@@ -555,6 +555,7 @@ export default function Home() {
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
   const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading } = useZone(location)
+  const shouldShowOutOfZoneHome = !zoneLoading && isOutOfService
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
@@ -1070,6 +1071,18 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-28 md:pb-24">
+      {shouldShowOutOfZoneHome && (
+        <div className="fixed inset-0 z-[90] pointer-events-none">
+          <div className="absolute inset-0 bg-slate-300/35 backdrop-blur-[1px]" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 px-4">
+            <div className="rounded-xl border border-red-200 bg-red-50/95 text-red-700 px-4 py-2 shadow-sm text-sm sm:text-base font-semibold whitespace-nowrap">
+              You are out of zone
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={shouldShowOutOfZoneHome ? "grayscale opacity-70 transition-all duration-300" : "transition-all duration-300"}>
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">
         {/* Main Background */}
@@ -2732,6 +2745,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+
+      </div>
 
       {/* Loading Screen - Switching Off Veg Mode */}
       <AnimatePresence>
