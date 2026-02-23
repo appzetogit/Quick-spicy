@@ -1,0 +1,43 @@
+[
+  {
+    "msg": "🔌 Connecting to MongoDB...",
+    "data": {}
+  },
+  {
+    "msg": "✅ Connected to MongoDB",
+    "data": {}
+  },
+  {
+    "msg": "🔍 Fetching Cloudinary credentials...",
+    "data": {}
+  },
+  {
+    "msg": "Credentials found:",
+    "data": {
+      "cloudName": "dciu4uawr",
+      "apiKey": "321367185532319",
+      "apiSecret": "YGxzi...",
+      "fullSecret": "YGxziMfOehQo2MCBfZsm2CPI5Uo",
+      "cloudNameLength": 9,
+      "apiKeyLength": 15,
+      "apiSecretLength": 27
+    }
+  },
+  {
+    "msg": "🔧 Initializing Cloudinary...",
+    "data": {}
+  },
+  {
+    "msg": "📤 Attempting test upload...",
+    "data": {}
+  },
+  {
+    "msg": "❌ Error during debug:",
+    "error": "Invalid image file",
+    "details": {
+      "message": "Invalid image file",
+      "name": "Error",
+      "http_code": 400
+    }
+  }
+]
