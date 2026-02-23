@@ -97,14 +97,21 @@ const app = express();
 const httpServer = createServer(app);
 
 // Initialize Socket.IO with proper CORS configuration
+const envSocketOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];
 const allowedSocketOrigins = [
-  process.env.CORS_ORIGIN,
+  ...envSocketOrigins,
+  'https://quickspicy.in',
+  'https://www.quickspicy.in',
+  'http://quickspicy.in',
+  'http://www.quickspicy.in',
   'https://foozeto.appzeto.com',
   'http://foozeto.appzeto.com',
   'http://localhost:5173',
   'http://localhost:3000',
   'http://127.0.0.1:5173',
-  'http://127.0.0.1:3000'
+  'http://127.0.0.1:3000',
+  'http://localhost:5174',
+  'http://127.0.0.1:5174'
 ].filter(Boolean); // Remove undefined values
 
 const io = new Server(httpServer, {
@@ -221,7 +228,7 @@ restaurantNamespace.on('connection', (socket) => {
         room: room,
         socketId: socket.id
       });
-      
+
       // Log all rooms this socket is now in
       const socketRooms = Array.from(socket.rooms).filter(r => r.startsWith('restaurant:'));
       console.log(`📋 Socket ${socket.id} is now in restaurant rooms:`, socketRooms);
@@ -311,8 +318,13 @@ connectRedis().catch(() => {
 // Security middleware
 app.use(helmet());
 // CORS configuration - allow multiple origins
+const envOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];
 const allowedOrigins = [
-  process.env.CORS_ORIGIN,
+  ...envOrigins,
+  'https://quickspicy.in',
+  'https://www.quickspicy.in',
+  'http://quickspicy.in',
+  'http://www.quickspicy.in',
   'https://foods.appzeto.com',
   'http://foods.appzeto.com',
   'https://foozeto.appzeto.com',
