@@ -8312,9 +8312,19 @@ export default function DeliveryHome() {
               right: 0,
               bottom: 0,
               pointerEvents: 'auto',
-              zIndex: 0
+              zIndex: 0,
+              filter: !isOnline ? 'grayscale(100%) brightness(0.78)' : 'none',
+              transition: 'filter 220ms ease'
             }}
           />
+
+          {!isOnline && (
+            <div className="absolute inset-0 z-[6] pointer-events-none bg-slate-500/20">
+              <div className="absolute top-3 right-3 rounded-full bg-slate-800/80 text-white text-xs font-medium px-3 py-1">
+                Offline
+              </div>
+            </div>
+          )}
           
           {/* Loading indicator */}
           {mapLoading && (

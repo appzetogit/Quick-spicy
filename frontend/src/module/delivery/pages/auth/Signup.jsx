@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { deliveryAPI } from "@/lib/api"
 import loginBg from "@/assets/deliveryloginbanner.png"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
@@ -52,6 +53,7 @@ export default function DeliverySignup() {
     name: "",
   })
   const [isLoading, setIsLoading] = useState(false)
+  const [apiError, setApiError] = useState("")
 
   // Redirect to home if already authenticated
   useEffect(() => {
@@ -142,6 +144,7 @@ export default function DeliverySignup() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
+    setApiError("")
 
     // Validate
     let hasErrors = false
@@ -162,21 +165,33 @@ export default function DeliverySignup() {
       return
     }
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
+    try {
+      const fullPhone = `${formData.countryCode} ${formData.phone}`.trim()
 
-    // Store auth data in sessionStorage for OTP page
-    const authData = {
-      method: "phone",
-      phone: `${formData.countryCode} ${formData.phone}`,
-      name: formData.name,
-      isSignUp: true,
-      module: "delivery",
+      // Match sign-in behavior: send OTP through backend
+      await deliveryAPI.sendOTP(fullPhone, "login")
+
+      // Store auth data in sessionStorage for OTP page
+      const authData = {
+        method: "phone",
+        phone: fullPhone,
+        name: formData.name,
+        isSignUp: true,
+        purpose: "login",
+        module: "delivery",
+      }
+      sessionStorage.setItem("deliveryAuthData", JSON.stringify(authData))
+
+      navigate("/delivery/otp")
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        "Failed to send OTP. Please try again."
+      setApiError(message)
+    } finally {
+      setIsLoading(false)
     }
-    sessionStorage.setItem("deliveryAuthData", JSON.stringify(authData))
-
-    setIsLoading(false)
-    navigate("/delivery/otp")
   }
 
   return (
@@ -245,6 +260,12 @@ export default function DeliverySignup() {
               Enter your details to get started.
             </p>
           </div>
+          {apiError && (
+            <div className="mb-4 flex items-center gap-1 text-xs sm:text-sm text-red-600">
+              <AlertCircle className="h-3 w-3" />
+              <span>{apiError}</span>
+            </div>
+          )}
 
           {/* Form */}
           <form

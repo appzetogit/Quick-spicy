@@ -109,6 +109,7 @@ export default function DeliverySignIn() {
         method: "phone",
         phone: fullPhone,
         isSignUp: false,
+        purpose: "login",
         module: "delivery",
       }
       sessionStorage.setItem("deliveryAuthData", JSON.stringify(authData))

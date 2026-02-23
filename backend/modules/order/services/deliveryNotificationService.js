@@ -265,7 +265,6 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       console.log(`📤 Emitted notification to room: ${room}`);
     });
 
-    // Also emit to all sockets in the delivery namespace (fallback if no specific room found)
     if (socketsInRoom.length === 0) {
       console.warn(`⚠️ No sockets connected in any delivery room for partner ${normalizedDeliveryPartnerId}`);
       console.warn(`⚠️ Delivery partner details:`, {
@@ -294,15 +293,14 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
         console.warn(`⚠️ No delivery partners are currently connected to the app!`);
       }
       
-      // Still broadcast to all delivery sockets as fallback
-      console.warn(`⚠️ Broadcasting to all delivery sockets as fallback (in case they connect later)`);
-      deliveryNamespace.emit('new_order', orderNotification);
-      deliveryNamespace.emit('play_notification_sound', {
-        type: 'new_order',
-        orderId: order.orderId,
-        message: `New order assigned: ${order.orderId}`
-      });
-      notificationSent = true;
+      // Strict targeting: never broadcast order assignment globally
+      console.warn(`⚠️ Strict zone delivery mode: global broadcast disabled for assigned order notifications`);
+      return {
+        success: false,
+        reason: 'Delivery partner not connected',
+        deliveryPartnerId: normalizedDeliveryPartnerId,
+        orderId: order.orderId
+      };
     } else {
       console.log(`✅ Successfully found ${socketsInRoom.length} connected socket(s) for delivery partner ${normalizedDeliveryPartnerId}`);
       console.log(`✅ Notification sent to room: ${foundRoom}`);
@@ -627,10 +625,9 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
       notificationSent = true;
       console.log(`✅ Order ready notification sent to delivery partner ${normalizedDeliveryPartnerId} in room ${foundRoom}`);
     } else {
-      // Fallback: broadcast to all delivery sockets
-      console.warn(`⚠️ Delivery partner ${normalizedDeliveryPartnerId} not found in any room, broadcasting to all`);
-      deliveryNamespace.emit('order_ready', orderReadyNotification);
-      notificationSent = true;
+      // Strict targeting: never broadcast order updates globally
+      console.warn(`⚠️ Delivery partner ${normalizedDeliveryPartnerId} not connected; global broadcast disabled`);
+      notificationSent = false;
     }
 
     return {
