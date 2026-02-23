@@ -1759,8 +1759,10 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     let restaurantWalletTransaction = null;
     let adminCommissionRecord = null;
     try {
-      // Get order total amount (subtotal, excluding delivery fee and tax for commission calculation)
-      const orderTotal = order.pricing?.subtotal || order.pricing?.total || 0;
+      // Commission base should be food price only: subtotal - discount
+      const subtotal = order.pricing?.subtotal || 0;
+      const discount = order.pricing?.discount || 0;
+      const orderTotal = Math.max(0, subtotal - discount);
       
       // Find restaurant by restaurantId (can be string or ObjectId)
       let restaurant = null;
@@ -1806,7 +1808,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
               amount: restaurantEarning,
               type: 'payment',
               status: 'Completed',
-              description: `Order #${orderIdForLog} - Amount: ₹${orderTotal.toFixed(2)}, Commission: ₹${commissionAmount.toFixed(2)}`,
+              description: `Order #${orderIdForLog} - Food Price: ₹${orderTotal.toFixed(2)}, Commission: ₹${commissionAmount.toFixed(2)}`,
               orderId: orderMongoId || order._id
             });
 
