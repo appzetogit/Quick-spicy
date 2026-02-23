@@ -1117,6 +1117,11 @@ export const adminAPI = {
     );
   },
 
+  // Update restaurant location
+  updateRestaurantLocation: (id, location) => {
+    return apiClient.put(`/admin/restaurants/${id}/location`, { location });
+  },
+
   // Update restaurant dining settings
   updateRestaurantDiningSettings: (id, diningSettings) => {
     return apiClient.put(`/admin/restaurants/${id}/dining-settings`, {

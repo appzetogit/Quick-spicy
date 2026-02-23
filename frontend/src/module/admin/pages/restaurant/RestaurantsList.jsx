@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Eye, Settings, ArrowUpDown, Loader2, X, MapPin, Phone, Mail, Clock, Star, Building2, User, FileText, CreditCard, Calendar, Image as ImageIcon, ExternalLink, ShieldX, AlertTriangle, Trash2, Plus } from "lucide-react"
-import { adminAPI, restaurantAPI } from "../../../../lib/api"
+import { adminAPI, restaurantAPI, locationAPI } from "../../../../lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportRestaurantsToPDF } from "../../components/restaurants/restaurantsExportUtils"
+import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 
 // Import icons from Dashboard-icons
 import locationIcon from "../../assets/Dashboard-icons/image1.png"
@@ -24,6 +25,26 @@ export default function RestaurantsList() {
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null) // { restaurant }
   const [deleting, setDeleting] = useState(false)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" })
+  const [isEditingLocation, setIsEditingLocation] = useState(false)
+  const [savingLocation, setSavingLocation] = useState(false)
+  const [resolvingAddress, setResolvingAddress] = useState(false)
+  const [mapLoading, setMapLoading] = useState(false)
+  const [mapError, setMapError] = useState("")
+  const [locationForm, setLocationForm] = useState({
+    latitude: "",
+    longitude: "",
+    formattedAddress: "",
+    addressLine1: "",
+    addressLine2: "",
+    area: "",
+    city: "",
+    state: "",
+    landmark: "",
+    pincode: "",
+  })
+  const mapContainerRef = useRef(null)
+  const mapRef = useRef(null)
+  const markerRef = useRef(null)
 
   // Format Restaurant ID to REST format (e.g., REST422829)
   const formatRestaurantId = (id) => {
@@ -257,6 +278,210 @@ export default function RestaurantsList() {
     return "★".repeat(rating) + "☆".repeat(5 - rating)
   }
 
+  const getLocationFromRestaurant = (restaurant) => {
+    return (
+      restaurant?.onboarding?.step1?.location ||
+      restaurant?.location ||
+      restaurant?.originalData?.location ||
+      {}
+    )
+  }
+
+  const formatLocationAddress = (location = {}, fallback = "N/A") => {
+    if (!location || typeof location !== "object") return fallback
+    if (location.formattedAddress) return location.formattedAddress
+    if (location.address) return location.address
+    const parts = [
+      location.addressLine1,
+      location.addressLine2,
+      location.area,
+      location.city,
+      location.state,
+      location.pincode || location.zipCode || location.postalCode,
+    ].filter(Boolean)
+    return parts.length > 0 ? parts.join(", ") : fallback
+  }
+
+  const normalizeLocationFormFromRestaurant = (restaurant) => {
+    const loc = getLocationFromRestaurant(restaurant)
+    const latitude = loc.latitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[1] : "")
+    const longitude = loc.longitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[0] : "")
+
+    return {
+      latitude: latitude ?? "",
+      longitude: longitude ?? "",
+      formattedAddress: loc.formattedAddress || loc.address || "",
+      addressLine1: loc.addressLine1 || "",
+      addressLine2: loc.addressLine2 || "",
+      area: loc.area || "",
+      city: loc.city || "",
+      state: loc.state || "",
+      landmark: loc.landmark || "",
+      pincode: loc.pincode || loc.zipCode || loc.postalCode || "",
+    }
+  }
+
+  const parseReverseGeocodeResult = (responseData = {}) => {
+    const firstResult = responseData?.data?.results?.[0] || responseData?.results?.[0] || null
+    if (!firstResult) return {}
+
+    const addressComponents = firstResult.address_components || {}
+    let area = ""
+    let city = ""
+    let state = ""
+    let pincode = ""
+
+    if (Array.isArray(addressComponents)) {
+      const getComponent = (types) =>
+        addressComponents.find((comp) =>
+          Array.isArray(comp.types) && types.some((t) => comp.types.includes(t)),
+        )
+
+      area =
+        getComponent(["sublocality_level_1", "sublocality", "neighborhood"])?.long_name ||
+        ""
+      city =
+        getComponent(["locality", "administrative_area_level_2"])?.long_name ||
+        ""
+      state = getComponent(["administrative_area_level_1"])?.long_name || ""
+      pincode = getComponent(["postal_code"])?.long_name || ""
+    } else {
+      area = addressComponents.area || ""
+      city = addressComponents.city || ""
+      state = addressComponents.state || ""
+      pincode = addressComponents.pincode || addressComponents.postalCode || ""
+    }
+
+    return {
+      formattedAddress: firstResult.formatted_address || "",
+      area,
+      city,
+      state,
+      pincode,
+    }
+  }
+
+  const reverseGeocodeLocation = async (lat, lng) => {
+    if (!Number.isFinite(Number(lat)) || !Number.isFinite(Number(lng))) return
+    try {
+      setResolvingAddress(true)
+      const response = await locationAPI.reverseGeocode(Number(lat), Number(lng))
+      const parsed = parseReverseGeocodeResult(response?.data)
+      setLocationForm((prev) => ({
+        ...prev,
+        formattedAddress: parsed.formattedAddress || prev.formattedAddress,
+        addressLine1: prev.addressLine1 || parsed.formattedAddress || prev.formattedAddress,
+        area: parsed.area || prev.area,
+        city: parsed.city || prev.city,
+        state: parsed.state || prev.state,
+        pincode: parsed.pincode || prev.pincode,
+      }))
+    } catch (err) {
+      console.warn("Failed to reverse geocode location:", err)
+    } finally {
+      setResolvingAddress(false)
+    }
+  }
+
+  const loadGoogleMapsScript = async () => {
+    if (window.google?.maps) return true
+
+    const apiKey = await getGoogleMapsApiKey()
+    if (!apiKey) {
+      setMapError("Google Maps API key is missing in Admin Environment Variables.")
+      return false
+    }
+
+    const existingScript = document.getElementById("admin-google-maps-script")
+    if (existingScript) {
+      await new Promise((resolve, reject) => {
+        if (window.google?.maps) {
+          resolve()
+          return
+        }
+        existingScript.addEventListener("load", resolve, { once: true })
+        existingScript.addEventListener("error", reject, { once: true })
+      })
+      return !!window.google?.maps
+    }
+
+    await new Promise((resolve, reject) => {
+      const script = document.createElement("script")
+      script.id = "admin-google-maps-script"
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`
+      script.async = true
+      script.defer = true
+      script.onload = resolve
+      script.onerror = reject
+      document.head.appendChild(script)
+    })
+
+    return !!window.google?.maps
+  }
+
+  const initializeLocationMap = async (lat, lng) => {
+    if (!mapContainerRef.current) return
+
+    try {
+      setMapLoading(true)
+      setMapError("")
+      const loaded = await loadGoogleMapsScript()
+      if (!loaded || !window.google?.maps) {
+        setMapError("Unable to load Google Maps.")
+        return
+      }
+
+      const parsedLat = Number(lat)
+      const parsedLng = Number(lng)
+      const center = {
+        lat: Number.isFinite(parsedLat) ? parsedLat : 22.7196,
+        lng: Number.isFinite(parsedLng) ? parsedLng : 75.8577,
+      }
+
+      mapRef.current = new window.google.maps.Map(mapContainerRef.current, {
+        center,
+        zoom: 16,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      })
+
+      markerRef.current = new window.google.maps.Marker({
+        position: center,
+        map: mapRef.current,
+        draggable: true,
+      })
+
+      markerRef.current.addListener("dragend", (event) => {
+        const nextLat = Number(event.latLng.lat().toFixed(6))
+        const nextLng = Number(event.latLng.lng().toFixed(6))
+        setLocationForm((prev) => ({
+          ...prev,
+          latitude: nextLat,
+          longitude: nextLng,
+        }))
+        reverseGeocodeLocation(nextLat, nextLng)
+      })
+
+      mapRef.current.addListener("click", (event) => {
+        const nextLat = Number(event.latLng.lat().toFixed(6))
+        const nextLng = Number(event.latLng.lng().toFixed(6))
+        markerRef.current?.setPosition({ lat: nextLat, lng: nextLng })
+        setLocationForm((prev) => ({
+          ...prev,
+          latitude: nextLat,
+          longitude: nextLng,
+        }))
+        reverseGeocodeLocation(nextLat, nextLng)
+      })
+    } catch (err) {
+      console.error("Error initializing location map:", err)
+      setMapError("Failed to initialize map. Please try again.")
+    } finally {
+      setMapLoading(false)
+    }
+  }
+
   // Handle view restaurant details
   const handleViewDetails = async (restaurant) => {
     setSelectedRestaurant(restaurant)
@@ -323,7 +548,109 @@ export default function RestaurantsList() {
     }
   }
 
+  const handleEditLocation = async (restaurant) => {
+    await handleViewDetails(restaurant)
+    setIsEditingLocation(true)
+  }
+
+  const handleSaveLocation = async () => {
+    if (!selectedRestaurant) return
+
+    const restaurantId = selectedRestaurant._id || selectedRestaurant.id
+    const latitude = Number(locationForm.latitude)
+    const longitude = Number(locationForm.longitude)
+
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      alert("Please select a valid location on map")
+      return
+    }
+
+    try {
+      setSavingLocation(true)
+      const locationPayload = {
+        latitude,
+        longitude,
+        coordinates: [longitude, latitude],
+        formattedAddress: locationForm.formattedAddress || "",
+        address: locationForm.formattedAddress || "",
+        addressLine1: locationForm.addressLine1 || locationForm.formattedAddress || "",
+        addressLine2: locationForm.addressLine2 || "",
+        area: locationForm.area || "",
+        city: locationForm.city || "",
+        state: locationForm.state || "",
+        landmark: locationForm.landmark || "",
+        pincode: locationForm.pincode || "",
+        zipCode: locationForm.pincode || "",
+        postalCode: locationForm.pincode || "",
+      }
+
+      const response = await adminAPI.updateRestaurantLocation(restaurantId, locationPayload)
+      const updatedRestaurant = response?.data?.data?.restaurant
+
+      if (updatedRestaurant?.location) {
+        setRestaurantDetails((prev) => ({
+          ...(prev || {}),
+          ...updatedRestaurant,
+          location: updatedRestaurant.location,
+          onboarding: {
+            ...(prev?.onboarding || {}),
+            step1: {
+              ...(prev?.onboarding?.step1 || {}),
+              location: updatedRestaurant.location,
+            },
+          },
+        }))
+
+        setRestaurants((prev) =>
+          prev.map((item) =>
+            (item._id === restaurantId || item.id === restaurantId)
+              ? {
+                ...item,
+                zone:
+                  updatedRestaurant.location.area ||
+                  updatedRestaurant.location.city ||
+                  item.zone,
+                originalData: {
+                  ...(item.originalData || {}),
+                  location: updatedRestaurant.location,
+                },
+              }
+              : item,
+          ),
+        )
+      }
+
+      setIsEditingLocation(false)
+      alert("Restaurant location updated successfully")
+    } catch (err) {
+      console.error("Error saving restaurant location:", err)
+      alert(err?.response?.data?.message || "Failed to update restaurant location")
+    } finally {
+      setSavingLocation(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!isEditingLocation || !selectedRestaurant) return
+
+    const sourceRestaurant = restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant
+    const initialForm = normalizeLocationFormFromRestaurant(sourceRestaurant)
+    setLocationForm(initialForm)
+    initializeLocationMap(initialForm.latitude, initialForm.longitude)
+
+    return () => {
+      if (markerRef.current) {
+        markerRef.current.setMap(null)
+      }
+      markerRef.current = null
+      mapRef.current = null
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditingLocation, selectedRestaurant, restaurantDetails?._id])
+
   const closeDetailsModal = () => {
+    setIsEditingLocation(false)
+    setMapError("")
     setSelectedRestaurant(null)
     setRestaurantDetails(null)
   }
@@ -690,6 +1017,13 @@ export default function RestaurantsList() {
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleEditLocation(restaurant)}
+                              className="p-1.5 rounded text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              title="Edit Location"
+                            >
+                              <Settings className="w-4 h-4" />
+                            </button>
+                            <button
                               onClick={() => handleBanRestaurant(restaurant)}
                               className={`p-1.5 rounded transition-colors ${!restaurant.status
                                 ? "text-green-600 hover:bg-green-50"
@@ -844,22 +1178,41 @@ export default function RestaurantsList() {
 
                     {/* Location & Contact */}
                     <div>
-                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Location & Contact</h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-semibold text-slate-900">Location & Contact</h4>
+                        {!isEditingLocation ? (
+                          <button
+                            onClick={() => setIsEditingLocation(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 text-xs font-semibold hover:bg-indigo-100 transition-colors"
+                          >
+                            <Settings className="w-3.5 h-3.5" />
+                            Edit Location
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setIsEditingLocation(false)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-3">
-                        {restaurantDetails?.location && (
+                        {!isEditingLocation && restaurantDetails?.location && (
                           <div className="flex items-start gap-3">
                             <MapPin className="w-5 h-5 text-slate-400 mt-0.5" />
                             <div>
                               <p className="text-xs text-slate-500">Address</p>
                               <p className="text-sm font-medium text-slate-900">
-                                {restaurantDetails.location.addressLine1 || ""}
-                                {restaurantDetails.location.addressLine2 && `, ${restaurantDetails.location.addressLine2}`}
-                                {restaurantDetails.location.area && `, ${restaurantDetails.location.area}`}
-                                {restaurantDetails.location.city && `, ${restaurantDetails.location.city}`}
-                                {!restaurantDetails.location.addressLine1 && !restaurantDetails.location.area && !restaurantDetails.location.city && selectedRestaurant.zone}
+                                {formatLocationAddress(restaurantDetails.location, selectedRestaurant.zone)}
                               </p>
                             </div>
                           </div>
+                        )}
+                        {isEditingLocation && (
+                          <p className="text-xs text-indigo-700 font-medium bg-indigo-50 border border-indigo-100 rounded-lg px-3 py-2">
+                            Location editor is shown at the bottom of this details modal.
+                          </p>
                         )}
                         {restaurantDetails?.primaryContactNumber && (
                           <div className="flex items-center gap-3">
@@ -1376,6 +1729,82 @@ export default function RestaurantsList() {
                             <p className="font-medium text-slate-900">{restaurantDetails.onboarding.completedSteps} / 4</p>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+
+                  {isEditingLocation && (
+                    <div className="pt-6 border-t border-slate-200">
+                      <h4 className="text-lg font-semibold text-slate-900 mb-4">Location Editor</h4>
+                      <div className="space-y-3 border border-indigo-100 bg-indigo-50/40 rounded-xl p-4">
+                        <p className="text-xs text-indigo-700 font-semibold">
+                          Pinpoint the exact restaurant location on map. This will be the address used everywhere.
+                        </p>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1">Latitude</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={locationForm.latitude}
+                              onChange={(e) => setLocationForm((prev) => ({ ...prev, latitude: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1">Longitude</label>
+                            <input
+                              type="number"
+                              step="any"
+                              value={locationForm.longitude}
+                              onChange={(e) => setLocationForm((prev) => ({ ...prev, longitude: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div className="sm:col-span-2">
+                            <label className="block text-xs text-slate-500 mb-1">Formatted Address</label>
+                            <input
+                              type="text"
+                              value={locationForm.formattedAddress}
+                              onChange={(e) => setLocationForm((prev) => ({ ...prev, formattedAddress: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1">Area</label>
+                            <input
+                              type="text"
+                              value={locationForm.area}
+                              onChange={(e) => setLocationForm((prev) => ({ ...prev, area: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-slate-500 mb-1">City</label>
+                            <input
+                              type="text"
+                              value={locationForm.city}
+                              onChange={(e) => setLocationForm((prev) => ({ ...prev, city: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div
+                          ref={mapContainerRef}
+                          className="w-full h-[460px] rounded-xl border border-slate-300 bg-slate-100"
+                        />
+                        {mapLoading && <p className="text-xs text-slate-500">Loading map...</p>}
+                        {resolvingAddress && <p className="text-xs text-slate-500">Resolving address...</p>}
+                        {mapError && <p className="text-xs text-red-600">{mapError}</p>}
+                        <button
+                          onClick={handleSaveLocation}
+                          disabled={savingLocation}
+                          className={`inline-flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold text-white ${savingLocation ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}`}
+                        >
+                          {savingLocation ? "Saving..." : "Save Location"}
+                        </button>
                       </div>
                     </div>
                   )}

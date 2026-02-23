@@ -20,6 +20,7 @@ import {
   getRestaurants,
   getRestaurantMenuByIdAdmin,
   createRestaurant,
+  updateRestaurantLocation,
   updateRestaurantStatus,
   getRestaurantJoinRequests,
   approveRestaurant,
@@ -293,6 +294,7 @@ router.get("/restaurant-analytics/:restaurantId", getRestaurantAnalytics);
 router.post("/restaurants/:id/approve", approveRestaurant);
 router.post("/restaurants/:id/reject", rejectRestaurant);
 router.post("/restaurants/:id/reverify", reverifyRestaurant);
+router.put("/restaurants/:id/location", updateRestaurantLocation);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
 router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
 router.delete("/restaurants/:id", deleteRestaurant);
