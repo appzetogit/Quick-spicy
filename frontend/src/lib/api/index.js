@@ -1170,6 +1170,12 @@ export const adminAPI = {
   createAdminOffer: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.OFFERS, data);
   },
+  updateAdminOfferCartVisibility: (offerId, itemId, showInCart) => {
+    return apiClient.patch(
+      `/admin/offers/${encodeURIComponent(offerId)}/items/${encodeURIComponent(itemId)}/cart-visibility`,
+      { showInCart },
+    );
+  },
 
   // Restaurant Commission Management
   getRestaurantCommissions: (params = {}) => {

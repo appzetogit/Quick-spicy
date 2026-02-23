@@ -2421,6 +2421,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             discountPercentage: item.discountPercentage || 0,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
+            showInCart: item.showInCart !== false,
             status: offer.status || "active",
             startDate: offer.startDate || null,
             endDate: offer.endDate || null,
@@ -2579,6 +2580,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
             couponCode: normalizedCode,
             image: "",
             isVeg: false,
+            showInCart: true,
           },
         ],
       });
@@ -2601,6 +2603,52 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       error: error.stack,
     });
     return errorResponse(res, 500, "Failed to create coupon");
+  }
+});
+
+/**
+ * PATCH /api/admin/offers/:offerId/items/:itemId/cart-visibility
+ */
+export const updateOfferCartVisibility = asyncHandler(async (req, res) => {
+  try {
+    const { offerId, itemId } = req.params;
+    const { showInCart } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(offerId)) {
+      return errorResponse(res, 400, "Invalid offerId");
+    }
+
+    const offer = await Offer.findById(offerId);
+    if (!offer) {
+      return errorResponse(res, 404, "Offer not found");
+    }
+
+    const itemIndex = offer.items.findIndex(
+      (item) => item?.itemId?.toString() === itemId,
+    );
+
+    if (itemIndex === -1) {
+      return errorResponse(res, 404, "Offer item not found");
+    }
+
+    const nextValue =
+      typeof showInCart === "boolean"
+        ? showInCart
+        : offer.items[itemIndex].showInCart === false;
+
+    offer.items[itemIndex].showInCart = nextValue;
+    await offer.save();
+
+    return successResponse(res, 200, "Cart visibility updated successfully", {
+      offerId: offer._id.toString(),
+      itemId,
+      showInCart: offer.items[itemIndex].showInCart !== false,
+    });
+  } catch (error) {
+    logger.error(`Error updating offer cart visibility: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to update cart visibility");
   }
 });
 

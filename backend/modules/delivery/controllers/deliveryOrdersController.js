@@ -4,6 +4,7 @@ import Delivery from '../models/Delivery.js';
 import Order from '../../order/models/Order.js';
 import Payment from '../../payment/models/Payment.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
+import Zone from '../../admin/models/Zone.js';
 import DeliveryWallet from '../models/DeliveryWallet.js';
 import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import RestaurantWallet from '../../restaurant/models/RestaurantWallet.js';
@@ -22,6 +23,97 @@ const logger = winston.createLogger({
     })
   ]
 });
+
+const isPointInsideZone = (lat, lng, coordinates = []) => {
+  if (!Array.isArray(coordinates) || coordinates.length < 3) return false;
+
+  let inside = false;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+    const pointI = coordinates[i] || {};
+    const pointJ = coordinates[j] || {};
+    const yi = Number(pointI.latitude);
+    const xi = Number(pointI.longitude);
+    const yj = Number(pointJ.latitude);
+    const xj = Number(pointJ.longitude);
+
+    if (
+      Number.isNaN(yi) ||
+      Number.isNaN(xi) ||
+      Number.isNaN(yj) ||
+      Number.isNaN(xj)
+    ) {
+      continue;
+    }
+
+    const intersects = ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+};
+
+const resolveOrderZone = async (order) => {
+  // Primary source: order assignment info
+  const zoneId = order?.assignmentInfo?.zoneId;
+  if (zoneId && mongoose.Types.ObjectId.isValid(zoneId)) {
+    const zone = await Zone.findOne({ _id: zoneId, isActive: true }).lean();
+    if (zone) return zone;
+  }
+
+  // Fallback: infer zone from restaurant location
+  let restaurantDoc = null;
+  if (order?.restaurantId && typeof order.restaurantId === 'object' && order.restaurantId.location) {
+    restaurantDoc = order.restaurantId;
+  } else {
+    const restaurantRef = order?.restaurantId?._id || order?.restaurantId;
+    if (restaurantRef && mongoose.Types.ObjectId.isValid(String(restaurantRef))) {
+      restaurantDoc = await Restaurant.findById(restaurantRef).select('location').lean();
+    }
+    if (!restaurantDoc && restaurantRef) {
+      restaurantDoc = await Restaurant.findOne({
+        $or: [{ restaurantId: String(restaurantRef) }, { slug: String(restaurantRef) }]
+      }).select('location').lean();
+    }
+  }
+
+  const restaurantLat = Number(restaurantDoc?.location?.latitude ?? restaurantDoc?.location?.coordinates?.[1]);
+  const restaurantLng = Number(restaurantDoc?.location?.longitude ?? restaurantDoc?.location?.coordinates?.[0]);
+
+  if (!Number.isFinite(restaurantLat) || !Number.isFinite(restaurantLng)) return null;
+
+  const activeZones = await Zone.find({ isActive: true }).lean();
+  for (const zone of activeZones) {
+    if (isPointInsideZone(restaurantLat, restaurantLng, zone?.coordinates)) {
+      return zone;
+    }
+  }
+
+  return null;
+};
+
+const isDeliveryInZone = (delivery, zone) => {
+  if (!delivery || !zone) return false;
+
+  const requiredZoneId = zone?._id?.toString();
+  if (!requiredZoneId) return false;
+
+  // Option 1: Assigned zone list on profile
+  const assignedZones = Array.isArray(delivery?.availability?.zones)
+    ? delivery.availability.zones.map((z) => z?.toString?.() || String(z))
+    : [];
+  if (assignedZones.includes(requiredZoneId)) {
+    return true;
+  }
+
+  // Option 2: Current live location inside zone polygon
+  const coords = delivery?.availability?.currentLocation?.coordinates;
+  if (!Array.isArray(coords) || coords.length < 2) return false;
+  const [lng, lat] = coords;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return false;
+
+  return isPointInsideZone(lat, lng, zone.coordinates);
+};
 
 /**
  * Get Delivery Partner Orders
@@ -59,28 +151,56 @@ export const getOrders = asyncHandler(async (req, res) => {
       }
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
 
-    // Fetch orders
-    const orders = await Order.find(query)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
-      .populate('restaurantId', 'name slug profileImage address location phone ownerPhone')
-      .populate('userId', 'name phone')
-      .lean();
+    let orders = [];
+    let total = 0;
 
-    // Get total count
-    const total = await Order.countDocuments(query);
+    if (isDiscoverMode) {
+      const allCandidateOrders = await Order.find(query)
+        .sort({ createdAt: -1 })
+        .populate('restaurantId', 'name slug profileImage address location phone ownerPhone')
+        .populate('userId', 'name phone')
+        .lean();
+
+      const filteredOrders = [];
+      for (const order of allCandidateOrders) {
+        const isAssignedToCurrent = order?.deliveryPartnerId?.toString?.() === delivery._id.toString();
+        if (isAssignedToCurrent) {
+          filteredOrders.push(order);
+          continue;
+        }
+
+        // Unassigned discover orders are visible only if delivery partner is in the same zone
+        const orderZone = await resolveOrderZone(order);
+        if (!orderZone) continue;
+        if (isDeliveryInZone(delivery, orderZone)) {
+          filteredOrders.push(order);
+        }
+      }
+
+      total = filteredOrders.length;
+      orders = filteredOrders.slice(skip, skip + limitNum);
+    } else {
+      orders = await Order.find(query)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum)
+        .populate('restaurantId', 'name slug profileImage address location phone ownerPhone')
+        .populate('userId', 'name phone')
+        .lean();
+      total = await Order.countDocuments(query);
+    }
 
     return successResponse(res, 200, 'Orders retrieved successfully', {
       orders,
       pagination: {
         page: parseInt(page),
-        limit: parseInt(limit),
+        limit: limitNum,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / limitNum)
       }
     });
   } catch (error) {
@@ -170,6 +290,10 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       
       // Allow access if order is in valid status OR delivery boy was notified
       if (isInValidStatus || wasNotified) {
+        const orderZone = await resolveOrderZone(order);
+        if (!orderZone || !isDeliveryInZone(delivery, orderZone)) {
+          return errorResponse(res, 403, 'Order not found or not available in your zone');
+        }
         console.log(`✅ Allowing access to order ${order.orderId} - Status: ${order.status}, Notified: ${wasNotified}`);
         // Allow access to view order details
       } else {
@@ -297,6 +421,11 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         console.log(`✅ Delivery partner ${currentDeliveryId} was notified about this order. Assigning order to them...`);
       } else if (isValidStatus) {
         console.log(`⚠️ Order ${order.orderId} is not assigned and delivery partner ${currentDeliveryId} was not notified, but order is in valid status (${order.status}). Allowing acceptance and assigning order.`);
+      }
+
+      const orderZone = await resolveOrderZone(order);
+      if (!orderZone || !isDeliveryInZone(delivery, orderZone)) {
+        return errorResponse(res, 403, 'Order is outside your zone and cannot be accepted');
       }
       
       // Proceed with assignment (first come first serve)

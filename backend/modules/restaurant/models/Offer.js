@@ -9,6 +9,7 @@ const offerItemSchema = new mongoose.Schema({
   couponCode: { type: String, required: true },
   image: { type: String, default: '' },
   isVeg: { type: Boolean, default: false },
+  showInCart: { type: Boolean, default: true },
 }, { _id: false });
 
 const offerSchema = new mongoose.Schema(
