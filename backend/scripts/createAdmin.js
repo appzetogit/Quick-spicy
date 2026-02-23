@@ -27,28 +27,32 @@ const createAdmin = async () => {
 
     // Admin details
     const adminData = {
-      name: "Tastizo Admin",
-      email: process.env.ADMIN_EMAIL || "tastizoteam@gmail.com",
+      name: "Quickspicy Admin",
+      email: process.env.ADMIN_EMAIL || "quickspicyofficial@gmail.com",
       phone: "7610416911",
-      password: process.env.ADMIN_PASSWORD || "Abhi@4321",
+      password: process.env.ADMIN_PASSWORD || "Quickspicy16072003",
       role: "admin",
       isActive: true,
       phoneVerified: false,
     };
 
     // Check if admin already exists
-    const existingAdmin = await Admin.findOne({
+    let admin = await Admin.findOne({
       email: adminData.email.toLowerCase(),
     });
 
-    if (existingAdmin) {
+    if (admin) {
       console.log("⚠️  Admin already exists with this email:", adminData.email);
-      console.log("Admin ID:", existingAdmin._id);
-      process.exit(0);
+      console.log("Updating password...");
+      admin.password = adminData.password;
+      admin.name = adminData.name;
+      await admin.save();
+      console.log("✅ Admin updated successfully!");
+    } else {
+      // Create new admin
+      admin = await Admin.create(adminData);
+      console.log("✅ Admin created successfully!");
     }
-
-    // Create new admin (password will be hashed by pre-save hook)
-    const admin = await Admin.create(adminData);
 
     // Remove password from response
     const adminResponse = admin.toObject();
