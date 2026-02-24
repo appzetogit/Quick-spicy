@@ -11,6 +11,11 @@ import RestaurantWallet from '../../restaurant/models/RestaurantWallet.js';
 import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
 import AdminCommission from '../../admin/models/AdminCommission.js';
 import { calculateRoute } from '../../order/services/routeCalculationService.js';
+import {
+  syncDeliveryPartnerPresence,
+  upsertActiveOrderTracking,
+  removeActiveOrderTracking
+} from '../services/firebaseRealtimeTrackingService.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
 
@@ -773,6 +778,39 @@ export const acceptOrder = asyncHandler(async (req, res) => {
 
     console.log(`✅ Order ${order.orderId} accepted by delivery partner ${delivery._id}`);
     console.log(`📍 Route calculated: ${routeData.distance.toFixed(2)} km, ${routeData.duration.toFixed(1)} mins`);
+
+    const restaurantCoords = updatedOrder.restaurantId?.location?.coordinates
+      ? {
+          lat: updatedOrder.restaurantId.location.coordinates[1],
+          lng: updatedOrder.restaurantId.location.coordinates[0]
+        }
+      : null;
+    const customerCoords = updatedOrder.address?.location?.coordinates
+      ? {
+          lat: updatedOrder.address.location.coordinates[1],
+          lng: updatedOrder.address.location.coordinates[0]
+        }
+      : null;
+
+    await Promise.allSettled([
+      upsertActiveOrderTracking({
+        orderId: updatedOrder.orderId || updatedOrder._id?.toString(),
+        deliveryBoyId: delivery._id?.toString(),
+        boyLat: deliveryLat,
+        boyLng: deliveryLng,
+        status: 'accepted',
+        routeCoordinates: routeData.coordinates || null,
+        restaurant: restaurantCoords,
+        customer: customerCoords
+      }),
+      syncDeliveryPartnerPresence({
+        deliveryId: delivery._id?.toString(),
+        lat: deliveryLat,
+        lng: deliveryLng,
+        isOnline: true,
+        activeOrderId: updatedOrder.orderId || updatedOrder._id?.toString()
+      })
+    ]);
 
     // Calculate delivery distance (restaurant to customer) for earnings calculation
     let deliveryDistance = 0;
@@ -1710,6 +1748,20 @@ export const completeDelivery = asyncHandler(async (req, res) => {
 
     const orderIdForLog = updatedOrder.orderId || order.orderId || orderMongoId?.toString() || orderId;
     console.log(`✅ Order ${orderIdForLog} marked as delivered by delivery partner ${delivery._id}`);
+
+    const deliveryDoc = await Delivery.findById(delivery._id).select('availability').lean();
+    const deliveryCurrentLocation = deliveryDoc?.availability?.currentLocation?.coordinates;
+
+    await Promise.allSettled([
+      removeActiveOrderTracking(orderIdForLog),
+      syncDeliveryPartnerPresence({
+        deliveryId: delivery._id?.toString(),
+        lat: Array.isArray(deliveryCurrentLocation) ? deliveryCurrentLocation[1] : null,
+        lng: Array.isArray(deliveryCurrentLocation) ? deliveryCurrentLocation[0] : null,
+        isOnline: deliveryDoc?.availability?.isOnline || false,
+        activeOrderId: null
+      })
+    ]);
 
     // Mark COD payment as collected (admin Payment Status → Collected)
     if (order.payment?.method === 'cash' || order.payment?.method === 'cod') {

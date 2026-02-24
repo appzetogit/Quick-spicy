@@ -2095,6 +2095,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       // Update the location in localStorage with this address
       const locationData = {
+        label: address.label || "Home",
         city: address.city,
         state: address.state,
         address: `${address.street}, ${address.city}`,

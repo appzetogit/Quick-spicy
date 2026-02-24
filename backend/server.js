@@ -16,6 +16,7 @@ dotenv.config();
 // Import configurations
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+import { initializeFirebaseRealtime } from './config/firebaseRealtime.js';
 
 // Import middleware
 import { errorHandler } from './shared/middleware/errorHandler.js';
@@ -299,17 +300,24 @@ app.set('io', io);
 // Connect to databases
 import { initializeCloudinary } from './config/cloudinary.js';
 
-// Connect to databases
-connectDB().then(() => {
-  // Initialize Cloudinary after DB connection
-  initializeCloudinary().catch(err => console.error('Failed to initialize Cloudinary:', err));
-});
+async function initializeServices() {
+  await connectDB();
 
-// Redis connection is optional - only connects if REDIS_ENABLED=true
-connectRedis().catch(() => {
-  // Silently handle Redis connection failures
-  // The app works without Redis
-});
+  // Initialize Cloudinary after DB connection
+  await initializeCloudinary().catch(err => console.error('Failed to initialize Cloudinary:', err));
+
+  // Initialize Firebase Realtime before routes/sockets start accepting traffic
+  const firebaseDb = await initializeFirebaseRealtime();
+  if (!firebaseDb) {
+    console.warn('⚠️ Firebase Realtime Database not available');
+  }
+
+  // Redis connection is optional - only connects if REDIS_ENABLED=true
+  await connectRedis().catch(() => {
+    // Silently handle Redis connection failures
+    // The app works without Redis
+  });
+}
 
 // Security middleware
 app.use(helmet());
@@ -631,14 +639,22 @@ io.on('connection', (socket) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+async function startServer() {
+  await initializeServices();
 
-  // Initialize scheduled tasks after DB connection is established
-  // Wait a bit for DB to connect, then start cron jobs
-  setTimeout(() => {
-    initializeScheduledTasks();
-  }, 5000);
+  httpServer.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+
+    // Initialize scheduled tasks after startup
+    setTimeout(() => {
+      initializeScheduledTasks();
+    }, 5000);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('❌ Server startup failed:', error);
+  process.exit(1);
 });
 
 // Initialize scheduled tasks

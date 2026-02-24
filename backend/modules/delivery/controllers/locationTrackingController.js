@@ -13,6 +13,12 @@ import {
   clearRouteCache
 } from '../services/locationProcessingService.js';
 import Order from '../../order/models/Order.js';
+import {
+  syncDeliveryPartnerPresence,
+  upsertActiveOrderTracking,
+  updateActiveOrderLocation,
+  removeActiveOrderTracking
+} from '../services/firebaseRealtimeTrackingService.js';
 
 /**
  * Receive GPS update from delivery app
@@ -79,6 +85,29 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         }
       }
     );
+
+    await Promise.allSettled([
+      updateActiveOrderLocation(orderId, {
+        boy_id: String(deliveryBoyId),
+        boy_lat: processedLocation.lat,
+        boy_lng: processedLocation.lng,
+        heading: processedLocation.bearing,
+        speed: processedLocation.speed,
+        progress: processedLocation.progress,
+        distance_covered: processedLocation.distanceCovered,
+        remaining_distance: processedLocation.remainingDistance,
+        on_route: processedLocation.onRoute,
+        timestamp: processedLocation.timestamp,
+        status: 'on_the_way'
+      }),
+      syncDeliveryPartnerPresence({
+        deliveryId: String(deliveryBoyId),
+        lat: processedLocation.lat,
+        lng: processedLocation.lng,
+        isOnline: true,
+        activeOrderId: orderId
+      })
+    ]);
     
     // Broadcast via WebSocket (handled by socket.io in server.js)
     const io = req.app.get('io');
@@ -167,6 +196,18 @@ export const initializeRoute = asyncHandler(async (req, res) => {
     
     // Cache route
     cacheRoutePolyline(orderId, route);
+
+    await upsertActiveOrderTracking({
+      orderId,
+      deliveryBoyId,
+      boyLat: riderCoords.lat,
+      boyLng: riderCoords.lng,
+      status: 'assigned',
+      polyline: route.polyline || null,
+      routeCoordinates: route.points || null,
+      restaurant: restaurantCoords,
+      customer: customerCoords
+    });
     
     // Broadcast route to connected clients
     const io = req.app.get('io');
@@ -207,6 +248,7 @@ export const clearLocationData = asyncHandler(async (req, res) => {
     
     if (orderId) {
       clearRouteCache(orderId);
+      await removeActiveOrderTracking(orderId);
     }
     
     return successResponse(res, 200, 'Location data cleared successfully');
