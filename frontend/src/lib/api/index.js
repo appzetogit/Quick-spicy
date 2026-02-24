@@ -1154,6 +1154,11 @@ export const adminAPI = {
     );
   },
 
+  // Update restaurant location
+  updateRestaurantLocation: (id, location) => {
+    return apiClient.put(`/admin/restaurants/${id}/location`, { location });
+  },
+
   // Update restaurant dining settings
   updateRestaurantDiningSettings: (id, diningSettings) => {
     return apiClient.put(`/admin/restaurants/${id}/dining-settings`, {
@@ -1201,6 +1206,12 @@ export const adminAPI = {
   // Create coupon offer from admin
   createAdminOffer: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.OFFERS, data);
+  },
+  updateAdminOfferCartVisibility: (offerId, itemId, showInCart) => {
+    return apiClient.patch(
+      `/admin/offers/${encodeURIComponent(offerId)}/items/${encodeURIComponent(itemId)}/cart-visibility`,
+      { showInCart },
+    );
   },
 
   // Restaurant Commission Management

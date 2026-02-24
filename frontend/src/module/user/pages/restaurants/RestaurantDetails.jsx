@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { restaurantAPI, diningAPI } from "@/lib/api"
+import { restaurantAPI, diningAPI, orderAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -460,6 +460,82 @@ export default function RestaurantDetails() {
           }
 
           if (restaurantIdForMenu) {
+            let hasPreviousOrderForRestaurant = false
+            if (isModuleAuthenticated('user')) {
+              try {
+                const normalize = (value) => (value ? String(value).trim().toLowerCase() : "")
+                const targetRestaurantName = normalize(transformedRestaurant.name)
+                const targetRestaurantIds = new Set(
+                  [
+                    restaurantIdForMenu,
+                    transformedRestaurant.id,
+                    transformedRestaurant.restaurantId,
+                    apiRestaurant?.restaurantId,
+                    apiRestaurant?._id,
+                    actualRestaurant?.restaurantId,
+                    actualRestaurant?._id,
+                  ].map(normalize).filter(Boolean)
+                )
+
+                const FETCH_LIMIT = 100
+                const firstResponse = await orderAPI.getOrders({ limit: FETCH_LIMIT, page: 1 })
+                let allOrders = []
+                let totalPages = 1
+
+                if (firstResponse?.data?.success && firstResponse?.data?.data?.orders) {
+                  allOrders = firstResponse.data.data.orders || []
+                  totalPages = firstResponse.data.data?.pagination?.pages || 1
+                } else if (firstResponse?.data?.orders) {
+                  allOrders = firstResponse.data.orders || []
+                  totalPages = firstResponse.data?.pagination?.pages || 1
+                } else if (Array.isArray(firstResponse?.data?.data)) {
+                  allOrders = firstResponse.data.data || []
+                }
+
+                if (totalPages > 1) {
+                  const pagePromises = []
+                  for (let p = 2; p <= totalPages; p += 1) {
+                    pagePromises.push(orderAPI.getOrders({ limit: FETCH_LIMIT, page: p }))
+                  }
+
+                  const pageResponses = await Promise.all(pagePromises)
+                  const remainingOrders = pageResponses.flatMap((resp) => {
+                    if (resp?.data?.success && resp?.data?.data?.orders) return resp.data.data.orders || []
+                    if (resp?.data?.orders) return resp.data.orders || []
+                    if (Array.isArray(resp?.data?.data)) return resp.data.data || []
+                    return []
+                  })
+                  allOrders = [...allOrders, ...remainingOrders]
+                }
+
+                hasPreviousOrderForRestaurant = allOrders.some((order) => {
+                  const orderRestaurantField = order?.restaurantId
+                  const candidateIds = [
+                    order?.restaurantId,
+                    orderRestaurantField?._id,
+                    orderRestaurantField?.id,
+                    orderRestaurantField?.restaurantId,
+                    order?.restaurant,
+                    order?.restaurant_id,
+                  ].map(normalize).filter(Boolean)
+
+                  if (candidateIds.some((id) => targetRestaurantIds.has(id))) {
+                    return true
+                  }
+
+                  const candidateNames = [
+                    order?.restaurantName,
+                    orderRestaurantField?.name,
+                    order?.restaurant?.name,
+                  ].map(normalize).filter(Boolean)
+
+                  return !!targetRestaurantName && candidateNames.includes(targetRestaurantName)
+                })
+              } catch (orderCheckError) {
+                console.warn("Could not verify previous orders for recommendation section:", orderCheckError)
+              }
+            }
+
             try {
               console.log('📋 Fetching menu for restaurant ID:', restaurantIdForMenu)
               const menuResponse = await restaurantAPI.getMenuByRestaurantId(restaurantIdForMenu)
@@ -513,8 +589,9 @@ export default function RestaurantDetails() {
                   })) || []
                 })))
 
-                // Always create recommended section (even if empty) - will show "No dish Yet" if empty
-                const finalMenuSections = [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...menuSections]
+                const finalMenuSections = hasPreviousOrderForRestaurant
+                  ? [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...menuSections]
+                  : menuSections
 
                 setRestaurant(prev => ({
                   ...prev,
@@ -883,12 +960,17 @@ export default function RestaurantDetails() {
     }
   }
 
+  const isRecommendedSection = (section) => {
+    const sectionName = section?.name || section?.title || ""
+    return typeof sectionName === "string" && sectionName.trim().toLowerCase() === "recommended for you"
+  }
+
   // Menu categories - dynamically generated from restaurant menu sections
   const menuCategories = (restaurant?.menuSections && Array.isArray(restaurant.menuSections))
     ? restaurant.menuSections.map((section, index) => {
       // Handle section name - check for valid non-empty string
       let sectionTitle = "Unnamed Section"
-      if (index === 0) {
+      if (isRecommendedSection(section)) {
         sectionTitle = "Recommended for you"
       } else if (section?.name && typeof section.name === 'string' && section.name.trim()) {
         sectionTitle = section.name.trim()
@@ -1491,8 +1573,9 @@ export default function RestaurantDetails() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 md:py-10 lg:py-12 space-y-6 md:space-y-8 lg:space-y-10">
             {getFilteredSections().map(({ section, originalIndex }, sectionIndex) => {
               // Handle section name - check for valid non-empty string
+              const isRecommended = isRecommendedSection(section)
               let sectionTitle = "Unnamed Section"
-              if (originalIndex === 0) {
+              if (isRecommended) {
                 sectionTitle = "Recommended for you"
               } else if (section?.name && typeof section.name === 'string' && section.name.trim()) {
                 sectionTitle = section.name.trim()
@@ -1506,7 +1589,7 @@ export default function RestaurantDetails() {
               return (
                 <div key={sectionIndex} id={sectionId} className="space-y-1 scroll-mt-20">
                   {/* Section Header */}
-                  {sectionIndex === 0 && (
+                  {isRecommended && (
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                         Recommended for you
@@ -1573,7 +1656,7 @@ export default function RestaurantDetails() {
                   )}
 
                   {/* Direct Items */}
-                  {isExpanded && originalIndex === 0 && section.items && section.items.length === 0 && (
+                  {isExpanded && isRecommended && section.items && section.items.length === 0 && (
                     <div className="text-center py-8">
                       <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">
                         No dish recommended

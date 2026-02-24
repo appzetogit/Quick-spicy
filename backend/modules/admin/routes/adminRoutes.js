@@ -20,6 +20,7 @@ import {
   getRestaurants,
   getRestaurantMenuByIdAdmin,
   createRestaurant,
+  updateRestaurantLocation,
   updateRestaurantStatus,
   getRestaurantJoinRequests,
   approveRestaurant,
@@ -29,6 +30,7 @@ import {
   updateRestaurantDiningSettings,
   getAllOffers,
   createAdminOffer,
+  updateOfferCartVisibility,
   getRestaurantAnalytics,
   getCustomerWalletReport,
 } from "../controllers/adminController.js";
@@ -293,6 +295,7 @@ router.get("/restaurant-analytics/:restaurantId", getRestaurantAnalytics);
 router.post("/restaurants/:id/approve", approveRestaurant);
 router.post("/restaurants/:id/reject", rejectRestaurant);
 router.post("/restaurants/:id/reverify", reverifyRestaurant);
+router.put("/restaurants/:id/location", updateRestaurantLocation);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
 router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
 router.delete("/restaurants/:id", deleteRestaurant);
@@ -405,6 +408,7 @@ router.post("/food-approvals/:id/reject", rejectFoodItem);
 // Offers Management
 router.get("/offers", getAllOffers);
 router.post("/offers", createAdminOffer);
+router.patch("/offers/:offerId/items/:itemId/cart-visibility", updateOfferCartVisibility);
 
 // Zone Management
 router.use("/zones", zoneRoutes);

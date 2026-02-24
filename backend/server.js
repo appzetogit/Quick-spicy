@@ -9,6 +9,10 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
 import mongoose from 'mongoose';
+import {
+  pruneStaleActiveOrders,
+  markOfflineStaleDeliveryBoys
+} from './modules/delivery/services/firebaseRealtimeTrackingService.js';
 
 // Load environment variables
 dotenv.config();
@@ -16,6 +20,7 @@ dotenv.config();
 // Import configurations
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
+import { initializeFirebaseRealtime } from './config/firebaseRealtime.js';
 
 // Import middleware
 import { errorHandler } from './shared/middleware/errorHandler.js';
@@ -299,17 +304,24 @@ app.set('io', io);
 // Connect to databases
 import { initializeCloudinary } from './config/cloudinary.js';
 
-// Connect to databases
-connectDB().then(() => {
-  // Initialize Cloudinary after DB connection
-  initializeCloudinary().catch(err => console.error('Failed to initialize Cloudinary:', err));
-});
+async function initializeServices() {
+  await connectDB();
 
-// Redis connection is optional - only connects if REDIS_ENABLED=true
-connectRedis().catch(() => {
-  // Silently handle Redis connection failures
-  // The app works without Redis
-});
+  // Initialize Cloudinary after DB connection
+  await initializeCloudinary().catch(err => console.error('Failed to initialize Cloudinary:', err));
+
+  // Initialize Firebase Realtime before routes/sockets start accepting traffic
+  const firebaseDb = await initializeFirebaseRealtime();
+  if (!firebaseDb) {
+    console.warn('⚠️ Firebase Realtime Database not available');
+  }
+
+  // Redis connection is optional - only connects if REDIS_ENABLED=true
+  await connectRedis().catch(() => {
+    // Silently handle Redis connection failures
+    // The app works without Redis
+  });
+}
 
 // Security middleware
 app.use(helmet());
@@ -631,18 +643,42 @@ io.on('connection', (socket) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
-httpServer.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+async function startServer() {
+  await initializeServices();
 
-  // Initialize scheduled tasks after DB connection is established
-  // Wait a bit for DB to connect, then start cron jobs
-  setTimeout(() => {
-    initializeScheduledTasks();
-  }, 5000);
+  httpServer.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+
+    // Initialize scheduled tasks after startup
+    setTimeout(() => {
+      initializeScheduledTasks();
+    }, 5000);
+  });
+}
+
+startServer().catch((error) => {
+  console.error('❌ Server startup failed:', error);
+  process.exit(1);
 });
 
 // Initialize scheduled tasks
 function initializeScheduledTasks() {
+  // Realtime DB hygiene: remove stale active orders and mark stale online partners offline.
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const [pruneResult, offlineResult] = await Promise.all([
+        pruneStaleActiveOrders({ staleMinutes: 180, maxRemovals: 1000 }),
+        markOfflineStaleDeliveryBoys({ staleMinutes: 20 })
+      ]);
+      if ((pruneResult?.removed || 0) > 0 || (offlineResult?.markedOffline || 0) > 0) {
+        console.log(`[Realtime Cleanup Cron] removed orders=${pruneResult?.removed || 0}, marked offline=${offlineResult?.markedOffline || 0}`);
+      }
+    } catch (error) {
+      console.error('[Realtime Cleanup Cron] Error:', error);
+    }
+  });
+  console.log('✅ Realtime tracking cleanup scheduler initialized (runs every 10 minutes)');
+
   // Import menu schedule service
   import('./modules/restaurant/services/menuScheduleService.js').then(({ processScheduledAvailability }) => {
     // Run every minute to check for due schedules

@@ -24,6 +24,57 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   return R * c; // Distance in kilometers
 }
 
+function isPointInsideZone(lat, lng, coordinates = []) {
+  if (!Array.isArray(coordinates) || coordinates.length < 3) return false;
+
+  let inside = false;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+    const pointI = coordinates[i] || {};
+    const pointJ = coordinates[j] || {};
+    const yi = Number(pointI.latitude);
+    const xi = Number(pointI.longitude);
+    const yj = Number(pointJ.latitude);
+    const xj = Number(pointJ.longitude);
+
+    if (
+      Number.isNaN(yi) ||
+      Number.isNaN(xi) ||
+      Number.isNaN(yj) ||
+      Number.isNaN(xj)
+    ) {
+      continue;
+    }
+
+    const intersects = ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+}
+
+async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng) {
+  // First try direct restaurantId mapping
+  if (restaurantId) {
+    const restaurantIdObj = restaurantId.toString ? restaurantId.toString() : restaurantId;
+    const mappedZone = await Zone.findOne({
+      restaurantId: restaurantIdObj,
+      isActive: true
+    }).lean();
+    if (mappedZone) return mappedZone;
+  }
+
+  // Fallback to location-based zone lookup
+  const activeZones = await Zone.find({ isActive: true }).lean();
+  for (const zone of activeZones) {
+    if (isPointInsideZone(restaurantLat, restaurantLng, zone?.coordinates)) {
+      return zone;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Find all nearest available delivery boys within priority distance (for priority notification)
  * @param {number} restaurantLat - Restaurant latitude
@@ -48,20 +99,17 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
       }
     };
 
-    if (restaurantId) {
-      try {
-        const restaurantIdObj = restaurantId.toString ? restaurantId.toString() : restaurantId;
-        zone = await Zone.findOne({
-          restaurantId: restaurantIdObj,
-          isActive: true
-        }).lean();
-
-        if (zone) {
-          console.log(`✅ Found zone: ${zone.name} for restaurant ${restaurantId}`);
-        }
-      } catch (zoneError) {
-        console.warn(`⚠️ Error finding zone:`, zoneError.message);
+    try {
+      zone = await resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng);
+      if (zone) {
+        console.log(`✅ Found zone: ${zone.name || zone.zoneName} for restaurant ${restaurantId || 'location'}`);
+      } else {
+        console.warn(`⚠️ No active zone found for restaurant location; skipping delivery notification`);
+        return [];
       }
+    } catch (zoneError) {
+      console.warn(`⚠️ Error finding zone:`, zoneError.message);
+      return [];
     }
 
     const deliveryPartners = await Delivery.find(deliveryQuery)
@@ -162,36 +210,17 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
       }
     };
 
-    if (restaurantId) {
-      try {
-        // Try to find zone by restaurantId
-        const restaurantIdObj = restaurantId.toString ? restaurantId.toString() : restaurantId;
-        zone = await Zone.findOne({
-          restaurantId: restaurantIdObj,
-          isActive: true
-        }).lean();
-
-        if (zone) {
-          console.log(`✅ Found zone: ${zone.name} for restaurant ${restaurantId}`);
-          
-          // Option A: Filter by zoneId if Delivery model has zoneId field
-          // Uncomment when zoneId is added to Delivery model
-          // deliveryQuery.zoneId = zone._id;
-
-          // Option B: Filter by geo-spatial query (if zone has boundary)
-          // This is more complex and slower, but works without modifying Delivery model
-          if (zone.boundary && zone.boundary.coordinates) {
-            // For now, we'll use distance-based with zone coordinate check
-            // In production, you can use $geoWithin for better accuracy
-            console.log(`📍 Zone boundary found, will filter by location after distance calculation`);
-          }
-        } else {
-          console.log(`⚠️ No zone found for restaurant ${restaurantId}, using distance-based assignment`);
-        }
-      } catch (zoneError) {
-        console.warn(`⚠️ Error finding zone for restaurant ${restaurantId}:`, zoneError.message);
-        // Continue with distance-based assignment
+    try {
+      zone = await resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng);
+      if (zone) {
+        console.log(`✅ Found zone: ${zone.name || zone.zoneName} for restaurant ${restaurantId || 'location'}`);
+      } else {
+        console.warn(`⚠️ No active zone found for restaurant location; skipping delivery assignment`);
+        return null;
       }
+    } catch (zoneError) {
+      console.warn(`⚠️ Error finding zone for restaurant ${restaurantId}:`, zoneError.message);
+      return null;
     }
 
     // Exclude already notified delivery partners

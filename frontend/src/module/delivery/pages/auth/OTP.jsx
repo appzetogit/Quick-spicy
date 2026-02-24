@@ -179,6 +179,8 @@ export default function DeliveryOTP() {
 
     try {
       const phone = authData?.phone
+      const purpose = authData?.purpose || "login"
+      const providedName = authData?.isSignUp ? authData?.name || null : null
       if (!phone) {
         setError("Phone number not found. Please try again.")
         setIsLoading(false)
@@ -186,7 +188,7 @@ export default function DeliveryOTP() {
       }
 
       // First attempt: verify OTP for login
-      const response = await deliveryAPI.verifyOTP(phone, code, "login")
+      const response = await deliveryAPI.verifyOTP(phone, code, purpose, providedName)
       const data = response?.data?.data || {}
 
       // Check if user needs to complete signup
@@ -309,13 +311,14 @@ export default function DeliveryOTP() {
 
     try {
       const phone = authData?.phone
+      const purpose = authData?.purpose || "login"
       if (!phone) {
         setError("Phone number not found. Please try again.")
         return
       }
 
       // Second call with name to auto-register and login
-      const response = await deliveryAPI.verifyOTP(phone, verifiedOtp, "login", trimmedName)
+      const response = await deliveryAPI.verifyOTP(phone, verifiedOtp, purpose, trimmedName)
       const data = response?.data?.data || {}
 
       const accessToken = data.accessToken
@@ -395,13 +398,14 @@ export default function DeliveryOTP() {
 
     try {
       const phone = authData?.phone
+      const purpose = authData?.purpose || "login"
       if (!phone) {
         setError("Phone number not found. Please go back and try again.")
         return
       }
 
       // Call backend to resend OTP
-      await deliveryAPI.sendOTP(phone, "login")
+      await deliveryAPI.sendOTP(phone, purpose)
     } catch (err) {
       const message =
         err?.response?.data?.message ||

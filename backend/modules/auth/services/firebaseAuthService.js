@@ -40,6 +40,34 @@ class FirebaseAuthService {
       let clientEmail = dbCredentials.clientEmail || process.env.FIREBASE_CLIENT_EMAIL;
       let privateKey = dbCredentials.privateKey || process.env.FIREBASE_PRIVATE_KEY;
 
+      const isServiceEmail = (email) => String(email || '').includes('.iam.gserviceaccount.com');
+      const normalizePrivateKey = (key) => {
+        let normalized = String(key || '').trim();
+        if (
+          (normalized.startsWith('"') && normalized.endsWith('"')) ||
+          (normalized.startsWith("'") && normalized.endsWith("'"))
+        ) {
+          normalized = normalized.slice(1, -1).trim();
+        }
+        return normalized
+          .replace(/\\r\\n/g, "\n")
+          .replace(/\\n/g, "\n")
+          .replace(/\r\n/g, "\n");
+      };
+      const isPemKey = (key) => normalizePrivateKey(key).includes('-----BEGIN PRIVATE KEY-----');
+
+      const dbCredsValid = Boolean(
+        dbCredentials.projectId &&
+        isServiceEmail(dbCredentials.clientEmail) &&
+        isPemKey(dbCredentials.privateKey)
+      );
+
+      if (!dbCredsValid) {
+        projectId = process.env.FIREBASE_PROJECT_ID || projectId;
+        clientEmail = process.env.FIREBASE_CLIENT_EMAIL || clientEmail;
+        privateKey = process.env.FIREBASE_PRIVATE_KEY || privateKey;
+      }
+
       // Fallback: read from firebaseconfig.json in backend root or config folder if env vars are not set
       if (!projectId || !clientEmail || !privateKey) {
         try {
@@ -77,10 +105,8 @@ class FirebaseAuthService {
         return;
       }
 
-      // Handle escaped newlines in private key
-      if (privateKey.includes("\\n")) {
-        privateKey = privateKey.replace(/\\n/g, "\n");
-      }
+      // Normalize private key from .env / DB values.
+      privateKey = normalizePrivateKey(privateKey);
 
       try {
         admin.initializeApp({

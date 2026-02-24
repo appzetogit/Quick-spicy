@@ -2,6 +2,7 @@ import WithdrawalRequest from "../models/WithdrawalRequest.js";
 import RestaurantWallet from "../models/RestaurantWallet.js";
 import Restaurant from "../models/Restaurant.js";
 import Order from "../../order/models/Order.js";
+import RestaurantCommission from "../../admin/models/RestaurantCommission.js";
 import {
   successResponse,
   errorResponse,
@@ -90,11 +91,24 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
       .select("pricing")
       .lean();
 
-    // Keep this in sync with finance page default commission fallback.
+    // Use configured restaurant commission rules (same source as settlement/finance),
+    // fallback to 10% only when no commission setup exists.
+    const restaurantCommission = await RestaurantCommission.findOne({
+      restaurant: restaurant._id,
+      status: true,
+    });
+
     const cyclePayout = deliveredOrders.reduce((sum, order) => {
-      const foodPrice = (order.pricing?.subtotal || 0) - (order.pricing?.discount || 0);
-      const defaultCommission = (foodPrice * 10) / 100;
-      return sum + Math.max(0, foodPrice - defaultCommission);
+      const foodPrice =
+        (order.pricing?.subtotal || 0) - (order.pricing?.discount || 0);
+
+      let commissionAmount = (foodPrice * 10) / 100;
+      if (restaurantCommission) {
+        const commissionResult = restaurantCommission.calculateCommission(foodPrice);
+        commissionAmount = commissionResult?.commission || 0;
+      }
+
+      return sum + Math.max(0, foodPrice - commissionAmount);
     }, 0);
 
     const existingWithdrawals = await WithdrawalRequest.find({

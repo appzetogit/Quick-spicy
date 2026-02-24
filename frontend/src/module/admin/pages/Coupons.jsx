@@ -12,6 +12,7 @@ export default function Coupons() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState("")
   const [submitSuccess, setSubmitSuccess] = useState("")
+  const [updatingCartVisibility, setUpdatingCartVisibility] = useState({})
   const [formData, setFormData] = useState({
     couponCode: "",
     discountType: "percentage",
@@ -123,6 +124,26 @@ export default function Coupons() {
       setSubmitError(err?.response?.data?.message || "Failed to create coupon")
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleShowInCart = async (offerId, itemId, currentValue) => {
+    const key = `${offerId}-${itemId}`
+    try {
+      setUpdatingCartVisibility((prev) => ({ ...prev, [key]: true }))
+      const nextValue = !currentValue
+      await adminAPI.updateAdminOfferCartVisibility(offerId, itemId, nextValue)
+      setOffers((prev) =>
+        prev.map((offer) =>
+          offer.offerId === offerId && offer.dishId === itemId
+            ? { ...offer, showInCart: nextValue }
+            : offer,
+        ),
+      )
+    } catch (err) {
+      console.error("Error updating cart visibility:", err)
+    } finally {
+      setUpdatingCartVisibility((prev) => ({ ...prev, [key]: false }))
     }
   }
 
@@ -331,6 +352,7 @@ export default function Coupons() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Discount</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Price</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Show In Cart</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Valid Until</th>
                   </tr>
                 </thead>
@@ -383,6 +405,22 @@ export default function Coupons() {
                         }`}>
                           {offer.status || 'Inactive'}
                         </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleShowInCart(offer.offerId, offer.dishId, offer.showInCart !== false)}
+                          disabled={!!updatingCartVisibility[`${offer.offerId}-${offer.dishId}`]}
+                          className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors ${
+                            offer.showInCart !== false ? "bg-green-600" : "bg-slate-300"
+                          } disabled:opacity-60`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              offer.showInCart !== false ? "translate-x-7" : "translate-x-1"
+                            }`}
+                          />
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">

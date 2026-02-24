@@ -904,6 +904,20 @@ export default function PageNavbar({
 
   const mainLocationName = locationDisplay.main
   const subLocationName = locationDisplay.sub
+  const savedAddressLabel = (() => {
+    if (location?.label && String(location.label).trim()) {
+      return String(location.label).trim()
+    }
+    try {
+      const stored = localStorage.getItem("userLocation")
+      if (!stored) return ""
+      const parsed = JSON.parse(stored)
+      return parsed?.label && String(parsed.label).trim() ? String(parsed.label).trim() : ""
+    } catch {
+      return ""
+    }
+  })()
+  const locationSubText = savedAddressLabel ? `Delivering to ${savedAddressLabel}` : subLocationName
 
   const handleLocationClick = () => {
     // Open location selector overlay
@@ -964,9 +978,9 @@ export default function PageNavbar({
                   </span>
                   <ChevronDown className={`h-3 w-3 sm:h-4 sm:w-4 ${textColorClass} flex-shrink-0`} strokeWidth={2.5} />
                 </div>
-                {subLocationName && (
+                {locationSubText && (
                   <span className={`text-[10px] sm:text-xs font-medium ${textColorClass}/80 truncate max-w-[140px] sm:max-w-[200px] text-center`}>
-                    {subLocationName}
+                    {locationSubText}
                   </span>
                 )}
               </div>

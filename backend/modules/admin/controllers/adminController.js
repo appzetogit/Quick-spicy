@@ -1296,6 +1296,139 @@ export const updateRestaurantStatus = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Update Restaurant Location
+ * PUT /api/admin/restaurants/:id/location
+ */
+export const updateRestaurantLocation = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { location } = req.body;
+
+    if (!location || typeof location !== "object") {
+      return errorResponse(res, 400, "Location object is required");
+    }
+
+    const parseCoordinate = (value) => {
+      if (value === null || value === undefined || value === "") return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    let latitude = parseCoordinate(
+      location.latitude ?? location.lat ?? location?.geometry?.location?.lat,
+    );
+    let longitude = parseCoordinate(
+      location.longitude ?? location.lng ?? location?.geometry?.location?.lng,
+    );
+
+    if ((latitude === null || longitude === null) && Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+      longitude = parseCoordinate(location.coordinates[0]);
+      latitude = parseCoordinate(location.coordinates[1]);
+    }
+
+    if (latitude === null || longitude === null) {
+      return errorResponse(
+        res,
+        400,
+        "Valid latitude and longitude are required",
+      );
+    }
+
+    if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      return errorResponse(res, 400, "Invalid latitude or longitude range");
+    }
+
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    const existingLocation = restaurant.location || {};
+    const formattedAddress =
+      location.formattedAddress ||
+      location.address ||
+      existingLocation.formattedAddress ||
+      existingLocation.address ||
+      "";
+
+    const nextLocation = {
+      ...existingLocation.toObject?.(),
+      ...location,
+      latitude,
+      longitude,
+      coordinates: [longitude, latitude],
+      formattedAddress,
+      address: location.address || formattedAddress,
+      addressLine1:
+        location.addressLine1 ||
+        existingLocation.addressLine1 ||
+        formattedAddress,
+      addressLine2: location.addressLine2 || existingLocation.addressLine2 || "",
+      area: location.area || existingLocation.area || "",
+      city: location.city || existingLocation.city || "",
+      state: location.state || existingLocation.state || "",
+      landmark: location.landmark || existingLocation.landmark || "",
+      zipCode:
+        location.zipCode ||
+        location.pincode ||
+        location.postalCode ||
+        existingLocation.zipCode ||
+        existingLocation.pincode ||
+        existingLocation.postalCode ||
+        "",
+      pincode:
+        location.pincode ||
+        location.zipCode ||
+        location.postalCode ||
+        existingLocation.pincode ||
+        existingLocation.zipCode ||
+        existingLocation.postalCode ||
+        "",
+      postalCode:
+        location.postalCode ||
+        location.pincode ||
+        location.zipCode ||
+        existingLocation.postalCode ||
+        existingLocation.pincode ||
+        existingLocation.zipCode ||
+        "",
+      street: location.street || existingLocation.street || "",
+    };
+
+    restaurant.location = nextLocation;
+
+    // Keep onboarding location in sync so all modules display the same source.
+    if (!restaurant.onboarding) restaurant.onboarding = {};
+    if (!restaurant.onboarding.step1) restaurant.onboarding.step1 = {};
+    restaurant.onboarding.step1.location = {
+      ...(restaurant.onboarding.step1.location?.toObject?.() || {}),
+      ...nextLocation,
+    };
+
+    await restaurant.save();
+
+    logger.info(`Restaurant location updated: ${id}`, {
+      updatedBy: req.user._id,
+      latitude,
+      longitude,
+    });
+
+    return successResponse(res, 200, "Restaurant location updated successfully", {
+      restaurant: {
+        id: restaurant._id.toString(),
+        name: restaurant.name,
+        location: restaurant.location,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error updating restaurant location: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to update restaurant location");
+  }
+});
+
+/**
  * Get Restaurant Join Requests
  * GET /api/admin/restaurants/requests
  * Query params: status (pending, rejected), page, limit, search
@@ -2288,6 +2421,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             discountPercentage: item.discountPercentage || 0,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
+            showInCart: item.showInCart !== false,
             status: offer.status || "active",
             startDate: offer.startDate || null,
             endDate: offer.endDate || null,
@@ -2446,6 +2580,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
             couponCode: normalizedCode,
             image: "",
             isVeg: false,
+            showInCart: true,
           },
         ],
       });
@@ -2468,6 +2603,52 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       error: error.stack,
     });
     return errorResponse(res, 500, "Failed to create coupon");
+  }
+});
+
+/**
+ * PATCH /api/admin/offers/:offerId/items/:itemId/cart-visibility
+ */
+export const updateOfferCartVisibility = asyncHandler(async (req, res) => {
+  try {
+    const { offerId, itemId } = req.params;
+    const { showInCart } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(offerId)) {
+      return errorResponse(res, 400, "Invalid offerId");
+    }
+
+    const offer = await Offer.findById(offerId);
+    if (!offer) {
+      return errorResponse(res, 404, "Offer not found");
+    }
+
+    const itemIndex = offer.items.findIndex(
+      (item) => item?.itemId?.toString() === itemId,
+    );
+
+    if (itemIndex === -1) {
+      return errorResponse(res, 404, "Offer item not found");
+    }
+
+    const nextValue =
+      typeof showInCart === "boolean"
+        ? showInCart
+        : offer.items[itemIndex].showInCart === false;
+
+    offer.items[itemIndex].showInCart = nextValue;
+    await offer.save();
+
+    return successResponse(res, 200, "Cart visibility updated successfully", {
+      offerId: offer._id.toString(),
+      itemId,
+      showInCart: offer.items[itemIndex].showInCart !== false,
+    });
+  } catch (error) {
+    logger.error(`Error updating offer cart visibility: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to update cart visibility");
   }
 });
 

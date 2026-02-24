@@ -27,6 +27,61 @@ const logger = winston.createLogger({
 });
 
 /**
+ * Point-in-polygon check for zone coordinates
+ * @param {number} lat
+ * @param {number} lng
+ * @param {Array<{latitude:number,longitude:number}>} coordinates
+ * @returns {boolean}
+ */
+const isPointInsideZone = (lat, lng, coordinates = []) => {
+  if (!Array.isArray(coordinates) || coordinates.length < 3) return false;
+
+  let inside = false;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+    const pointI = coordinates[i] || {};
+    const pointJ = coordinates[j] || {};
+
+    const yi = Number(pointI.latitude);
+    const xi = Number(pointI.longitude);
+    const yj = Number(pointJ.latitude);
+    const xj = Number(pointJ.longitude);
+
+    if (
+      Number.isNaN(yi) ||
+      Number.isNaN(xi) ||
+      Number.isNaN(yj) ||
+      Number.isNaN(xj)
+    ) {
+      continue;
+    }
+
+    const intersects = ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+};
+
+/**
+ * Find active zone containing a point
+ * @param {Array} activeZones
+ * @param {number} lat
+ * @param {number} lng
+ * @returns {Object|null}
+ */
+const findActiveZoneForPoint = (activeZones, lat, lng) => {
+  if (!Array.isArray(activeZones)) return null;
+  for (const zone of activeZones) {
+    if (isPointInsideZone(lat, lng, zone?.coordinates)) {
+      return zone;
+    }
+  }
+  return null;
+};
+
+/**
  * Create a new order and initiate Razorpay payment
  */
 export const createOrder = async (req, res) => {
@@ -186,43 +241,8 @@ export const createOrder = async (req, res) => {
 
     // Check if restaurant is within any active zone
     const activeZones = await Zone.find({ isActive: true }).lean();
-    let restaurantInZone = false;
-    let restaurantZone = null;
-
-    for (const zone of activeZones) {
-      if (!zone.coordinates || zone.coordinates.length < 3) continue;
-      
-      let isInZone = false;
-      if (typeof zone.containsPoint === 'function') {
-        isInZone = zone.containsPoint(restaurantLat, restaurantLng);
-      } else {
-        // Ray casting algorithm
-        let inside = false;
-        for (let i = 0, j = zone.coordinates.length - 1; i < zone.coordinates.length; j = i++) {
-          const coordI = zone.coordinates[i];
-          const coordJ = zone.coordinates[j];
-          const xi = typeof coordI === 'object' ? (coordI.latitude || coordI.lat) : null;
-          const yi = typeof coordI === 'object' ? (coordI.longitude || coordI.lng) : null;
-          const xj = typeof coordJ === 'object' ? (coordJ.latitude || coordJ.lat) : null;
-          const yj = typeof coordJ === 'object' ? (coordJ.longitude || coordJ.lng) : null;
-          
-          if (xi === null || yi === null || xj === null || yj === null) continue;
-          
-          const intersect = ((yi > restaurantLng) !== (yj > restaurantLng)) && 
-                           (restaurantLat < (xj - xi) * (restaurantLng - yi) / (yj - yi) + xi);
-          if (intersect) inside = !inside;
-        }
-        isInZone = inside;
-      }
-      
-      if (isInZone) {
-        restaurantInZone = true;
-        restaurantZone = zone;
-        break;
-      }
-    }
-
-    if (!restaurantInZone) {
+    const restaurantZone = findActiveZoneForPoint(activeZones, restaurantLat, restaurantLng);
+    if (!restaurantZone) {
       logger.warn('⚠️ Restaurant location is not within any active zone:', {
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
         restaurantName: restaurant.name,
@@ -242,32 +262,68 @@ export const createOrder = async (req, res) => {
       zoneName: restaurantZone?.name || restaurantZone?.zoneName
     });
 
-    // CRITICAL: Validate user's zone matches restaurant's zone (strict zone matching)
-    const { zoneId: userZoneId } = req.body; // User's zone ID from frontend
-    
-    if (userZoneId) {
-      const restaurantZoneId = restaurantZone._id.toString();
-      
-      if (restaurantZoneId !== userZoneId) {
-        logger.warn('⚠️ Zone mismatch - user and restaurant are in different zones:', {
-          userZoneId,
-          restaurantZoneId,
-          restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
-          restaurantName: restaurant.name
-        });
-        return res.status(403).json({
-          success: false,
-          message: 'This restaurant is not available in your zone. Please select a restaurant from your current delivery zone.'
-        });
-      }
-      
-      logger.info('✅ Zone match validated - user and restaurant are in the same zone:', {
-        zoneId: userZoneId,
-        restaurantId: restaurant._id?.toString() || restaurant.restaurantId
+    // CRITICAL: User must be in an active zone and it must match the restaurant zone
+    const addressLng = Number(address?.location?.coordinates?.[0]);
+    const addressLat = Number(address?.location?.coordinates?.[1]);
+    const hasValidAddressCoordinates = Number.isFinite(addressLat) &&
+      Number.isFinite(addressLng) &&
+      !(addressLat === 0 && addressLng === 0);
+
+    if (!hasValidAddressCoordinates) {
+      logger.warn('⚠️ Order blocked: invalid customer location coordinates', {
+        userId,
+        addressLocation: address?.location
       });
-    } else {
-      logger.warn('⚠️ User zoneId not provided in order request - zone validation skipped');
+      return res.status(400).json({
+        success: false,
+        message: 'Valid delivery location is required to place an order.'
+      });
     }
+
+    const userDetectedZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
+    if (!userDetectedZone) {
+      logger.warn('⚠️ Order blocked: customer is outside active service zones', {
+        userId,
+        addressLat,
+        addressLng
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'Your delivery address is outside our active service zones.'
+      });
+    }
+
+    const restaurantZoneId = restaurantZone._id.toString();
+    const userDetectedZoneId = userDetectedZone._id.toString();
+    if (restaurantZoneId !== userDetectedZoneId) {
+      logger.warn('⚠️ Zone mismatch - customer and restaurant are in different zones:', {
+        userId,
+        userDetectedZoneId,
+        restaurantZoneId,
+        restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+        restaurantName: restaurant.name
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'This restaurant is not available in your current delivery zone.'
+      });
+    }
+
+    // Optional cross-check if frontend sends zoneId
+    if (req.body?.zoneId && req.body.zoneId !== userDetectedZoneId) {
+      logger.warn('⚠️ Frontend zoneId differs from detected customer zoneId', {
+        providedZoneId: req.body.zoneId,
+        detectedZoneId: userDetectedZoneId,
+        userId
+      });
+    }
+
+    logger.info('✅ Customer zone validated and matched with restaurant zone:', {
+      zoneId: userDetectedZoneId,
+      zoneName: userDetectedZone?.name || userDetectedZone?.zoneName,
+      userId,
+      restaurantId: restaurant._id?.toString() || restaurant.restaurantId
+    });
 
     assignedRestaurantId = restaurant._id?.toString() || restaurant.restaurantId;
     assignedRestaurantName = restaurant.name;
@@ -311,6 +367,12 @@ export const createOrder = async (req, res) => {
       payment: {
         method: normalizedPaymentMethod,
         status: 'pending'
+      },
+      assignmentInfo: {
+        restaurantId: assignedRestaurantId,
+        zoneId: userDetectedZoneId,
+        zoneName: userDetectedZone?.name || userDetectedZone?.zoneName,
+        assignedBy: 'zone_match'
       }
     });
 

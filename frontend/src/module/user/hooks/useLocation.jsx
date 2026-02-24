@@ -1888,19 +1888,30 @@ export function useLocation() {
               !prevLocationCoordsRef.current.longitude ||
               Math.abs(prevLocationCoordsRef.current.latitude - loc.latitude) > coordThreshold ||
               Math.abs(prevLocationCoordsRef.current.longitude - loc.longitude) > coordThreshold
+            let persistedLocation = loc
+            try {
+              const storedRaw = localStorage.getItem("userLocation")
+              const storedLocation = storedRaw ? JSON.parse(storedRaw) : null
+              const savedLabel = loc?.label || storedLocation?.label
+              if (savedLabel && String(savedLabel).trim()) {
+                persistedLocation = { ...loc, label: String(savedLabel).trim() }
+              }
+            } catch {
+              persistedLocation = loc
+            }
 
             // Only update location state if coordinates changed significantly
             if (coordsChanged) {
               prevLocationCoordsRef.current = { latitude: loc.latitude, longitude: loc.longitude }
               console.log("💾 Updating live location:", loc)
-              localStorage.setItem("userLocation", JSON.stringify(loc))
-              setLocation(loc)
+              localStorage.setItem("userLocation", JSON.stringify(persistedLocation))
+              setLocation(persistedLocation)
               setPermissionGranted(true)
               setError(null)
             } else {
               // Coordinates haven't changed significantly, skip state update to prevent re-renders
               // Still update localStorage silently for persistence
-              localStorage.setItem("userLocation", JSON.stringify(loc))
+              localStorage.setItem("userLocation", JSON.stringify(persistedLocation))
             }
 
             // Debounce DB updates - only update every 5 seconds

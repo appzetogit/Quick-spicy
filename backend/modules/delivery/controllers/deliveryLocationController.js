@@ -5,6 +5,7 @@ import Zone from '../../admin/models/Zone.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
+import { syncDeliveryPartnerPresence } from '../services/firebaseRealtimeTrackingService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -94,6 +95,16 @@ export const updateLocation = asyncHandler(async (req, res) => {
     }
 
     const currentLocation = updatedDelivery.availability?.currentLocation;
+    const currentOrderId = updatedDelivery?.availability?.activeOrderId || null;
+
+    // Best-effort Firebase sync for online/offline + coordinates.
+    await syncDeliveryPartnerPresence({
+      deliveryId: updatedDelivery._id?.toString(),
+      lat: currentLocation?.coordinates?.[1],
+      lng: currentLocation?.coordinates?.[0],
+      isOnline: updatedDelivery.availability?.isOnline || false,
+      activeOrderId: currentOrderId
+    });
 
     return successResponse(res, 200, 'Status updated successfully', {
       location: currentLocation ? {

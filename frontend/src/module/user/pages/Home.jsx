@@ -547,14 +547,16 @@ export default function Home() {
       addFavorite: () => console.warn("ProfileProvider not available"),
       removeFavorite: () => console.warn("ProfileProvider not available"),
       isFavorite: () => false,
-      getFavorites: () => []
+      getFavorites: () => [],
+      getDefaultAddress: () => null
     }
   }
 
-  const { addFavorite, removeFavorite, isFavorite, getFavorites } = profileContext
+  const { addFavorite, removeFavorite, isFavorite, getFavorites, getDefaultAddress } = profileContext
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
   const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading } = useZone(location)
+  const shouldShowOutOfZoneHome = !zoneLoading && isOutOfService
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
@@ -567,6 +569,31 @@ export default function Home() {
 
   const cityName = location?.city || "Select"
   const stateName = location?.state || "Location"
+
+  const formatSavedAddress = useCallback((address) => {
+    if (!address) return ""
+
+    if (address.formattedAddress && address.formattedAddress !== "Select location") {
+      return address.formattedAddress
+    }
+
+    const parts = []
+    if (address.additionalDetails) parts.push(address.additionalDetails)
+    if (address.street) parts.push(address.street)
+    if (address.city) parts.push(address.city)
+    if (address.state) parts.push(address.state)
+    if (address.zipCode) parts.push(address.zipCode)
+
+    if (parts.length > 0) return parts.join(", ")
+    if (address.address && address.address !== "Select location") return address.address
+
+    return ""
+  }, [])
+
+  const savedAddressText = useMemo(() => {
+    const defaultAddress = getDefaultAddress?.()
+    return formatSavedAddress(defaultAddress)
+  }, [getDefaultAddress, formatSavedAddress])
 
   // Mock points value - replace with actual points from context/store
   const userPoints = 99
@@ -1069,7 +1096,19 @@ export default function Home() {
   )
 
   return (
-    <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-28 md:pb-24">
+    <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-16 md:pb-6">
+      {shouldShowOutOfZoneHome && (
+        <div className="fixed inset-0 z-[90] pointer-events-none">
+          <div className="absolute inset-0 bg-slate-300/35 backdrop-blur-[1px]" />
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 px-4">
+            <div className="rounded-xl border border-red-200 bg-red-50/95 text-red-700 px-4 py-2 shadow-sm text-sm sm:text-base font-semibold whitespace-nowrap">
+              You are out of zone
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className={shouldShowOutOfZoneHome ? "grayscale opacity-70 transition-all duration-300" : "transition-all duration-300"}>
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">
         {/* Main Background */}
@@ -1192,6 +1231,24 @@ export default function Home() {
         >
           <PageNavbar textColor="black" zIndex={50} />
         </motion.div>
+
+        <div className="px-3 sm:px-6 lg:px-8 pb-2 md:hidden">
+          <button
+            type="button"
+            onClick={handleLocationClick}
+            className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
+          >
+            <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                Saved Address
+              </p>
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                {savedAddressText || "No saved address. Tap to add one."}
+              </p>
+            </div>
+          </button>
+        </div>
 
         {/* Search Bar and VEG MODE Container - Sticky */}
         <motion.div
@@ -1690,7 +1747,7 @@ export default function Home() {
 
         {/* Restaurants - Enhanced with Animations */}
         <motion.section
-          className="space-y-0 pt-3 sm:pt-4 lg:pt-6 pb-20 md:pb-24"
+          className="space-y-0 pt-3 sm:pt-4 lg:pt-6 pb-8 md:pb-10"
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-100px" }}
@@ -2732,6 +2789,8 @@ export default function Home() {
         )}
       </AnimatePresence>
 
+
+      </div>
 
       {/* Loading Screen - Switching Off Veg Mode */}
       <AnimatePresence>

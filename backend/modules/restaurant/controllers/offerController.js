@@ -251,6 +251,9 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
       const isItemMatch = item.itemId === itemId;
       console.log(`[COUPONS]   Item ${idx}: itemId="${item.itemId}", searching for="${itemId}", match=${isItemMatch || isGlobalCoupon}`);
       if (isItemMatch || isGlobalCoupon) {
+        if (item.showInCart === false) {
+          return;
+        }
         const coupon = {
           couponCode: item.couponCode,
           discountPercentage: item.discountPercentage,
@@ -370,6 +373,9 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
         item.itemName === 'All Items';
       const isItemMatch = item.itemId === itemId;
       if (isItemMatch || isGlobalCoupon) {
+        if (item.showInCart === false) {
+          return;
+        }
         coupons.push({
           couponCode: item.couponCode,
           discountPercentage: item.discountPercentage,
