@@ -15,6 +15,22 @@ const logger = winston.createLogger({
   ]
 });
 
+const resolveFcmChannel = (channel, platform) => {
+  const normalizedChannel = String(channel || '').trim().toLowerCase();
+  if (normalizedChannel === 'web' || normalizedChannel === 'mobile') {
+    return normalizedChannel;
+  }
+
+  const normalizedPlatform = String(platform || '').trim().toLowerCase();
+  if (normalizedPlatform === 'web') {
+    return 'web';
+  }
+  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview'].includes(normalizedPlatform)) {
+    return 'mobile';
+  }
+  return 'web';
+};
+
 /**
  * Get user profile
  * GET /api/user/profile
@@ -44,7 +60,7 @@ export const getUserProfile = asyncHandler(async (req, res) => {
  */
 export const updateUserProfile = asyncHandler(async (req, res) => {
   try {
-    const { name, email, phone, dateOfBirth, anniversary, gender } = req.body;
+    const { name, email, phone, dateOfBirth, anniversary, gender, fcmToken, fcmPlatform, fcmChannel } = req.body;
 
     const user = await User.findById(req.user._id);
 
@@ -102,6 +118,18 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
       user.gender = gender || null;
     }
 
+    // Backward-compatible FCM token update through profile endpoint
+    if (fcmToken !== undefined && fcmToken !== null && String(fcmToken).trim() !== '') {
+      const token = String(fcmToken).trim();
+      const platform = ['web', 'android', 'ios', 'mobile'].includes(fcmPlatform) ? fcmPlatform : 'web';
+      const channel = resolveFcmChannel(fcmChannel, platform);
+      if (channel === 'mobile') {
+        user.fcmtokenmobile = token;
+      } else {
+        user.fcmtokenweb = token;
+      }
+    }
+
     // Save to database
     await user.save();
 
@@ -110,7 +138,7 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
     delete userResponse.password;
 
     logger.info(`User profile updated: ${user._id}`, {
-      updatedFields: { name, email, phone, dateOfBirth, anniversary, gender }
+      updatedFields: { name, email, phone, dateOfBirth, anniversary, gender, fcmToken: !!fcmToken }
     });
 
     return successResponse(res, 200, 'Profile updated successfully', {
@@ -119,6 +147,87 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   } catch (error) {
     logger.error(`Error updating user profile: ${error.message}`, { error: error.stack });
     return errorResponse(res, 500, 'Failed to update profile');
+  }
+});
+
+/**
+ * Register/update user FCM token
+ * POST /api/user/fcm-token
+ */
+export const registerUserFcmToken = asyncHandler(async (req, res) => {
+  try {
+    const { token, channel = 'web', platform = 'web' } = req.body || {};
+
+    if (!token || !String(token).trim()) {
+      return errorResponse(res, 400, 'FCM token is required');
+    }
+
+    const normalizedToken = String(token).trim();
+    const normalizedPlatform = ['web', 'android', 'ios', 'mobile'].includes(platform) ? platform : 'web';
+    const normalizedChannel = resolveFcmChannel(channel, normalizedPlatform);
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    if (normalizedChannel === 'mobile') {
+      user.fcmtokenmobile = normalizedToken;
+    } else {
+      user.fcmtokenweb = normalizedToken;
+    }
+    await user.save();
+
+    return successResponse(res, 200, 'FCM token saved successfully', {
+      fcmtokenweb: user.fcmtokenweb || null,
+      fcmtokenmobile: user.fcmtokenmobile || null,
+      channel: normalizedChannel,
+    });
+  } catch (error) {
+    logger.error(`Error saving user FCM token: ${error.message}`, { error: error.stack });
+    return errorResponse(res, 500, 'Failed to save FCM token');
+  }
+});
+
+/**
+ * Remove/deactivate user FCM token
+ * DELETE /api/user/fcm-token
+ */
+export const removeUserFcmToken = asyncHandler(async (req, res) => {
+  try {
+    const { token, channel = null, platform = null } = req.body || {};
+    const normalizedToken = token ? String(token).trim() : null;
+    const normalizedChannel = channel ? resolveFcmChannel(channel, platform) : null;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    if (normalizedToken) {
+      if (user.fcmtokenweb === normalizedToken) {
+        user.fcmtokenweb = null;
+      }
+      if (user.fcmtokenmobile === normalizedToken) {
+        user.fcmtokenmobile = null;
+      }
+    } else if (normalizedChannel) {
+      if (normalizedChannel === 'web') {
+        user.fcmtokenweb = null;
+      } else {
+        user.fcmtokenmobile = null;
+      }
+    } else {
+      user.fcmtokenweb = null;
+      user.fcmtokenmobile = null;
+    }
+
+    await user.save();
+
+    return successResponse(res, 200, 'FCM token removed successfully');
+  } catch (error) {
+    logger.error(`Error removing user FCM token: ${error.message}`, { error: error.stack });
+    return errorResponse(res, 500, 'Failed to remove FCM token');
   }
 });
 
@@ -515,4 +624,3 @@ export const deleteUserAddress = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to delete address');
   }
 });
-

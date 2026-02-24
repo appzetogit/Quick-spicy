@@ -104,6 +104,13 @@ const ensureReferralCodeForUser = async (user) => {
   return user;
 };
 
+const normalizeFcmPlatform = (platform = "web") => {
+  const raw = String(platform || "web").trim().toLowerCase();
+  if (raw === "web") return "web";
+  if (raw === "mobile" || raw === "android" || raw === "ios") return "mobile";
+  return "web";
+};
+
 /**
  * Send OTP for phone number or email
  * POST /api/auth/send-otp
@@ -623,26 +630,24 @@ export const login = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, "Email and password are required");
   }
 
-  // Find user by email and role (if role provided) to ensure correct module access
-  // If role not provided, find by email only (backward compatibility)
-  const findQuery = { email };
-  if (role) {
-    findQuery.role = role;
+  const allowedRoles = ["user", "restaurant", "delivery", "admin"];
+  const userRole = role || "user";
+  if (!allowedRoles.includes(userRole)) {
+    return errorResponse(
+      res,
+      400,
+      `Invalid role. Allowed roles: ${allowedRoles.join(", ")}`,
+    );
   }
+
+  // Always scope login by role so each module authenticates against its own account type.
+  const normalizedEmail = email.toLowerCase().trim();
+  const findQuery = { email: normalizedEmail, role: userRole };
 
   const user = await User.findOne(findQuery).select("+password");
 
   if (!user) {
     return errorResponse(res, 401, "Invalid email or password");
-  }
-
-  // If role was provided but doesn't match, return error
-  if (role && user.role !== role) {
-    return errorResponse(
-      res,
-      401,
-      `No ${role} account found with this email. Please check your credentials.`,
-    );
   }
 
   if (!user.isActive) {
@@ -687,8 +692,9 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   logger.info(`User logged in via email: ${user._id}`, {
-    email,
+    email: normalizedEmail,
     userId: user._id,
+    role: userRole,
   });
 
   return successResponse(res, 200, "Login successful", {
@@ -806,6 +812,100 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
       gender: req.user.gender,
     },
   });
+});
+
+/**
+ * Save/update FCM token for authenticated user (all roles in /auth module)
+ * POST /api/auth/fcm-token
+ */
+export const saveFcmToken = asyncHandler(async (req, res) => {
+  const { token, platform = "web" } = req.body || {};
+
+  if (!token || !String(token).trim()) {
+    return errorResponse(res, 400, "FCM token is required");
+  }
+
+  const normalizedToken = String(token).trim();
+  const normalizedPlatform = normalizeFcmPlatform(platform);
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return errorResponse(res, 404, "User not found");
+  }
+
+  if (normalizedPlatform === "mobile") {
+    user.fcmtokenmobile = normalizedToken;
+  } else {
+    user.fcmtokenweb = normalizedToken;
+  }
+
+  await user.save();
+
+  return successResponse(res, 200, "FCM token saved successfully", {
+    role: user.role,
+    platform: normalizedPlatform,
+    fcmtokenweb: user.fcmtokenweb || null,
+    fcmtokenmobile: user.fcmtokenmobile || null,
+  });
+});
+
+/**
+ * Remove FCM token for authenticated user
+ * DELETE /api/auth/fcm-token
+ */
+export const removeFcmToken = asyncHandler(async (req, res) => {
+  const { token = null, platform = null } = req.body || {};
+  const normalizedToken = token ? String(token).trim() : null;
+  const normalizedPlatform = platform ? normalizeFcmPlatform(platform) : null;
+
+  const user = await User.findById(req.user._id);
+  if (!user) {
+    return errorResponse(res, 404, "User not found");
+  }
+
+  if (normalizedToken) {
+    if (user.fcmtokenweb === normalizedToken) {
+      user.fcmtokenweb = null;
+    }
+    if (user.fcmtokenmobile === normalizedToken) {
+      user.fcmtokenmobile = null;
+    }
+  } else if (normalizedPlatform) {
+    if (normalizedPlatform === "web") {
+      user.fcmtokenweb = null;
+    } else {
+      user.fcmtokenmobile = null;
+    }
+  } else {
+    user.fcmtokenweb = null;
+    user.fcmtokenmobile = null;
+  }
+
+  await user.save();
+
+  return successResponse(res, 200, "FCM token removed successfully", {
+    role: user.role,
+    fcmtokenweb: user.fcmtokenweb || null,
+    fcmtokenmobile: user.fcmtokenmobile || null,
+  });
+});
+
+/**
+ * Save web-only FCM token
+ * POST /api/auth/fcm-token/web
+ */
+export const saveWebFcmToken = asyncHandler(async (req, res) => {
+  req.body = { ...(req.body || {}), platform: "web" };
+  return saveFcmToken(req, res);
+});
+
+/**
+ * Save mobile-only FCM token (Flutter APK route)
+ * POST /api/auth/fcm-token/mobile
+ */
+export const saveMobileFcmToken = asyncHandler(async (req, res) => {
+  req.body = { ...(req.body || {}), platform: "mobile" };
+  return saveFcmToken(req, res);
 });
 
 /**

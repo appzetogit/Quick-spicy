@@ -128,7 +128,19 @@ class OTPService {
         // Skip actual SMS sending for test phone numbers
         if (!isTestPhoneNumber(phone)) {
           // Use SMSIndia Hub for phone OTP
-          await smsIndiaHubService.sendOTP(phone, otp, purpose);
+          try {
+            await smsIndiaHubService.sendOTP(phone, otp, purpose);
+          } catch (smsError) {
+            // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
+            if (process.env.NODE_ENV !== 'production') {
+              logger.warn(`SMS send failed in non-production mode, continuing without SMS: ${smsError.message}`, {
+                phone,
+                purpose
+              });
+            } else {
+              throw smsError;
+            }
+          }
         } else {
           logger.info(`Skipping SMS for test phone number: ${phone}`, {
             phone,
@@ -304,4 +316,3 @@ class OTPService {
 }
 
 export default new OTPService();
-

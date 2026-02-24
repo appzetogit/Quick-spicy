@@ -8,7 +8,9 @@ import {
   getUserAddresses,
   addUserAddress,
   updateUserAddress,
-  deleteUserAddress
+  deleteUserAddress,
+  registerUserFcmToken,
+  removeUserFcmToken
 } from '../controllers/userController.js';
 import { authenticate } from '../../auth/middleware/auth.js';
 import { uploadMiddleware } from '../../../shared/utils/cloudinaryService.js';
@@ -41,6 +43,10 @@ router.post('/addresses', addUserAddress);
 router.put('/addresses/:id', updateUserAddress);
 router.delete('/addresses/:id', deleteUserAddress);
 
+// FCM token routes
+router.post('/fcm-token', registerUserFcmToken);
+router.delete('/fcm-token', removeUserFcmToken);
+
 // Wallet routes
 router.use('/wallet', userWalletRoutes);
 
@@ -48,4 +54,3 @@ router.use('/wallet', userWalletRoutes);
 router.use('/complaints', complaintRoutes);
 
 export default router;
-

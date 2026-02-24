@@ -112,9 +112,8 @@ export const authAPI = {
   },
 
   // Login with email/password
-  login: (email, password, role = null) => {
-    const payload = { email, password };
-    if (role) payload.role = role;
+  login: (email, password, role = "user") => {
+    const payload = { email, password, role };
     return apiClient.post(API_ENDPOINTS.AUTH.LOGIN, payload);
   },
 
@@ -125,6 +124,16 @@ export const authAPI = {
       role,
       ...(referralCode ? { referralCode: String(referralCode).trim().toUpperCase() } : {}),
     });
+  },
+
+  // Save FCM token for authenticated role (user/restaurant/delivery via /auth/login)
+  saveFcmToken: (token, platform = "web") => {
+    return apiClient.post("/auth/fcm-token", { token, platform });
+  },
+
+  // Remove FCM token
+  removeFcmToken: (payload = {}) => {
+    return apiClient.delete("/auth/fcm-token", { data: payload });
   },
 
   // Refresh token
@@ -153,6 +162,34 @@ export const userAPI = {
   // Update user profile
   updateProfile: (data) => {
     return apiClient.put(API_ENDPOINTS.USER.PROFILE, data);
+  },
+
+  // Save/update FCM token for push notifications
+  saveFcmToken: (token, options = {}) => {
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";
+    const isLikelyMobile = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(ua);
+    const isFlutterWebView = /\bwv\b|Flutter/i.test(ua);
+    const inferredChannel = isFlutterWebView || isLikelyMobile ? "mobile" : "web";
+    const channel = options.channel || inferredChannel;
+    const platform = options.platform || (channel === "mobile" ? "android" : "web");
+
+    return apiClient.post("/user/fcm-token", {
+      token,
+      channel,
+      platform,
+      ...(options.deviceId ? { deviceId: options.deviceId } : {}),
+    });
+  },
+
+  // Remove/deactivate FCM token
+  removeFcmToken: (token = null, options = {}) => {
+    return apiClient.delete("/user/fcm-token", {
+      data: {
+        ...(token ? { token } : {}),
+        ...(options.channel ? { channel: options.channel } : {}),
+        ...(options.platform ? { platform: options.platform } : {}),
+      },
+    });
   },
 
   // Upload profile image

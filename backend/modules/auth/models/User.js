@@ -216,6 +216,17 @@ const userSchema = new mongoose.Schema({
       }
     }
   },
+  // Required explicit field names (as requested)
+  fcmtokenweb: {
+    type: String,
+    trim: true,
+    default: null
+  },
+  fcmtokenmobile: {
+    type: String,
+    trim: true,
+    default: null
+  },
   isActive: {
     type: Boolean,
     default: true

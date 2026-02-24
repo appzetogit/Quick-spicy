@@ -10,7 +10,11 @@ import {
   getCurrentUser,
   googleAuth,
   googleCallback,
-  firebaseGoogleLogin
+  firebaseGoogleLogin,
+  saveFcmToken,
+  removeFcmToken,
+  saveWebFcmToken,
+  saveMobileFcmToken
 } from '../controllers/authController.js';
 import { authenticate } from '../middleware/auth.js';
 import { validate } from '../../../shared/middleware/validate.js';
@@ -61,7 +65,7 @@ const registerSchema = Joi.object({
 const loginSchema = Joi.object({
   email: Joi.string().email().required().lowercase(),
   password: Joi.string().required(),
-  role: Joi.string().valid('user', 'restaurant', 'delivery', 'admin').optional()
+  role: Joi.string().valid('user', 'restaurant', 'delivery', 'admin').default('user')
 });
 
 const resetPasswordSchema = Joi.object({
@@ -69,6 +73,16 @@ const resetPasswordSchema = Joi.object({
   otp: Joi.string().required().length(6),
   newPassword: Joi.string().required().min(6).max(100),
   role: Joi.string().valid('user', 'restaurant', 'delivery', 'admin').optional()
+});
+
+const fcmTokenSchema = Joi.object({
+  token: Joi.string().trim().min(10).required(),
+  platform: Joi.string().valid('web', 'mobile', 'android', 'ios').default('web')
+});
+
+const removeFcmTokenSchema = Joi.object({
+  token: Joi.string().trim().optional(),
+  platform: Joi.string().valid('web', 'mobile', 'android', 'ios').optional()
 });
 
 // Public routes
@@ -94,6 +108,10 @@ router.get('/google/:role/callback', googleCallback);
 
 // Protected routes
 router.get('/me', authenticate, getCurrentUser);
+router.post('/fcm-token', authenticate, validate(fcmTokenSchema), saveFcmToken);
+router.post('/fcm-token/web', authenticate, validate(Joi.object({ token: Joi.string().trim().min(10).required() })), saveWebFcmToken);
+router.post('/fcm-token/mobile', authenticate, validate(Joi.object({ token: Joi.string().trim().min(10).required() })), saveMobileFcmToken);
+router.delete('/fcm-token', authenticate, validate(removeFcmTokenSchema), removeFcmToken);
 
 export default router;
 

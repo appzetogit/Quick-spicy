@@ -75,7 +75,12 @@ export async function getAllEnvVars() {
     logger.error(
       `Error fetching environment variables from database: ${error.message}`,
     );
-    // Return empty object on error, will fallback to process.env in getEnvVar
+    // If DB fetch fails but we have a previously cached snapshot, keep using it.
+    if (envCache) {
+      logger.warn("Using stale environment variable cache due to database error");
+      return envCache;
+    }
+    // Return empty object on first-load errors; getEnvVar will fallback to process.env
     return {};
   }
 }
