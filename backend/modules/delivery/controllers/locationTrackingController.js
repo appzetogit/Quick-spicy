@@ -152,6 +152,7 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
 export const initializeRoute = asyncHandler(async (req, res) => {
   try {
     const { orderId, riderLat, riderLng } = req.body;
+    const deliveryBoyId = req.deliveryBoy?.id || req.user?.id || null;
     
     if (!orderId) {
       return errorResponse(res, 400, 'Order ID is required');
@@ -204,9 +205,11 @@ export const initializeRoute = asyncHandler(async (req, res) => {
       boyLng: riderCoords.lng,
       status: 'assigned',
       polyline: route.polyline || null,
-      routeCoordinates: route.points || null,
+      routeCoordinates: null,
       restaurant: restaurantCoords,
-      customer: customerCoords
+      customer: customerCoords,
+      distance: route.totalDistance ? Number((route.totalDistance / 1000).toFixed(3)) : null,
+      duration: route.duration ? Number((route.duration / 60).toFixed(2)) : null
     });
     
     // Broadcast route to connected clients

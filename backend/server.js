@@ -9,6 +9,10 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
 import mongoose from 'mongoose';
+import {
+  pruneStaleActiveOrders,
+  markOfflineStaleDeliveryBoys
+} from './modules/delivery/services/firebaseRealtimeTrackingService.js';
 
 // Load environment variables
 dotenv.config();
@@ -659,6 +663,22 @@ startServer().catch((error) => {
 
 // Initialize scheduled tasks
 function initializeScheduledTasks() {
+  // Realtime DB hygiene: remove stale active orders and mark stale online partners offline.
+  cron.schedule('*/10 * * * *', async () => {
+    try {
+      const [pruneResult, offlineResult] = await Promise.all([
+        pruneStaleActiveOrders({ staleMinutes: 180, maxRemovals: 1000 }),
+        markOfflineStaleDeliveryBoys({ staleMinutes: 20 })
+      ]);
+      if ((pruneResult?.removed || 0) > 0 || (offlineResult?.markedOffline || 0) > 0) {
+        console.log(`[Realtime Cleanup Cron] removed orders=${pruneResult?.removed || 0}, marked offline=${offlineResult?.markedOffline || 0}`);
+      }
+    } catch (error) {
+      console.error('[Realtime Cleanup Cron] Error:', error);
+    }
+  });
+  console.log('✅ Realtime tracking cleanup scheduler initialized (runs every 10 minutes)');
+
   // Import menu schedule service
   import('./modules/restaurant/services/menuScheduleService.js').then(({ processScheduledAvailability }) => {
     // Run every minute to check for due schedules

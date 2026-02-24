@@ -2,6 +2,8 @@ import { getFirebaseRealtimeDb } from '../../../config/firebaseRealtime.js';
 
 const DELIVERY_BOYS_NODE = 'delivery_boys';
 const ACTIVE_ORDERS_NODE = 'active_orders';
+const DEFAULT_ACTIVE_ORDER_STALE_MINUTES = 180; // 3 hours
+const DEFAULT_DELIVERY_STALE_MINUTES = 20; // 20 minutes
 
 function sanitizeFirebaseKey(key) {
   return String(key || '').replace(/[.#$/[\]]/g, '_');
@@ -61,7 +63,9 @@ export async function upsertActiveOrderTracking({
   polyline = null,
   routeCoordinates = null,
   restaurant = null,
-  customer = null
+  customer = null,
+  distance = null,
+  duration = null
 }) {
   try {
     const db = getFirebaseRealtimeDb();
@@ -73,15 +77,27 @@ export async function upsertActiveOrderTracking({
       boy_lat: toNumberOrNull(boyLat),
       boy_lng: toNumberOrNull(boyLng),
       status: status || 'assigned',
-      updated_at: Date.now()
+      last_updated: Date.now()
     };
 
     if (polyline) payload.polyline = polyline;
-    if (Array.isArray(routeCoordinates) && routeCoordinates.length > 0) payload.route_coordinates = routeCoordinates;
-    if (restaurant) payload.restaurant = restaurant;
-    if (customer) payload.customer = customer;
+    if (Array.isArray(routeCoordinates) && routeCoordinates.length > 0 && routeCoordinates.length <= 50) {
+      payload.route_coordinates = routeCoordinates;
+    }
+    if (restaurant) {
+      payload.restaurant_lat = toNumberOrNull(restaurant.lat);
+      payload.restaurant_lng = toNumberOrNull(restaurant.lng);
+    }
+    if (customer) {
+      payload.customer_lat = toNumberOrNull(customer.lat);
+      payload.customer_lng = toNumberOrNull(customer.lng);
+    }
+    if (distance !== null && distance !== undefined) payload.distance = toNumberOrNull(distance);
+    if (duration !== null && duration !== undefined) payload.duration = toNumberOrNull(duration);
 
-    await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).update(payload);
+    const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
+    await orderRef.update(payload);
+    await orderRef.child('created_at').transaction((current) => current || Date.now());
     return true;
   } catch (error) {
     console.warn(`⚠️ Failed to upsert active order tracking in Firebase: ${error.message}`);
@@ -97,7 +113,7 @@ export async function updateActiveOrderLocation(orderId, locationPayload) {
     const safeOrderId = sanitizeFirebaseKey(orderId);
     await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).update({
       ...locationPayload,
-      updated_at: Date.now()
+      last_updated: Date.now()
     });
     return true;
   } catch (error) {
@@ -141,7 +157,8 @@ export async function findNearestOnlineDeliveryBoys({
       .map(([deliveryId, value]) => {
         const boyLat = toNumberOrNull(value?.lat);
         const boyLng = toNumberOrNull(value?.lng);
-        if (!value?.isOnline || boyLat === null || boyLng === null) return null;
+        const isOnline = value?.isOnline === true || value?.status === 'online' || value?.status === 'busy';
+        if (!isOnline || boyLat === null || boyLng === null) return null;
 
         const distanceKm = calculateDistanceKm(lat, lng, boyLat, boyLng);
         return { deliveryId, ...value, distanceKm };
@@ -155,5 +172,82 @@ export async function findNearestOnlineDeliveryBoys({
   } catch (error) {
     console.warn(`⚠️ Failed to find nearest delivery boys from Firebase: ${error.message}`);
     return [];
+  }
+}
+
+export async function pruneStaleActiveOrders({
+  staleMinutes = DEFAULT_ACTIVE_ORDER_STALE_MINUTES,
+  maxRemovals = 1000
+} = {}) {
+  try {
+    const db = getFirebaseRealtimeDb();
+    if (!db) return { removed: 0 };
+
+    const staleBefore = Date.now() - (staleMinutes * 60 * 1000);
+    const snapshot = await db.ref(ACTIVE_ORDERS_NODE).once('value');
+    const orders = snapshot.val() || {};
+
+    const removals = [];
+    let removed = 0;
+
+    for (const [orderId, value] of Object.entries(orders)) {
+      if (removed >= maxRemovals) break;
+      const ts = Number(value?.last_updated || value?.updated_at || value?.created_at || 0);
+      const status = String(value?.status || '').toLowerCase();
+      const isTerminal = ['delivered', 'cancelled', 'completed'].includes(status);
+      if ((ts > 0 && ts < staleBefore) || isTerminal) {
+        removals.push(db.ref(`${ACTIVE_ORDERS_NODE}/${orderId}`).remove());
+        removed += 1;
+      }
+    }
+
+    if (removals.length > 0) {
+      await Promise.allSettled(removals);
+    }
+    return { removed };
+  } catch (error) {
+    console.warn(`⚠️ Failed to prune stale active orders: ${error.message}`);
+    return { removed: 0 };
+  }
+}
+
+export async function markOfflineStaleDeliveryBoys({
+  staleMinutes = DEFAULT_DELIVERY_STALE_MINUTES
+} = {}) {
+  try {
+    const db = getFirebaseRealtimeDb();
+    if (!db) return { markedOffline: 0 };
+
+    const staleBefore = Date.now() - (staleMinutes * 60 * 1000);
+    const snapshot = await db.ref(DELIVERY_BOYS_NODE).once('value');
+    const boys = snapshot.val() || {};
+
+    const updates = [];
+    let markedOffline = 0;
+
+    for (const [deliveryId, value] of Object.entries(boys)) {
+      const ts = Number(value?.last_updated || 0);
+      const isOnline = value?.isOnline === true || value?.status === 'online' || value?.status === 'busy';
+      if (isOnline && ts > 0 && ts < staleBefore) {
+        updates.push(
+          db.ref(`${DELIVERY_BOYS_NODE}/${deliveryId}`).update({
+            isOnline: false,
+            status: 'offline',
+            activeOrderId: null,
+            last_updated: Date.now()
+          })
+        );
+        markedOffline += 1;
+      }
+    }
+
+    if (updates.length > 0) {
+      await Promise.allSettled(updates);
+    }
+
+    return { markedOffline };
+  } catch (error) {
+    console.warn(`⚠️ Failed to mark stale delivery boys offline: ${error.message}`);
+    return { markedOffline: 0 };
   }
 }

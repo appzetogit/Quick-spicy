@@ -799,9 +799,11 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         boyLat: deliveryLat,
         boyLng: deliveryLng,
         status: 'accepted',
-        routeCoordinates: routeData.coordinates || null,
+        routeCoordinates: null,
         restaurant: restaurantCoords,
-        customer: customerCoords
+        customer: customerCoords,
+        distance: routeData.distance,
+        duration: routeData.duration
       }),
       syncDeliveryPartnerPresence({
         deliveryId: delivery._id?.toString(),
