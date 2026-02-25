@@ -1,5 +1,36 @@
 import { useState, useMemo } from "react"
 import { exportToCSV, exportToExcel, exportToPDF, exportToJSON } from "./ordersExportUtils"
+import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
+import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
+
+const toNumber = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const formatMoney = (value) => `INR ${toNumber(value).toFixed(2)}`
+
+const blobToDataUrl = (blob) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onloadend = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(blob)
+  })
+
+const imageUrlToDataUrl = async (url) => {
+  if (!url) return null
+  if (url.startsWith("data:")) return url
+
+  try {
+    const response = await fetch(url, { cache: "force-cache" })
+    if (!response.ok) return null
+    const blob = await response.blob()
+    return await blobToDataUrl(blob)
+  } catch {
+    return null
+  }
+}
 
 export function useOrdersManagement(orders, statusKey, title) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -165,144 +196,168 @@ export function useOrdersManagement(orders, statusKey, title) {
 
   const handlePrintOrder = async (order) => {
     try {
-      // Dynamic import of jsPDF and autoTable for instant PDF download
-      const { default: jsPDF } = await import('jspdf')
-      const { default: autoTable } = await import('jspdf-autotable')
+      const { default: jsPDF } = await import("jspdf")
+      const { default: autoTable } = await import("jspdf-autotable")
 
       const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       })
 
-      // Add title
-      doc.setFontSize(18)
-      doc.setTextColor(30, 30, 30)
-      doc.text('Order Invoice', 105, 20, { align: 'center' })
+      const pageWidth = doc.internal.pageSize.getWidth()
+      const orderId = order.orderId || order.id || order.subscriptionId || "N/A"
+      const orderDate = order.date && order.time
+        ? `${order.date}, ${order.time}`
+        : (order.date || new Date().toLocaleDateString())
 
-      // Order ID
-      doc.setFontSize(12)
-      doc.setTextColor(100, 100, 100)
-      const orderId = order.orderId || order.id || order.subscriptionId || 'N/A'
-      doc.text(`Order ID: ${orderId}`, 105, 28, { align: 'center' })
+      const settings = getCachedSettings() || await loadBusinessSettings()
+      const companyName = settings?.companyName || "Appzeto Food"
+      const logoUrl = settings?.logo?.url || quickSpicyLogo
+      const logoDataUrl = await imageUrlToDataUrl(logoUrl)
 
-      // Date
+      const items = Array.isArray(order.items) ? order.items : []
+      const itemsSubtotal = items.reduce((sum, item) => {
+        const qty = toNumber(item?.quantity || 1)
+        const unitPrice = toNumber(item?.price)
+        return sum + (qty * unitPrice)
+      }, 0)
+      const subtotal = itemsSubtotal > 0 ? itemsSubtotal : toNumber(order.subtotal || order.totalAmount)
+      const deliveryFee = toNumber(order.deliveryFee || order.deliveryCharge || order.delivery?.fee)
+      const taxAmount = toNumber(order.taxAmount || order.tax || order.gst)
+      const discountAmount = toNumber(order.discountAmount || order.discount)
+      const computedTotal = subtotal + deliveryFee + taxAmount - discountAmount
+      const totalAmount = toNumber(order.totalAmount || computedTotal)
+
+      doc.setFillColor(15, 118, 110)
+      doc.rect(0, 0, pageWidth, 42, "F")
+
+      if (logoDataUrl) {
+        try {
+          const logoFormat = logoDataUrl.includes("image/jpeg") ? "JPEG" : "PNG"
+          doc.addImage(logoDataUrl, logoFormat, 14, 8, 24, 24, undefined, "FAST")
+        } catch {
+          // Ignore logo rendering issues and continue with text-only header.
+        }
+      }
+
+      doc.setTextColor(255, 255, 255)
+      doc.setFontSize(16)
+      doc.setFont(undefined, "bold")
+      doc.text(companyName, logoDataUrl ? 42 : 14, 17)
       doc.setFontSize(10)
-      const orderDate = order.date && order.time ? `${order.date}, ${order.time}` : (order.date || new Date().toLocaleDateString())
-      doc.text(`Date: ${orderDate}`, 105, 34, { align: 'center' })
+      doc.setFont(undefined, "normal")
+      doc.text("Order Invoice", logoDataUrl ? 42 : 14, 24)
 
-      let startY = 45
+      doc.setFontSize(9)
+      doc.text(`Invoice #: ${orderId}`, pageWidth - 14, 14, { align: "right" })
+      doc.text(`Date: ${orderDate}`, pageWidth - 14, 20, { align: "right" })
 
-      // Customer Information
-      if (order.customerName || order.customerPhone) {
-        doc.setFontSize(12)
-        doc.setTextColor(30, 30, 30)
-        doc.text('Customer Information', 14, startY)
-        startY += 8
+      doc.setDrawColor(226, 232, 240)
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(14, 49, 90, 42, 2, 2, "FD")
+      doc.roundedRect(108, 49, 88, 42, 2, 2, "FD")
 
-        doc.setFontSize(10)
-        doc.setTextColor(60, 60, 60)
-        if (order.customerName) {
-          doc.text(`Name: ${order.customerName}`, 14, startY)
-          startY += 6
-        }
-        if (order.customerPhone) {
-          doc.text(`Phone: ${order.customerPhone}`, 14, startY)
-          startY += 6
-        }
-        startY += 5
-      }
+      doc.setTextColor(15, 23, 42)
+      doc.setFontSize(10)
+      doc.setFont(undefined, "bold")
+      doc.text("Bill To", 18, 57)
+      doc.text("Order Details", 112, 57)
 
-      // Restaurant Information
-      if (order.restaurant) {
-        doc.setFontSize(12)
-        doc.setTextColor(30, 30, 30)
-        doc.text('Restaurant', 14, startY)
-        startY += 8
+      doc.setFont(undefined, "normal")
+      doc.setFontSize(9)
+      doc.setTextColor(71, 85, 105)
+      doc.text(`Customer: ${order.customerName || "N/A"}`, 18, 64)
+      doc.text(`Phone: ${order.customerPhone || "N/A"}`, 18, 70)
+      doc.text(`Restaurant: ${order.restaurant || "N/A"}`, 18, 76)
+      doc.text(`Delivery: ${order.deliveryType || "N/A"}`, 18, 82)
 
-        doc.setFontSize(10)
-        doc.setTextColor(60, 60, 60)
-        doc.text(order.restaurant, 14, startY)
-        startY += 10
-      }
+      const paymentType = order.paymentType || order.payment?.method || order.paymentMethod || "N/A"
+      doc.text(`Order ID: ${orderId}`, 112, 64)
+      doc.text(`Status: ${order.orderStatus || "N/A"}`, 112, 70)
+      doc.text(`Payment: ${paymentType}`, 112, 76)
+      doc.text(`Payment Status: ${order.paymentStatus || "N/A"}`, 112, 82)
 
-      // Delivery Type
-      if (order.deliveryType) {
-        doc.setFontSize(10)
-        doc.text(`Delivery Type: ${order.deliveryType}`, 14, startY)
-        startY += 8
-      }
-
-      // Order Items Table
-      if (order.items && Array.isArray(order.items) && order.items.length > 0) {
-        const tableData = order.items.map((item) => [
-          item.quantity || 1,
-          item.name || item.itemName || item.title || 'Unknown Item',
-          `₹${(item.price || 0).toFixed(2)}`,
-          `₹${((item.quantity || 1) * (item.price || 0)).toFixed(2)}`
-        ])
-
-        autoTable(doc, {
-          startY: startY,
-          head: [['Qty', 'Item Name', 'Price', 'Total']],
-          body: tableData,
-          theme: 'striped',
-          headStyles: {
-            fillColor: [59, 130, 246],
-            textColor: 255,
-            fontStyle: 'bold',
-            fontSize: 10
-          },
-          bodyStyles: {
-            fontSize: 9,
-            textColor: [30, 30, 30]
-          },
-          alternateRowStyles: {
-            fillColor: [245, 247, 250]
-          },
-          styles: {
-            cellPadding: 4,
-            lineColor: [200, 200, 200],
-            lineWidth: 0.5
-          },
-          columnStyles: {
-            0: { cellWidth: 20, halign: 'center' },
-            1: { cellWidth: 80 },
-            2: { cellWidth: 35, halign: 'right' },
-            3: { cellWidth: 35, halign: 'right', fontStyle: 'bold' }
-          },
-          margin: { left: 14, right: 14 }
+      const tableBody = items.length > 0
+        ? items.map((item) => {
+          const qty = toNumber(item.quantity || 1)
+          const title = item.name || item.itemName || item.title || "Item"
+          const unitPrice = toNumber(item.price)
+          const lineTotal = qty * unitPrice
+          return [qty, title, formatMoney(unitPrice), formatMoney(lineTotal)]
         })
+        : [[1, "Order Total", formatMoney(totalAmount), formatMoney(totalAmount)]]
 
-        startY = doc.lastAutoTable.finalY + 10
-      }
+      autoTable(doc, {
+        startY: 98,
+        head: [["Qty", "Item", "Unit Price", "Line Total"]],
+        body: tableBody,
+        theme: "grid",
+        headStyles: {
+          fillColor: [15, 118, 110],
+          textColor: 255,
+          fontSize: 9,
+          fontStyle: "bold",
+        },
+        bodyStyles: {
+          fontSize: 9,
+          textColor: [30, 41, 59],
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        styles: {
+          cellPadding: 3.2,
+          lineColor: [226, 232, 240],
+          lineWidth: 0.3,
+        },
+        columnStyles: {
+          0: { halign: "center", cellWidth: 18 },
+          1: { cellWidth: 94 },
+          2: { halign: "right", cellWidth: 36 },
+          3: { halign: "right", cellWidth: 38 },
+        },
+        margin: { left: 14, right: 14 },
+      })
 
-      // Total Amount
-      if (order.totalAmount) {
-        doc.setFontSize(14)
-        doc.setTextColor(30, 30, 30)
-        doc.setFont(undefined, 'bold')
-        const totalAmount = typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : order.totalAmount
-        doc.text(`Total Amount: ₹${totalAmount}`, 14, startY)
-        startY += 8
-      }
+      const summaryStartY = (doc.lastAutoTable?.finalY || 130) + 8
+      autoTable(doc, {
+        startY: summaryStartY,
+        body: [
+          ["Subtotal", formatMoney(subtotal)],
+          ["Delivery Fee", formatMoney(deliveryFee)],
+          ["Tax", formatMoney(taxAmount)],
+          ["Discount", `- ${formatMoney(discountAmount)}`],
+          ["Grand Total", formatMoney(totalAmount)],
+        ],
+        theme: "plain",
+        styles: {
+          fontSize: 10,
+          textColor: [30, 41, 59],
+          cellPadding: 1.8,
+        },
+        columnStyles: {
+          0: { cellWidth: 34, fontStyle: "bold" },
+          1: { cellWidth: 40, halign: "right" },
+        },
+        margin: { left: pageWidth - 88 },
+        didParseCell: (hookData) => {
+          if (hookData.row.index === 4) {
+            hookData.cell.styles.fontStyle = "bold"
+            hookData.cell.styles.fontSize = 11
+            hookData.cell.styles.textColor = [15, 118, 110]
+          }
+        },
+      })
 
-      // Payment Status
-      if (order.paymentStatus) {
-        doc.setFontSize(10)
-        doc.setTextColor(100, 100, 100)
-        doc.setFont(undefined, 'normal')
-        doc.text(`Payment Status: ${order.paymentStatus}`, 14, startY)
-        startY += 6
-      }
+      const footerY = Math.max((doc.lastAutoTable?.finalY || summaryStartY) + 14, 255)
+      doc.setDrawColor(226, 232, 240)
+      doc.line(14, footerY - 6, pageWidth - 14, footerY - 6)
+      doc.setFontSize(9)
+      doc.setTextColor(100, 116, 139)
+      doc.text(`Generated on ${new Date().toLocaleString()}`, 14, footerY)
+      doc.text("Thank you for using our platform.", pageWidth - 14, footerY, { align: "right" })
 
-      // Order Status
-      if (order.orderStatus) {
-        doc.setFontSize(10)
-        doc.text(`Order Status: ${order.orderStatus}`, 14, startY)
-      }
-
-      // Save the PDF instantly
       const filename = `Invoice_${orderId}_${new Date().toISOString().split("T")[0]}.pdf`
       doc.save(filename)
     } catch (error) {
