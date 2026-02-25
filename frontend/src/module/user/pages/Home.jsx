@@ -556,7 +556,6 @@ export default function Home() {
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
   const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading, error: zoneError } = useZone(location)
-  const shouldShowOutOfZoneHome = !zoneLoading && !zoneError && isOutOfService
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
@@ -594,6 +593,38 @@ export default function Home() {
     const defaultAddress = getDefaultAddress?.()
     return formatSavedAddress(defaultAddress)
   }, [getDefaultAddress, formatSavedAddress])
+
+  const defaultSavedAddress = useMemo(() => getDefaultAddress?.() || null, [getDefaultAddress])
+
+  const defaultSavedAddressLocation = useMemo(() => {
+    const coords = defaultSavedAddress?.location?.coordinates
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lng = parseFloat(coords[0])
+      const lat = parseFloat(coords[1])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { latitude: lat, longitude: lng }
+      }
+    }
+
+    const lat = parseFloat(defaultSavedAddress?.latitude ?? defaultSavedAddress?.lat)
+    const lng = parseFloat(defaultSavedAddress?.longitude ?? defaultSavedAddress?.lng)
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return { latitude: lat, longitude: lng }
+    }
+
+    return null
+  }, [defaultSavedAddress])
+
+  const { isOutOfService: isSavedAddressOutOfService, loading: savedAddressZoneLoading, error: savedAddressZoneError } =
+    useZone(defaultSavedAddressLocation)
+
+  const hasSavedAddress = Boolean(defaultSavedAddress && savedAddressText)
+  const shouldShowOutOfZoneHome =
+    hasSavedAddress &&
+    Boolean(defaultSavedAddressLocation) &&
+    !savedAddressZoneLoading &&
+    !savedAddressZoneError &&
+    isSavedAddressOutOfService
 
   // Mock points value - replace with actual points from context/store
   const userPoints = 99
