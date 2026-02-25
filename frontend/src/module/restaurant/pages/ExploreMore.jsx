@@ -868,10 +868,7 @@ export default function ExploreMore() {
         >
           <Card className="bg-white border-gray-200 py-3 mb-6 rounded-lg shadow-0">
             <CardContent className="px-4">
-              <button
-                onClick={() => navigate("/restaurant/switch-outlet")}
-                className="w-full flex items-center justify-between"
-              >
+              <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-1">
                   <div className="p-2 bg-gray-100 rounded-lg">
                     <Store className="w-5 h-5 text-gray-900" />
@@ -887,8 +884,7 @@ export default function ExploreMore() {
                     )}
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
-              </button>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
