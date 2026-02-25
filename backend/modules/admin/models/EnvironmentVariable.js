@@ -1,6 +1,31 @@
 import mongoose from 'mongoose';
 import { encrypt, decrypt, isEncrypted } from '../../../shared/utils/encryption.js';
 
+export const ENV_VARIABLE_KEYS = [
+  'RAZORPAY_API_KEY',
+  'RAZORPAY_SECRET_KEY',
+  'CLOUDINARY_CLOUD_NAME',
+  'CLOUDINARY_API_KEY',
+  'CLOUDINARY_API_SECRET',
+  'FIREBASE_API_KEY',
+  'FIREBASE_AUTH_DOMAIN',
+  'FIREBASE_STORAGE_BUCKET',
+  'FIREBASE_MESSAGING_SENDER_ID',
+  'FIREBASE_APP_ID',
+  'MEASUREMENT_ID',
+  'FIREBASE_PROJECT_ID',
+  'FIREBASE_CLIENT_EMAIL',
+  'FIREBASE_PRIVATE_KEY',
+  'FIREBASE_DATABASE_URL',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'SMSINDIAHUB_API_KEY',
+  'SMSINDIAHUB_SENDER_ID',
+  'VITE_GOOGLE_MAPS_API_KEY'
+];
+
 const environmentVariableSchema = new mongoose.Schema(
   {
     // Razorpay
@@ -144,7 +169,8 @@ const environmentVariableSchema = new mongoose.Schema(
 
 // Create a single document instance (singleton pattern)
 environmentVariableSchema.statics.getOrCreate = async function() {
-  let envVars = await this.findOne();
+  // Keep selection deterministic in case legacy duplicate documents exist.
+  let envVars = await this.findOne().sort({ lastUpdatedAt: -1, updatedAt: -1, createdAt: -1 });
   if (!envVars) {
     envVars = await this.create({});
   }

@@ -1,6 +1,6 @@
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
-import EnvironmentVariable from '../models/EnvironmentVariable.js';
+import EnvironmentVariable, { ENV_VARIABLE_KEYS } from '../models/EnvironmentVariable.js';
 import { clearEnvCache } from '../../../shared/utils/envService.js';
 import winston from 'winston';
 
@@ -69,7 +69,9 @@ export const getPublicEnvVariables = asyncHandler(async (req, res) => {
 export const saveEnvVariables = asyncHandler(async (req, res) => {
   // Get admin from req.user (set by adminAuth middleware) or req.admin (fallback)
   const admin = req.user || req.admin; // From adminAuth middleware
-  const envData = req.body;
+  const envData = req.body?.envData && typeof req.body.envData === 'object'
+    ? req.body.envData
+    : req.body;
   
   logger.info('Saving environment variables', { 
     adminId: admin?._id,
@@ -101,25 +103,29 @@ export const saveEnvVariables = asyncHandler(async (req, res) => {
       return errorResponse(res, 500, `Failed to get environment variables document: ${getError.message}`);
     }
     
-    // Update all fields (encryption will happen in pre-save hook)
+    // Update all known fields (encryption will happen in pre-save hook)
     const updatedFields = [];
-    Object.keys(envData).forEach(key => {
-      if (envVars.schema.paths[key]) {
-        // Set the value directly - pre-save hook will encrypt it
-        let value = envData[key];
-        
-        // Convert to string for all fields (schema expects strings)
-        if (value !== null && value !== undefined) {
-          value = String(value);
-        } else {
-          value = '';
-        }
-        
-        envVars[key] = value;
-        // Mark field as modified to trigger encryption
-        envVars.markModified(key);
-        updatedFields.push(key);
+    ENV_VARIABLE_KEYS.forEach(key => {
+      if (!(key in envData)) return;
+
+      // Set the value directly - pre-save hook will encrypt sensitive keys
+      let value = envData[key];
+
+      // Convert to string for all fields (schema expects strings)
+      if (value !== null && value !== undefined) {
+        value = String(value);
       } else {
+        value = '';
+      }
+
+      envVars[key] = value;
+      envVars.markModified(key);
+      updatedFields.push(key);
+    });
+
+    // Keep logging unknown keys for visibility while ignoring them safely.
+    Object.keys(envData).forEach(key => {
+      if (!ENV_VARIABLE_KEYS.includes(key)) {
         logger.warn(`Unknown field in request: ${key}`);
       }
     });
@@ -203,4 +209,3 @@ export const saveEnvVariables = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, errorMessage);
   }
 });
-
