@@ -865,6 +865,79 @@ export const getCurrentRestaurant = asyncHandler(async (req, res) => {
   });
 });
 
+const resolveFcmChannel = (platform = 'web') => {
+  const normalizedPlatform = String(platform || '').trim().toLowerCase();
+  if (normalizedPlatform === 'web') {
+    return 'web';
+  }
+  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview'].includes(normalizedPlatform)) {
+    return 'mobile';
+  }
+  return 'web';
+};
+
+/**
+ * Save/update FCM token for authenticated restaurant
+ * POST /api/restaurant/auth/fcm-token
+ */
+export const saveFcmToken = asyncHandler(async (req, res) => {
+  const { token, platform = 'web' } = req.body || {};
+
+  if (!token || !String(token).trim()) {
+    return errorResponse(res, 400, 'FCM token is required');
+  }
+
+  const normalizedToken = String(token).trim();
+  const channel = resolveFcmChannel(platform);
+
+  if (channel === 'mobile') {
+    req.restaurant.fcmtokenmobile = normalizedToken;
+  } else {
+    req.restaurant.fcmtokenweb = normalizedToken;
+  }
+
+  await req.restaurant.save();
+
+  return successResponse(res, 200, 'FCM token saved successfully', {
+    platform: channel,
+    fcmtokenweb: req.restaurant.fcmtokenweb || null,
+    fcmtokenmobile: req.restaurant.fcmtokenmobile || null,
+  });
+});
+
+/**
+ * Remove FCM token for authenticated restaurant
+ * DELETE /api/restaurant/auth/fcm-token
+ */
+export const removeFcmToken = asyncHandler(async (req, res) => {
+  const { token = null, platform = null } = req.body || {};
+  const normalizedToken = token ? String(token).trim() : null;
+  const channel = platform ? resolveFcmChannel(platform) : null;
+
+  if (normalizedToken) {
+    if (req.restaurant.fcmtokenweb === normalizedToken) {
+      req.restaurant.fcmtokenweb = null;
+    }
+    if (req.restaurant.fcmtokenmobile === normalizedToken) {
+      req.restaurant.fcmtokenmobile = null;
+    }
+  } else if (channel === 'web') {
+    req.restaurant.fcmtokenweb = null;
+  } else if (channel === 'mobile') {
+    req.restaurant.fcmtokenmobile = null;
+  } else {
+    req.restaurant.fcmtokenweb = null;
+    req.restaurant.fcmtokenmobile = null;
+  }
+
+  await req.restaurant.save();
+
+  return successResponse(res, 200, 'FCM token removed successfully', {
+    fcmtokenweb: req.restaurant.fcmtokenweb || null,
+    fcmtokenmobile: req.restaurant.fcmtokenmobile || null,
+  });
+});
+
 /**
  * Reverify Restaurant (Resubmit for approval)
  * POST /api/restaurant/auth/reverify

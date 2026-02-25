@@ -383,6 +383,17 @@ export const restaurantAPI = {
   getCurrentRestaurant: () => {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.AUTH.ME);
   },
+  saveFcmToken: (token, platform = "web") => {
+    return apiClient.post(API_ENDPOINTS.RESTAURANT.AUTH.FCM_TOKEN, {
+      token,
+      platform,
+    });
+  },
+  removeFcmToken: (payload = {}) => {
+    return apiClient.delete(API_ENDPOINTS.RESTAURANT.AUTH.FCM_TOKEN, {
+      data: payload,
+    });
+  },
 
   reverify: () => {
     return apiClient.post(API_ENDPOINTS.RESTAURANT.AUTH.REVERIFY);

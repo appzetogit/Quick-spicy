@@ -62,6 +62,15 @@ const restaurantSchema = new mongoose.Schema(
       type: String,
       select: false, // Don't return password by default
     },
+    // Push notification tokens
+    fcmtokenweb: {
+      type: String,
+      default: null,
+    },
+    fcmtokenmobile: {
+      type: String,
+      default: null,
+    },
     googleId: {
       type: String,
     },
