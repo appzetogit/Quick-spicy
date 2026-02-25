@@ -14,7 +14,8 @@ class SMSIndiaHubService {
     // Credentials will be loaded from database dynamically
     this.apiKey = null;
     this.senderId = null;
-    this.baseUrl = "http://cloud.smsindiahub.in/vendorsms/pushsms.aspx";
+    // Prefer HTTPS to avoid redirect hops and TLS downgrade issues in production networks.
+    this.baseUrl = "https://cloud.smsindiahub.in/vendorsms/pushsms.aspx";
     this.initializeCredentials();
   }
 
@@ -159,19 +160,27 @@ class SMSIndiaHubService {
       // The message text MUST match the registered DLT template EXACTLY
       // Check if custom message template is provided (must match registered DLT template exactly)
       const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
-      
+
       // Check if template ID is provided (for DLT registered templates)
       const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
-      
-      // Check if promotional SMS is enabled (temporary workaround for template issues)
-      // ⚠️ WARNING: Promotional SMS is not recommended for OTP - use only for testing
-      const usePromotional = process.env.SMSINDIAHUB_USE_PROMOTIONAL === 'true';
-      // Always use transactional SMS (gwid=2) like RentYatra, unless promotional is explicitly enabled
-      const gatewayId = usePromotional ? "1" : "2"; // 1 = promotional, 2 = transactional
-      
+
+      // Never use promotional route in production for OTPs. Promotional routes are frequently delayed.
+      const isProd = process.env.NODE_ENV === "production";
+      const usePromotional =
+        !isProd && process.env.SMSINDIAHUB_USE_PROMOTIONAL === "true";
+
+      // 1 = promotional, 2 = transactional
+      const gatewayId = usePromotional ? "1" : "2";
+
       if (usePromotional) {
-        console.warn("⚠️ Using promotional SMS mode - not recommended for production OTP!");
+        console.warn("⚠️ Using promotional SMS mode (non-production).");
       }
+
+      // Normalize purpose string from callers ("reset-password" vs "reset_password")
+      const normalizedPurpose = String(purpose || "register")
+        .trim()
+        .toLowerCase()
+        .replace(/_/g, "-");
       
       // For transactional SMS (DLT), message must match registered template EXACTLY
       // Use fixed template text that matches DLT registration, regardless of purpose
@@ -183,9 +192,9 @@ class SMSIndiaHubService {
       } else if (usePromotional) {
         // For promotional SMS, we can use dynamic purpose text
         let purposeText = 'registration';
-        if (purpose === 'login') {
+        if (normalizedPurpose === 'login') {
           purposeText = 'login';
-        } else if (purpose === 'reset_password') {
+        } else if (normalizedPurpose === 'reset-password') {
           purposeText = 'password reset';
         }
         const companyName = await this.getCompanyName();
@@ -214,6 +223,7 @@ class SMSIndiaHubService {
       }
 
       const apiUrl = `${this.baseUrl}?${params.toString()}`;
+      const startedAt = Date.now();
 
       // Make GET request to SMSIndia Hub API
       const response = await axios.get(apiUrl, {
@@ -222,11 +232,14 @@ class SMSIndiaHubService {
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        timeout: 15000, // 15 second timeout
+        timeout: 8000, // keep OTP path snappy
       });
+
+      const requestMs = Date.now() - startedAt;
 
       console.log("📱 SMSIndia Hub Response Status:", response.status);
       console.log("📱 SMSIndia Hub Response Data:", response.data);
+      console.log("📱 SMSIndia Hub Request Time (ms):", requestMs);
 
       // SMSIndia Hub can return JSON or plain text response
       let responseData = response.data;
@@ -259,6 +272,7 @@ class SMSIndiaHubService {
             success: true,
             messageId: messageId,
             jobId: parsedResponse.JobId,
+            requestMs,
             status: 'sent',
             to: normalizedPhone,
             body: message,
@@ -278,6 +292,7 @@ class SMSIndiaHubService {
         return {
           success: true,
           messageId: `sms_${Date.now()}`,
+          requestMs,
           status: 'sent',
           to: normalizedPhone,
           body: message,
@@ -293,6 +308,7 @@ class SMSIndiaHubService {
         return {
           success: true,
           messageId: `sms_${Date.now()}`,
+          requestMs,
           status: 'sent',
           to: normalizedPhone,
           body: message,

@@ -129,7 +129,15 @@ class OTPService {
         if (!isTestPhoneNumber(phone)) {
           // Use SMSIndia Hub for phone OTP
           try {
-            await smsIndiaHubService.sendOTP(phone, otp, purpose);
+            const smsStartedAt = Date.now();
+            const smsResult = await smsIndiaHubService.sendOTP(phone, otp, purpose);
+            logger.info(`SMS OTP dispatch completed`, {
+              phone,
+              purpose,
+              requestMs: smsResult?.requestMs ?? (Date.now() - smsStartedAt),
+              providerStatus: smsResult?.status || 'unknown',
+              providerMessageId: smsResult?.messageId || null
+            });
           } catch (smsError) {
             // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
             if (process.env.NODE_ENV !== 'production') {
