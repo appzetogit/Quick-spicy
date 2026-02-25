@@ -555,8 +555,8 @@ export default function Home() {
   const { addFavorite, removeFavorite, isFavorite, getFavorites, getDefaultAddress } = profileContext
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
-  const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading } = useZone(location)
-  const shouldShowOutOfZoneHome = !zoneLoading && isOutOfService
+  const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading, error: zoneError } = useZone(location)
+  const shouldShowOutOfZoneHome = !zoneLoading && !zoneError && isOutOfService
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)

@@ -6,6 +6,11 @@
 let cachedApiKey = null;
 let apiKeyPromise = null;
 
+function sanitizeApiKey(value) {
+  if (!value) return "";
+  return String(value).trim().replace(/^['"]|['"]$/g, "");
+}
+
 /**
  * Get Google Maps API Key from backend
  * Uses caching to avoid multiple requests
@@ -24,22 +29,33 @@ export async function getGoogleMapsApiKey() {
 
   // Fetch from backend
   apiKeyPromise = (async () => {
+    const envFallbackKey = sanitizeApiKey(import.meta.env.VITE_GOOGLE_MAPS_API_KEY);
     try {
       const { adminAPI } = await import('../api/index.js');
       const response = await adminAPI.getPublicEnvVariables();
-      
-      if (response.data.success && response.data.data?.VITE_GOOGLE_MAPS_API_KEY) {
-        cachedApiKey = response.data.data.VITE_GOOGLE_MAPS_API_KEY;
+
+      const dbKey = sanitizeApiKey(response?.data?.data?.VITE_GOOGLE_MAPS_API_KEY);
+      if (response?.data?.success && dbKey) {
+        cachedApiKey = dbKey;
         return cachedApiKey;
       }
-      
-      // No fallback - return empty if not in database
-      console.warn('⚠️ Google Maps API key not found in database. Please set it in Admin → System → Environment Variables');
-      return '';
+
+      if (envFallbackKey) {
+        console.warn('⚠️ Google Maps API key not found in database. Using VITE_GOOGLE_MAPS_API_KEY fallback.');
+        cachedApiKey = envFallbackKey;
+        return cachedApiKey;
+      }
+
+      console.warn('⚠️ Google Maps API key missing in both database and frontend env.');
+      return "";
     } catch (error) {
       console.warn('Failed to fetch Google Maps API key from backend:', error.message);
-      // No fallback - return empty on error
-      return '';
+      if (envFallbackKey) {
+        console.warn('⚠️ Using VITE_GOOGLE_MAPS_API_KEY fallback after backend key fetch failure.');
+        cachedApiKey = envFallbackKey;
+        return cachedApiKey;
+      }
+      return "";
     } finally {
       apiKeyPromise = null;
     }

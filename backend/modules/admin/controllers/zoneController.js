@@ -140,7 +140,7 @@ export const createZone = asyncHandler(async (req, res) => {
 
     // Validate coordinates
     for (const coord of coordinates) {
-      if (!coord.latitude || !coord.longitude) {
+      if (coord.latitude == null || coord.longitude == null) {
         return errorResponse(res, 400, 'Each coordinate must have latitude and longitude');
       }
       if (coord.latitude < -90 || coord.latitude > 90) {
@@ -223,7 +223,7 @@ export const updateZone = asyncHandler(async (req, res) => {
 
       // Validate coordinates
       for (const coord of updateData.coordinates) {
-        if (!coord.latitude || !coord.longitude) {
+        if (coord.latitude == null || coord.longitude == null) {
           return errorResponse(res, 400, 'Each coordinate must have latitude and longitude');
         }
       }
@@ -336,10 +336,10 @@ export const detectUserZone = asyncHandler(async (req, res) => {
     const { lat, lng, latitude, longitude } = req.query;
     
     // Support both lat/lng and latitude/longitude
-    const userLat = parseFloat(lat || latitude);
-    const userLng = parseFloat(lng || longitude);
+    const userLat = parseFloat(lat ?? latitude);
+    const userLng = parseFloat(lng ?? longitude);
 
-    if (!userLat || !userLng || isNaN(userLat) || isNaN(userLng)) {
+    if (!Number.isFinite(userLat) || !Number.isFinite(userLng)) {
       return errorResponse(res, 400, 'Latitude and longitude are required');
     }
 
@@ -364,34 +364,14 @@ export const detectUserZone = asyncHandler(async (req, res) => {
     let minDistance = Infinity;
 
     for (const zone of activeZones) {
-      if (!zone.coordinates || zone.coordinates.length < 3) continue;
+      const polygonCoords = extractZonePolygon(zone);
+      if (!polygonCoords || polygonCoords.length < 3) continue;
 
-      let isInZone = false;
-      if (typeof zone.containsPoint === 'function') {
-        isInZone = zone.containsPoint(userLat, userLng);
-      } else {
-        // Ray casting algorithm
-        let inside = false;
-        for (let i = 0, j = zone.coordinates.length - 1; i < zone.coordinates.length; j = i++) {
-          const coordI = zone.coordinates[i];
-          const coordJ = zone.coordinates[j];
-          const xi = typeof coordI === 'object' ? (coordI.latitude || coordI.lat) : null;
-          const yi = typeof coordI === 'object' ? (coordI.longitude || coordI.lng) : null;
-          const xj = typeof coordJ === 'object' ? (coordJ.latitude || coordJ.lat) : null;
-          const yj = typeof coordJ === 'object' ? (coordJ.longitude || coordJ.lng) : null;
-          
-          if (xi === null || yi === null || xj === null || yj === null) continue;
-          
-          const intersect = ((yi > userLng) !== (yj > userLng)) && 
-                           (userLat < (xj - xi) * (userLng - yi) / (yj - yi) + xi);
-          if (intersect) inside = !inside;
-        }
-        isInZone = inside;
-      }
+      const isInZone = isPointInPolygon(userLat, userLng, polygonCoords);
 
       if (isInZone) {
         // Calculate distance to zone centroid for buffer logic
-        const centroid = calculateZoneCentroid(zone.coordinates);
+        const centroid = calculateZoneCentroid(polygonCoords);
         const distance = calculateDistance(userLat, userLng, centroid.lat, centroid.lng);
         
         if (distance < minDistance) {
@@ -406,9 +386,10 @@ export const detectUserZone = asyncHandler(async (req, res) => {
       const BUFFER_DISTANCE = 0.1; // 100 meters in km
       
       for (const zone of activeZones) {
-        if (!zone.coordinates || zone.coordinates.length < 3) continue;
+        const polygonCoords = extractZonePolygon(zone);
+        if (!polygonCoords || polygonCoords.length < 3) continue;
         
-        const centroid = calculateZoneCentroid(zone.coordinates);
+        const centroid = calculateZoneCentroid(polygonCoords);
         const distance = calculateDistance(userLat, userLng, centroid.lat, centroid.lng);
         
         // Find nearest zone within buffer
@@ -455,8 +436,7 @@ function calculateZoneCentroid(coordinates) {
   let count = 0;
 
   for (const coord of coordinates) {
-    const lat = typeof coord === 'object' ? (coord.latitude || coord.lat) : null;
-    const lng = typeof coord === 'object' ? (coord.longitude || coord.lng) : null;
+    const { lat, lng } = normalizeCoordinate(coord);
     if (lat !== null && lng !== null) {
       sumLat += lat;
       sumLng += lng;
@@ -486,6 +466,104 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 }
 
 /**
+ * Normalize coordinate objects/arrays into { lat, lng }.
+ * Supports:
+ * - { latitude, longitude } or { lat, lng }
+ * - [lng, lat] (GeoJSON)
+ */
+function normalizeCoordinate(coord) {
+  if (!coord) return { lat: null, lng: null };
+
+  if (Array.isArray(coord) && coord.length >= 2) {
+    const lng = parseFloat(coord[0]);
+    const lat = parseFloat(coord[1]);
+    return {
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null
+    };
+  }
+
+  if (typeof coord === 'object') {
+    const latRaw = coord.latitude ?? coord.lat;
+    const lngRaw = coord.longitude ?? coord.lng;
+    const lat = parseFloat(latRaw);
+    const lng = parseFloat(lngRaw);
+    return {
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null
+    };
+  }
+
+  return { lat: null, lng: null };
+}
+
+/**
+ * Extract polygon coordinates in [lng, lat] format from zone document.
+ */
+function extractZonePolygon(zone) {
+  if (!zone) return null;
+
+  // Prefer canonical GeoJSON boundary when present.
+  if (Array.isArray(zone.boundary?.coordinates?.[0]) && zone.boundary.coordinates[0].length >= 3) {
+    return zone.boundary.coordinates[0];
+  }
+
+  if (!Array.isArray(zone.coordinates) || zone.coordinates.length < 3) return null;
+
+  const polygon = zone.coordinates
+    .map((coord) => normalizeCoordinate(coord))
+    .filter((coord) => coord.lat !== null && coord.lng !== null)
+    .map((coord) => [coord.lng, coord.lat]);
+
+  if (polygon.length < 3) return null;
+
+  const [firstLng, firstLat] = polygon[0];
+  const [lastLng, lastLat] = polygon[polygon.length - 1];
+  if (firstLng !== lastLng || firstLat !== lastLat) {
+    polygon.push([firstLng, firstLat]);
+  }
+
+  return polygon;
+}
+
+/**
+ * Point-in-polygon with edge-inclusive check.
+ * polygonCoords must be [lng, lat].
+ */
+function isPointInPolygon(lat, lng, polygonCoords) {
+  if (!Array.isArray(polygonCoords) || polygonCoords.length < 3) return false;
+
+  let inside = false;
+  const epsilon = 1e-10;
+
+  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
+    const xi = polygonCoords[i][0];
+    const yi = polygonCoords[i][1];
+    const xj = polygonCoords[j][0];
+    const yj = polygonCoords[j][1];
+
+    // Edge-inclusive check so boundary points are treated as inside.
+    const cross = (lng - xi) * (yj - yi) - (lat - yi) * (xj - xi);
+    if (Math.abs(cross) < epsilon) {
+      const minX = Math.min(xi, xj) - epsilon;
+      const maxX = Math.max(xi, xj) + epsilon;
+      const minY = Math.min(yi, yj) - epsilon;
+      const maxY = Math.max(yi, yj) + epsilon;
+      if (lng >= minX && lng <= maxX && lat >= minY && lat <= maxY) {
+        return true;
+      }
+    }
+
+    const intersects = ((yi > lat) !== (yj > lat)) &&
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || epsilon) + xi);
+
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+}
+
+/**
  * Check if a location is within any zone for a restaurant
  * POST /api/admin/zones/check-location
  */
@@ -493,7 +571,7 @@ export const checkLocationInZone = asyncHandler(async (req, res) => {
   try {
     const { latitude, longitude, restaurantId } = req.body;
 
-    if (!latitude || !longitude || !restaurantId) {
+    if (latitude == null || longitude == null || !restaurantId) {
       return errorResponse(res, 400, 'Latitude, longitude, and restaurant ID are required');
     }
 

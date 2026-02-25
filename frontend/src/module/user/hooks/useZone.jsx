@@ -15,7 +15,7 @@ export function useZone(location) {
 
   // Detect zone when location is available
   const detectZone = useCallback(async (lat, lng) => {
-    if (!lat || !lng) {
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
       setZoneStatus('OUT_OF_SERVICE')
       setZoneId(null)
       setZone(null)
@@ -53,9 +53,6 @@ export function useZone(location) {
     } catch (err) {
       console.error('Error detecting zone:', err)
       setError(err.response?.data?.message || err.message || 'Failed to detect zone')
-      setZoneStatus('OUT_OF_SERVICE')
-      setZoneId(null)
-      setZone(null)
       
       // Try to use cached zone if available
       const cachedZoneId = localStorage.getItem('userZoneId')
@@ -64,6 +61,11 @@ export function useZone(location) {
         setZoneId(cachedZoneId)
         setZone(cachedZone ? JSON.parse(cachedZone) : null)
         setZoneStatus('IN_SERVICE')
+      } else {
+        // Network/CORS/backend failures should not be treated as confirmed out-of-zone.
+        setZoneStatus('loading')
+        setZoneId(null)
+        setZone(null)
       }
     } finally {
       setLoading(false)
@@ -83,7 +85,7 @@ export function useZone(location) {
       Math.abs(prevCoordsRef.current.latitude - (lat || 0)) > coordThreshold ||
       Math.abs(prevCoordsRef.current.longitude - (lng || 0)) > coordThreshold
 
-    if (lat && lng) {
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
       // Only detect zone if coordinates changed significantly
       if (coordsChanged) {
         prevCoordsRef.current = { latitude: lat, longitude: lng }
@@ -109,7 +111,7 @@ export function useZone(location) {
   const refreshZone = useCallback(() => {
     const lat = location?.latitude
     const lng = location?.longitude
-    if (lat && lng) {
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
       detectZone(lat, lng)
     }
   }, [location?.latitude, location?.longitude, detectZone])

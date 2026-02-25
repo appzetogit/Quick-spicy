@@ -140,15 +140,31 @@ zoneSchema.methods.containsPoint = function(latitude, longitude) {
   }
   
   // Simple point-in-polygon check using ray casting algorithm
+  // GeoJSON coordinates are [lng, lat]
   const coords = this.boundary.coordinates[0];
   let inside = false;
+  const epsilon = 1e-10;
   
   for (let i = 0, j = coords.length - 1; i < coords.length; j = i++) {
-    const xi = coords[i][0], yi = coords[i][1];
-    const xj = coords[j][0], yj = coords[j][1];
+    const xi = coords[i][0];
+    const yi = coords[i][1];
+    const xj = coords[j][0];
+    const yj = coords[j][1];
+
+    // Treat points on polygon boundary as inside.
+    const cross = (longitude - xi) * (yj - yi) - (latitude - yi) * (xj - xi);
+    if (Math.abs(cross) < epsilon) {
+      const minX = Math.min(xi, xj) - epsilon;
+      const maxX = Math.max(xi, xj) + epsilon;
+      const minY = Math.min(yi, yj) - epsilon;
+      const maxY = Math.max(yi, yj) + epsilon;
+      if (longitude >= minX && longitude <= maxX && latitude >= minY && latitude <= maxY) {
+        return true;
+      }
+    }
     
-    const intersect = ((yi > longitude) !== (yj > longitude)) &&
-      (longitude < (xj - xi) * (longitude - yi) / (yj - yi) + xi);
+    const intersect = ((yi > latitude) !== (yj > latitude)) &&
+      (longitude < ((xj - xi) * (latitude - yi)) / ((yj - yi) || epsilon) + xi);
     
     if (intersect) inside = !inside;
   }

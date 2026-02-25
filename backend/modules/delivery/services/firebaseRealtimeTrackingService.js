@@ -2,8 +2,10 @@ import { getFirebaseRealtimeDb } from '../../../config/firebaseRealtime.js';
 
 const DELIVERY_BOYS_NODE = 'delivery_boys';
 const ACTIVE_ORDERS_NODE = 'active_orders';
+const ORDER_TRACKING_HISTORY_NODE = 'order_tracking_history';
 const DEFAULT_ACTIVE_ORDER_STALE_MINUTES = 180; // 3 hours
 const DEFAULT_DELIVERY_STALE_MINUTES = 20; // 20 minutes
+const MALFORMED_ORDER_GRACE_MINUTES = 30;
 
 function sanitizeFirebaseKey(key) {
   return String(key || '').replace(/[.#$/[\]]/g, '_');
@@ -111,7 +113,14 @@ export async function updateActiveOrderLocation(orderId, locationPayload) {
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
-    await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).update({
+    const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
+    const existing = await orderRef.once('value');
+    if (!existing.exists()) {
+      // Avoid creating malformed partial nodes from location-only updates.
+      return false;
+    }
+
+    await orderRef.update({
       ...locationPayload,
       last_updated: Date.now()
     });
@@ -128,7 +137,17 @@ export async function removeActiveOrderTracking(orderId) {
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
-    await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).remove();
+    const activeRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
+    const snapshot = await activeRef.once('value');
+    if (snapshot.exists()) {
+      const existing = snapshot.val();
+      const archivedAt = Date.now();
+      await db.ref(`${ORDER_TRACKING_HISTORY_NODE}/${safeOrderId}/${archivedAt}`).set({
+        ...existing,
+        archived_at: archivedAt
+      });
+    }
+    await activeRef.remove();
     return true;
   } catch (error) {
     console.warn(`⚠️ Failed to remove active order tracking from Firebase: ${error.message}`);
@@ -183,7 +202,9 @@ export async function pruneStaleActiveOrders({
     const db = getFirebaseRealtimeDb();
     if (!db) return { removed: 0 };
 
-    const staleBefore = Date.now() - (staleMinutes * 60 * 1000);
+    const now = Date.now();
+    const staleBefore = now - (staleMinutes * 60 * 1000);
+    const malformedGraceBefore = now - (MALFORMED_ORDER_GRACE_MINUTES * 60 * 1000);
     const snapshot = await db.ref(ACTIVE_ORDERS_NODE).once('value');
     const orders = snapshot.val() || {};
 
@@ -195,7 +216,15 @@ export async function pruneStaleActiveOrders({
       const ts = Number(value?.last_updated || value?.updated_at || value?.created_at || 0);
       const status = String(value?.status || '').toLowerCase();
       const isTerminal = ['delivered', 'cancelled', 'completed'].includes(status);
-      if ((ts > 0 && ts < staleBefore) || isTerminal) {
+      const isMalformed =
+        value?.boy_id == null ||
+        value?.restaurant_lat == null ||
+        value?.restaurant_lng == null ||
+        value?.customer_lat == null ||
+        value?.customer_lng == null;
+      const malformedAndOld = isMalformed && ts > 0 && ts < malformedGraceBefore;
+
+      if ((ts > 0 && ts < staleBefore) || isTerminal || malformedAndOld) {
         removals.push(db.ref(`${ACTIVE_ORDERS_NODE}/${orderId}`).remove());
         removed += 1;
       }
