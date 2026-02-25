@@ -2217,25 +2217,13 @@ export function useLocation() {
       }
     };
 
-    // Only check permissions/start watching if we already have a saved location
-    // This avoids "Requests geolocation permission on page load" warnings on fresh visits
-    // New users must explicitly click "Use Current Location" first
-    const hasStoredLocation = localStorage.getItem("userLocation");
-    if (hasStoredLocation) {
-      checkPermissionAndStart();
-    } else {
-      console.log("📍 Fresh visit - skipping auto-geolocation check (waiting for user action)");
-      setLoading(false);
-    }
+    // Always check permission state on startup.
+    // This does NOT trigger browser prompt by itself; it only auto-fetches when permission is already granted.
+    checkPermissionAndStart();
 
     // Cleanup timeout and watcher
     return () => {
       clearTimeout(loadingTimeout)
-      console.log("🧹 Cleaning up location watcher")
-      stopWatchingLocation()
-    }
-
-    return () => {
       console.log("🧹 Cleaning up location watcher")
       stopWatchingLocation()
     }

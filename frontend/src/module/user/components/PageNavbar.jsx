@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { ChevronDown, ShoppingCart, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLocation } from "../hooks/useLocation"
@@ -21,33 +21,65 @@ export default function PageNavbar({
   const cartCount = getCartCount()
   const [logoUrl, setLogoUrl] = useState(null)
   const [companyName, setCompanyName] = useState(null)
+  const autoLocationAttemptedRef = useRef(false)
 
-  // Auto-trigger location fetch if we have placeholder values (only once on mount)
+  // Auto-trigger location fetch once when location is missing/placeholder and permission is already granted.
+  useEffect(() => {
+    if (autoLocationAttemptedRef.current || loading || !requestLocation) return
+
+    const hasMissingOrPlaceholderLocation =
+      !location ||
+      location.formattedAddress === "Select location" ||
+      location.city === "Current Location"
+
+    if (!hasMissingOrPlaceholderLocation) return
+
+    let cancelled = false
+    const timeoutId = setTimeout(async () => {
+      try {
+        let isGranted = false
+        if (navigator.permissions?.query) {
+          const result = await navigator.permissions.query({ name: 'geolocation' })
+          isGranted = result.state === 'granted'
+        }
+
+        if (!isGranted) {
+          console.log("📍 Geolocation permission not granted; waiting for user action")
+          return
+        }
+
+        autoLocationAttemptedRef.current = true
+        const fetchedLocation = await requestLocation()
+        if (cancelled) return
+
+        if (fetchedLocation &&
+          fetchedLocation.formattedAddress !== "Select location" &&
+          fetchedLocation.city !== "Current Location") {
+          console.log("✅ Location fetched successfully:", fetchedLocation)
+        } else {
+          console.warn("⚠️ Location fetch returned placeholder, user may need to select manually")
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.warn("Location fetch failed:", err)
+        }
+      }
+    }, 1200)
+
+    return () => {
+      cancelled = true
+      clearTimeout(timeoutId)
+    }
+  }, [location, loading, requestLocation])
+
+  // Reset one-time auto-attempt if location becomes valid, so future invalid states can retry.
   useEffect(() => {
     if (location &&
-      !loading &&
-      requestLocation &&
-      (location.formattedAddress === "Select location" ||
-        location.city === "Current Location")) {
-      console.log("🔄 Auto-triggering location fetch due to placeholder values")
-      // Wait a bit to avoid multiple rapid calls, and only trigger once
-      const timeoutId = setTimeout(() => {
-        requestLocation().then((fetchedLocation) => {
-          if (fetchedLocation &&
-            fetchedLocation.formattedAddress !== "Select location" &&
-            fetchedLocation.city !== "Current Location") {
-            console.log("✅ Location fetched successfully:", fetchedLocation)
-          } else {
-            console.warn("⚠️ Location fetch returned placeholder, user may need to select manually")
-          }
-        }).catch(err => {
-          console.warn("Location fetch failed:", err)
-        })
-      }, 2000) // Wait 2 seconds before triggering
-
-      return () => clearTimeout(timeoutId)
+      location.formattedAddress !== "Select location" &&
+      location.city !== "Current Location") {
+      autoLocationAttemptedRef.current = false
     }
-  }, []) // Only run once on mount
+  }, [location])
 
   // Load business settings logo
   useEffect(() => {
