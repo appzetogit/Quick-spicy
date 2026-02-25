@@ -147,13 +147,13 @@ export default function App() {
 
           {/* Restaurant Public Routes */}
           <Route path="/restaurant/welcome" element={<AuthRedirect module="restaurant"><RestaurantWelcome /></AuthRedirect>} />
-          <Route path="/restaurant/auth/sign-in" element={<AuthRedirect module="restaurant"><RestaurantSignIn /></AuthRedirect>} />
+          <Route path="/restaurant/auth/sign-in" element={<AuthRedirect module="restaurant"><RestaurantLogin /></AuthRedirect>} />
           <Route path="/restaurant/login" element={<AuthRedirect module="restaurant"><RestaurantLogin /></AuthRedirect>} />
-          <Route path="/restaurant/signup" element={<AuthRedirect module="restaurant"><RestaurantSignup /></AuthRedirect>} />
-          <Route path="/restaurant/signup-email" element={<AuthRedirect module="restaurant"><RestaurantSignupEmail /></AuthRedirect>} />
+          <Route path="/restaurant/signup" element={<Navigate to="/restaurant/login" replace />} />
+          <Route path="/restaurant/signup-email" element={<Navigate to="/restaurant/login" replace />} />
           <Route path="/restaurant/forgot-password" element={<AuthRedirect module="restaurant"><RestaurantForgotPassword /></AuthRedirect>} />
           <Route path="/restaurant/otp" element={<AuthRedirect module="restaurant"><RestaurantOTP /></AuthRedirect>} />
-          <Route path="/restaurant/auth/google-callback" element={<AuthRedirect module="restaurant"><RestaurantGoogleCallback /></AuthRedirect>} />
+          <Route path="/restaurant/auth/google-callback" element={<Navigate to="/restaurant/login" replace />} />
 
           {/* Restaurant Protected Routes */}
           <Route
@@ -794,7 +794,7 @@ export default function App() {
           />
           {/* Delivery Public Routes */}
           <Route path="/delivery/sign-in" element={<DeliverySignIn />} />
-          <Route path="/delivery/signup" element={<DeliverySignup />} />
+          <Route path="/delivery/signup" element={<Navigate to="/delivery/sign-in" replace />} />
           <Route path="/delivery/otp" element={<DeliveryOTP />} />
           <Route path="/delivery/welcome" element={<AuthRedirect module="delivery"><DeliveryWelcome /></AuthRedirect>} />
           <Route path="/delivery/terms" element={<DeliveryTerms />} />
@@ -803,19 +803,11 @@ export default function App() {
           {/* Delivery Signup Routes (Protected - require authentication) */}
           <Route
             path="/delivery/signup/details"
-            element={
-              <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
-                <DeliverySignupStep1 />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/delivery/sign-in" replace />}
           />
           <Route
             path="/delivery/signup/documents"
-            element={
-              <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
-                <DeliverySignupStep2 />
-              </ProtectedRoute>
-            }
+            element={<Navigate to="/delivery/sign-in" replace />}
           />
 
           {/* Delivery Protected Routes */}

@@ -174,7 +174,7 @@ export default function DeliverySignIn() {
               Sign in to your account
             </h2>
             <p className="text-base text-gray-600">
-              Login or create an account
+              Login with your phone number
             </p>
           </div>
 

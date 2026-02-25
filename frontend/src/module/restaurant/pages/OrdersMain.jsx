@@ -2015,8 +2015,12 @@ function OrderCard({
   deliveryPartnerId,
   onSelect,
   onCancel,
+  onMarkReady,
+  isMarkingReady = false,
 }) {
-  const isReady = status === "Ready"
+  const normalizedStatus = String(status || "").toLowerCase()
+  const isReady = normalizedStatus === "ready"
+  const isPreparing = normalizedStatus === "preparing"
   const statusLabel = String(status || "")
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase())
@@ -2024,7 +2028,7 @@ function OrderCard({
   return (
     <div className="w-full bg-white rounded-2xl p-4 mb-3 border border-gray-200 hover:border-gray-400 transition-colors relative">
       {/* Cancel button - only show for preparing orders */}
-      {status === 'preparing' && onCancel && (
+      {isPreparing && onCancel && (
         <button
           type="button"
           onClick={(e) => {
@@ -2116,7 +2120,7 @@ function OrderCard({
                 {tableOrToken ? ` • ${tableOrToken}` : ""}
               </p>
               {/* Delivery Assignment Status - Only show for preparing orders */}
-              {status === 'preparing' && (
+              {isPreparing && (
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${deliveryPartnerId
                     ? 'bg-green-100 text-green-700 border border-green-300'
@@ -2132,15 +2136,30 @@ function OrderCard({
                 </div>
               )}
             </div>
-            {/* Hide ETA for ready orders */}
-            {status !== 'ready' && eta && (
-              <div className="flex items-baseline gap-1">
-                <span className="text-[11px] text-gray-500">ETA</span>
-                <span className="text-xs font-medium text-black">
-                  {eta}
-                </span>
-              </div>
-            )}
+            <div className="flex items-center gap-2">
+              {isPreparing && onMarkReady && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onMarkReady({ orderId, mongoId, customerName })
+                  }}
+                  disabled={isMarkingReady}
+                  className="px-2.5 py-1 rounded-lg text-[11px] font-semibold border border-green-600 text-green-700 bg-green-50 hover:bg-green-100 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                >
+                  {isMarkingReady ? "Marking..." : "Mark Ready"}
+                </button>
+              )}
+              {/* Hide ETA for ready orders */}
+              {!isReady && eta && (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[11px] text-gray-500">ETA</span>
+                  <span className="text-xs font-medium text-black">
+                    {eta}
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -2153,6 +2172,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [markingReadyOrderIds, setMarkingReadyOrderIds] = useState({})
 
   useEffect(() => {
     let isMounted = true
@@ -2323,6 +2343,33 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
     }
   }, [orders])
 
+  const handleMarkReady = async ({ orderId, mongoId, customerName }) => {
+    const orderKey = mongoId || orderId
+    if (!orderKey || markingReadyOrderIds[orderKey]) return
+
+    try {
+      setMarkingReadyOrderIds((prev) => ({ ...prev, [orderKey]: true }))
+      await restaurantAPI.markOrderReady(orderKey)
+      setOrders((prev) => prev.filter((order) => (order.mongoId || order.orderId) !== orderKey))
+      toast.success(`Order ${orderId} marked ready${customerName ? ` for ${customerName}` : ""}`)
+    } catch (error) {
+      const status = error.response?.status
+      const message = error.response?.data?.message || 'Failed to mark order as ready'
+      if (status === 400 && String(message).toLowerCase().includes('current status')) {
+        setOrders((prev) => prev.filter((order) => (order.mongoId || order.orderId) !== orderKey))
+        toast.success(`Order ${orderId} is already ready`)
+      } else {
+        toast.error(message)
+      }
+    } finally {
+      setMarkingReadyOrderIds((prev) => {
+        const next = { ...prev }
+        delete next[orderKey]
+        return next
+      })
+    }
+  }
+
   if (loading) {
     return (
       <div className="pt-4 pb-6">
@@ -2385,6 +2432,8 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
                 deliveryPartnerId={order.deliveryPartnerId}
                 onSelect={onSelectOrder}
                 onCancel={onCancel}
+                onMarkReady={handleMarkReady}
+                isMarkingReady={Boolean(markingReadyOrderIds[order.mongoId || order.orderId])}
               />
             )
           })}
