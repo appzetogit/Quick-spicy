@@ -4,7 +4,9 @@ import {
   verifyOTP,
   refreshToken,
   logout,
-  getCurrentDelivery
+  getCurrentDelivery,
+  saveFcmToken,
+  removeFcmToken
 } from '../controllers/deliveryAuthController.js';
 import { authenticate } from '../middleware/deliveryAuth.js';
 import { validate } from '../../../shared/middleware/validate.js';
@@ -33,6 +35,16 @@ const verifyOTPSchema = Joi.object({
   name: Joi.string().allow(null, '').optional()
 });
 
+const fcmTokenSchema = Joi.object({
+  token: Joi.string().trim().min(10).required(),
+  platform: Joi.string().valid('web', 'android', 'ios', 'mobile').default('web')
+});
+
+const removeFcmTokenSchema = Joi.object({
+  token: Joi.string().trim().optional(),
+  platform: Joi.string().valid('web', 'android', 'ios', 'mobile').optional(),
+}).or('token', 'platform');
+
 // Public routes
 router.post('/send-otp', validate(sendOTPSchema), sendOTP);
 router.post('/verify-otp', validate(verifyOTPSchema), verifyOTP);
@@ -41,6 +53,7 @@ router.post('/refresh-token', refreshToken);
 // Protected routes (require authentication)
 router.post('/logout', authenticate, logout);
 router.get('/me', authenticate, getCurrentDelivery);
+router.post('/fcm-token', authenticate, validate(fcmTokenSchema), saveFcmToken);
+router.delete('/fcm-token', authenticate, validate(removeFcmTokenSchema), removeFcmToken);
 
 export default router;
-

@@ -847,6 +847,17 @@ export const deliveryAPI = {
   getCurrentDelivery: () => {
     return apiClient.get(API_ENDPOINTS.DELIVERY.AUTH.ME);
   },
+  saveFcmToken: (token, platform = "web") => {
+    return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.FCM_TOKEN, {
+      token,
+      platform,
+    });
+  },
+  removeFcmToken: (payload = {}) => {
+    return apiClient.delete(API_ENDPOINTS.DELIVERY.AUTH.FCM_TOKEN, {
+      data: payload,
+    });
+  },
 
   // Dashboard
   getDashboard: () => {

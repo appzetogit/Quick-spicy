@@ -232,6 +232,15 @@ const deliverySchema = new mongoose.Schema(
       type: String,
       select: false
     },
+    // Push notification tokens
+    fcmtokenweb: {
+      type: String,
+      default: null
+    },
+    fcmtokenmobile: {
+      type: String,
+      default: null
+    },
     // Active status
     isActive: {
       type: Boolean,
@@ -352,4 +361,3 @@ deliverySchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 export default mongoose.model('Delivery', deliverySchema);
-

@@ -231,6 +231,7 @@ export const API_ENDPOINTS = {
       REFRESH_TOKEN: "/delivery/auth/refresh-token",
       LOGOUT: "/delivery/auth/logout",
       ME: "/delivery/auth/me",
+      FCM_TOKEN: "/delivery/auth/fcm-token",
     },
     SIGNUP: {
       DETAILS: "/delivery/signup/details",

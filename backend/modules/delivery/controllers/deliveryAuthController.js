@@ -355,3 +355,75 @@ export const getCurrentDelivery = asyncHandler(async (req, res) => {
   });
 });
 
+const resolveFcmChannel = (platform = 'web') => {
+  const normalizedPlatform = String(platform || '').trim().toLowerCase();
+  if (normalizedPlatform === 'web') {
+    return 'web';
+  }
+  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview'].includes(normalizedPlatform)) {
+    return 'mobile';
+  }
+  return 'web';
+};
+
+/**
+ * Save/update FCM token for authenticated delivery partner
+ * POST /api/delivery/auth/fcm-token
+ */
+export const saveFcmToken = asyncHandler(async (req, res) => {
+  const { token, platform = 'web' } = req.body || {};
+
+  if (!token || !String(token).trim()) {
+    return errorResponse(res, 400, 'FCM token is required');
+  }
+
+  const normalizedToken = String(token).trim();
+  const channel = resolveFcmChannel(platform);
+
+  if (channel === 'mobile') {
+    req.delivery.fcmtokenmobile = normalizedToken;
+  } else {
+    req.delivery.fcmtokenweb = normalizedToken;
+  }
+
+  await req.delivery.save();
+
+  return successResponse(res, 200, 'FCM token saved successfully', {
+    platform: channel,
+    fcmtokenweb: req.delivery.fcmtokenweb || null,
+    fcmtokenmobile: req.delivery.fcmtokenmobile || null,
+  });
+});
+
+/**
+ * Remove FCM token for authenticated delivery partner
+ * DELETE /api/delivery/auth/fcm-token
+ */
+export const removeFcmToken = asyncHandler(async (req, res) => {
+  const { token = null, platform = null } = req.body || {};
+  const normalizedToken = token ? String(token).trim() : null;
+  const channel = platform ? resolveFcmChannel(platform) : null;
+
+  if (normalizedToken) {
+    if (req.delivery.fcmtokenweb === normalizedToken) {
+      req.delivery.fcmtokenweb = null;
+    }
+    if (req.delivery.fcmtokenmobile === normalizedToken) {
+      req.delivery.fcmtokenmobile = null;
+    }
+  } else if (channel === 'web') {
+    req.delivery.fcmtokenweb = null;
+  } else if (channel === 'mobile') {
+    req.delivery.fcmtokenmobile = null;
+  } else {
+    req.delivery.fcmtokenweb = null;
+    req.delivery.fcmtokenmobile = null;
+  }
+
+  await req.delivery.save();
+
+  return successResponse(res, 200, 'FCM token removed successfully', {
+    fcmtokenweb: req.delivery.fcmtokenweb || null,
+    fcmtokenmobile: req.delivery.fcmtokenmobile || null,
+  });
+});
