@@ -3,6 +3,8 @@ import Delivery from '../../delivery/models/Delivery.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Payment from '../../payment/models/Payment.js';
 import mongoose from 'mongoose';
+import admin from 'firebase-admin';
+import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 
 // Dynamic import to avoid circular dependency
 let getIO = null;
@@ -43,6 +45,71 @@ function buildPaymentMeta(order, paymentRecord = null) {
     amountToCollect,
     cashToCollect: amountToCollect,
     collectionAmount: amountToCollect
+  };
+}
+
+function extractDeliveryTokens(deliveryRecord = null) {
+  const tokens = [];
+  const addToken = (token) => {
+    const normalized = String(token || '').trim();
+    if (normalized.length >= 10) {
+      tokens.push(normalized);
+    }
+  };
+
+  addToken(deliveryRecord?.fcmtokenmobile);
+  addToken(deliveryRecord?.fcmtokenweb);
+  return [...new Set(tokens)];
+}
+
+async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
+  const uniqueTokens = [...new Set((tokens || []).map((t) => String(t || '').trim()).filter((t) => t.length >= 10))];
+  if (uniqueTokens.length === 0) {
+    return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
+  }
+
+  await firebaseAuthService.init();
+  if (!firebaseAuthService.isEnabled()) {
+    console.warn('FCM push skipped for delivery notifications: Firebase not configured');
+    return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
+  }
+
+  const message = {
+    notification: {
+      title: String(payload?.title || 'New Delivery Update'),
+      body: String(payload?.body || 'You have an order update')
+    },
+    data: {
+      type: String(payload?.type || 'delivery_update'),
+      orderId: String(payload?.orderId || ''),
+      orderMongoId: String(payload?.orderMongoId || ''),
+      status: String(payload?.status || ''),
+      phase: String(payload?.phase || ''),
+      sentAt: new Date().toISOString()
+    },
+    tokens: uniqueTokens
+  };
+
+  if (payload?.imageUrl) {
+    message.notification.imageUrl = payload.imageUrl;
+    message.notification.image = payload.imageUrl;
+    message.webpush = {
+      notification: { image: payload.imageUrl },
+      fcmOptions: { link: '/delivery' }
+    };
+    message.android = {
+      notification: { imageUrl: payload.imageUrl, image: payload.imageUrl }
+    };
+    message.apns = {
+      fcmOptions: { imageUrl: payload.imageUrl }
+    };
+  }
+
+  const response = await admin.messaging().sendEachForMulticast(message);
+  return {
+    success: (response.successCount || 0) > 0,
+    sentCount: response.successCount || 0,
+    failedCount: response.failureCount || 0
   };
 }
 
@@ -122,7 +189,7 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
 
     // Get delivery partner details
     const deliveryPartner = await Delivery.findById(deliveryPartnerId)
-      .select('name phone availability.currentLocation availability.isOnline status isActive')
+      .select('name phone availability.currentLocation availability.isOnline status isActive fcmtokenweb fcmtokenmobile')
       .lean();
 
     if (!deliveryPartner) {
@@ -313,6 +380,22 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       console.log(`📤 Emitted notification to room: ${room}`);
     });
 
+    let pushResult = { success: false, sentCount: 0, failedCount: 0 };
+    try {
+      const pushTokens = extractDeliveryTokens(deliveryPartner);
+      pushResult = await sendDeliveryPushNotifications(pushTokens, {
+        type: 'new_order',
+        title: 'New Delivery Request',
+        body: `${orderNotification.restaurantName || 'Restaurant'} order ${order.orderId} is available`,
+        orderId: order.orderId,
+        orderMongoId: order._id?.toString(),
+        status: order.status
+      });
+      console.log(`📲 Push notification result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Push send failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
+    }
+
     if (socketsInRoom.length === 0) {
       console.warn(`⚠️ No sockets connected in any delivery room for partner ${normalizedDeliveryPartnerId}`);
       console.warn(`⚠️ Delivery partner details:`, {
@@ -344,10 +427,11 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       // Strict targeting: never broadcast order assignment globally
       console.warn(`⚠️ Strict zone delivery mode: global broadcast disabled for assigned order notifications`);
       return {
-        success: false,
+        success: pushResult.success,
         reason: 'Delivery partner not connected',
         deliveryPartnerId: normalizedDeliveryPartnerId,
-        orderId: order.orderId
+        orderId: order.orderId,
+        pushSent: pushResult.sentCount || 0
       };
     } else {
       console.log(`✅ Successfully found ${socketsInRoom.length} connected socket(s) for delivery partner ${normalizedDeliveryPartnerId}`);
@@ -363,7 +447,8 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
     return {
       success: true,
       deliveryPartnerId,
-      orderId: order.orderId
+      orderId: order.orderId,
+      pushSent: pushResult.sentCount || 0
     };
   } catch (error) {
     console.error('Error notifying delivery boy:', error);
@@ -577,10 +662,27 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       hasCustomerLocation: !!orderNotification.customerLocation
     });
 
+    const deliveryRecords = await Delivery.find({
+      _id: {
+        $in: deliveryPartnerIds.filter((id) => mongoose.Types.ObjectId.isValid(id))
+      }
+    })
+      .select('_id fcmtokenweb fcmtokenmobile')
+      .lean();
+
+    const deliveryById = new Map();
+    deliveryRecords.forEach((record) => {
+      deliveryById.set(record._id.toString(), record);
+    });
+
+    const pushTokens = [];
+
     // Notify each delivery partner
     for (const deliveryPartnerId of deliveryPartnerIds) {
       try {
         const normalizedId = deliveryPartnerId?.toString() || deliveryPartnerId;
+        const deliveryRecord = deliveryById.get(normalizedId);
+        extractDeliveryTokens(deliveryRecord).forEach((token) => pushTokens.push(token));
         const roomVariations = [
           `delivery:${normalizedId}`,
           `delivery:${deliveryPartnerId}`,
@@ -618,6 +720,21 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       } catch (partnerError) {
         console.error(`❌ Error notifying delivery partner ${deliveryPartnerId}:`, partnerError);
       }
+    }
+
+    try {
+      const pushResult = await sendDeliveryPushNotifications(pushTokens, {
+        type: 'new_order_available',
+        title: 'New Order Available',
+        body: `${orderNotification.restaurantName || 'Restaurant'} has a delivery request`,
+        orderId: order.orderId || order._id?.toString(),
+        orderMongoId: order._id?.toString(),
+        status: order.status,
+        phase
+      });
+      console.log(`📲 Push notification result for order ${order.orderId} (${phase}):`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Push send failed for order ${order.orderId} (${phase}):`, pushError.message);
     }
 
     console.log(`✅ Notified ${notifiedCount} delivery partners (phase: ${phase}) for order ${order.orderId}`);
@@ -660,6 +777,12 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
       restaurantLng: coords?.[0]
     };
 
+    const deliveryPartnerRecord = await Delivery.findById(deliveryPartnerId)
+      .select('fcmtokenweb fcmtokenmobile')
+      .lean();
+
+    const pushTokens = extractDeliveryTokens(deliveryPartnerRecord);
+
     // Try to find delivery partner's room
     const roomVariations = [
       `delivery:${normalizedDeliveryPartnerId}`,
@@ -691,6 +814,20 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
       // Strict targeting: never broadcast order updates globally
       console.warn(`⚠️ Delivery partner ${normalizedDeliveryPartnerId} not connected; global broadcast disabled`);
       notificationSent = false;
+    }
+
+    try {
+      const pushResult = await sendDeliveryPushNotifications(pushTokens, {
+        type: 'order_ready',
+        title: 'Order Ready for Pickup',
+        body: `Order ${order.orderId || order._id} is ready at ${orderReadyNotification.restaurantName || 'restaurant'}`,
+        orderId: order.orderId || order._id?.toString(),
+        orderMongoId: order._id?.toString(),
+        status: 'ready'
+      });
+      console.log(`📲 Order-ready push result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Order-ready push failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
     }
 
     return {
