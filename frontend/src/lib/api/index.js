@@ -1117,6 +1117,11 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.DASHBOARD_STATS);
   },
 
+  // Send admin push notification to stored FCM tokens
+  sendPushNotification: (payload) => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.PUSH_NOTIFICATION_SEND, payload);
+  },
+
   // Get users
   getUsers: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.USERS, { params });

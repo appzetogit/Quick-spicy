@@ -197,6 +197,7 @@ import {
   respondToSafetyEmergency,
   deleteSafetyEmergency,
 } from "../controllers/safetyEmergencyController.js";
+import { sendPushNotification } from "../controllers/pushNotificationController.js";
 import {
   getOrders,
   getOrderById,
@@ -276,6 +277,7 @@ router.delete("/admins/:id", deleteAdmin);
 // Profile Management
 router.get("/profile", getAdminProfile);
 router.put("/profile", updateAdminProfile);
+router.post("/push-notification/send", sendPushNotification);
 
 // Settings Management
 router.put("/settings/change-password", changeAdminPassword);

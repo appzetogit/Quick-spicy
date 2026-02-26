@@ -1,5 +1,7 @@
 import { useState, useMemo, useRef } from "react"
 import { Search, Download, ChevronDown, Bell, Edit, Trash2, Upload, Settings, Image as ImageIcon } from "lucide-react"
+import { toast } from "sonner"
+import { adminAPI } from "@/lib/api"
 import { pushNotificationsDummy } from "../data/pushNotificationsDummy"
 // Using placeholders for notification images
 const notificationImage1 = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=400&fit=crop"
@@ -23,6 +25,7 @@ export default function PushNotification() {
   const [bannerPreview, setBannerPreview] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState(pushNotificationsDummy)
+  const [isSending, setIsSending] = useState(false)
 
   const filteredNotifications = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -40,10 +43,49 @@ export default function PushNotification() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const resolveTarget = (sendTo) => {
+    const normalized = String(sendTo || "").trim().toLowerCase()
+    if (normalized === "customer") return "customer"
+    if (normalized === "delivery man") return "delivery"
+    if (normalized === "restaurant") return "restaurant"
+    return "customer"
+  }
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (!formData.title.trim() || !formData.description.trim()) {
-      alert("Title and description are required")
+      toast.error("Title and description are required")
+      return
+    }
+
+    setIsSending(true)
+
+    try {
+      const payload = {
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        target: resolveTarget(formData.sendTo),
+        platform: "all",
+        zone: formData.zone,
+      }
+
+      const response = await adminAPI.sendPushNotification(payload)
+      const data = response?.data?.data || {}
+      const sentCount = Number(data.sentCount || 0)
+      const failedCount = Number(data.failedCount || 0)
+
+      if (sentCount > 0) {
+        toast.success(`Notification sent to ${sentCount} device(s)${failedCount ? `, failed: ${failedCount}` : ""}`)
+      } else {
+        toast.info(response?.data?.message || "No eligible FCM tokens found")
+      }
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Failed to send notification"
+      toast.error(message)
+      setIsSending(false)
       return
     }
 
@@ -65,6 +107,7 @@ export default function PushNotification() {
 
     setNotifications((prev) => [newNotification, ...prev])
     handleReset()
+    setIsSending(false)
   }
 
   const handleReset = () => {
@@ -215,12 +258,13 @@ export default function PushNotification() {
                 Reset
               </button>
               <div className="flex items-center gap-2">
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md"
-                >
-                  Send Notification
-                </button>
+              <button
+                type="submit"
+                disabled={isSending}
+                className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md"
+              >
+                  {isSending ? "Sending..." : "Send Notification"}
+              </button>
                 <button className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all">
                   <Settings className="w-5 h-5" />
                 </button>
