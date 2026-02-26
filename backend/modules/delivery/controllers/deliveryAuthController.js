@@ -240,6 +240,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     // Return access token and delivery boy info
     return successResponse(res, 200, 'Authentication successful', {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       user: {
         id: delivery._id,
         deliveryId: delivery.deliveryId,

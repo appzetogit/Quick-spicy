@@ -399,7 +399,13 @@ export default function DeliveryBoyCommission() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+              <button
+                onClick={handleAdd}
+                className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all shadow-sm"
+              >
+                Add Rule
+              </button>
               <button 
                 onClick={() => setIsSettingsOpen(true)}
                 className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"

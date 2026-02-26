@@ -278,45 +278,54 @@ apiClient.interceptors.response.use(
     }
 
     // If response contains new access token, store it for the current module
-    if (response.data?.accessToken) {
-      const currentPath = window.location.pathname;
-      let tokenKey = "accessToken"; // fallback
-      let expectedRole = "user";
+      if (response.data?.accessToken) {
+        const currentPath = window.location.pathname;
+        let tokenKey = "accessToken"; // fallback
+        let refreshTokenKey = "refreshToken";
+        let expectedRole = "user";
 
-      if (currentPath.startsWith("/admin")) {
-        tokenKey = "admin_accessToken";
-        expectedRole = "admin";
-      } else if (
+        if (currentPath.startsWith("/admin")) {
+          tokenKey = "admin_accessToken";
+          refreshTokenKey = "admin_refreshToken";
+          expectedRole = "admin";
+        } else if (
         currentPath.startsWith("/restaurant") &&
         !currentPath.startsWith("/restaurants")
       ) {
         // /restaurant/* is for restaurant module, /restaurants/* is for user module viewing restaurants
-        tokenKey = "restaurant_accessToken";
-        expectedRole = "restaurant";
-      } else if (currentPath.startsWith("/delivery")) {
-        tokenKey = "delivery_accessToken";
-        expectedRole = "delivery";
-      } else if (
+          tokenKey = "restaurant_accessToken";
+          refreshTokenKey = "restaurant_refreshToken";
+          expectedRole = "restaurant";
+        } else if (currentPath.startsWith("/delivery")) {
+          tokenKey = "delivery_accessToken";
+          refreshTokenKey = "delivery_refreshToken";
+          expectedRole = "delivery";
+        } else if (
         currentPath.startsWith("/user") ||
         currentPath.startsWith("/usermain") ||
         currentPath === "/" ||
         currentPath.startsWith("/restaurants")
       ) {
         // User module includes /restaurants/* and /usermain/* paths
-        tokenKey = "user_accessToken";
-        expectedRole = "user";
-      }
+          tokenKey = "user_accessToken";
+          refreshTokenKey = "user_refreshToken";
+          expectedRole = "user";
+        }
 
-      const token = response.data.accessToken;
-      const role = getRoleFromToken(token);
+        const token = response.data.accessToken;
+        const refreshToken = response.data.refreshToken || response.data?.data?.refreshToken;
+        const role = getRoleFromToken(token);
 
       // Only store the token if the role matches the current module
-      if (!role || role !== expectedRole) {
-        clearModuleAuth(tokenKey.replace("_accessToken", ""));
-      } else {
-        localStorage.setItem(tokenKey, token);
+        if (!role || role !== expectedRole) {
+          clearModuleAuth(tokenKey.replace("_accessToken", ""));
+        } else {
+          localStorage.setItem(tokenKey, token);
+          if (refreshToken && typeof refreshToken === "string") {
+            localStorage.setItem(refreshTokenKey, refreshToken);
+          }
+        }
       }
-    }
     return response;
   },
   async (error) => {
@@ -345,11 +354,29 @@ apiClient.interceptors.response.use(
 
         // Try to refresh the token
         // The refresh token is sent via httpOnly cookie automatically
+        let refreshTokenHeader = null;
+        if (currentPath.startsWith("/admin")) {
+          refreshTokenHeader = localStorage.getItem("admin_refreshToken");
+        } else if (
+          currentPath.startsWith("/restaurant") &&
+          !currentPath.startsWith("/restaurants")
+        ) {
+          refreshTokenHeader = localStorage.getItem("restaurant_refreshToken");
+        } else if (currentPath.startsWith("/delivery")) {
+          refreshTokenHeader = localStorage.getItem("delivery_refreshToken");
+        } else {
+          refreshTokenHeader = localStorage.getItem("user_refreshToken");
+        }
+
         const response = await axios.post(
           `${API_BASE_URL}${refreshEndpoint}`,
           {},
           {
             withCredentials: true,
+            headers:
+              refreshTokenHeader && typeof refreshTokenHeader === "string"
+                ? { "x-refresh-token": refreshTokenHeader }
+                : {},
           },
         );
 
