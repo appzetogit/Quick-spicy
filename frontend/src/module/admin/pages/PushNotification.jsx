@@ -20,6 +20,7 @@ export default function PushNotification() {
     title: "",
     zone: "All",
     sendTo: "Customer",
+    imageUrl: "",
     description: "",
   })
   const [bannerPreview, setBannerPreview] = useState("")
@@ -61,12 +62,21 @@ export default function PushNotification() {
     setIsSending(true)
 
     try {
+      const normalizedImageUrl = formData.imageUrl.trim()
+      const isHttpImageUrl = !normalizedImageUrl || /^https?:\/\//i.test(normalizedImageUrl)
+      if (!isHttpImageUrl) {
+        toast.error("Notification image URL must start with http:// or https://")
+        setIsSending(false)
+        return
+      }
+
       const payload = {
         title: formData.title.trim(),
         description: formData.description.trim(),
         target: resolveTarget(formData.sendTo),
         platform: "all",
         zone: formData.zone,
+        ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
       }
 
       const response = await adminAPI.sendPushNotification(payload)
@@ -102,7 +112,7 @@ export default function PushNotification() {
       target: formData.sendTo,
       status: true,
       image: Boolean(bannerPreview),
-      imageUrl: bannerPreview || null,
+      imageUrl: formData.imageUrl.trim() || bannerPreview || null,
     }
 
     setNotifications((prev) => [newNotification, ...prev])
@@ -115,6 +125,7 @@ export default function PushNotification() {
       title: "",
       zone: "All",
       sendTo: "Customer",
+      imageUrl: "",
       description: "",
     })
     setBannerPreview("")
@@ -245,6 +256,20 @@ export default function PushNotification() {
                 accept="image/*"
                 onChange={handleBannerSelect}
                 className="hidden"
+              />
+            </div>
+
+            {/* Description */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Notification Image URL (public)
+              </label>
+              <input
+                type="text"
+                value={formData.imageUrl}
+                onChange={(e) => handleInputChange("imageUrl", e.target.value)}
+                placeholder="https://example.com/banner.jpg"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
 

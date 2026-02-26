@@ -131,7 +131,7 @@ async function attachForegroundListener(firebaseAppInstance) {
   onMessage(messaging, (payload) => {
     const title = payload?.notification?.title || "New notification";
     const body = payload?.notification?.body || "";
-    const image = payload?.notification?.image || undefined;
+    const image = payload?.notification?.image || payload?.data?.imageUrl || undefined;
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {

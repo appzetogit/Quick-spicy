@@ -99,6 +99,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   const {
     title = "",
     description = "",
+    imageUrl = "",
     target = "customer",
     platform = "all",
     zone = "All",
@@ -106,6 +107,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
 
   const normalizedTitle = String(title || "").trim();
   const normalizedDescription = String(description || "").trim();
+  const normalizedImageUrl = String(imageUrl || "").trim();
   const normalizedTarget = normalizeTarget(target);
   const normalizedPlatform = normalizePlatform(platform);
 
@@ -138,14 +140,38 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     notification: {
       title: normalizedTitle,
       body: normalizedDescription,
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
     },
     data: {
       type: "admin_push_notification",
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: String(zone || "All"),
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
       sentAt: new Date().toISOString(),
     },
+    ...(normalizedImageUrl
+      ? {
+          webpush: {
+            notification: {
+              image: normalizedImageUrl,
+            },
+            fcmOptions: {
+              link: "/",
+            },
+          },
+          android: {
+            notification: {
+              imageUrl: normalizedImageUrl,
+            },
+          },
+          apns: {
+            fcmOptions: {
+              imageUrl: normalizedImageUrl,
+            },
+          },
+        }
+      : {}),
   };
 
   const batches = chunk(allTokens, BATCH_SIZE);
@@ -183,4 +209,3 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     sampleFailures: failedTokens.slice(0, 20),
   });
 });
-
