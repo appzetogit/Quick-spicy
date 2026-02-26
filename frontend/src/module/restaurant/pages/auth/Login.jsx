@@ -38,11 +38,12 @@ const countryCodes = [
 export default function RestaurantLogin() {
   const companyName = useCompanyName()
   const navigate = useNavigate()
+  const DEFAULT_COUNTRY_CODE = "+91"
   const [formData, setFormData] = useState(() => {
     const saved = sessionStorage.getItem("restaurantLoginPhone")
     return {
       phone: saved || "",
-      countryCode: "+91",
+      countryCode: DEFAULT_COUNTRY_CODE,
     }
   })
   const [error, setError] = useState("")

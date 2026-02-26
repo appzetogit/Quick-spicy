@@ -140,6 +140,32 @@ const timeToString = (date) => {
   return `${hours}:${minutes}`
 }
 
+const normalizeTimeValue = (value) => {
+  if (!value) return ""
+
+  const raw = String(value).trim()
+  if (!raw) return ""
+
+  // Already in HH:mm format
+  if (/^\d{2}:\d{2}$/.test(raw)) {
+    return raw
+  }
+
+  // Handle H:mm by zero-padding hour
+  if (/^\d{1}:\d{2}$/.test(raw)) {
+    const [h, m] = raw.split(":")
+    return `${h.padStart(2, "0")}:${m}`
+  }
+
+  // Fallback for ISO / Date-like strings
+  const parsed = new Date(raw)
+  if (!Number.isNaN(parsed.getTime())) {
+    return timeToString(parsed)
+  }
+
+  return ""
+}
+
 const formatDateToLocalYMD = (date) => {
   if (!date || Number.isNaN(date.getTime?.())) return ""
   const year = date.getFullYear()
@@ -307,8 +333,8 @@ export default function RestaurantOnboarding() {
           menuImages: localData.step2.menuImages || [],
           profileImage: localData.step2.profileImage || null,
           cuisines: localData.step2.cuisines || [],
-          openingTime: localData.step2.openingTime || "",
-          closingTime: localData.step2.closingTime || "",
+          openingTime: normalizeTimeValue(localData.step2.openingTime),
+          closingTime: normalizeTimeValue(localData.step2.closingTime),
           openDays: localData.step2.openDays || [],
         })
       }
@@ -409,8 +435,8 @@ export default function RestaurantOnboarding() {
               // Load profile image URL if available
               profileImage: data.step2.profileImageUrl || null,
               cuisines: data.step2.cuisines || [],
-              openingTime: data.step2.deliveryTimings?.openingTime || "",
-              closingTime: data.step2.deliveryTimings?.closingTime || "",
+              openingTime: normalizeTimeValue(data.step2.deliveryTimings?.openingTime),
+              closingTime: normalizeTimeValue(data.step2.deliveryTimings?.closingTime),
               openDays: data.step2.openDays || [],
             })
           }
@@ -834,8 +860,8 @@ export default function RestaurantOnboarding() {
             profileImageUrl: profileUpload,
             cuisines: step2.cuisines || [],
             deliveryTimings: {
-              openingTime: step2.openingTime || "",
-              closingTime: step2.closingTime || "",
+              openingTime: normalizeTimeValue(step2.openingTime),
+              closingTime: normalizeTimeValue(step2.closingTime),
             },
             openDays: step2.openDays || [],
           },
