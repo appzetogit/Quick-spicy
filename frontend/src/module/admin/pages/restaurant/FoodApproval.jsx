@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Search, CheckCircle2, XCircle, Eye, Clock, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import {
@@ -21,26 +21,62 @@ export default function FoodApproval() {
   const [showRejectModal, setShowRejectModal] = useState(false)
   const [rejectReason, setRejectReason] = useState("")
   const [processing, setProcessing] = useState(false)
+  const isMountedRef = useRef(true)
 
   // Fetch pending food approval requests
-  const fetchFoodRequests = async () => {
+  const fetchFoodRequests = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const response = await adminAPI.getPendingFoodApprovals()
       const data = response?.data?.data?.requests || response?.data?.requests || []
+      if (!isMountedRef.current) return
       setFoodRequests(data)
     } catch (error) {
       console.error('Error fetching food approval requests:', error)
-      toast.error('Failed to load food approval requests')
+      if (!isMountedRef.current) return
+      if (!silent) {
+        toast.error('Failed to load food approval requests')
+      }
       setFoodRequests([])
     } finally {
-      setLoading(false)
+      if (!silent && isMountedRef.current) {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
 
   useEffect(() => {
+    isMountedRef.current = true
     fetchFoodRequests()
-  }, [])
+
+    const onFocus = () => fetchFoodRequests({ silent: true })
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchFoodRequests({ silent: true })
+      }
+    }
+    const onPageShow = () => fetchFoodRequests({ silent: true })
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchFoodRequests({ silent: true })
+      }
+    }, 30000)
+
+    window.addEventListener("focus", onFocus)
+    window.addEventListener("pageshow", onPageShow)
+    document.addEventListener("visibilitychange", onVisibility)
+
+    return () => {
+      isMountedRef.current = false
+      clearInterval(intervalId)
+      window.removeEventListener("focus", onFocus)
+      window.removeEventListener("pageshow", onPageShow)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [fetchFoodRequests])
 
   // Filter requests based on search query
   const filteredRequests = useMemo(() => {
