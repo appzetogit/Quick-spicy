@@ -49,7 +49,15 @@ export const getPublicEnvVariables = asyncHandler(async (req, res) => {
     // Return only public variables that frontend needs
     // NO FALLBACK - Only use database value
     const publicEnvData = {
-      VITE_GOOGLE_MAPS_API_KEY: envData.VITE_GOOGLE_MAPS_API_KEY || ''
+      VITE_GOOGLE_MAPS_API_KEY: envData.VITE_GOOGLE_MAPS_API_KEY || '',
+      FIREBASE_API_KEY: envData.FIREBASE_API_KEY || '',
+      FIREBASE_AUTH_DOMAIN: envData.FIREBASE_AUTH_DOMAIN || '',
+      FIREBASE_STORAGE_BUCKET: envData.FIREBASE_STORAGE_BUCKET || '',
+      FIREBASE_MESSAGING_SENDER_ID: envData.FIREBASE_MESSAGING_SENDER_ID || '',
+      FIREBASE_APP_ID: envData.FIREBASE_APP_ID || '',
+      FIREBASE_VAPID_KEY: envData.FIREBASE_VAPID_KEY || '',
+      MEASUREMENT_ID: envData.MEASUREMENT_ID || '',
+      FIREBASE_PROJECT_ID: envData.FIREBASE_PROJECT_ID || ''
     };
     
     return successResponse(res, 200, 'Public environment variables retrieved successfully', publicEnvData);
@@ -57,7 +65,15 @@ export const getPublicEnvVariables = asyncHandler(async (req, res) => {
     logger.error(`Error fetching public environment variables: ${error.message}`, { stack: error.stack });
     // No fallback - return empty if database fails
     return successResponse(res, 200, 'Public environment variables retrieved successfully', {
-      VITE_GOOGLE_MAPS_API_KEY: ''
+      VITE_GOOGLE_MAPS_API_KEY: '',
+      FIREBASE_API_KEY: '',
+      FIREBASE_AUTH_DOMAIN: '',
+      FIREBASE_STORAGE_BUCKET: '',
+      FIREBASE_MESSAGING_SENDER_ID: '',
+      FIREBASE_APP_ID: '',
+      FIREBASE_VAPID_KEY: '',
+      MEASUREMENT_ID: '',
+      FIREBASE_PROJECT_ID: ''
     });
   }
 });

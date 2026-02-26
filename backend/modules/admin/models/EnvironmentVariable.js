@@ -12,6 +12,7 @@ export const ENV_VARIABLE_KEYS = [
   'FIREBASE_STORAGE_BUCKET',
   'FIREBASE_MESSAGING_SENDER_ID',
   'FIREBASE_APP_ID',
+  'FIREBASE_VAPID_KEY',
   'MEASUREMENT_ID',
   'FIREBASE_PROJECT_ID',
   'FIREBASE_CLIENT_EMAIL',
@@ -79,6 +80,11 @@ const environmentVariableSchema = new mongoose.Schema(
       trim: true
     },
     FIREBASE_APP_ID: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    FIREBASE_VAPID_KEY: {
       type: String,
       default: '',
       trim: true

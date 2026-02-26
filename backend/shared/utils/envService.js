@@ -133,6 +133,7 @@ export async function getFirebaseCredentials() {
     storageBucket: await getEnvVar("FIREBASE_STORAGE_BUCKET"),
     messagingSenderId: await getEnvVar("FIREBASE_MESSAGING_SENDER_ID"),
     appId: await getEnvVar("FIREBASE_APP_ID"),
+    vapidKey: await getEnvVar("FIREBASE_VAPID_KEY"),
     measurementId: await getEnvVar("MEASUREMENT_ID"),
     projectId: await getEnvVar("FIREBASE_PROJECT_ID"),
     clientEmail: await getEnvVar("FIREBASE_CLIENT_EMAIL"),

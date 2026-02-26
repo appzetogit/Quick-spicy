@@ -49,6 +49,7 @@ export default function SystemAddons() {
     FIREBASE_STORAGE_BUCKET: "",
     FIREBASE_MESSAGING_SENDER_ID: "",
     FIREBASE_APP_ID: "",
+    FIREBASE_VAPID_KEY: "",
     MEASUREMENT_ID: "",
     FIREBASE_PROJECT_ID: "",
     FIREBASE_CLIENT_EMAIL: "",
@@ -256,6 +257,12 @@ export default function SystemAddons() {
                 label="Firebase App ID"
                 value={envData.FIREBASE_APP_ID}
                 onChange={(e) => handleInputChange("FIREBASE_APP_ID", e.target.value)}
+              />
+              <InputField
+                label="Firebase VAPID Key"
+                value={envData.FIREBASE_VAPID_KEY}
+                onChange={(e) => handleInputChange("FIREBASE_VAPID_KEY", e.target.value)}
+                placeholder="Web push certificate key pair public key"
               />
               <InputField
                 label="Measurement ID"

@@ -3,6 +3,7 @@ import { useEffect, Suspense, lazy } from "react"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AuthRedirect from "@/components/AuthRedirect"
 import Loader from "@/components/Loader"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -136,6 +137,12 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const location = useLocation()
+
+  useEffect(() => {
+    registerWebPushForCurrentModule(location.pathname)
+  }, [location.pathname])
+
   return (
     <>
       <ScrollToTop />
