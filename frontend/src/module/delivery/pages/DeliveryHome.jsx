@@ -646,6 +646,12 @@ export default function DeliveryHome() {
   const cameraInputRef = useRef(null)
   const [orderDeliveredButtonProgress, setOrderDeliveredButtonProgress] = useState(0)
   const [orderDeliveredIsAnimatingToComplete, setOrderDeliveredIsAnimatingToComplete] = useState(false)
+  const [showDeliveryOtpModal, setShowDeliveryOtpModal] = useState(false)
+  const [deliveryOtpDigits, setDeliveryOtpDigits] = useState(["", "", "", "", "", ""])
+  const [deliveryOtpError, setDeliveryOtpError] = useState("")
+  const [isVerifyingDeliveryOtp, setIsVerifyingDeliveryOtp] = useState(false)
+  const deliveryOtpResolveRef = useRef(null)
+  const deliveryOtpInputRefs = useRef([])
   const orderDeliveredButtonRef = useRef(null)
   // Trip distance and time from Google Maps API
   const [tripDistance, setTripDistance] = useState(null) // in meters
@@ -669,6 +675,14 @@ export default function DeliveryHome() {
   const acceptButtonSwipeStartY = useRef(0)
   const acceptButtonIsSwiping = useRef(false)
   const autoShowTimerRef = useRef(null)
+
+  useEffect(() => {
+    if (!showDeliveryOtpModal) return
+    const focusTimer = setTimeout(() => {
+      deliveryOtpInputRefs.current[0]?.focus()
+    }, 120)
+    return () => clearTimeout(focusTimer)
+  }, [showDeliveryOtpModal])
 
   const {
     bookedGigs,
@@ -3900,6 +3914,116 @@ export default function DeliveryHome() {
   }
 
   // Handle Order Delivered button swipe
+  const requestDeliveryOtpFromModal = useCallback(() => {
+    return new Promise((resolve) => {
+      deliveryOtpResolveRef.current = resolve
+      setDeliveryOtpDigits(["", "", "", "", "", ""])
+      setDeliveryOtpError("")
+      setShowDeliveryOtpModal(true)
+    })
+  }, [])
+
+  const closeDeliveryOtpModal = useCallback((otpValue = null) => {
+    if (deliveryOtpResolveRef.current) {
+      deliveryOtpResolveRef.current(otpValue)
+      deliveryOtpResolveRef.current = null
+    }
+    setShowDeliveryOtpModal(false)
+    setDeliveryOtpDigits(["", "", "", "", "", ""])
+    setDeliveryOtpError("")
+  }, [])
+
+  const handleDeliveryOtpDigitChange = (index, value) => {
+    const digit = String(value || "").replace(/\D/g, "").slice(-1)
+    const next = [...deliveryOtpDigits]
+    next[index] = digit
+    setDeliveryOtpDigits(next)
+    setDeliveryOtpError("")
+
+    if (digit && index < 5) {
+      deliveryOtpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleDeliveryOtpKeyDown = (index, event) => {
+    if (event.key === "Backspace" && !deliveryOtpDigits[index] && index > 0) {
+      const next = [...deliveryOtpDigits]
+      next[index - 1] = ""
+      setDeliveryOtpDigits(next)
+      deliveryOtpInputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleDeliveryOtpPaste = (event) => {
+    event.preventDefault()
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    if (!pasted) return
+
+    const next = ["", "", "", "", "", ""]
+    pasted.split("").forEach((digit, index) => {
+      next[index] = digit
+    })
+    setDeliveryOtpDigits(next)
+    setDeliveryOtpError("")
+
+    const focusIndex = Math.min(pasted.length, 5)
+    deliveryOtpInputRefs.current[focusIndex]?.focus()
+  }
+
+  const submitDeliveryOtpModal = () => {
+    const otpValue = deliveryOtpDigits.join("").trim()
+    if (otpValue.length !== 6) {
+      setDeliveryOtpError("Please enter a valid 6-digit OTP")
+      return
+    }
+    closeDeliveryOtpModal(otpValue)
+  }
+
+  const verifyDropOtpForCurrentOrder = useCallback(async (orderIdForApi) => {
+    const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
+    const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+
+    if (!dropOtpRequired || dropOtpVerified) {
+      return true
+    }
+
+    const enteredOtp = await requestDeliveryOtpFromModal()
+    const normalizedOtp = (enteredOtp || "").trim()
+
+    if (!normalizedOtp) {
+      toast.error("Delivery OTP is required before completing this order.")
+      return false
+    }
+
+    try {
+      setIsVerifyingDeliveryOtp(true)
+      const otpVerifyResponse = await deliveryAPI.verifyDropOtp(orderIdForApi, normalizedOtp)
+
+      if (!otpVerifyResponse.data?.success) {
+        toast.error(otpVerifyResponse.data?.message || "Invalid delivery OTP. Please try again.")
+        return false
+      }
+
+      setSelectedRestaurant((prev) => (
+        prev
+          ? {
+            ...prev,
+            deliveryVerification: otpVerifyResponse.data?.data?.order?.deliveryVerification || {
+              dropOtp: { required: true, verified: true }
+            }
+          }
+          : prev
+      ))
+
+      return true
+    } catch (otpError) {
+      toast.error(otpError?.response?.data?.message || "Failed to verify delivery OTP.")
+      return false
+    } finally {
+      setIsVerifyingDeliveryOtp(false)
+    }
+  }, [requestDeliveryOtpFromModal, selectedRestaurant])
+
   const handleOrderDeliveredTouchStart = (e) => {
     orderDeliveredSwipeStartX.current = e.touches[0].clientX
     orderDeliveredSwipeStartY.current = e.touches[0].clientY
@@ -3943,66 +4067,28 @@ export default function DeliveryHome() {
     const threshold = maxSwipe * 0.7 // 70% of max swipe
 
     if (deltaX > threshold) {
-      const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
-      const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+      const orderIdForApi = selectedRestaurant?.id ||
+        newOrder?.orderMongoId ||
+        newOrder?._id ||
+        selectedRestaurant?.orderId ||
+        newOrder?.orderId
 
-      if (dropOtpRequired && !dropOtpVerified) {
-        const orderIdForApi = selectedRestaurant?.id ||
-          newOrder?.orderMongoId ||
-          newOrder?._id ||
-          selectedRestaurant?.orderId ||
-          newOrder?.orderId
+      if (!orderIdForApi) {
+        toast.error('Order details not found for OTP verification.')
+        setOrderDeliveredButtonProgress(0)
+        orderDeliveredSwipeStartX.current = 0
+        orderDeliveredSwipeStartY.current = 0
+        orderDeliveredIsSwiping.current = false
+        return
+      }
 
-        if (!orderIdForApi) {
-          toast.error('Order details not found for OTP verification.')
-          setOrderDeliveredButtonProgress(0)
-          orderDeliveredSwipeStartX.current = 0
-          orderDeliveredSwipeStartY.current = 0
-          orderDeliveredIsSwiping.current = false
-          return
-        }
-
-        const enteredOtp = window.prompt('Enter customer delivery OTP before sliding to complete')
-        const normalizedOtp = (enteredOtp || '').trim()
-
-        if (!normalizedOtp) {
-          toast.error('Delivery OTP is required before completing this order.')
-          setOrderDeliveredButtonProgress(0)
-          orderDeliveredSwipeStartX.current = 0
-          orderDeliveredSwipeStartY.current = 0
-          orderDeliveredIsSwiping.current = false
-          return
-        }
-
-        try {
-          const otpVerifyResponse = await deliveryAPI.verifyDropOtp(orderIdForApi, normalizedOtp)
-          if (!otpVerifyResponse.data?.success) {
-            toast.error(otpVerifyResponse.data?.message || 'Invalid delivery OTP. Please try again.')
-            setOrderDeliveredButtonProgress(0)
-            orderDeliveredSwipeStartX.current = 0
-            orderDeliveredSwipeStartY.current = 0
-            orderDeliveredIsSwiping.current = false
-            return
-          }
-
-          setSelectedRestaurant(prev => (
-            prev
-              ? {
-                ...prev,
-                deliveryVerification: otpVerifyResponse.data?.data?.order?.deliveryVerification || {
-                  dropOtp: { required: true, verified: true }
-                }
-              }
-              : prev
-          ))
-        } catch (otpError) {
-          toast.error(otpError?.response?.data?.message || 'Failed to verify delivery OTP.')
-          setOrderDeliveredButtonProgress(0)
-          orderDeliveredSwipeStartX.current = 0
-          orderDeliveredSwipeStartY.current = 0
-          orderDeliveredIsSwiping.current = false
-          return
-        }
+      const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+      if (!otpVerified) {
+        setOrderDeliveredButtonProgress(0)
+        orderDeliveredSwipeStartX.current = 0
+        orderDeliveredSwipeStartY.current = 0
+        orderDeliveredIsSwiping.current = false
+        return
       }
 
       // Animate to completion
@@ -10380,6 +10466,64 @@ export default function DeliveryHome() {
         </div>
       </BottomPopup>
 
+      <BottomPopup
+        isOpen={showDeliveryOtpModal}
+        onClose={() => closeDeliveryOtpModal(null)}
+        showCloseButton={false}
+        closeOnBackdropClick={false}
+        maxHeight="60vh"
+        showHandle={true}
+      >
+        <div className="px-1 pb-1">
+          <div className="text-center mb-5">
+            <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-100 flex items-center justify-center">
+              <Lock className="w-7 h-7 text-emerald-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900">Verify Delivery OTP</h3>
+            <p className="text-sm text-gray-600 mt-1">Ask customer for the 6-digit OTP to complete delivery</p>
+          </div>
+
+          <div className="flex items-center justify-center gap-2 mb-4" onPaste={handleDeliveryOtpPaste}>
+            {deliveryOtpDigits.map((digit, index) => (
+              <input
+                key={`delivery-otp-${index}`}
+                ref={(el) => {
+                  deliveryOtpInputRefs.current[index] = el
+                }}
+                type="tel"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(event) => handleDeliveryOtpDigitChange(index, event.target.value)}
+                onKeyDown={(event) => handleDeliveryOtpKeyDown(index, event)}
+                className="w-11 h-12 rounded-xl border border-gray-300 text-center text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              />
+            ))}
+          </div>
+
+          {deliveryOtpError && (
+            <p className="text-center text-sm text-red-500 mb-4">{deliveryOtpError}</p>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => closeDeliveryOtpModal(null)}
+              className="h-11 rounded-xl border border-gray-300 text-gray-700 font-semibold"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={submitDeliveryOtpModal}
+              className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              Verify OTP
+            </button>
+          </div>
+        </div>
+      </BottomPopup>
+
       {/* Order Delivered Bottom Popup - shown instantly after Reached Drop is confirmed */}
       <BottomPopup
         isOpen={showOrderDeliveredAnimation}
@@ -10593,34 +10737,9 @@ export default function DeliveryHome() {
                       review: customerReviewText
                     })
                     
-                    const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
-                    const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
-
-                    if (dropOtpRequired && !dropOtpVerified) {
-                      const enteredOtp = window.prompt('Enter customer delivery OTP to complete delivery')
-                      const normalizedOtp = (enteredOtp || '').trim()
-
-                      if (!normalizedOtp) {
-                        toast.error('Delivery OTP is required before completing this order.')
-                        return
-                      }
-
-                      const otpVerifyResponse = await deliveryAPI.verifyDropOtp(orderIdForApi, normalizedOtp)
-                      if (!otpVerifyResponse.data?.success) {
-                        toast.error(otpVerifyResponse.data?.message || 'Invalid delivery OTP. Please try again.')
-                        return
-                      }
-
-                      setSelectedRestaurant(prev => (
-                        prev
-                          ? {
-                            ...prev,
-                            deliveryVerification: otpVerifyResponse.data?.data?.order?.deliveryVerification || {
-                              dropOtp: { required: true, verified: true }
-                            }
-                          }
-                          : prev
-                      ))
+                    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+                    if (!otpVerified) {
+                      return
                     }
 
                     // Call completeDelivery API with rating and review
@@ -10798,6 +10917,25 @@ export default function DeliveryHome() {
               >
                 Complete
               </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isVerifyingDeliveryOtp && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[260] bg-black/45 backdrop-blur-[2px] flex items-center justify-center px-6"
+          >
+            <div className="w-full max-w-xs rounded-2xl bg-white shadow-2xl p-6 text-center">
+              <div className="w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <Loader2 className="w-7 h-7 text-emerald-600 animate-spin" />
+              </div>
+              <p className="text-base font-semibold text-gray-900">Verifying OTP</p>
+              <p className="text-sm text-gray-600 mt-1">Please wait...</p>
             </div>
           </motion.div>
         )}
