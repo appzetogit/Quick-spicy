@@ -195,6 +195,78 @@ const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, r
   </motion.button>
 )
 
+const getRestaurantCoordsFromOrder = (apiOrder, fallback = null) => {
+  if (
+    apiOrder?.restaurantId?.location?.coordinates &&
+    Array.isArray(apiOrder.restaurantId.location.coordinates) &&
+    apiOrder.restaurantId.location.coordinates.length >= 2
+  ) {
+    return apiOrder.restaurantId.location.coordinates
+  }
+  if (apiOrder?.restaurantId?.location?.latitude && apiOrder?.restaurantId?.location?.longitude) {
+    return [apiOrder.restaurantId.location.longitude, apiOrder.restaurantId.location.latitude]
+  }
+  if (
+    apiOrder?.restaurant?.location?.coordinates &&
+    Array.isArray(apiOrder.restaurant.location.coordinates) &&
+    apiOrder.restaurant.location.coordinates.length >= 2
+  ) {
+    return apiOrder.restaurant.location.coordinates
+  }
+  return fallback || null
+}
+
+const transformOrderForTracking = (apiOrder, previousOrder = null, explicitRestaurantCoords = null) => {
+  const restaurantCoords = explicitRestaurantCoords ?? getRestaurantCoordsFromOrder(apiOrder, previousOrder?.restaurantLocation?.coordinates)
+
+  return {
+    id: apiOrder?.orderId || apiOrder?._id,
+    mongoId: apiOrder?._id || null,
+    orderId: apiOrder?.orderId || apiOrder?._id,
+    restaurant: apiOrder?.restaurantName || previousOrder?.restaurant || 'Restaurant',
+    restaurantId: apiOrder?.restaurantId || previousOrder?.restaurantId || null,
+    userId: apiOrder?.userId || previousOrder?.userId || null,
+    userName: apiOrder?.userName || apiOrder?.userId?.name || apiOrder?.userId?.fullName || previousOrder?.userName || '',
+    userPhone: apiOrder?.userPhone || apiOrder?.userId?.phone || previousOrder?.userPhone || '',
+    address: {
+      street: apiOrder?.address?.street || previousOrder?.address?.street || '',
+      city: apiOrder?.address?.city || previousOrder?.address?.city || '',
+      state: apiOrder?.address?.state || previousOrder?.address?.state || '',
+      zipCode: apiOrder?.address?.zipCode || previousOrder?.address?.zipCode || '',
+      additionalDetails: apiOrder?.address?.additionalDetails || previousOrder?.address?.additionalDetails || '',
+      formattedAddress: apiOrder?.address?.formattedAddress ||
+        (apiOrder?.address?.street && apiOrder?.address?.city
+          ? `${apiOrder.address.street}${apiOrder.address.additionalDetails ? `, ${apiOrder.address.additionalDetails}` : ''}, ${apiOrder.address.city}${apiOrder.address.state ? `, ${apiOrder.address.state}` : ''}${apiOrder.address.zipCode ? ` ${apiOrder.address.zipCode}` : ''}`
+          : previousOrder?.address?.formattedAddress || apiOrder?.address?.city || ''),
+      coordinates: apiOrder?.address?.location?.coordinates || previousOrder?.address?.coordinates || null
+    },
+    restaurantLocation: {
+      coordinates: restaurantCoords
+    },
+    items: apiOrder?.items?.map(item => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price
+    })) || previousOrder?.items || [],
+    total: apiOrder?.pricing?.total || previousOrder?.total || 0,
+    status: apiOrder?.status || previousOrder?.status || 'pending',
+    deliveryPartner: apiOrder?.deliveryPartnerId ? {
+      name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
+      avatar: null
+    } : (previousOrder?.deliveryPartner || null),
+    deliveryPartnerId: apiOrder?.deliveryPartnerId?._id || apiOrder?.deliveryPartnerId || apiOrder?.assignmentInfo?.deliveryPartnerId || previousOrder?.deliveryPartnerId || null,
+    assignmentInfo: apiOrder?.assignmentInfo || previousOrder?.assignmentInfo || null,
+    tracking: apiOrder?.tracking || previousOrder?.tracking || {},
+    deliveryState: apiOrder?.deliveryState || previousOrder?.deliveryState || null,
+    createdAt: apiOrder?.createdAt || previousOrder?.createdAt || null,
+    totalAmount: apiOrder?.pricing?.total || apiOrder?.totalAmount || previousOrder?.totalAmount || 0,
+    deliveryFee: apiOrder?.pricing?.deliveryFee || apiOrder?.deliveryFee || previousOrder?.deliveryFee || 0,
+    gst: apiOrder?.pricing?.gst || apiOrder?.gst || previousOrder?.gst || 0,
+    paymentMethod: apiOrder?.paymentMethod || apiOrder?.payment?.method || previousOrder?.paymentMethod || null,
+    payment: apiOrder?.payment || previousOrder?.payment || null
+  }
+}
+
 export default function OrderTracking() {
   const { orderId } = useParams()
   const navigate = useNavigate()
@@ -294,53 +366,41 @@ export default function OrderTracking() {
             setOrderStatus('cancelled');
           }
 
-          // Only update if status actually changed
-          if (newDeliveryStatus === 'accepted' ||
-            (newDeliveryStatus !== currentDeliveryStatus) ||
-            (newPhase !== currentPhase) ||
-            (newOrderStatus !== currentOrderStatus)) {
-            console.log('🔄 Order status updated:', {
-              oldStatus: currentDeliveryStatus,
-              newStatus: newDeliveryStatus,
-              oldPhase: currentPhase,
-              newPhase: newPhase
-            });
+          console.log('🔄 Polling order sync:', {
+            oldStatus: currentDeliveryStatus,
+            newStatus: newDeliveryStatus,
+            oldPhase: currentPhase,
+            newPhase,
+            orderStatus: newOrderStatus
+          });
 
-            // Reuse location from populated order payload; avoid extra restaurant API call in polling path.
-            let restaurantCoords = null;
-            if (
-              apiOrder.restaurantId?.location?.coordinates &&
-              Array.isArray(apiOrder.restaurantId.location.coordinates) &&
-              apiOrder.restaurantId.location.coordinates.length >= 2
-            ) {
-              restaurantCoords = apiOrder.restaurantId.location.coordinates;
-            } else if (
-              apiOrder.restaurant?.location?.coordinates &&
-              Array.isArray(apiOrder.restaurant.location.coordinates) &&
-              apiOrder.restaurant.location.coordinates.length >= 2
-            ) {
-              restaurantCoords = apiOrder.restaurant.location.coordinates;
-            }
+          // Reuse location from populated order payload; avoid extra restaurant API call in polling path.
+          let restaurantCoords = null;
+          if (
+            apiOrder.restaurantId?.location?.coordinates &&
+            Array.isArray(apiOrder.restaurantId.location.coordinates) &&
+            apiOrder.restaurantId.location.coordinates.length >= 2
+          ) {
+            restaurantCoords = apiOrder.restaurantId.location.coordinates;
+          } else if (
+            apiOrder.restaurant?.location?.coordinates &&
+            Array.isArray(apiOrder.restaurant.location.coordinates) &&
+            apiOrder.restaurant.location.coordinates.length >= 2
+          ) {
+            restaurantCoords = apiOrder.restaurant.location.coordinates;
+          }
 
-            const transformedOrder = {
-              ...apiOrder,
-              mongoId: apiOrder?._id || null,
-              orderId: apiOrder?.orderId || apiOrder?._id || null,
-              id: apiOrder?.orderId || apiOrder?._id || null,
-              restaurantLocation: restaurantCoords ? {
-                coordinates: restaurantCoords
-              } : order.restaurantLocation,
-              deliveryPartnerId: apiOrder.deliveryPartnerId?._id || apiOrder.deliveryPartnerId || apiOrder.assignmentInfo?.deliveryPartnerId || null,
-              assignmentInfo: apiOrder.assignmentInfo || null,
-              deliveryState: apiOrder.deliveryState || null,
-              createdAt: apiOrder.createdAt || null,
-              totalAmount: apiOrder.pricing?.total || apiOrder.totalAmount || 0,
-              deliveryFee: apiOrder.pricing?.deliveryFee || apiOrder.deliveryFee || 0,
-              gst: apiOrder.pricing?.gst || apiOrder.gst || 0,
-              paymentMethod: apiOrder.paymentMethod || null
-            };
+          const transformedOrder = transformOrderForTracking(apiOrder, order, restaurantCoords);
+          setOrder(transformedOrder);
 
-            setOrder(transformedOrder);
+          if (newOrderStatus === 'cancelled') {
+            setOrderStatus('cancelled');
+          } else if (newOrderStatus === 'preparing') {
+            setOrderStatus('preparing');
+          } else if (newOrderStatus === 'ready' || newOrderStatus === 'out_for_delivery') {
+            setOrderStatus('pickup');
+          } else if (newOrderStatus === 'delivered') {
+            setOrderStatus('delivered');
           }
         }
       } catch (err) {
@@ -449,53 +509,7 @@ export default function OrderTracking() {
           console.log('📍 Customer coordinates:', apiOrder.address?.location?.coordinates);
 
           // Transform API order to match component structure
-          const transformedOrder = {
-            id: apiOrder.orderId || apiOrder._id,
-            mongoId: apiOrder._id || null,
-            orderId: apiOrder.orderId || apiOrder._id,
-            restaurant: apiOrder.restaurantName || 'Restaurant',
-            restaurantId: apiOrder.restaurantId || null, // Include restaurantId for location access
-            userId: apiOrder.userId || null, // Include user data for phone number
-            userName: apiOrder.userName || apiOrder.userId?.name || apiOrder.userId?.fullName || '',
-            userPhone: apiOrder.userPhone || apiOrder.userId?.phone || '',
-            address: {
-              street: apiOrder.address?.street || '',
-              city: apiOrder.address?.city || '',
-              state: apiOrder.address?.state || '',
-              zipCode: apiOrder.address?.zipCode || '',
-              additionalDetails: apiOrder.address?.additionalDetails || '',
-              formattedAddress: apiOrder.address?.formattedAddress ||
-                (apiOrder.address?.street && apiOrder.address?.city
-                  ? `${apiOrder.address.street}${apiOrder.address.additionalDetails ? `, ${apiOrder.address.additionalDetails}` : ''}, ${apiOrder.address.city}${apiOrder.address.state ? `, ${apiOrder.address.state}` : ''}${apiOrder.address.zipCode ? ` ${apiOrder.address.zipCode}` : ''}`
-                  : apiOrder.address?.city || ''),
-              coordinates: apiOrder.address?.location?.coordinates || null
-            },
-            restaurantLocation: {
-              coordinates: restaurantCoords
-            },
-            items: apiOrder.items?.map(item => ({
-              name: item.name,
-              quantity: item.quantity,
-              price: item.price
-            })) || [],
-            total: apiOrder.pricing?.total || 0,
-            status: apiOrder.status || 'pending',
-            deliveryPartner: apiOrder.deliveryPartnerId ? {
-              name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
-              avatar: null
-            } : null,
-            deliveryPartnerId: apiOrder.deliveryPartnerId?._id || apiOrder.deliveryPartnerId || apiOrder.assignmentInfo?.deliveryPartnerId || null,
-            assignmentInfo: apiOrder.assignmentInfo || null,
-            tracking: apiOrder.tracking || {},
-            deliveryState: apiOrder.deliveryState || null,
-            createdAt: apiOrder.createdAt || null,
-            totalAmount: apiOrder.pricing?.total || apiOrder.totalAmount || 0,
-            deliveryFee: apiOrder.pricing?.deliveryFee || apiOrder.deliveryFee || 0,
-            gst: apiOrder.pricing?.gst || apiOrder.gst || 0,
-            paymentMethod: apiOrder.paymentMethod || null
-          }
-
-          setOrder(transformedOrder)
+          setOrder(transformOrderForTracking(apiOrder, null, restaurantCoords))
 
           // Update orderStatus based on API order status
           if (apiOrder.status === 'cancelled') {
@@ -547,7 +561,8 @@ export default function OrderTracking() {
   // Listen for order status updates from socket (e.g., "Delivery partner on the way")
   useEffect(() => {
     const handleOrderStatusNotification = (event) => {
-      const { message, title, status, estimatedDeliveryTime } = event.detail;
+      const payload = event?.detail || {};
+      const { message, status, estimatedDeliveryTime } = payload;
 
       console.log('📢 Order status notification received:', { message, status });
 
@@ -642,7 +657,7 @@ export default function OrderTracking() {
         const orderResponse = await orderAPI.getOrderDetails(orderId);
         if (orderResponse.data?.success && orderResponse.data.data?.order) {
           const apiOrder = orderResponse.data.data.order;
-          setOrder(apiOrder);
+          setOrder(transformOrderForTracking(apiOrder, order));
           // Update orderStatus to cancelled
           if (apiOrder.status === 'cancelled') {
             setOrderStatus('cancelled');
@@ -720,44 +735,7 @@ export default function OrderTracking() {
           }
         }
 
-        const transformedOrder = {
-          id: apiOrder.orderId || apiOrder._id,
-          mongoId: apiOrder._id || null,
-          orderId: apiOrder.orderId || apiOrder._id,
-          restaurant: apiOrder.restaurantName || 'Restaurant',
-          restaurantId: apiOrder.restaurantId || null, // Include restaurantId for location access
-          userId: apiOrder.userId || null, // Include user data for phone number
-          userName: apiOrder.userName || apiOrder.userId?.name || apiOrder.userId?.fullName || '',
-          userPhone: apiOrder.userPhone || apiOrder.userId?.phone || '',
-          address: {
-            street: apiOrder.address?.street || '',
-            city: apiOrder.address?.city || '',
-            state: apiOrder.address?.state || '',
-            zipCode: apiOrder.address?.zipCode || '',
-            additionalDetails: apiOrder.address?.additionalDetails || '',
-            formattedAddress: apiOrder.address?.formattedAddress ||
-              (apiOrder.address?.street && apiOrder.address?.city
-                ? `${apiOrder.address.street}${apiOrder.address.additionalDetails ? `, ${apiOrder.address.additionalDetails}` : ''}, ${apiOrder.address.city}${apiOrder.address.state ? `, ${apiOrder.address.state}` : ''}${apiOrder.address.zipCode ? ` ${apiOrder.address.zipCode}` : ''}`
-                : apiOrder.address?.city || ''),
-            coordinates: apiOrder.address?.location?.coordinates || null
-          },
-          restaurantLocation: {
-            coordinates: restaurantCoords
-          },
-          items: apiOrder.items?.map(item => ({
-            name: item.name,
-            quantity: item.quantity,
-            price: item.price
-          })) || [],
-          total: apiOrder.pricing?.total || 0,
-          status: apiOrder.status || 'pending',
-          deliveryPartner: apiOrder.deliveryPartnerId ? {
-            name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
-            avatar: null
-          } : null,
-          tracking: apiOrder.tracking || {}
-        }
-        setOrder(transformedOrder)
+        setOrder(transformOrderForTracking(apiOrder, order, restaurantCoords))
 
         // Update order status for UI
         if (apiOrder.status === 'cancelled') {

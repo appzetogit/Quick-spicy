@@ -676,7 +676,7 @@ const DeliveryTrackingMap = ({
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionDelay: 500,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: Infinity,
       timeout: 5000
     });
 
@@ -739,6 +739,13 @@ const DeliveryTrackingMap = ({
       socketRef.current._locationRequestInterval = locationRequestInterval;
     });
 
+    socketRef.current.on('reconnect', () => {
+      trackingIds.forEach((trackingId) => {
+        socketRef.current.emit('join-order-tracking', trackingId);
+      });
+      requestCurrentLocationForTrackingIds();
+    });
+
     trackingIds.forEach((trackingId) => {
       socketRef.current.on(`location-receive-${trackingId}`, handleRealtimeLocation);
       socketRef.current.on(`current-location-${trackingId}`, handleCurrentLocation);
@@ -772,6 +779,7 @@ const DeliveryTrackingMap = ({
           socketRef.current.off(`route-initialized-${trackingId}`, handleRouteInitialized);
         });
         socketRef.current.off('order_status_update');
+        socketRef.current.off('reconnect');
         socketRef.current.disconnect();
       }
     };
