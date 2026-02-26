@@ -372,6 +372,12 @@ export async function assignOrderToDeliveryBoy(order, restaurantLat, restaurantL
       return null;
     }
     
+    // Only assign after restaurant has accepted and moved order to preparing/ready.
+    if (!['preparing', 'ready'].includes(String(order.status || '').toLowerCase())) {
+      console.log(`Order ${order.orderId} is in status '${order.status}'. Assignment is allowed only after restaurant acceptance.`);
+      return null;
+    }
+
     // Check if order already has a delivery partner assigned
     if (order.deliveryPartnerId) {
       console.log(`⚠️ Order ${order.orderId} already has delivery partner assigned`);

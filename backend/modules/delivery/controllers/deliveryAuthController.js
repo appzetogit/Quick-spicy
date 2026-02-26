@@ -155,14 +155,18 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         }
       }
 
-      // Check if signup needs to be completed (missing required fields)
-      const needsSignup = !delivery.location?.city || 
-                         !delivery.vehicle?.number || 
-                         !delivery.documents?.pan?.number ||
-                         !delivery.documents?.aadhar?.number ||
-                         !delivery.documents?.aadhar?.document ||
-                         !delivery.documents?.pan?.document ||
-                         !delivery.documents?.drivingLicense?.document;
+      // Only enforce signup completion for unapproved accounts.
+      // Approved/active riders should continue to app/zone flow even if legacy fields are missing.
+      const shouldEnforceSignupCompletion = ['pending', 'blocked'].includes(String(delivery.status || '').toLowerCase());
+      const needsSignup = shouldEnforceSignupCompletion && (
+        !delivery.location?.city ||
+        !delivery.vehicle?.number ||
+        !delivery.documents?.pan?.number ||
+        !delivery.documents?.aadhar?.number ||
+        !delivery.documents?.aadhar?.document ||
+        !delivery.documents?.pan?.document ||
+        !delivery.documents?.drivingLicense?.document
+      );
 
       if (needsSignup) {
         // Generate tokens for signup flow
@@ -194,6 +198,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
             email: delivery.email,
             deliveryId: delivery.deliveryId,
             status: delivery.status,
+            availability: delivery.availability,
+            zoneIds: Array.isArray(delivery?.availability?.zones)
+              ? delivery.availability.zones.map((z) => z?.toString?.() || String(z))
+              : [],
             rejectionReason: delivery.rejectionReason || null // Include rejection reason for blocked accounts
           },
           needsSignup: true // Signal that signup needs to be completed
@@ -243,6 +251,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         profileImage: delivery.profileImage,
         isActive: delivery.isActive,
         status: delivery.status,
+        availability: delivery.availability,
+        zoneIds: Array.isArray(delivery?.availability?.zones)
+          ? delivery.availability.zones.map((z) => z?.toString?.() || String(z))
+          : [],
         rejectionReason: delivery.rejectionReason || null, // Include rejection reason for blocked accounts
         metrics: delivery.metrics,
         earnings: delivery.earnings

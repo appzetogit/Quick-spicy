@@ -199,6 +199,46 @@ const isDeliveryInZone = (delivery, zone) => {
   return isPointInsideZone(lat, lng, zone.coordinates);
 };
 
+const normalizePaymentMethod = (value) => {
+  const method = String(value || '').toLowerCase().trim();
+  if (method === 'cash' || method === 'cod' || method === 'cash on delivery') return 'cash';
+  if (method === 'wallet') return 'wallet';
+  if (method) return method;
+  return 'razorpay';
+};
+
+const isCashPaymentMethod = (value) => normalizePaymentMethod(value) === 'cash';
+
+const toOrderTotal = (order) => {
+  const total = Number(order?.pricing?.total);
+  return Number.isFinite(total) && total > 0 ? total : 0;
+};
+
+const buildDeliveryPaymentMeta = (order, paymentRecord = null) => {
+  const methodFromOrder = order?.payment?.method;
+  const methodFromPayment = paymentRecord?.method;
+  const paymentMethod = normalizePaymentMethod(methodFromPayment || methodFromOrder);
+  const isCOD = isCashPaymentMethod(paymentMethod);
+
+  const orderPaymentStatus = String(order?.payment?.status || '').toLowerCase().trim();
+  const paymentRecordStatus = String(paymentRecord?.status || '').toLowerCase().trim();
+  const paymentStatus = paymentRecordStatus || orderPaymentStatus || (isCOD ? 'pending' : 'completed');
+
+  const orderTotal = toOrderTotal(order);
+  const isCollected = isCOD && ['completed', 'paid', 'collected'].includes(paymentStatus);
+  const amountToCollect = isCOD && !isCollected ? orderTotal : 0;
+
+  return {
+    paymentMethod,
+    paymentStatus,
+    isCOD,
+    codAmount: isCOD ? orderTotal : 0,
+    amountToCollect,
+    cashToCollect: amountToCollect,
+    collectionAmount: amountToCollect
+  };
+};
+
 /**
  * Get Delivery Partner Orders
  * GET /api/delivery/orders
@@ -283,8 +323,33 @@ export const getOrders = asyncHandler(async (req, res) => {
       orders.map((order) => hydrateOrderRestaurant(order, restaurantCache))
     );
 
+    // Resolve payment mode and COD collectable amount for delivery slider/cards.
+    const orderIds = hydratedOrders.map((o) => o?._id).filter(Boolean);
+    let paymentMap = new Map();
+    if (orderIds.length > 0) {
+      try {
+        const paymentRecords = await Payment.find({ orderId: { $in: orderIds } })
+          .select('orderId method status')
+          .lean();
+        paymentMap = new Map(
+          paymentRecords.map((record) => [record.orderId?.toString?.(), record])
+        );
+      } catch (paymentLookupError) {
+        logger.warn(`Payment lookup failed in getOrders: ${paymentLookupError.message}`);
+      }
+    }
+
+    const enrichedOrders = hydratedOrders.map((order) => {
+      const paymentRecord = paymentMap.get(order?._id?.toString?.());
+      const paymentMeta = buildDeliveryPaymentMeta(order, paymentRecord);
+      return {
+        ...order,
+        ...paymentMeta
+      };
+    });
+
     return successResponse(res, 200, 'Orders retrieved successfully', {
-      orders: hydratedOrders,
+      orders: enrichedOrders,
       pagination: {
         page: parseInt(page),
         limit: limitNum,
@@ -397,15 +462,13 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       return errorResponse(res, 403, 'Order not found or not available for you');
     }
 
-    // Resolve payment method for delivery boy (COD vs Online)
-    let paymentMethod = order.payment?.method || 'razorpay';
-    if (paymentMethod !== 'cash') {
-      try {
-        const paymentRecord = await Payment.findOne({ orderId: order._id }).select('method').lean();
-        if (paymentRecord?.method === 'cash') paymentMethod = 'cash';
-      } catch (e) { /* ignore */ }
-    }
-    const orderWithPayment = { ...order, paymentMethod };
+    // Resolve payment mode + COD collectable amount for delivery slider/details.
+    let paymentRecord = null;
+    try {
+      paymentRecord = await Payment.findOne({ orderId: order._id }).select('method status').lean();
+    } catch (e) { /* ignore */ }
+    const paymentMeta = buildDeliveryPaymentMeta(order, paymentRecord);
+    const orderWithPayment = { ...order, ...paymentMeta };
 
     return successResponse(res, 200, 'Order details retrieved successfully', {
       order: orderWithPayment
@@ -970,15 +1033,13 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       };
     }
 
-    // Resolve payment method for delivery boy (COD vs Online) - use Payment collection if order.payment is wrong
-    let paymentMethod = updatedOrder.payment?.method || 'razorpay';
-    if (paymentMethod !== 'cash') {
-      try {
-        const paymentRecord = await Payment.findOne({ orderId: updatedOrder._id }).select('method').lean();
-        if (paymentRecord?.method === 'cash') paymentMethod = 'cash';
-      } catch (e) { /* ignore */ }
-    }
-    const orderWithPayment = { ...updatedOrder, paymentMethod };
+    // Resolve payment mode + COD collectable amount for delivery slider after accept.
+    let paymentRecord = null;
+    try {
+      paymentRecord = await Payment.findOne({ orderId: updatedOrder._id }).select('method status').lean();
+    } catch (e) { /* ignore */ }
+    const paymentMeta = buildDeliveryPaymentMeta(updatedOrder, paymentRecord);
+    const orderWithPayment = { ...updatedOrder, ...paymentMeta };
 
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,

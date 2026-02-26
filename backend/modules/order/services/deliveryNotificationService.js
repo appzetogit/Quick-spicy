@@ -14,6 +14,11 @@ async function getIOInstance() {
   return getIO ? getIO() : null;
 }
 
+function isOrderEligibleForDeliveryDispatch(order) {
+  const status = String(order?.status || '').toLowerCase();
+  return ['preparing', 'ready'].includes(status);
+}
+
 /**
  * Check if delivery partner is connected to socket
  * @param {string} deliveryPartnerId - Delivery partner ID
@@ -57,6 +62,11 @@ async function checkDeliveryPartnerConnection(deliveryPartnerId) {
  * @param {string} deliveryPartnerId - Delivery partner ID
  */
 export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
+  if (!isOrderEligibleForDeliveryDispatch(order)) {
+    console.log(`Order ${order.orderId} status '${order.status}' is not eligible for delivery dispatch yet.`);
+    return { success: false, reason: `Order status ${order.status} not eligible for delivery dispatch` };
+  }
+
   // CRITICAL: Don't notify if order is cancelled
   if (order.status === 'cancelled') {
     console.log(`⚠️ Order ${order.orderId} is cancelled. Cannot notify delivery partner.`);
@@ -333,6 +343,11 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
  */
 export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phase = 'priority') {
   try {
+    if (!isOrderEligibleForDeliveryDispatch(order)) {
+      console.log(`Order ${order.orderId} status '${order.status}' is not eligible for multi-delivery notification yet.`);
+      return { success: false, notified: 0 };
+    }
+
     if (!deliveryPartnerIds || deliveryPartnerIds.length === 0) {
       return { success: false, notified: 0 };
     }
