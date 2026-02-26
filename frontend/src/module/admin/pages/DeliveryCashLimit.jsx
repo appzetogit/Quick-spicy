@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { IndianRupee, Loader2, Wallet } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -9,25 +9,34 @@ export default function DeliveryCashLimit() {
   const [savingWithdrawal, setSavingWithdrawal] = useState(false)
   const [deliveryCashLimit, setDeliveryCashLimit] = useState("")
   const [deliveryWithdrawalLimit, setDeliveryWithdrawalLimit] = useState("")
+  const isMountedRef = useRef(true)
 
-  const fetchLimit = async () => {
+  const fetchLimit = useCallback(async ({ silent = false } = {}) => {
     try {
-      setLoading(true)
+      if (!silent) {
+        setLoading(true)
+      }
       const response = await adminAPI.getDeliveryCashLimit()
       const data = response?.data?.data ?? response?.data ?? {}
       const limit = data.deliveryCashLimit
       const wl = data.deliveryWithdrawalLimit ?? 100
+      if (!isMountedRef.current) return
       setDeliveryCashLimit(limit !== undefined && limit !== null ? String(limit) : "")
       setDeliveryWithdrawalLimit(wl !== undefined && wl !== null ? String(wl) : "100")
     } catch (error) {
       console.error("Error fetching delivery cash limit:", error)
-      toast.error(error.response?.data?.message || "Failed to load delivery cash limit")
+      if (!isMountedRef.current) return
+      if (!silent) {
+        toast.error(error.response?.data?.message || "Failed to load delivery cash limit")
+      }
       setDeliveryCashLimit("")
       setDeliveryWithdrawalLimit("100")
     } finally {
-      setLoading(false)
+      if (!silent && isMountedRef.current) {
+        setLoading(false)
+      }
     }
-  }
+  }, [])
 
   const saveLimit = async () => {
     const value = Number(deliveryCashLimit)
@@ -45,6 +54,7 @@ export default function DeliveryCashLimit() {
         value
       setDeliveryCashLimit(String(saved))
       toast.success("Delivery cash limit updated successfully")
+      await fetchLimit({ silent: true })
     } catch (error) {
       console.error("Error saving delivery cash limit:", error)
       toast.error(error.response?.data?.message || "Failed to update delivery cash limit")
@@ -69,6 +79,7 @@ export default function DeliveryCashLimit() {
         value
       setDeliveryWithdrawalLimit(String(saved))
       toast.success("Withdrawal limit updated successfully")
+      await fetchLimit({ silent: true })
     } catch (error) {
       console.error("Error saving withdrawal limit:", error)
       toast.error(error.response?.data?.message || "Failed to update withdrawal limit")
@@ -78,8 +89,35 @@ export default function DeliveryCashLimit() {
   }
 
   useEffect(() => {
+    isMountedRef.current = true
     fetchLimit()
-  }, [])
+
+    const onFocus = () => fetchLimit({ silent: true })
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        fetchLimit({ silent: true })
+      }
+    }
+    const onPageShow = () => fetchLimit({ silent: true })
+
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchLimit({ silent: true })
+      }
+    }, 30000)
+
+    window.addEventListener("focus", onFocus)
+    window.addEventListener("pageshow", onPageShow)
+    document.addEventListener("visibilitychange", onVisibility)
+
+    return () => {
+      isMountedRef.current = false
+      clearInterval(intervalId)
+      window.removeEventListener("focus", onFocus)
+      window.removeEventListener("pageshow", onPageShow)
+      document.removeEventListener("visibilitychange", onVisibility)
+    }
+  }, [fetchLimit])
 
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
