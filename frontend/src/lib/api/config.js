@@ -256,6 +256,7 @@ export const API_ENDPOINTS = {
     ORDER_REACHED_PICKUP: "/delivery/orders/:orderId/reached-pickup",
     ORDER_CONFIRM_ID: "/delivery/orders/:orderId/confirm-order-id",
     ORDER_REACHED_DROP: "/delivery/orders/:orderId/reached-drop",
+    ORDER_VERIFY_DROP_OTP: "/delivery/orders/:orderId/verify-drop-otp",
     ORDER_COMPLETE_DELIVERY: "/delivery/orders/:orderId/complete-delivery",
     TRIP_HISTORY: "/delivery/trip-history",
     EARNINGS: "/delivery/earnings",

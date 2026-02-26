@@ -263,7 +263,8 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
     deliveryFee: apiOrder?.pricing?.deliveryFee || apiOrder?.deliveryFee || previousOrder?.deliveryFee || 0,
     gst: apiOrder?.pricing?.gst || apiOrder?.gst || previousOrder?.gst || 0,
     paymentMethod: apiOrder?.paymentMethod || apiOrder?.payment?.method || previousOrder?.paymentMethod || null,
-    payment: apiOrder?.payment || previousOrder?.payment || null
+    payment: apiOrder?.payment || previousOrder?.payment || null,
+    deliveryVerification: apiOrder?.deliveryVerification || previousOrder?.deliveryVerification || null
   }
 }
 
@@ -323,6 +324,11 @@ export default function OrderTracking() {
     const seconds = totalSeconds % 60
     return `${minutes}:${String(seconds).padStart(2, '0')}`
   }, [editWindowRemainingMs])
+
+  const customerDeliveryOtp = useMemo(() => {
+    const code = order?.deliveryVerification?.dropOtp?.code
+    return code ? String(code) : null
+  }, [order?.deliveryVerification?.dropOtp?.code])
 
   useEffect(() => {
     if (!isEditWindowOpen) return
@@ -968,6 +974,19 @@ export default function OrderTracking() {
                 Cancel Order
               </Button>
             </div>
+          </motion.div>
+        )}
+
+        {customerDeliveryOtp && orderStatus !== 'delivered' && orderStatus !== 'cancelled' && (
+          <motion.div
+            className="bg-blue-50 rounded-xl p-4 shadow-sm border border-blue-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.28 }}
+          >
+            <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Delivery OTP</p>
+            <p className="text-2xl font-extrabold text-blue-900 mt-1 tracking-widest">{customerDeliveryOtp}</p>
+            <p className="text-xs text-blue-700 mt-1">Share this OTP with your delivery partner at drop-off.</p>
           </motion.div>
         )}
 

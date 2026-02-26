@@ -2456,6 +2456,7 @@ export default function DeliveryHome() {
                 items: order.items || [],
                 total: order.pricing?.total || 0,
                 paymentMethod: order.paymentMethod ?? order.payment?.method ?? 'razorpay', // backend-resolved first (COD vs Online)
+                deliveryVerification: order.deliveryVerification || null,
                 phone: order.restaurantId?.phone || order.restaurantId?.ownerPhone || null, // Restaurant phone number (prefer phone, fallback to ownerPhone)
                 ownerPhone: order.restaurantId?.ownerPhone || null, // Owner phone number (separate field for direct access)
                 orderStatus: order.status || 'preparing', // Store order status (pending, preparing, ready, out_for_delivery, delivered)
@@ -3928,7 +3929,7 @@ export default function DeliveryHome() {
     }
   }
 
-  const handleOrderDeliveredTouchEnd = (e) => {
+  const handleOrderDeliveredTouchEnd = async (e) => {
     if (!orderDeliveredIsSwiping.current) {
       setOrderDeliveredButtonProgress(0)
       return
@@ -3942,6 +3943,68 @@ export default function DeliveryHome() {
     const threshold = maxSwipe * 0.7 // 70% of max swipe
 
     if (deltaX > threshold) {
+      const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
+      const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+
+      if (dropOtpRequired && !dropOtpVerified) {
+        const orderIdForApi = selectedRestaurant?.id ||
+          newOrder?.orderMongoId ||
+          newOrder?._id ||
+          selectedRestaurant?.orderId ||
+          newOrder?.orderId
+
+        if (!orderIdForApi) {
+          toast.error('Order details not found for OTP verification.')
+          setOrderDeliveredButtonProgress(0)
+          orderDeliveredSwipeStartX.current = 0
+          orderDeliveredSwipeStartY.current = 0
+          orderDeliveredIsSwiping.current = false
+          return
+        }
+
+        const enteredOtp = window.prompt('Enter customer delivery OTP before sliding to complete')
+        const normalizedOtp = (enteredOtp || '').trim()
+
+        if (!normalizedOtp) {
+          toast.error('Delivery OTP is required before completing this order.')
+          setOrderDeliveredButtonProgress(0)
+          orderDeliveredSwipeStartX.current = 0
+          orderDeliveredSwipeStartY.current = 0
+          orderDeliveredIsSwiping.current = false
+          return
+        }
+
+        try {
+          const otpVerifyResponse = await deliveryAPI.verifyDropOtp(orderIdForApi, normalizedOtp)
+          if (!otpVerifyResponse.data?.success) {
+            toast.error(otpVerifyResponse.data?.message || 'Invalid delivery OTP. Please try again.')
+            setOrderDeliveredButtonProgress(0)
+            orderDeliveredSwipeStartX.current = 0
+            orderDeliveredSwipeStartY.current = 0
+            orderDeliveredIsSwiping.current = false
+            return
+          }
+
+          setSelectedRestaurant(prev => (
+            prev
+              ? {
+                ...prev,
+                deliveryVerification: otpVerifyResponse.data?.data?.order?.deliveryVerification || {
+                  dropOtp: { required: true, verified: true }
+                }
+              }
+              : prev
+          ))
+        } catch (otpError) {
+          toast.error(otpError?.response?.data?.message || 'Failed to verify delivery OTP.')
+          setOrderDeliveredButtonProgress(0)
+          orderDeliveredSwipeStartX.current = 0
+          orderDeliveredSwipeStartY.current = 0
+          orderDeliveredIsSwiping.current = false
+          return
+        }
+      }
+
       // Animate to completion
       setOrderDeliveredIsAnimatingToComplete(true)
       setOrderDeliveredButtonProgress(1)
@@ -4666,7 +4729,8 @@ export default function DeliveryHome() {
             items: firstOrder.items || [],
             total: firstOrder.pricing?.total || 0,
             payment: firstOrder.payment?.method || 'COD',
-            amount: firstOrder.pricing?.total || 0
+            amount: firstOrder.pricing?.total || 0,
+            deliveryVerification: firstOrder.deliveryVerification || null
           }
           
           setSelectedRestaurant(restaurantData)
@@ -10529,6 +10593,36 @@ export default function DeliveryHome() {
                       review: customerReviewText
                     })
                     
+                    const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
+                    const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+
+                    if (dropOtpRequired && !dropOtpVerified) {
+                      const enteredOtp = window.prompt('Enter customer delivery OTP to complete delivery')
+                      const normalizedOtp = (enteredOtp || '').trim()
+
+                      if (!normalizedOtp) {
+                        toast.error('Delivery OTP is required before completing this order.')
+                        return
+                      }
+
+                      const otpVerifyResponse = await deliveryAPI.verifyDropOtp(orderIdForApi, normalizedOtp)
+                      if (!otpVerifyResponse.data?.success) {
+                        toast.error(otpVerifyResponse.data?.message || 'Invalid delivery OTP. Please try again.')
+                        return
+                      }
+
+                      setSelectedRestaurant(prev => (
+                        prev
+                          ? {
+                            ...prev,
+                            deliveryVerification: otpVerifyResponse.data?.data?.order?.deliveryVerification || {
+                              dropOtp: { required: true, verified: true }
+                            }
+                          }
+                          : prev
+                      ))
+                    }
+
                     // Call completeDelivery API with rating and review
                     const response = await deliveryAPI.completeDelivery(
                       orderIdForApi,

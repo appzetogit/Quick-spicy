@@ -6,6 +6,7 @@ import {
   confirmReachedPickup, 
   confirmOrderId,
   confirmReachedDrop,
+  verifyDropOtp,
   completeDelivery
 } from '../controllers/deliveryOrdersController.js';
 import { getTripHistory } from '../controllers/deliveryTripHistoryController.js';
@@ -23,6 +24,7 @@ router.patch('/orders/:orderId/accept', acceptOrder);
 router.patch('/orders/:orderId/reached-pickup', confirmReachedPickup);
 router.patch('/orders/:orderId/confirm-order-id', confirmOrderId);
 router.patch('/orders/:orderId/reached-drop', confirmReachedDrop);
+router.patch('/orders/:orderId/verify-drop-otp', verifyDropOtp);
 router.patch('/orders/:orderId/complete-delivery', completeDelivery);
 
 // Trip History route

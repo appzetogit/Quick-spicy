@@ -26,6 +26,11 @@ const logger = winston.createLogger({
   ]
 });
 
+const generateDropDeliveryOtp = () => {
+  // 4-digit OTP for handover confirmation at drop.
+  return String(Math.floor(1000 + Math.random() * 9000));
+};
+
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
   const normalized = { ...location };
@@ -389,6 +394,8 @@ export const createOrder = async (req, res) => {
     const timestamp = Date.now();
     const random = Math.floor(Math.random() * 1000);
     const generatedOrderId = `ORD-${timestamp}-${random}`;
+    const generatedDropOtp = generateDropDeliveryOtp();
+    const dropOtpExpiresAt = new Date(Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
 
     // Ensure couponCode is included in pricing
     if (!pricing.couponCode && pricing.appliedCoupon?.code) {
@@ -420,6 +427,15 @@ export const createOrder = async (req, res) => {
         zoneId: userDetectedZoneId,
         zoneName: userDetectedZone?.name || userDetectedZone?.zoneName,
         assignedBy: 'zone_match'
+      },
+      deliveryVerification: {
+        dropOtp: {
+          code: generatedDropOtp,
+          expiresAt: dropOtpExpiresAt,
+          verifiedAt: null,
+          verifiedBy: null,
+          attempts: 0
+        }
       }
     });
 
@@ -640,7 +656,8 @@ export const createOrder = async (req, res) => {
               id: order._id.toString(),
               orderId: order.orderId,
               status: order.status,
-              total: pricing.total
+              total: pricing.total,
+              deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
             },
             razorpay: null,
             wallet: {
@@ -723,7 +740,8 @@ export const createOrder = async (req, res) => {
             id: order._id.toString(),
             orderId: order.orderId,
             status: order.status,
-            total: pricing.total
+            total: pricing.total,
+            deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
           },
           razorpay: null
         }
@@ -785,7 +803,8 @@ export const createOrder = async (req, res) => {
           id: order._id.toString(),
           orderId: order.orderId,
           status: order.status,
-          total: pricing.total
+          total: pricing.total,
+          deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
         },
         razorpay: razorpayOrder ? {
           orderId: razorpayOrder.id,

@@ -323,6 +323,24 @@ const buildDeliveryPaymentMeta = (order, paymentRecord = null) => {
   };
 };
 
+const sanitizeDeliveryVerificationForDelivery = (order = null) => {
+  if (!order || typeof order !== 'object') return order;
+
+  const dropOtp = order?.deliveryVerification?.dropOtp || {};
+  return {
+    ...order,
+    deliveryVerification: {
+      dropOtp: {
+        required: Boolean(dropOtp?.code),
+        verified: Boolean(dropOtp?.verifiedAt),
+        verifiedAt: dropOtp?.verifiedAt || null,
+        expiresAt: dropOtp?.expiresAt || null,
+        attempts: Number(dropOtp?.attempts) || 0
+      }
+    }
+  };
+};
+
 const getDeliveryCashLimitState = async (deliveryId) => {
   let totalCashLimit = null;
   try {
@@ -470,10 +488,10 @@ export const getOrders = asyncHandler(async (req, res) => {
     const enrichedOrders = hydratedOrders.map((order) => {
       const paymentRecord = paymentMap.get(order?._id?.toString?.());
       const paymentMeta = buildDeliveryPaymentMeta(order, paymentRecord);
-      return {
+      return sanitizeDeliveryVerificationForDelivery({
         ...order,
         ...paymentMeta
-      };
+      });
     });
 
     return successResponse(res, 200, 'Orders retrieved successfully', {
@@ -600,7 +618,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       paymentRecord = await Payment.findOne({ orderId: order._id }).select('method status').lean();
     } catch (e) { /* ignore */ }
     const paymentMeta = buildDeliveryPaymentMeta(order, paymentRecord);
-    const orderWithPayment = { ...order, ...paymentMeta };
+    const orderWithPayment = sanitizeDeliveryVerificationForDelivery({ ...order, ...paymentMeta });
 
     return successResponse(res, 200, 'Order details retrieved successfully', {
       order: orderWithPayment,
@@ -1183,7 +1201,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       paymentRecord = await Payment.findOne({ orderId: updatedOrder._id }).select('method status').lean();
     } catch (e) { /* ignore */ }
     const paymentMeta = buildDeliveryPaymentMeta(updatedOrder, paymentRecord);
-    const orderWithPayment = { ...updatedOrder, ...paymentMeta };
+    const orderWithPayment = sanitizeDeliveryVerificationForDelivery({ ...updatedOrder, ...paymentMeta });
 
     await emitOrderStatusRealtime(
       orderWithPayment,
@@ -1284,7 +1302,7 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
     if (isPastPickupPhase) {
       console.log(`ℹ️ Order ${order.orderId} is already past pickup phase. Current phase: ${order.deliveryState?.currentPhase || 'unknown'}, Status: ${order.deliveryState?.status || 'unknown'}, Order status: ${order.status || 'unknown'}`);
       return successResponse(res, 200, 'Order is already past pickup phase', {
-        order,
+        order: sanitizeDeliveryVerificationForDelivery(order),
         message: 'Order is already out for delivery'
       });
     }
@@ -1308,7 +1326,7 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
     if (order.deliveryState.currentPhase === 'at_pickup' || order.deliveryState.status === 'reached_pickup') {
       console.log(`ℹ️ Order ${order.orderId} already at pickup. Returning success (idempotent).`);
       return successResponse(res, 200, 'Reached pickup already confirmed', {
-        order,
+        order: sanitizeDeliveryVerificationForDelivery(order),
         message: 'Order was already marked as reached pickup'
       });
     }
@@ -1367,7 +1385,7 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
     }, 10000); // 10 seconds delay
 
     return successResponse(res, 200, 'Reached pickup confirmed', {
-      order,
+      order: sanitizeDeliveryVerificationForDelivery(order),
       message: 'Order ID confirmation will be requested in 10 seconds'
     });
   } catch (error) {
@@ -1523,7 +1541,7 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
       }
 
       return successResponse(res, 200, 'Order ID already confirmed', {
-        order: order,
+        order: sanitizeDeliveryVerificationForDelivery(order),
         route: routeData
       });
     }
@@ -1661,7 +1679,7 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
 
     // Send response first, then handle socket notification asynchronously
     const responseData = {
-      order: updatedOrder,
+      order: sanitizeDeliveryVerificationForDelivery(updatedOrder),
       route: {
         coordinates: routeData.coordinates,
         distance: routeData.distance,
@@ -1852,7 +1870,7 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
     await syncOrderPhaseToRealtime(finalOrder, delivery._id, 'at_delivery');
 
     return successResponse(res, 200, 'Reached drop confirmed', {
-      order: finalOrder,
+      order: sanitizeDeliveryVerificationForDelivery(finalOrder),
       message: 'Reached drop location confirmed'
     });
   } catch (error) {
@@ -1866,6 +1884,94 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
     });
     return errorResponse(res, 500, `Failed to confirm reached drop: ${error.message}`);
   }
+});
+
+/**
+ * Verify Drop OTP before completion
+ * PATCH /api/delivery/orders/:orderId/verify-drop-otp
+ */
+export const verifyDropOtp = asyncHandler(async (req, res) => {
+  const delivery = req.delivery;
+  const { orderId } = req.params;
+  const { otp } = req.body || {};
+
+  if (!delivery?._id) {
+    return errorResponse(res, 401, 'Delivery partner authentication required');
+  }
+
+  if (!orderId) {
+    return errorResponse(res, 400, 'Order ID is required');
+  }
+
+  const normalizedOtp = String(otp || '').trim();
+  if (!normalizedOtp || normalizedOtp.length < 4) {
+    return errorResponse(res, 400, 'Valid drop OTP is required');
+  }
+
+  const query = mongoose.Types.ObjectId.isValid(orderId) && orderId.length === 24
+    ? {
+      deliveryPartnerId: delivery._id,
+      $or: [{ _id: orderId }, { orderId }]
+    }
+    : {
+      deliveryPartnerId: delivery._id,
+      orderId
+    };
+
+  const order = await Order.findOne(query).lean();
+  if (!order) {
+    return errorResponse(res, 404, 'Order not found or not assigned to you');
+  }
+
+  const isValidState = order.status === 'out_for_delivery' ||
+    order.deliveryState?.currentPhase === 'at_delivery' ||
+    order.deliveryState?.currentPhase === 'en_route_to_delivery';
+  if (!isValidState) {
+    return errorResponse(res, 400, 'OTP can be verified only when order is out for delivery');
+  }
+
+  const dropOtp = order?.deliveryVerification?.dropOtp || {};
+  if (!dropOtp?.code) {
+    return successResponse(res, 200, 'Drop OTP verification not required for this order', {
+      order: sanitizeDeliveryVerificationForDelivery(order)
+    });
+  }
+
+  if (dropOtp?.verifiedAt && String(dropOtp?.verifiedBy || '') === String(delivery._id)) {
+    return successResponse(res, 200, 'Drop OTP already verified', {
+      order: sanitizeDeliveryVerificationForDelivery(order)
+    });
+  }
+
+  if (dropOtp?.expiresAt && new Date(dropOtp.expiresAt).getTime() < Date.now()) {
+    return errorResponse(res, 400, 'Drop OTP expired. Please ask customer to contact support.');
+  }
+
+  if (normalizedOtp !== String(dropOtp.code)) {
+    const attempts = (Number(dropOtp.attempts) || 0) + 1;
+    await Order.updateOne(
+      { _id: order._id },
+      { $set: { 'deliveryVerification.dropOtp.attempts': attempts } }
+    );
+    return errorResponse(res, 400, 'Invalid drop OTP');
+  }
+
+  const now = new Date();
+  const updatedOrder = await Order.findByIdAndUpdate(
+    order._id,
+    {
+      $set: {
+        'deliveryVerification.dropOtp.verifiedAt': now,
+        'deliveryVerification.dropOtp.verifiedBy': delivery._id,
+        'deliveryVerification.dropOtp.attempts': 0
+      }
+    },
+    { new: true }
+  ).lean();
+
+  return successResponse(res, 200, 'Drop OTP verified successfully', {
+    order: sanitizeDeliveryVerificationForDelivery(updatedOrder)
+  });
 });
 
 /**
@@ -1980,7 +2086,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       }
       
       return successResponse(res, 200, 'Order already delivered', {
-        order: order,
+        order: sanitizeDeliveryVerificationForDelivery(order),
         earnings: earnings,
         message: 'Order was already marked as delivered'
       });
@@ -1994,6 +2100,14 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     
     if (!isValidState) {
       return errorResponse(res, 400, `Order cannot be completed. Current status: ${order.status}, Phase: ${order.deliveryState?.currentPhase || 'unknown'}`);
+    }
+
+    const dropOtp = order?.deliveryVerification?.dropOtp || {};
+    const requiresDropOtp = Boolean(dropOtp?.code);
+    const isDropOtpVerifiedForDelivery = Boolean(dropOtp?.verifiedAt) &&
+      String(dropOtp?.verifiedBy || '') === String(delivery._id);
+    if (requiresDropOtp && !isDropOtpVerifiedForDelivery) {
+      return errorResponse(res, 403, 'Please verify customer drop OTP before completing delivery.');
     }
 
     // Ensure we have order._id - from .lean() it's a plain object with _id
@@ -2356,7 +2470,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     // Send response first, then handle notifications asynchronously
     // This prevents timeouts if notifications take too long
     const responseData = {
-      order: updatedOrder,
+      order: sanitizeDeliveryVerificationForDelivery(updatedOrder),
       earnings: {
         amount: totalEarning,
         currency: 'INR',

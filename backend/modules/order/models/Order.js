@@ -267,6 +267,31 @@ const orderSchema = new mongoose.Schema({
     deliveryPartnerId: String,
     assignedAt: Date
   },
+  deliveryVerification: {
+    dropOtp: {
+      code: {
+        type: String,
+        default: null
+      },
+      expiresAt: {
+        type: Date,
+        default: null
+      },
+      verifiedAt: {
+        type: Date,
+        default: null
+      },
+      verifiedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Delivery',
+        default: null
+      },
+      attempts: {
+        type: Number,
+        default: 0
+      }
+    }
+  },
   deliveryState: {
     status: {
       type: String,

@@ -995,6 +995,12 @@ export const deliveryAPI = {
       API_ENDPOINTS.DELIVERY.ORDER_REACHED_DROP.replace(":orderId", orderId),
     );
   },
+  verifyDropOtp: (orderId, otp) => {
+    return apiClient.patch(
+      API_ENDPOINTS.DELIVERY.ORDER_VERIFY_DROP_OTP.replace(":orderId", orderId),
+      { otp },
+    );
+  },
   completeDelivery: (orderId, rating = null, review = "") => {
     return apiClient.patch(
       API_ENDPOINTS.DELIVERY.ORDER_COMPLETE_DELIVERY.replace(
