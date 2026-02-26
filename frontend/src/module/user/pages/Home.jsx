@@ -568,6 +568,20 @@ export default function Home() {
 
   const cityName = location?.city || "Select"
   const stateName = location?.state || "Location"
+  const hasLiveLocation = useMemo(() => {
+    if (!location) return false
+
+    const isPlaceholder = (value) => {
+      if (!value) return true
+      const normalized = String(value).trim().toLowerCase()
+      return !normalized || normalized === "select location" || normalized === "current location"
+    }
+
+    const hasAddressText = !isPlaceholder(location.formattedAddress) || !isPlaceholder(location.address)
+    const hasCityState = !isPlaceholder(location.city) || !isPlaceholder(location.state)
+
+    return hasAddressText || hasCityState
+  }, [location])
 
   const formatSavedAddress = useCallback((address) => {
     if (!address) return ""
@@ -1263,23 +1277,25 @@ export default function Home() {
           <PageNavbar textColor="black" zIndex={50} />
         </motion.div>
 
-        <div className="px-3 sm:px-6 lg:px-8 pb-2 md:hidden">
-          <button
-            type="button"
-            onClick={handleLocationClick}
-            className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
-          >
-            <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
-                Saved Address
-              </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {savedAddressText || "No saved address. Tap to add one."}
-              </p>
-            </div>
-          </button>
-        </div>
+        {!hasLiveLocation && (
+          <div className="px-3 sm:px-6 lg:px-8 pb-2 md:hidden">
+            <button
+              type="button"
+              onClick={handleLocationClick}
+              className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
+            >
+              <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                  Saved Address
+                </p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {savedAddressText || "No saved address. Tap to add one."}
+                </p>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Search Bar and VEG MODE Container - Sticky */}
         <motion.div
