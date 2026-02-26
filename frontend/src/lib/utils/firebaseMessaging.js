@@ -131,6 +131,20 @@ async function attachForegroundListener(firebaseAppInstance) {
   onMessage(messaging, (payload) => {
     const title = payload?.notification?.title || "New notification";
     const body = payload?.notification?.body || "";
+    const image = payload?.notification?.image || undefined;
+
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      try {
+        new Notification(title, {
+          body,
+          icon: "/favicon.ico",
+          image,
+        });
+      } catch {
+        // Ignore Notification API errors and fallback to toast.
+      }
+    }
+
     if (body) {
       toast.success(`${title}: ${body}`);
     } else {

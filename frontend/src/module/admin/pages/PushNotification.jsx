@@ -152,6 +152,19 @@ export default function PushNotification() {
     }
   }
 
+  const resolveNotificationImageSrc = (notification) => {
+    if (notification?.imageUrl) {
+      return notification.imageUrl
+    }
+
+    const rawImage = typeof notification?.image === "string" ? notification.image.trim() : ""
+    if (rawImage && (/^https?:\/\//i.test(rawImage) || rawImage.startsWith("data:") || rawImage.startsWith("/"))) {
+      return rawImage
+    }
+
+    return notificationImages[notification?.sl] || notificationImage1
+  }
+
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -337,11 +350,17 @@ export default function PushNotification() {
                       {notification.image ? (
                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-100">
                           <img
-                            src={notification.imageUrl || notificationImages[notification.sl] || notificationImage1}
+                            src={resolveNotificationImageSrc(notification)}
                             alt={notification.title}
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                              e.target.style.display = "none"
+                              const fallback = notificationImage1
+                              if (e.currentTarget.src === fallback || e.currentTarget.dataset.fallbackApplied === "true") {
+                                e.currentTarget.style.display = "none"
+                                return
+                              }
+                              e.currentTarget.dataset.fallbackApplied = "true"
+                              e.currentTarget.src = fallback
                             }}
                           />
                         </div>

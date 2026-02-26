@@ -5,22 +5,36 @@ importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-com
 const sanitize = (value) => String(value || "").trim().replace(/^['"]|['"]$/g, "");
 
 async function loadFirebaseWebConfig() {
-  try {
-    const response = await fetch("/api/env/public", { cache: "no-store" });
-    const json = await response.json();
-    const data = (json && json.data) || {};
-    return {
-      apiKey: sanitize(data.FIREBASE_API_KEY),
-      authDomain: sanitize(data.FIREBASE_AUTH_DOMAIN),
-      projectId: sanitize(data.FIREBASE_PROJECT_ID),
-      appId: sanitize(data.FIREBASE_APP_ID),
-      messagingSenderId: sanitize(data.FIREBASE_MESSAGING_SENDER_ID),
-      storageBucket: sanitize(data.FIREBASE_STORAGE_BUCKET),
-      measurementId: sanitize(data.MEASUREMENT_ID),
-    };
-  } catch {
-    return null;
+  const candidates = ["/api/env/public"];
+  if (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1") {
+    candidates.push("http://localhost:5000/api/env/public");
   }
+
+  for (const url of candidates) {
+    try {
+      const response = await fetch(url, { cache: "no-store" });
+      if (!response.ok) continue;
+      const json = await response.json();
+      const data = (json && json.data) || {};
+      const config = {
+        apiKey: sanitize(data.FIREBASE_API_KEY),
+        authDomain: sanitize(data.FIREBASE_AUTH_DOMAIN),
+        projectId: sanitize(data.FIREBASE_PROJECT_ID),
+        appId: sanitize(data.FIREBASE_APP_ID),
+        messagingSenderId: sanitize(data.FIREBASE_MESSAGING_SENDER_ID),
+        storageBucket: sanitize(data.FIREBASE_STORAGE_BUCKET),
+        measurementId: sanitize(data.MEASUREMENT_ID),
+      };
+
+      if (config.apiKey && config.projectId && config.appId && config.messagingSenderId) {
+        return config;
+      }
+    } catch {
+      // try next candidate
+    }
+  }
+
+  return null;
 }
 
 (async () => {
