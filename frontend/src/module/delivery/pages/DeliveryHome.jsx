@@ -2080,11 +2080,20 @@ export default function DeliveryHome() {
       }
   }, [isOnline]) // Re-run when online status changes - this controls start/stop of tracking
 
+  // WebView-safe touch extractor: Flutter InAppWebView may emit inconsistent touchend payloads.
+  const getTouchPoint = (e) => {
+    const touch = e?.touches?.[0] || e?.changedTouches?.[0]
+    if (!touch) return null
+    return { x: touch.clientX, y: touch.clientY }
+  }
+
   // Handle new order popup accept button swipe
   const handleNewOrderAcceptTouchStart = (e) => {
     if (isAcceptingNewOrderRef.current) return
-    newOrderAcceptButtonSwipeStartX.current = e.touches[0].clientX
-    newOrderAcceptButtonSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    newOrderAcceptButtonSwipeStartX.current = touch.x
+    newOrderAcceptButtonSwipeStartY.current = touch.y
     newOrderAcceptButtonIsSwiping.current = false
     setNewOrderIsAnimatingToComplete(false)
     setNewOrderAcceptButtonProgress(0)
@@ -2092,8 +2101,10 @@ export default function DeliveryHome() {
 
   const handleNewOrderAcceptTouchMove = (e) => {
     if (isAcceptingNewOrderRef.current) return
-    const deltaX = e.touches[0].clientX - newOrderAcceptButtonSwipeStartX.current
-    const deltaY = e.touches[0].clientY - newOrderAcceptButtonSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - newOrderAcceptButtonSwipeStartX.current
+    const deltaY = touch.y - newOrderAcceptButtonSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -2115,7 +2126,8 @@ export default function DeliveryHome() {
   const handleNewOrderAcceptTouchEnd = (e) => {
     if (isAcceptingNewOrderRef.current) return
 
-    const deltaX = e.changedTouches[0].clientX - newOrderAcceptButtonSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? newOrderAcceptButtonSwipeStartX.current) - newOrderAcceptButtonSwipeStartX.current
     if (!newOrderAcceptButtonIsSwiping.current && deltaX > 30) {
       newOrderAcceptButtonIsSwiping.current = true
     }
@@ -2889,6 +2901,15 @@ export default function DeliveryHome() {
     newOrderAcceptButtonIsSwiping.current = false
   }
 
+  const handleNewOrderAcceptTouchCancel = () => {
+    if (isAcceptingNewOrderRef.current) return
+    newOrderAcceptButtonSwipeStartX.current = 0
+    newOrderAcceptButtonSwipeStartY.current = 0
+    newOrderAcceptButtonIsSwiping.current = false
+    setNewOrderAcceptButtonProgress(0)
+    setNewOrderIsAnimatingToComplete(false)
+  }
+
   // Handle new order popup swipe down to minimize (not close)
   // Popup should stay visible until accept/reject is clicked
   const handleNewOrderPopupTouchStart = (e) => {
@@ -2999,16 +3020,20 @@ export default function DeliveryHome() {
 
   // Handle Reached Pickup button swipe
   const handlereachedPickupTouchStart = (e) => {
-    reachedPickupSwipeStartX.current = e.touches[0].clientX
-    reachedPickupSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    reachedPickupSwipeStartX.current = touch.x
+    reachedPickupSwipeStartY.current = touch.y
     reachedPickupIsSwiping.current = false
     setreachedPickupIsAnimatingToComplete(false)
     setreachedPickupButtonProgress(0)
   }
 
   const handlereachedPickupTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - reachedPickupSwipeStartX.current
-    const deltaY = e.touches[0].clientY - reachedPickupSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - reachedPickupSwipeStartX.current
+    const deltaY = touch.y - reachedPickupSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -3033,7 +3058,8 @@ export default function DeliveryHome() {
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - reachedPickupSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? reachedPickupSwipeStartX.current) - reachedPickupSwipeStartX.current
     const buttonWidth = reachedPickupButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
@@ -3202,18 +3228,30 @@ export default function DeliveryHome() {
     reachedPickupIsSwiping.current = false
   }
 
+  const handlereachedPickupTouchCancel = () => {
+    reachedPickupSwipeStartX.current = 0
+    reachedPickupSwipeStartY.current = 0
+    reachedPickupIsSwiping.current = false
+    setreachedPickupButtonProgress(0)
+    setreachedPickupIsAnimatingToComplete(false)
+  }
+
   // Handle Reached Drop button swipe
   const handleReachedDropTouchStart = (e) => {
-    reachedDropSwipeStartX.current = e.touches[0].clientX
-    reachedDropSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    reachedDropSwipeStartX.current = touch.x
+    reachedDropSwipeStartY.current = touch.y
     reachedDropIsSwiping.current = false
     setReachedDropIsAnimatingToComplete(false)
     setReachedDropButtonProgress(0)
   }
 
   const handleReachedDropTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - reachedDropSwipeStartX.current
-    const deltaY = e.touches[0].clientY - reachedDropSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - reachedDropSwipeStartX.current
+    const deltaY = touch.y - reachedDropSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -3238,7 +3276,8 @@ export default function DeliveryHome() {
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - reachedDropSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? reachedDropSwipeStartX.current) - reachedDropSwipeStartX.current
     const buttonWidth = reachedDropButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
@@ -3337,18 +3376,30 @@ export default function DeliveryHome() {
     reachedDropIsSwiping.current = false
   }
 
+  const handleReachedDropTouchCancel = () => {
+    reachedDropSwipeStartX.current = 0
+    reachedDropSwipeStartY.current = 0
+    reachedDropIsSwiping.current = false
+    setReachedDropButtonProgress(0)
+    setReachedDropIsAnimatingToComplete(false)
+  }
+
   // Handle Order ID Confirmation button swipe
   const handleOrderIdConfirmTouchStart = (e) => {
-    orderIdConfirmSwipeStartX.current = e.touches[0].clientX
-    orderIdConfirmSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    orderIdConfirmSwipeStartX.current = touch.x
+    orderIdConfirmSwipeStartY.current = touch.y
     orderIdConfirmIsSwiping.current = false
     setOrderIdConfirmIsAnimatingToComplete(false)
     setOrderIdConfirmButtonProgress(0)
   }
 
   const handleOrderIdConfirmTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - orderIdConfirmSwipeStartX.current
-    const deltaY = e.touches[0].clientY - orderIdConfirmSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - orderIdConfirmSwipeStartX.current
+    const deltaY = touch.y - orderIdConfirmSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -3550,7 +3601,8 @@ export default function DeliveryHome() {
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - orderIdConfirmSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? orderIdConfirmSwipeStartX.current) - orderIdConfirmSwipeStartX.current
     const buttonWidth = orderIdConfirmButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
@@ -3851,6 +3903,14 @@ export default function DeliveryHome() {
     orderIdConfirmIsSwiping.current = false
   }
 
+  const handleOrderIdConfirmTouchCancel = () => {
+    orderIdConfirmSwipeStartX.current = 0
+    orderIdConfirmSwipeStartY.current = 0
+    orderIdConfirmIsSwiping.current = false
+    setOrderIdConfirmButtonProgress(0)
+    setOrderIdConfirmIsAnimatingToComplete(false)
+  }
+
   // Handle Start Navigation Button - Opens Google Maps app in navigation mode
   const handleStartNavigation = () => {
     // Get customer location from selectedRestaurant
@@ -4025,16 +4085,20 @@ export default function DeliveryHome() {
   }, [requestDeliveryOtpFromModal, selectedRestaurant])
 
   const handleOrderDeliveredTouchStart = (e) => {
-    orderDeliveredSwipeStartX.current = e.touches[0].clientX
-    orderDeliveredSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    orderDeliveredSwipeStartX.current = touch.x
+    orderDeliveredSwipeStartY.current = touch.y
     orderDeliveredIsSwiping.current = false
     setOrderDeliveredIsAnimatingToComplete(false)
     setOrderDeliveredButtonProgress(0)
   }
 
   const handleOrderDeliveredTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - orderDeliveredSwipeStartX.current
-    const deltaY = e.touches[0].clientY - orderDeliveredSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - orderDeliveredSwipeStartX.current
+    const deltaY = touch.y - orderDeliveredSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -4059,7 +4123,8 @@ export default function DeliveryHome() {
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - orderDeliveredSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? orderDeliveredSwipeStartX.current) - orderDeliveredSwipeStartX.current
     const buttonWidth = orderDeliveredButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
@@ -4123,18 +4188,30 @@ export default function DeliveryHome() {
     orderDeliveredIsSwiping.current = false
   }
 
+  const handleOrderDeliveredTouchCancel = () => {
+    orderDeliveredSwipeStartX.current = 0
+    orderDeliveredSwipeStartY.current = 0
+    orderDeliveredIsSwiping.current = false
+    setOrderDeliveredButtonProgress(0)
+    setOrderDeliveredIsAnimatingToComplete(false)
+  }
+
   // Handle accept orders button swipe
   const handleAcceptOrdersTouchStart = (e) => {
-    acceptButtonSwipeStartX.current = e.touches[0].clientX
-    acceptButtonSwipeStartY.current = e.touches[0].clientY
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    acceptButtonSwipeStartX.current = touch.x
+    acceptButtonSwipeStartY.current = touch.y
     acceptButtonIsSwiping.current = false
     setIsAnimatingToComplete(false)
     setAcceptButtonProgress(0)
   }
 
   const handleAcceptOrdersTouchMove = (e) => {
-    const deltaX = e.touches[0].clientX - acceptButtonSwipeStartX.current
-    const deltaY = e.touches[0].clientY - acceptButtonSwipeStartY.current
+    const touch = getTouchPoint(e)
+    if (!touch) return
+    const deltaX = touch.x - acceptButtonSwipeStartX.current
+    const deltaY = touch.y - acceptButtonSwipeStartY.current
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -4159,7 +4236,8 @@ export default function DeliveryHome() {
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - acceptButtonSwipeStartX.current
+    const touch = getTouchPoint(e)
+    const deltaX = (touch?.x ?? acceptButtonSwipeStartX.current) - acceptButtonSwipeStartX.current
     const buttonWidth = acceptButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
@@ -4192,6 +4270,14 @@ export default function DeliveryHome() {
     acceptButtonSwipeStartX.current = 0
     acceptButtonSwipeStartY.current = 0
     acceptButtonIsSwiping.current = false
+  }
+
+  const handleAcceptOrdersTouchCancel = () => {
+    acceptButtonSwipeStartX.current = 0
+    acceptButtonSwipeStartY.current = 0
+    acceptButtonIsSwiping.current = false
+    setAcceptButtonProgress(0)
+    setIsAnimatingToComplete(false)
   }
 
   // Handle bottom sheet swipe
@@ -7884,6 +7970,11 @@ export default function DeliveryHome() {
 
   // Auto-rotate carousel
   useEffect(() => {
+    if (carouselAutoRotateRef.current) {
+      clearInterval(carouselAutoRotateRef.current)
+      carouselAutoRotateRef.current = null
+    }
+
     // Reset to first slide if current slide is out of bounds
     setCurrentCarouselSlide((prev) => {
       if (prev >= carouselSlides.length) {
@@ -7891,19 +7982,27 @@ export default function DeliveryHome() {
       }
       return prev
     })
-    
+
+    // No rotation needed for 0/1 slides and avoids modulo edge cases in WebView.
+    if (carouselSlides.length <= 1) {
+      return () => {}
+    }
+
     carouselAutoRotateRef.current = setInterval(() => {
       setCurrentCarouselSlide((prev) => (prev + 1) % carouselSlides.length)
     }, 3000)
+
     return () => {
       if (carouselAutoRotateRef.current) {
         clearInterval(carouselAutoRotateRef.current)
+        carouselAutoRotateRef.current = null
       }
     }
   }, [carouselSlides])
 
   // Reset auto-rotate timer after manual swipe
   const resetCarouselAutoRotate = useCallback(() => {
+    if (carouselSlides.length <= 1) return
     if (carouselAutoRotateRef.current) {
       clearInterval(carouselAutoRotateRef.current)
     }
@@ -7938,6 +8037,12 @@ export default function DeliveryHome() {
 
   const handleCarouselTouchEnd = useCallback((e) => {
     if (!carouselIsSwiping.current) return
+    if (carouselSlides.length <= 1) {
+      carouselIsSwiping.current = false
+      carouselStartX.current = 0
+      carouselStartY.current = 0
+      return
+    }
 
     const endX = e.changedTouches[0].clientX
     const endY = e.changedTouches[0].clientY
@@ -7961,6 +8066,12 @@ export default function DeliveryHome() {
     carouselStartX.current = 0
     carouselStartY.current = 0
   }, [carouselSlides.length, resetCarouselAutoRotate])
+
+  const handleCarouselTouchCancel = useCallback(() => {
+    carouselIsSwiping.current = false
+    carouselStartX.current = 0
+    carouselStartY.current = 0
+  }, [])
 
   // Handle carousel mouse events for desktop
   const handleCarouselMouseDown = (e) => {
@@ -8014,13 +8125,15 @@ export default function DeliveryHome() {
     carouselElement.addEventListener('touchstart', handleCarouselTouchStart, { passive: true })
     carouselElement.addEventListener('touchmove', handleCarouselTouchMove, { passive: false })
     carouselElement.addEventListener('touchend', handleCarouselTouchEnd, { passive: true })
+    carouselElement.addEventListener('touchcancel', handleCarouselTouchCancel, { passive: true })
 
     return () => {
       carouselElement.removeEventListener('touchstart', handleCarouselTouchStart)
       carouselElement.removeEventListener('touchmove', handleCarouselTouchMove)
       carouselElement.removeEventListener('touchend', handleCarouselTouchEnd)
+      carouselElement.removeEventListener('touchcancel', handleCarouselTouchCancel)
     }
-  }, [handleCarouselTouchStart, handleCarouselTouchMove, handleCarouselTouchEnd])
+  }, [handleCarouselTouchStart, handleCarouselTouchMove, handleCarouselTouchEnd, handleCarouselTouchCancel])
 
   // Handle swipe bar touch events
   const handleSwipeBarTouchStart = (e) => {
@@ -8393,6 +8506,7 @@ export default function DeliveryHome() {
       <div
         ref={carouselRef}
         className="relative overflow-hidden bg-gray-700 cursor-grab active:cursor-grabbing select-none flex-shrink-0"
+        style={{ touchAction: 'pan-y' }}
         onMouseDown={handleCarouselMouseDown}
       >
         <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${currentCarouselSlide * 100}%)` }}>
@@ -9610,6 +9724,7 @@ export default function DeliveryHome() {
                       onTouchStart={handleNewOrderAcceptTouchStart}
                       onTouchMove={handleNewOrderAcceptTouchMove}
                       onTouchEnd={handleNewOrderAcceptTouchEnd}
+                      onTouchCancel={handleNewOrderAcceptTouchCancel}
                       whileTap={{ scale: 0.98 }}
                     >
                       {/* Swipe progress background */}
@@ -10063,6 +10178,7 @@ export default function DeliveryHome() {
               onTouchStart={handlereachedPickupTouchStart}
               onTouchMove={handlereachedPickupTouchMove}
               onTouchEnd={handlereachedPickupTouchEnd}
+              onTouchCancel={handlereachedPickupTouchCancel}
               whileTap={{ scale: 0.98 }}
             >
               {/* Swipe progress background */}
@@ -10210,6 +10326,7 @@ export default function DeliveryHome() {
                 onTouchStart={billImageUploaded ? handleOrderIdConfirmTouchStart : undefined}
                 onTouchMove={billImageUploaded ? handleOrderIdConfirmTouchMove : undefined}
                 onTouchEnd={billImageUploaded ? handleOrderIdConfirmTouchEnd : undefined}
+                onTouchCancel={billImageUploaded ? handleOrderIdConfirmTouchCancel : undefined}
                 whileTap={billImageUploaded ? { scale: 0.98 } : {}}
               >
                 {/* Swipe progress background */}
@@ -10411,6 +10528,7 @@ export default function DeliveryHome() {
               onTouchStart={handleReachedDropTouchStart}
               onTouchMove={handleReachedDropTouchMove}
               onTouchEnd={handleReachedDropTouchEnd}
+              onTouchCancel={handleReachedDropTouchCancel}
               whileTap={{ scale: 0.98 }}
             >
               {/* Swipe progress background */}
@@ -10614,6 +10732,7 @@ export default function DeliveryHome() {
               onTouchStart={handleOrderDeliveredTouchStart}
               onTouchMove={handleOrderDeliveredTouchMove}
               onTouchEnd={handleOrderDeliveredTouchEnd}
+              onTouchCancel={handleOrderDeliveredTouchCancel}
               whileTap={{ scale: 0.98 }}
             >
               {/* Swipe progress background */}
