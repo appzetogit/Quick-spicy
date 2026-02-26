@@ -35,6 +35,8 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const ONBOARDING_STORAGE_KEY = "restaurant_onboarding_data"
 const PAN_NUMBER_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const GALLERY_IMAGE_ACCEPT =
+  ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
 
 const isUploadableFile = (value) => {
   if (!value || typeof value !== "object") return false
@@ -43,9 +45,8 @@ const isUploadableFile = (value) => {
   if (typeof Blob !== "undefined" && value instanceof Blob) return true
 
   return (
-    typeof value.type === "string" &&
     typeof value.size === "number" &&
-    typeof value.slice === "function"
+    (typeof value.slice === "function" || typeof value.arrayBuffer === "function")
   )
 }
 
@@ -1330,7 +1331,7 @@ export default function RestaurantOnboarding() {
               id="menuImagesInput"
               type="file"
               multiple
-              accept="image/*"
+              accept={GALLERY_IMAGE_ACCEPT}
               className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
@@ -1472,7 +1473,7 @@ export default function RestaurantOnboarding() {
           <input
             id="profileImageInput"
             type="file"
-            accept="image/*"
+            accept={GALLERY_IMAGE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0] || null
@@ -1593,7 +1594,7 @@ export default function RestaurantOnboarding() {
           <Label className="text-xs text-gray-700">PAN image</Label>
           <Input
             type="file"
-            accept="image/*"
+            accept={GALLERY_IMAGE_ACCEPT}
             onChange={(e) =>
               setStep3({ ...step3, panImage: e.target.files?.[0] || null })
             }
@@ -1645,7 +1646,7 @@ export default function RestaurantOnboarding() {
             />
             <Input
               type="file"
-              accept="image/*"
+              accept={GALLERY_IMAGE_ACCEPT}
               onChange={(e) =>
                 setStep3({ ...step3, gstImage: e.target.files?.[0] || null })
               }
@@ -1709,7 +1710,7 @@ export default function RestaurantOnboarding() {
         </div>
         <Input
           type="file"
-          accept="image/*"
+          accept={GALLERY_IMAGE_ACCEPT}
           onChange={(e) =>
             setStep3({ ...step3, fssaiImage: e.target.files?.[0] || null })
           }

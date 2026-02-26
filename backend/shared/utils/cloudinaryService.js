@@ -7,24 +7,34 @@ const storage = multer.memoryStorage();
 
 // Generic file filter for common image/video mime types
 const fileFilter = (req, file, cb) => {
-  const allowedMimeTypes = [
-    // images
-    'image/jpeg',
-    'image/jpg',
-    'image/png',
-    'image/webp',
-    'image/gif',
-    'image/heic',
-    'image/heif',
-    'image/svg+xml',
-    // videos
-    'video/mp4',
-    'video/quicktime',
-    'video/x-msvideo',
-    'video/x-matroska'
-  ];
+  const mimeType = (file?.mimetype || '').toLowerCase();
+  const fileName = (file?.originalname || '').toLowerCase();
+  const ext = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.')) : '';
 
-  if (allowedMimeTypes.includes(file.mimetype)) {
+  const allowedImageExt = new Set([
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.webp',
+    '.gif',
+    '.heic',
+    '.heif',
+    '.svg'
+  ]);
+
+  const allowedVideoExt = new Set([
+    '.mp4',
+    '.mov',
+    '.avi',
+    '.mkv'
+  ]);
+
+  const isAllowedMime = mimeType.startsWith('image/') || mimeType.startsWith('video/');
+  const isFallbackAllowedExt =
+    (mimeType === '' || mimeType === 'application/octet-stream') &&
+    (allowedImageExt.has(ext) || allowedVideoExt.has(ext));
+
+  if (isAllowedMime || isFallbackAllowedExt) {
     cb(null, true);
   } else {
     cb(new Error('Unsupported file type. Please upload an image or video.'));

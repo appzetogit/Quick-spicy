@@ -151,7 +151,6 @@ export default function SignupStep2() {
     const file = documents[docType]
     const uploaded = uploadedDocs[docType]
     const isUploading = uploading[docType]
-    const cameraInputRef = useRef(null)
     const galleryInputRef = useRef(null)
 
     return (
@@ -200,44 +199,19 @@ export default function SignupStep2() {
               <div className="w-full flex items-center gap-2 pb-4">
                 <button
                   type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex-1 text-center px-3 py-2 rounded-md bg-[#00B761] text-white text-sm font-medium cursor-pointer hover:bg-[#00A055] transition-colors"
-                >
-                  Camera
-                </button>
-                <button
-                  type="button"
                   onClick={() => galleryInputRef.current?.click()}
-                  className="flex-1 text-center px-3 py-2 rounded-md border border-gray-300 text-gray-700 text-sm font-medium cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="w-full text-center px-3 py-2 rounded-md bg-[#00B761] text-white text-sm font-medium cursor-pointer hover:bg-[#00A055] transition-colors"
                 >
-                  Gallery
+                  Choose from Gallery
                 </button>
               </div>
             )}
 
             <input
-              ref={cameraInputRef}
-              type="file"
-              className="sr-only"
-              accept="image/*"
-              capture="environment"
-              onClick={(e) => {
-                e.target.value = ""
-              }}
-              onChange={(e) => {
-                const selectedFile = e.target.files[0]
-                if (selectedFile) {
-                  handleFileSelect(docType, selectedFile)
-                }
-                e.target.value = ""
-              }}
-              disabled={isUploading}
-            />
-            <input
               ref={galleryInputRef}
               type="file"
               className="sr-only"
-              accept="image/*"
+              accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
               onClick={(e) => {
                 e.target.value = ""
               }}
