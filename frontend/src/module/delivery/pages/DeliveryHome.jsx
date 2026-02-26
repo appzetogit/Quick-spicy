@@ -598,6 +598,8 @@ export default function DeliveryHome() {
   const newOrderAcceptButtonIsSwiping = useRef(false)
   const [newOrderAcceptButtonProgress, setNewOrderAcceptButtonProgress] = useState(0)
   const [newOrderIsAnimatingToComplete, setNewOrderIsAnimatingToComplete] = useState(false)
+  const [isAcceptingNewOrder, setIsAcceptingNewOrder] = useState(false)
+  const isAcceptingNewOrderRef = useRef(false)
   const newOrderPopupRef = useRef(null)
   const newOrderSwipeStartY = useRef(0)
   const newOrderIsSwiping = useRef(false)
@@ -2066,6 +2068,7 @@ export default function DeliveryHome() {
 
   // Handle new order popup accept button swipe
   const handleNewOrderAcceptTouchStart = (e) => {
+    if (isAcceptingNewOrderRef.current) return
     newOrderAcceptButtonSwipeStartX.current = e.touches[0].clientX
     newOrderAcceptButtonSwipeStartY.current = e.touches[0].clientY
     newOrderAcceptButtonIsSwiping.current = false
@@ -2074,6 +2077,7 @@ export default function DeliveryHome() {
   }
 
   const handleNewOrderAcceptTouchMove = (e) => {
+    if (isAcceptingNewOrderRef.current) return
     const deltaX = e.touches[0].clientX - newOrderAcceptButtonSwipeStartX.current
     const deltaY = e.touches[0].clientY - newOrderAcceptButtonSwipeStartY.current
 
@@ -2095,19 +2099,27 @@ export default function DeliveryHome() {
   }
 
   const handleNewOrderAcceptTouchEnd = (e) => {
+    if (isAcceptingNewOrderRef.current) return
+
+    const deltaX = e.changedTouches[0].clientX - newOrderAcceptButtonSwipeStartX.current
+    if (!newOrderAcceptButtonIsSwiping.current && deltaX > 30) {
+      newOrderAcceptButtonIsSwiping.current = true
+    }
+
     if (!newOrderAcceptButtonIsSwiping.current) {
       setNewOrderAcceptButtonProgress(0)
       return
     }
 
-    const deltaX = e.changedTouches[0].clientX - newOrderAcceptButtonSwipeStartX.current
     const buttonWidth = newOrderAcceptButtonRef.current?.offsetWidth || 300
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.55 // smoother acceptance
 
     if (deltaX > threshold) {
+      isAcceptingNewOrderRef.current = true
+      setIsAcceptingNewOrder(true)
       // Stop audio immediately when user accepts
       if (alertAudioRef.current) {
         alertAudioRef.current.pause()
@@ -2840,6 +2852,8 @@ export default function DeliveryHome() {
           setIsNewOrderPopupMinimized(false) // Reset minimized state
           setNewOrderDragY(0) // Reset drag position
         } finally {
+          isAcceptingNewOrderRef.current = false
+          setIsAcceptingNewOrder(false)
           // Reset after animation
           setTimeout(() => {
             setNewOrderAcceptButtonProgress(0)
@@ -9492,7 +9506,7 @@ export default function DeliveryHome() {
                               damping: 25
                             } : { duration: 0 }}
                           >
-                            {newOrderAcceptButtonProgress > 0.5 ? 'Release to Accept' : 'Accept order'}
+                            {isAcceptingNewOrder ? 'Accepting...' : (newOrderAcceptButtonProgress > 0.5 ? 'Release to Accept' : 'Accept order')}
                           </motion.span>
                         </div>
                       </div>
@@ -10231,10 +10245,6 @@ export default function DeliveryHome() {
             >
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-              <MapPin className="w-5 h-5 text-gray-700" />
-              <span className="text-gray-700 font-medium">Chat</span>
             </button>
             <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
               <MapPin className="w-5 h-5 text-white" />

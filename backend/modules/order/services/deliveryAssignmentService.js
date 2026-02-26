@@ -2,6 +2,8 @@ import Delivery from '../../delivery/models/Delivery.js';
 import Order from '../models/Order.js';
 import Zone from '../../admin/models/Zone.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
+import BusinessSettings from '../../admin/models/BusinessSettings.js';
+import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 import mongoose from 'mongoose';
 
 /**
@@ -75,6 +77,63 @@ async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng)
   return null;
 }
 
+async function getGlobalDeliveryCashLimit() {
+  try {
+    const settings = await BusinessSettings.getSettings();
+    const configured = Number(settings?.deliveryCashLimit);
+    if (Number.isFinite(configured) && configured >= 0) {
+      return { enforce: true, limit: configured };
+    }
+  } catch (error) {
+    console.warn(`⚠️ Failed to load delivery cash limit settings: ${error.message}`);
+  }
+  return { enforce: false, limit: null };
+}
+
+async function filterPartnersByAvailableCashLimit(deliveryPartners = []) {
+  if (!Array.isArray(deliveryPartners) || deliveryPartners.length === 0) {
+    return [];
+  }
+
+  const { enforce, limit } = await getGlobalDeliveryCashLimit();
+  if (!enforce) {
+    return deliveryPartners;
+  }
+
+  if (limit <= 0) {
+    console.warn('⚠️ Global delivery cash limit is 0; no delivery partner is eligible for new order assignment');
+    return [];
+  }
+
+  const partnerIds = deliveryPartners
+    .map((partner) => partner?._id)
+    .filter((id) => mongoose.Types.ObjectId.isValid(String(id)));
+
+  if (partnerIds.length === 0) {
+    return [];
+  }
+
+  const wallets = await DeliveryWallet.find({ deliveryId: { $in: partnerIds } })
+    .select('deliveryId cashInHand')
+    .lean();
+  const walletByDeliveryId = new Map(
+    wallets.map((wallet) => [String(wallet.deliveryId), Number(wallet.cashInHand) || 0])
+  );
+
+  const eligiblePartners = deliveryPartners.filter((partner) => {
+    const deliveryId = String(partner?._id || '');
+    const cashInHand = Math.max(0, Number(walletByDeliveryId.get(deliveryId)) || 0);
+    const availableCashLimit = Math.max(0, limit - cashInHand);
+    return availableCashLimit > 0;
+  });
+
+  if (eligiblePartners.length !== deliveryPartners.length) {
+    console.log(`🚫 Filtered ${deliveryPartners.length - eligiblePartners.length} delivery partner(s) due to exhausted available cash limit`);
+  }
+
+  return eligiblePartners;
+}
+
 /**
  * Find all nearest available delivery boys within priority distance (for priority notification)
  * @param {number} restaurantLat - Restaurant latitude
@@ -118,12 +177,15 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
 
     console.log(`📊 Found ${deliveryPartners?.length || 0} online delivery partners`);
 
-    if (!deliveryPartners || deliveryPartners.length === 0) {
+    const cashEligibleDeliveryPartners = await filterPartnersByAvailableCashLimit(deliveryPartners);
+    console.log(`💰 Cash-limit eligible delivery partners: ${cashEligibleDeliveryPartners.length}`);
+
+    if (!cashEligibleDeliveryPartners || cashEligibleDeliveryPartners.length === 0) {
       return [];
     }
 
     // Calculate distance and filter
-    const deliveryPartnersWithDistance = deliveryPartners
+    const deliveryPartnersWithDistance = cashEligibleDeliveryPartners
       .map(partner => {
         const location = partner.availability?.currentLocation;
         if (!location || !location.coordinates || location.coordinates.length < 2) {
@@ -241,7 +303,10 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
 
     console.log(`📊 Found ${deliveryPartners?.length || 0} online delivery partners in database`);
 
-    if (!deliveryPartners || deliveryPartners.length === 0) {
+    const cashEligibleDeliveryPartners = await filterPartnersByAvailableCashLimit(deliveryPartners);
+    console.log(`💰 Cash-limit eligible delivery partners: ${cashEligibleDeliveryPartners.length}`);
+
+    if (!cashEligibleDeliveryPartners || cashEligibleDeliveryPartners.length === 0) {
       console.log('⚠️ No online delivery partners found');
       console.log('⚠️ Checking all delivery partners to see why...');
       
@@ -259,7 +324,7 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
     }
 
     // Calculate distance for each delivery partner and filter by zone if applicable
-    const deliveryPartnersWithDistance = deliveryPartners
+    const deliveryPartnersWithDistance = cashEligibleDeliveryPartners
       .map(partner => {
         const location = partner.availability?.currentLocation;
         if (!location || !location.coordinates || location.coordinates.length < 2) {

@@ -6,6 +6,7 @@ import Payment from '../../payment/models/Payment.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Zone from '../../admin/models/Zone.js';
 import DeliveryWallet from '../models/DeliveryWallet.js';
+import BusinessSettings from '../../admin/models/BusinessSettings.js';
 import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import RestaurantWallet from '../../restaurant/models/RestaurantWallet.js';
 import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
@@ -322,6 +323,45 @@ const buildDeliveryPaymentMeta = (order, paymentRecord = null) => {
   };
 };
 
+const getDeliveryCashLimitState = async (deliveryId) => {
+  let totalCashLimit = null;
+  try {
+    const settings = await BusinessSettings.getSettings();
+    const configured = Number(settings?.deliveryCashLimit);
+    if (Number.isFinite(configured) && configured >= 0) {
+      totalCashLimit = configured;
+    }
+  } catch (error) {
+    logger.warn(`Failed to load delivery cash limit for eligibility: ${error.message}`);
+  }
+
+  if (!Number.isFinite(totalCashLimit) || totalCashLimit === null) {
+    return {
+      canReceiveNewOrders: true,
+      availableCashLimit: null,
+      totalCashLimit: null,
+      cashInHand: null,
+      warning: null
+    };
+  }
+
+  const wallet = await DeliveryWallet.findOne({ deliveryId }).select('cashInHand').lean();
+  const cashInHand = Math.max(0, Number(wallet?.cashInHand) || 0);
+  const availableCashLimit = Math.max(0, totalCashLimit - cashInHand);
+  const canReceiveNewOrders = availableCashLimit > 0;
+  const warning = canReceiveNewOrders
+    ? null
+    : 'Your available cash limit is 0. Please settle cash in hand to receive new orders.';
+
+  return {
+    canReceiveNewOrders,
+    availableCashLimit,
+    totalCashLimit,
+    cashInHand,
+    warning
+  };
+};
+
 /**
  * Get Delivery Partner Orders
  * GET /api/delivery/orders
@@ -331,6 +371,7 @@ export const getOrders = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
     const { status, page = 1, limit = 20, includeDelivered, discover } = req.query;
+    const cashLimitState = await getDeliveryCashLimitState(delivery._id);
 
     // Build query
     const isDiscoverMode = discover === 'true' || discover === true;
@@ -377,6 +418,10 @@ export const getOrders = asyncHandler(async (req, res) => {
         const isAssignedToCurrent = order?.deliveryPartnerId?.toString?.() === delivery._id.toString();
         if (isAssignedToCurrent) {
           filteredOrders.push(order);
+          continue;
+        }
+
+        if (!cashLimitState.canReceiveNewOrders) {
           continue;
         }
 
@@ -433,6 +478,9 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     return successResponse(res, 200, 'Orders retrieved successfully', {
       orders: enrichedOrders,
+      cashLimitWarning: cashLimitState.warning,
+      canReceiveNewOrders: cashLimitState.canReceiveNewOrders,
+      availableCashLimit: cashLimitState.availableCashLimit,
       pagination: {
         page: parseInt(page),
         limit: limitNum,
@@ -454,6 +502,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
     const { orderId } = req.params;
+    const cashLimitState = await getDeliveryCashLimitState(delivery._id);
 
     // Build query to find order by either _id or orderId field
     // Allow access if order is assigned to this delivery partner OR if they were notified about it
@@ -554,7 +603,10 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     const orderWithPayment = { ...order, ...paymentMeta };
 
     return successResponse(res, 200, 'Order details retrieved successfully', {
-      order: orderWithPayment
+      order: orderWithPayment,
+      cashLimitWarning: cashLimitState.warning,
+      canReceiveNewOrders: cashLimitState.canReceiveNewOrders,
+      availableCashLimit: cashLimitState.availableCashLimit
     });
   } catch (error) {
     logger.error(`Error fetching order details: ${error.message}`, { error: error.stack });
@@ -601,10 +653,19 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     // Check if order is assigned to this delivery partner
     const orderDeliveryPartnerId = order.deliveryPartnerId?.toString();
     const currentDeliveryId = delivery._id.toString();
+    const cashLimitState = await getDeliveryCashLimitState(delivery._id);
 
     // If order is not assigned, check if this delivery boy was notified (priority-based system)
     // Also allow acceptance if order is in valid status (preparing/ready) - more permissive
     if (!orderDeliveryPartnerId) {
+      if (!cashLimitState.canReceiveNewOrders) {
+        return errorResponse(
+          res,
+          403,
+          'Cannot accept new orders: available cash limit is 0. Please settle cash in hand first.'
+        );
+      }
+
       console.log(`ℹ️ Order ${order.orderId} is not assigned yet. Checking if this delivery partner was notified...`);
       
       // Check if this delivery boy was in the priority or expanded notification list
