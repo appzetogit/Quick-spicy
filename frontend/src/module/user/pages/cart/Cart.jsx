@@ -95,7 +95,7 @@ export default function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [manualCouponCode, setManualCouponCode] = useState("")
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("razorpay") // razorpay | cash | wallet
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash") // COD only for now
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
   const [deliveryFleet, setDeliveryFleet] = useState("standard")
@@ -2054,11 +2054,7 @@ export default function Cart() {
                       PAY USING
                     </p>
                     <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200">
-                      {selectedPaymentMethod === "razorpay"
-                        ? "Razorpay"
-                        : selectedPaymentMethod === "wallet"
-                          ? "Wallet"
-                          : "Cash on Delivery"}
+                      Cash on Delivery
                     </p>
                   </div>
                 </div>
@@ -2069,8 +2065,7 @@ export default function Cart() {
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
                     className="appearance-none bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-9 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#EB590E]/40"
                   >
-                    <option value="razorpay">Razorpay</option>
-                    <option value="wallet">Wallet {walletBalance > 0 ? `(₹${walletBalance.toFixed(0)})` : ''}</option>
+                    {/* Razorpay and Wallet hidden for now */}
                     <option value="cash">COD</option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -2094,13 +2089,7 @@ export default function Cart() {
                     ? "Processing..."
                     : !hasSavedAddress
                       ? "Add Address to Continue"
-                    : selectedPaymentMethod === "razorpay"
-                      ? "Select Payment"
-                      : selectedPaymentMethod === "wallet"
-                        ? walletBalance >= total
-                          ? "Place Order"
-                          : "Insufficient Balance"
-                        : "Place Order"}
+                    : "Place Order"}
                 </span>
                 <ChevronRight className="h-5 w-5 md:h-6 md:w-6 ml-2" />
               </Button>
@@ -2497,3 +2486,4 @@ export default function Cart() {
     </div>
   )
 }
+
