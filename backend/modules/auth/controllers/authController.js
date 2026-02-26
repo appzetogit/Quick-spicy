@@ -104,10 +104,33 @@ const ensureReferralCodeForUser = async (user) => {
   return user;
 };
 
-const normalizeFcmPlatform = (platform = "web") => {
-  const raw = String(platform || "web").trim().toLowerCase();
-  if (raw === "web") return "web";
-  if (raw === "mobile" || raw === "android" || raw === "ios") return "mobile";
+const resolveFcmChannel = (channel = null, platform = "web", headers = {}) => {
+  const normalizedChannel = String(channel || "").trim().toLowerCase();
+  if (normalizedChannel === "web" || normalizedChannel === "mobile" || normalizedChannel === "both") {
+    return normalizedChannel;
+  }
+
+  const normalizedPlatform = String(platform || "web").trim().toLowerCase();
+  if (normalizedPlatform === "web") {
+    const clientPlatform = String(headers["x-client-platform"] || headers["x-platform"] || "").trim().toLowerCase();
+    if (["android", "ios", "mobile", "flutter", "flutter-webview", "apk"].includes(clientPlatform)) {
+      return "mobile";
+    }
+
+    const userAgent = String(headers["user-agent"] || "").toLowerCase();
+    if (userAgent.startsWith("dart/") || userAgent.includes("flutter")) {
+      return "mobile";
+    }
+
+    return "web";
+  }
+
+  if (["mobile", "android", "ios", "flutter", "flutter-webview", "apk"].includes(normalizedPlatform)) {
+    return "mobile";
+  }
+  if (normalizedPlatform === "all" || normalizedPlatform === "both") {
+    return "both";
+  }
   return "web";
 };
 
@@ -819,21 +842,24 @@ export const getCurrentUser = asyncHandler(async (req, res) => {
  * POST /api/auth/fcm-token
  */
 export const saveFcmToken = asyncHandler(async (req, res) => {
-  const { token, platform = "web" } = req.body || {};
+  const { token, platform = "web", channel = null } = req.body || {};
 
   if (!token || !String(token).trim()) {
     return errorResponse(res, 400, "FCM token is required");
   }
 
   const normalizedToken = String(token).trim();
-  const normalizedPlatform = normalizeFcmPlatform(platform);
+  const normalizedChannel = resolveFcmChannel(channel, platform, req.headers);
 
   const user = await User.findById(req.user._id);
   if (!user) {
     return errorResponse(res, 404, "User not found");
   }
 
-  if (normalizedPlatform === "mobile") {
+  if (normalizedChannel === "both") {
+    user.fcmtokenweb = normalizedToken;
+    user.fcmtokenmobile = normalizedToken;
+  } else if (normalizedChannel === "mobile") {
     user.fcmtokenmobile = normalizedToken;
   } else {
     user.fcmtokenweb = normalizedToken;
@@ -843,7 +869,7 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
 
   return successResponse(res, 200, "FCM token saved successfully", {
     role: user.role,
-    platform: normalizedPlatform,
+    channel: normalizedChannel,
     fcmtokenweb: user.fcmtokenweb || null,
     fcmtokenmobile: user.fcmtokenmobile || null,
   });
@@ -854,9 +880,9 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
  * DELETE /api/auth/fcm-token
  */
 export const removeFcmToken = asyncHandler(async (req, res) => {
-  const { token = null, platform = null } = req.body || {};
+  const { token = null, platform = null, channel = null } = req.body || {};
   const normalizedToken = token ? String(token).trim() : null;
-  const normalizedPlatform = platform ? normalizeFcmPlatform(platform) : null;
+  const normalizedChannel = platform || channel ? resolveFcmChannel(channel, platform, req.headers) : null;
 
   const user = await User.findById(req.user._id);
   if (!user) {
@@ -870,10 +896,13 @@ export const removeFcmToken = asyncHandler(async (req, res) => {
     if (user.fcmtokenmobile === normalizedToken) {
       user.fcmtokenmobile = null;
     }
-  } else if (normalizedPlatform) {
-    if (normalizedPlatform === "web") {
+  } else if (normalizedChannel) {
+    if (normalizedChannel === "web") {
       user.fcmtokenweb = null;
+    } else if (normalizedChannel === "mobile") {
+      user.fcmtokenmobile = null;
     } else {
+      user.fcmtokenweb = null;
       user.fcmtokenmobile = null;
     }
   } else {

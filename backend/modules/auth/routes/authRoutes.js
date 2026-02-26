@@ -77,12 +77,14 @@ const resetPasswordSchema = Joi.object({
 
 const fcmTokenSchema = Joi.object({
   token: Joi.string().trim().min(10).required(),
-  platform: Joi.string().valid('web', 'mobile', 'android', 'ios').default('web')
+  platform: Joi.string().valid('web', 'mobile', 'android', 'ios', 'flutter', 'flutter-webview', 'apk', 'all', 'both').default('web'),
+  channel: Joi.string().valid('web', 'mobile', 'both').optional(),
 });
 
 const removeFcmTokenSchema = Joi.object({
   token: Joi.string().trim().optional(),
-  platform: Joi.string().valid('web', 'mobile', 'android', 'ios').optional()
+  platform: Joi.string().valid('web', 'mobile', 'android', 'ios', 'flutter', 'flutter-webview', 'apk', 'all', 'both').optional(),
+  channel: Joi.string().valid('web', 'mobile', 'both').optional(),
 });
 
 // Public routes

@@ -865,13 +865,32 @@ export const getCurrentRestaurant = asyncHandler(async (req, res) => {
   });
 });
 
-const resolveFcmChannel = (platform = 'web') => {
+const resolveFcmChannel = (channel = null, platform = 'web', headers = {}) => {
+  const normalizedChannel = String(channel || '').trim().toLowerCase();
+  if (normalizedChannel === 'web' || normalizedChannel === 'mobile' || normalizedChannel === 'both') {
+    return normalizedChannel;
+  }
+
   const normalizedPlatform = String(platform || '').trim().toLowerCase();
   if (normalizedPlatform === 'web') {
+    const clientPlatform = String(headers['x-client-platform'] || headers['x-platform'] || '').trim().toLowerCase();
+    if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview', 'apk'].includes(clientPlatform)) {
+      return 'mobile';
+    }
+
+    const userAgent = String(headers['user-agent'] || '').toLowerCase();
+    if (userAgent.startsWith('dart/') || userAgent.includes('flutter')) {
+      return 'mobile';
+    }
+
     return 'web';
   }
-  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview'].includes(normalizedPlatform)) {
+
+  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview', 'apk'].includes(normalizedPlatform)) {
     return 'mobile';
+  }
+  if (normalizedPlatform === 'all' || normalizedPlatform === 'both') {
+    return 'both';
   }
   return 'web';
 };
@@ -881,16 +900,19 @@ const resolveFcmChannel = (platform = 'web') => {
  * POST /api/restaurant/auth/fcm-token
  */
 export const saveFcmToken = asyncHandler(async (req, res) => {
-  const { token, platform = 'web' } = req.body || {};
+  const { token, platform = 'web', channel = null } = req.body || {};
 
   if (!token || !String(token).trim()) {
     return errorResponse(res, 400, 'FCM token is required');
   }
 
   const normalizedToken = String(token).trim();
-  const channel = resolveFcmChannel(platform);
+  const resolvedChannel = resolveFcmChannel(channel, platform, req.headers);
 
-  if (channel === 'mobile') {
+  if (resolvedChannel === 'both') {
+    req.restaurant.fcmtokenweb = normalizedToken;
+    req.restaurant.fcmtokenmobile = normalizedToken;
+  } else if (resolvedChannel === 'mobile') {
     req.restaurant.fcmtokenmobile = normalizedToken;
   } else {
     req.restaurant.fcmtokenweb = normalizedToken;
@@ -899,7 +921,7 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
   await req.restaurant.save();
 
   return successResponse(res, 200, 'FCM token saved successfully', {
-    platform: channel,
+    channel: resolvedChannel,
     fcmtokenweb: req.restaurant.fcmtokenweb || null,
     fcmtokenmobile: req.restaurant.fcmtokenmobile || null,
   });
@@ -910,9 +932,9 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
  * DELETE /api/restaurant/auth/fcm-token
  */
 export const removeFcmToken = asyncHandler(async (req, res) => {
-  const { token = null, platform = null } = req.body || {};
+  const { token = null, platform = null, channel = null } = req.body || {};
   const normalizedToken = token ? String(token).trim() : null;
-  const channel = platform ? resolveFcmChannel(platform) : null;
+  const resolvedChannel = platform || channel ? resolveFcmChannel(channel, platform, req.headers) : null;
 
   if (normalizedToken) {
     if (req.restaurant.fcmtokenweb === normalizedToken) {
@@ -921,9 +943,12 @@ export const removeFcmToken = asyncHandler(async (req, res) => {
     if (req.restaurant.fcmtokenmobile === normalizedToken) {
       req.restaurant.fcmtokenmobile = null;
     }
-  } else if (channel === 'web') {
+  } else if (resolvedChannel === 'web') {
     req.restaurant.fcmtokenweb = null;
-  } else if (channel === 'mobile') {
+  } else if (resolvedChannel === 'mobile') {
+    req.restaurant.fcmtokenmobile = null;
+  } else if (resolvedChannel === 'both') {
+    req.restaurant.fcmtokenweb = null;
     req.restaurant.fcmtokenmobile = null;
   } else {
     req.restaurant.fcmtokenweb = null;
