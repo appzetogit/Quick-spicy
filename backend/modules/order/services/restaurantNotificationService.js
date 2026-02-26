@@ -2,6 +2,8 @@ import Order from '../models/Order.js';
 import Payment from '../../payment/models/Payment.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import mongoose from 'mongoose';
+import admin from 'firebase-admin';
+import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 
 // Dynamic import to avoid circular dependency
 let getIO = null;
@@ -12,6 +14,74 @@ async function getIOInstance() {
     getIO = serverModule.getIO;
   }
   return getIO ? getIO() : null;
+}
+
+function extractRestaurantTokens(restaurantRecord = null) {
+  const tokens = [];
+  const addToken = (token) => {
+    const normalized = String(token || '').trim();
+    if (normalized.length >= 10) tokens.push(normalized);
+  };
+
+  addToken(restaurantRecord?.fcmtokenweb);
+  addToken(restaurantRecord?.fcmtokenmobile);
+  return [...new Set(tokens)];
+}
+
+function getRestaurantStatusMessage(status, orderRef) {
+  const orderLabel = orderRef ? `Order ${orderRef}` : 'Order';
+  const normalizedStatus = String(status || '').toLowerCase();
+  const statusMessages = {
+    pending: `${orderLabel} created and awaiting confirmation.`,
+    confirmed: `${orderLabel} confirmed successfully.`,
+    preparing: `${orderLabel} is now being prepared.`,
+    ready: `${orderLabel} is ready for pickup.`,
+    out_for_delivery: `${orderLabel} is out for delivery.`,
+    delivered: `${orderLabel} delivered successfully.`,
+    cancelled: `${orderLabel} was cancelled.`
+  };
+
+  return statusMessages[normalizedStatus] || `${orderLabel} status updated to ${normalizedStatus || 'updated'}.`;
+}
+
+async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
+  const uniqueTokens = [...new Set((tokens || []).map((t) => String(t || '').trim()).filter((t) => t.length >= 10))];
+  if (uniqueTokens.length === 0) {
+    return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
+  }
+
+  await firebaseAuthService.init();
+  if (!firebaseAuthService.isEnabled()) {
+    return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
+  }
+
+  const message = {
+    notification: {
+      title: String(payload?.title || 'Restaurant Order Update'),
+      body: String(payload?.body || 'You have an order update')
+    },
+    data: {
+      type: String(payload?.type || 'restaurant_order_update'),
+      orderId: String(payload?.orderId || ''),
+      orderMongoId: String(payload?.orderMongoId || ''),
+      status: String(payload?.status || ''),
+      sentAt: new Date().toISOString(),
+      targetUrl: '/restaurant/orders'
+    },
+    webpush: {
+      fcmOptions: {
+        link: '/restaurant/orders'
+      }
+    },
+    tokens: uniqueTokens
+  };
+
+  const response = await admin.messaging().sendEachForMulticast(message);
+  return {
+    success: (response.successCount || 0) > 0,
+    sentCount: response.successCount || 0,
+    failedCount: response.failureCount || 0
+  };
 }
 
 /**
@@ -202,6 +272,21 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
       };
     }
 
+    try {
+      const pushTokens = extractRestaurantTokens(restaurant);
+      const pushResult = await sendRestaurantPushNotifications(pushTokens, {
+        type: 'new_order',
+        title: 'New Order Received',
+        body: `Order ${order.orderId} received from ${orderNotification.restaurantName || 'customer'}`,
+        orderId: order.orderId,
+        orderMongoId: order._id?.toString(),
+        status: order.status
+      });
+      console.log(`📲 Restaurant push result for ${normalizedRestaurantId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Restaurant push failed for ${normalizedRestaurantId}:`, pushError.message);
+    }
+
     return {
       success: true,
       restaurantId,
@@ -231,6 +316,15 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
       throw new Error('Order not found');
     }
 
+    const restaurant = await Restaurant.findOne({
+      $or: [
+        { _id: order.restaurantId },
+        { restaurantId: String(order.restaurantId || '') }
+      ]
+    })
+      .select('fcmtokenweb fcmtokenmobile')
+      .lean();
+
     // Get restaurant namespace
     const restaurantNamespace = io.of('/restaurant');
 
@@ -239,6 +333,21 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
       status,
       updatedAt: new Date()
     });
+
+    try {
+      const pushTokens = extractRestaurantTokens(restaurant);
+      const pushResult = await sendRestaurantPushNotifications(pushTokens, {
+        type: 'order_status_update',
+        title: 'Order Status Updated',
+        body: getRestaurantStatusMessage(status, order.orderId),
+        orderId: order.orderId,
+        orderMongoId: order._id?.toString(),
+        status
+      });
+      console.log(`📲 Restaurant status push result for ${order.restaurantId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Restaurant status push failed for ${order.restaurantId}:`, pushError.message);
+    }
 
     console.log(`📢 Notified restaurant ${order.restaurantId} about order ${order.orderId} status: ${status}`);
   } catch (error) {

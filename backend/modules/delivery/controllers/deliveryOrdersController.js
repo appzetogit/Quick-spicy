@@ -12,6 +12,7 @@ import RestaurantWallet from '../../restaurant/models/RestaurantWallet.js';
 import RestaurantCommission from '../../admin/models/RestaurantCommission.js';
 import AdminCommission from '../../admin/models/AdminCommission.js';
 import { calculateRoute } from '../../order/services/routeCalculationService.js';
+import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
 import {
   syncDeliveryPartnerPresence,
   upsertActiveOrderTracking,
@@ -1209,6 +1210,11 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       'Delivery partner accepted your order and is heading to pickup.'
     );
     await syncOrderPhaseToRealtime(orderWithPayment, delivery._id, 'accepted');
+    try {
+      await notifyUserOrderUpdate(orderWithPayment?._id?.toString?.() || orderWithPayment?.orderId, 'accepted');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
+    }
 
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,
@@ -1348,6 +1354,11 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
       'Delivery partner reached the restaurant.'
     );
     await syncOrderPhaseToRealtime(order, delivery._id, 'reached_pickup');
+    try {
+      await notifyUserOrderUpdate(order?._id?.toString?.() || order?.orderId, 'reached_pickup');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
+    }
 
     // After 10 seconds, trigger order ID confirmation request
     // Use order._id (MongoDB ObjectId) instead of orderId string
@@ -1701,6 +1712,9 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
       }
     );
     syncOrderPhaseToRealtime(updatedOrder, delivery._id, 'out_for_delivery');
+    notifyUserOrderUpdate(updatedOrder?._id?.toString?.() || updatedOrder?.orderId, 'out_for_delivery').catch((notifError) => {
+      console.error('Error sending user notification:', notifError);
+    });
 
     return response;
   } catch (error) {
@@ -1868,6 +1882,11 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
       'Delivery partner has reached your location.'
     );
     await syncOrderPhaseToRealtime(finalOrder, delivery._id, 'at_delivery');
+    try {
+      await notifyUserOrderUpdate(finalOrder?._id?.toString?.() || finalOrder?.orderId, 'at_delivery');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
+    }
 
     return successResponse(res, 200, 'Reached drop confirmed', {
       order: sanitizeDeliveryVerificationForDelivery(finalOrder),
@@ -2519,10 +2538,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       // Notify user about delivery completion
       (async () => {
         try {
-          const { notifyUserOrderUpdate } = await import('../../order/services/userNotificationService.js');
-          if (notifyUserOrderUpdate) {
-            await notifyUserOrderUpdate(orderIdForNotification, 'delivered');
-          }
+          await notifyUserOrderUpdate(orderIdForNotification, 'delivered');
         } catch (notifError) {
           console.error('Error sending user notification:', notifError);
         }

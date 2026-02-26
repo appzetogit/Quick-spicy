@@ -4,6 +4,7 @@ import Restaurant from '../models/Restaurant.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNotificationService.js';
+import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
 import { assignOrderToDeliveryBoy, findNearestDeliveryBoys, findNearestDeliveryBoy } from '../../order/services/deliveryAssignmentService.js';
 import { notifyDeliveryBoyNewOrder, notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
 import mongoose from 'mongoose';
@@ -336,6 +337,11 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     } catch (notifError) {
       console.error('Error sending notification:', notifError);
     }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), 'preparing');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
+    }
 
     // Priority-based order notification: First notify nearest delivery boys, then expand after 30 seconds
     if (!order.deliveryPartnerId) {
@@ -613,6 +619,11 @@ export const rejectOrder = asyncHandler(async (req, res) => {
     } catch (notifError) {
       console.error('Error sending notification:', notifError);
     }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), 'cancelled');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
+    }
 
     return successResponse(res, 200, 'Order rejected successfully', {
       order
@@ -681,6 +692,11 @@ export const markOrderPreparing = asyncHandler(async (req, res) => {
         await notifyRestaurantOrderUpdate(order._id.toString(), 'preparing');
       } catch (notifError) {
         console.error('Error sending notification:', notifError);
+      }
+      try {
+        await notifyUserOrderUpdate(order._id.toString(), 'preparing');
+      } catch (notifError) {
+        console.error('Error sending user notification:', notifError);
       }
     }
 
@@ -932,6 +948,11 @@ export const markOrderReady = asyncHandler(async (req, res) => {
       await notifyRestaurantOrderUpdate(order._id.toString(), 'ready');
     } catch (notifError) {
       console.error('Error sending restaurant notification:', notifError);
+    }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), 'ready');
+    } catch (notifError) {
+      console.error('Error sending user notification:', notifError);
     }
 
     // Notify delivery boy that order is ready for pickup
