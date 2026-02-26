@@ -75,31 +75,37 @@ const getVerifiedPhoneFromStoredRestaurant = () => {
 // Helper functions for localStorage
 const saveOnboardingToLocalStorage = (step1, step2, step3, step4, currentStep) => {
   try {
-    // Convert File objects to a serializable format (we'll store file names/paths if available)
+    // Persist only stable URL-based values. File/Blob objects are not serializable and
+    // restoring metadata-only placeholders breaks preview/upload flows.
     const serializableStep2 = {
       ...step2,
-      menuImages: step2.menuImages.map((file) => {
-        if (isUploadableFile(file)) {
-          return { name: file.name, size: file.size, type: file.type }
-        }
-        return file
-      }),
-      profileImage: isUploadableFile(step2.profileImage)
-        ? { name: step2.profileImage.name, size: step2.profileImage.size, type: step2.profileImage.type }
-        : step2.profileImage,
+      menuImages: (step2.menuImages || []).filter(
+        (img) => !isUploadableFile(img) && (img?.url || (typeof img === "string" && img.startsWith("http")))
+      ),
+      profileImage:
+        !isUploadableFile(step2.profileImage) &&
+        (step2.profileImage?.url || (typeof step2.profileImage === "string" && step2.profileImage.startsWith("http")))
+          ? step2.profileImage
+          : null,
     }
 
     const serializableStep3 = {
       ...step3,
-      panImage: isUploadableFile(step3.panImage)
-        ? { name: step3.panImage.name, size: step3.panImage.size, type: step3.panImage.type }
-        : step3.panImage,
-      gstImage: isUploadableFile(step3.gstImage)
-        ? { name: step3.gstImage.name, size: step3.gstImage.size, type: step3.gstImage.type }
-        : step3.gstImage,
-      fssaiImage: isUploadableFile(step3.fssaiImage)
-        ? { name: step3.fssaiImage.name, size: step3.fssaiImage.size, type: step3.fssaiImage.type }
-        : step3.fssaiImage,
+      panImage:
+        !isUploadableFile(step3.panImage) &&
+        (step3.panImage?.url || (typeof step3.panImage === "string" && step3.panImage.startsWith("http")))
+          ? step3.panImage
+          : null,
+      gstImage:
+        !isUploadableFile(step3.gstImage) &&
+        (step3.gstImage?.url || (typeof step3.gstImage === "string" && step3.gstImage.startsWith("http")))
+          ? step3.gstImage
+          : null,
+      fssaiImage:
+        !isUploadableFile(step3.fssaiImage) &&
+        (step3.fssaiImage?.url || (typeof step3.fssaiImage === "string" && step3.fssaiImage.startsWith("http")))
+          ? step3.fssaiImage
+          : null,
     }
 
     const dataToSave = {
@@ -364,9 +370,19 @@ export default function RestaurantOnboarding() {
         })
       }
       if (localData.step2) {
+        const restoredMenuImages = (localData.step2.menuImages || []).filter(
+          (img) => img?.url || (typeof img === "string" && img.startsWith("http"))
+        )
+        const restoredProfileImage =
+          localData.step2.profileImage?.url ||
+            (typeof localData.step2.profileImage === "string" &&
+            localData.step2.profileImage.startsWith("http"))
+            ? localData.step2.profileImage
+            : null
+
         setStep2({
-          menuImages: localData.step2.menuImages || [],
-          profileImage: localData.step2.profileImage || null,
+          menuImages: restoredMenuImages,
+          profileImage: restoredProfileImage,
           cuisines: localData.step2.cuisines || [],
           openingTime: normalizeTimeValue(localData.step2.openingTime),
           closingTime: normalizeTimeValue(localData.step2.closingTime),
@@ -477,15 +493,19 @@ export default function RestaurantOnboarding() {
             }))
           }
           if (data.step2) {
-            setStep2({
-              // Load menu images from URLs if available
-              menuImages: data.step2.menuImageUrls || [],
-              // Load profile image URL if available
-              profileImage: data.step2.profileImageUrl || null,
-              cuisines: data.step2.cuisines || [],
-              openingTime: normalizeTimeValue(data.step2.deliveryTimings?.openingTime),
-              closingTime: normalizeTimeValue(data.step2.deliveryTimings?.closingTime),
-              openDays: data.step2.openDays || [],
+            setStep2((prev) => {
+              const localMenuFiles = (prev.menuImages || []).filter((img) => isUploadableFile(img))
+              const localProfileFile = isUploadableFile(prev.profileImage) ? prev.profileImage : null
+              const apiMenuImages = data.step2.menuImageUrls || []
+
+              return {
+                menuImages: localMenuFiles.length > 0 ? [...apiMenuImages, ...localMenuFiles] : apiMenuImages,
+                profileImage: localProfileFile || data.step2.profileImageUrl || null,
+                cuisines: data.step2.cuisines || [],
+                openingTime: normalizeTimeValue(data.step2.deliveryTimings?.openingTime),
+                closingTime: normalizeTimeValue(data.step2.deliveryTimings?.closingTime),
+                openDays: data.step2.openDays || [],
+              }
             })
           }
           if (data.step3) {
