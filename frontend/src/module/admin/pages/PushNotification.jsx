@@ -48,7 +48,7 @@ export default function PushNotification() {
   const resolveTarget = (sendTo) => {
     const normalized = String(sendTo || "").trim().toLowerCase()
     if (normalized === "customer") return "customer"
-    if (normalized === "delivery man") return "delivery"
+    if (["delivery man", "delivery boy", "delivery partner"].includes(normalized)) return "delivery"
     if (normalized === "restaurant") return "restaurant"
     return "customer"
   }

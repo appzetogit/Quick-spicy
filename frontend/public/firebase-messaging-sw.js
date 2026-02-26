@@ -67,7 +67,12 @@ async function loadFirebaseWebConfig() {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const targetUrl = "/";
+  const rawLink =
+    event?.notification?.data?.link ||
+    event?.notification?.data?.click_action ||
+    event?.notification?.data?.targetUrl ||
+    "/";
+  const targetUrl = String(rawLink || "/").startsWith("/") ? String(rawLink || "/") : "/";
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
       const client = windowClients.find((c) => c.url.includes(self.location.origin));

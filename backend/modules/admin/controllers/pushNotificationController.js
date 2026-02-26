@@ -32,6 +32,18 @@ const normalizePlatform = (platform = "all") => {
   return "all";
 };
 
+const normalizeZone = (zone = "All") => String(zone || "All").trim() || "All";
+
+const buildActiveOrLegacyFilter = () => ({
+  $or: [{ isActive: true }, { isActive: { $exists: false } }],
+});
+
+const resolveTargetLink = (target = "customer") => {
+  if (target === "delivery") return "/delivery";
+  if (target === "restaurant") return "/restaurant";
+  return "/";
+};
+
 const extractTokensByPlatform = (records = [], platform = "all") => {
   const tokens = [];
 
@@ -61,22 +73,24 @@ const chunk = (arr = [], size = BATCH_SIZE) => {
 };
 
 async function getTargetTokens(target, platform) {
+  const baseFilter = buildActiveOrLegacyFilter();
+
   if (target === "customer") {
-    const users = await User.find({ role: "user", isActive: true })
+    const users = await User.find({ role: "user", ...baseFilter })
       .select("fcmtokenweb fcmtokenmobile")
       .lean();
     return extractTokensByPlatform(users, platform);
   }
 
   if (target === "delivery") {
-    const deliveryPartners = await Delivery.find({ isActive: true })
+    const deliveryPartners = await Delivery.find(baseFilter)
       .select("fcmtokenweb fcmtokenmobile")
       .lean();
     return extractTokensByPlatform(deliveryPartners, platform);
   }
 
   if (target === "restaurant") {
-    const restaurants = await Restaurant.find({ isActive: true })
+    const restaurants = await Restaurant.find(baseFilter)
       .select("fcmtokenweb fcmtokenmobile")
       .lean();
     return extractTokensByPlatform(restaurants, platform);
@@ -99,6 +113,8 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   const {
     title = "",
     description = "",
+    message = "",
+    body = "",
     imageUrl = "",
     target = "customer",
     platform = "all",
@@ -106,10 +122,12 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   } = req.body || {};
 
   const normalizedTitle = String(title || "").trim();
-  const normalizedDescription = String(description || "").trim();
+  const normalizedDescription = String(description || message || body || "").trim();
   const normalizedImageUrl = String(imageUrl || "").trim();
   const normalizedTarget = normalizeTarget(target);
   const normalizedPlatform = normalizePlatform(platform);
+  const normalizedZone = normalizeZone(zone);
+  const targetLink = resolveTargetLink(normalizedTarget);
 
   if (!normalizedTitle || !normalizedDescription) {
     return errorResponse(res, 400, "Title and description are required");
@@ -129,7 +147,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     return successResponse(res, 200, "No FCM tokens found for selected audience", {
       target: normalizedTarget,
       platform: normalizedPlatform,
-      zone,
+      zone: normalizedZone,
       totalTokens: 0,
       sentCount: 0,
       failedCount: 0,
@@ -146,20 +164,21 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
       type: "admin_push_notification",
       target: normalizedTarget,
       platform: normalizedPlatform,
-      zone: String(zone || "All"),
+      zone: normalizedZone,
+      link: targetLink,
       ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl, image: normalizedImageUrl } : {}),
       sentAt: new Date().toISOString(),
     },
+    webpush: {
+      notification: {
+        ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
+      },
+      fcmOptions: {
+        link: targetLink,
+      },
+    },
     ...(normalizedImageUrl
       ? {
-          webpush: {
-            notification: {
-              image: normalizedImageUrl,
-            },
-            fcmOptions: {
-              link: "/",
-            },
-          },
           android: {
             notification: {
               imageUrl: normalizedImageUrl,
@@ -203,7 +222,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   return successResponse(res, 200, "Push notification processed", {
     target: normalizedTarget,
     platform: normalizedPlatform,
-    zone,
+    zone: normalizedZone,
     totalTokens: allTokens.length,
     sentCount,
     failedCount,
