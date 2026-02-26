@@ -59,14 +59,55 @@ const DeliveryTrackingMap = ({
       .filter(Boolean);
     return [...new Set(ids)];
   }, [orderId, orderTrackingIds]);
+  const primaryTrackingId = trackingIds[0] || null;
   const trackingIdsKey = trackingIds.join('|');
+  const lastRouteColorRef = useRef(null);
+
+  const isOrderPickedUp = useMemo(() => {
+    const currentPhase = order?.deliveryState?.currentPhase;
+    const status = order?.deliveryState?.status;
+    return (
+      currentPhase === 'at_pickup' ||
+      currentPhase === 'en_route_to_delivery' ||
+      status === 'reached_pickup' ||
+      status === 'order_confirmed' ||
+      status === 'en_route_to_delivery' ||
+      order?.status === 'out_for_delivery'
+    );
+  }, [order?.deliveryState?.currentPhase, order?.deliveryState?.status, order?.status]);
+  const routeColor = isOrderPickedUp ? '#2563eb' : '#10b981';
+
+  const preserveViewportState = useCallback(() => {
+    if (!mapInstance.current || !window.google?.maps) return null;
+    const center = mapInstance.current.getCenter?.();
+    const zoom = mapInstance.current.getZoom?.();
+    if (!center || typeof zoom !== 'number') return null;
+    return {
+      center: { lat: center.lat(), lng: center.lng() },
+      zoom
+    };
+  }, []);
+
+  const restoreViewportState = useCallback((state) => {
+    if (!state || !mapInstance.current) return;
+    const currentCenter = mapInstance.current.getCenter?.();
+    const currentZoom = mapInstance.current.getZoom?.();
+    const needsCenterUpdate = !currentCenter ||
+      Math.abs(currentCenter.lat() - state.center.lat) > 1e-7 ||
+      Math.abs(currentCenter.lng() - state.center.lng) > 1e-7;
+    const needsZoomUpdate = typeof currentZoom === 'number' && currentZoom !== state.zoom;
+    if (needsCenterUpdate) {
+      mapInstance.current.setCenter(state.center);
+    }
+    if (needsZoomUpdate) {
+      mapInstance.current.setZoom(state.zoom);
+    }
+  }, []);
 
   const requestCurrentLocationForTrackingIds = useCallback(() => {
-    if (!socketRef.current || !socketRef.current.connected) return;
-    trackingIds.forEach((trackingId) => {
-      socketRef.current.emit('request-current-location', trackingId);
-    });
-  }, [trackingIdsKey]);
+    if (!socketRef.current || !socketRef.current.connected || !primaryTrackingId) return;
+    socketRef.current.emit('request-current-location', primaryTrackingId);
+  }, [primaryTrackingId]);
 
   // Fallback source for rider location from order payload (used when socket update is delayed/missed)
   useEffect(() => {
@@ -126,18 +167,27 @@ const DeliveryTrackingMap = ({
     }
 
     // Round coordinates to 4 decimal places (~11 meters) for cache key
+    const viewportBeforeRouteUpdate = preserveViewportState();
     const roundCoord = (coord) => Math.round(coord * 10000) / 10000;
     const cacheKey = `${roundCoord(startLat)},${roundCoord(startLng)}|${roundCoord(endLat)},${roundCoord(endLng)}`;
 
     // Check cache first (cache valid for 5 minutes)
     const cached = directionsCacheRef.current.get(cacheKey);
     const now = Date.now();
-    if (cached && (now - cached.timestamp) < 300000) { // 5 minutes cache
+      if (cached && (now - cached.timestamp) < 300000) { // 5 minutes cache
       console.log('✅ Using cached route');
       // Use cached result
       if (cached.result && cached.result.routes && cached.result.routes[0]) {
-        directionsRendererRef.current.setOptions({ preserveViewport: true });
+        directionsRendererRef.current.setOptions({
+          preserveViewport: true,
+          polylineOptions: {
+            strokeColor: routeColor,
+            strokeWeight: 0,
+            strokeOpacity: 0
+          }
+        });
         directionsRendererRef.current.setDirections(cached.result);
+        setTimeout(() => restoreViewportState(viewportBeforeRouteUpdate), 0);
 
         const polylinePoints = extractPolylineFromDirections(cached.result);
         if (polylinePoints && polylinePoints.length > 0) {
@@ -159,7 +209,7 @@ const DeliveryTrackingMap = ({
           routePolylineRef.current = new window.google.maps.Polyline({
             path: cached.result.routes[0].overview_path,
             geodesic: true,
-            strokeColor: '#10b981',
+            strokeColor: routeColor,
             strokeOpacity: 0.8,
             strokeWeight: 4,
             icons: [{
@@ -167,7 +217,7 @@ const DeliveryTrackingMap = ({
                 path: 'M 0,-1 0,1',
                 strokeOpacity: 1,
                 strokeWeight: 2,
-                strokeColor: '#10b981',
+                strokeColor: routeColor,
                 scale: 4
               },
               offset: '0%',
@@ -221,8 +271,16 @@ const DeliveryTrackingMap = ({
           }
 
           // Ensure viewport doesn't change when route is set
-          directionsRendererRef.current.setOptions({ preserveViewport: true });
+          directionsRendererRef.current.setOptions({
+            preserveViewport: true,
+            polylineOptions: {
+              strokeColor: routeColor,
+              strokeWeight: 0,
+              strokeOpacity: 0
+            }
+          });
           directionsRendererRef.current.setDirections(result);
+          setTimeout(() => restoreViewportState(viewportBeforeRouteUpdate), 0);
 
           // Extract polyline points for route-based animation (Rapido style)
           const polylinePoints = extractPolylineFromDirections(result);
@@ -251,7 +309,7 @@ const DeliveryTrackingMap = ({
             routePolylineRef.current = new window.google.maps.Polyline({
               path: result.routes[0].overview_path,
               geodesic: true,
-              strokeColor: '#10b981',
+              strokeColor: routeColor,
               strokeOpacity: 0.8,
               strokeWeight: 4,
               icons: [{
@@ -259,7 +317,7 @@ const DeliveryTrackingMap = ({
                   path: 'M 0,-1 0,1',
                   strokeOpacity: 1,
                   strokeWeight: 2,
-                  strokeColor: '#10b981',
+                  strokeColor: routeColor,
                   scale: 4
                 },
                 offset: '0%',
@@ -280,7 +338,7 @@ const DeliveryTrackingMap = ({
     } catch (error) {
       console.warn('Error calling Directions API:', error);
     }
-  }, []);
+  }, [routeColor, preserveViewportState, restoreViewportState]);
 
   // Check if delivery partner is assigned (memoized to avoid dependency issues)
   // MUST be defined BEFORE any useEffect that uses it
@@ -323,11 +381,12 @@ const DeliveryTrackingMap = ({
     const currentPhase = order.deliveryState?.currentPhase || 'assigned';
     const status = order.deliveryState?.status || 'pending';
 
-    // Phase 1: Delivery boy going to restaurant (en_route_to_pickup)
-    if (currentPhase === 'en_route_to_pickup' || status === 'accepted') {
+    // Phase 3: Delivery boy going to customer (en_route_to_delivery / out_for_delivery)
+    // Keep this check before status=accepted to avoid showing pickup route after pickup is done.
+    if (currentPhase === 'en_route_to_delivery' || status === 'en_route_to_delivery' || order.status === 'out_for_delivery') {
       return {
         start: { lat: deliveryBoyLocation.lat, lng: deliveryBoyLocation.lng },
-        end: restaurantCoords
+        end: customerCoords
       };
     }
 
@@ -339,11 +398,11 @@ const DeliveryTrackingMap = ({
       };
     }
 
-    // Phase 3: Delivery boy going to customer (en_route_to_delivery)
-    if (currentPhase === 'en_route_to_delivery' || status === 'en_route_to_delivery' || order.status === 'out_for_delivery') {
+    // Phase 1: Delivery boy going to restaurant (en_route_to_pickup)
+    if (currentPhase === 'en_route_to_pickup' || status === 'accepted') {
       return {
         start: { lat: deliveryBoyLocation.lat, lng: deliveryBoyLocation.lng },
-        end: customerCoords
+        end: restaurantCoords
       };
     }
 
@@ -675,7 +734,7 @@ const DeliveryTrackingMap = ({
 
       const locationRequestInterval = setInterval(() => {
         requestCurrentLocationForTrackingIds();
-      }, 5000);
+      }, 15000);
 
       socketRef.current._locationRequestInterval = locationRequestInterval;
     });
@@ -907,7 +966,7 @@ const DeliveryTrackingMap = ({
           suppressMarkers: true, // We'll add custom markers
           preserveViewport: true, // CRITICAL: Don't auto-adjust viewport when route is set - keep map stable
           polylineOptions: {
-            strokeColor: '#10b981',
+            strokeColor: routeColor,
             strokeWeight: 0, // Hide default polyline, we'll use custom dashed one
             strokeOpacity: 0
           }
@@ -1098,7 +1157,11 @@ const DeliveryTrackingMap = ({
 
     // Throttle route updates to avoid too many API calls
     const now = Date.now();
-    if (lastRouteUpdateRef.current && (now - lastRouteUpdateRef.current) < 10000) {
+    const routeColorChanged = lastRouteColorRef.current !== routeColor;
+    if (routeColorChanged) {
+      lastRouteColorRef.current = routeColor;
+    }
+    if (!routeColorChanged && lastRouteUpdateRef.current && (now - lastRouteUpdateRef.current) < 10000) {
       return; // Skip if updated less than 10 seconds ago
     }
 
@@ -1172,7 +1235,7 @@ const DeliveryTrackingMap = ({
         }
       }
     }
-  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, getRouteToShow, drawRoute, hasDeliveryPartner]);
+  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, getRouteToShow, drawRoute, hasDeliveryPartner, routeColor]);
 
   // Update bike when REAL location changes (from socket)
   useEffect(() => {

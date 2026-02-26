@@ -11,7 +11,10 @@ import cron from 'node-cron';
 import mongoose from 'mongoose';
 import {
   pruneStaleActiveOrders,
-  markOfflineStaleDeliveryBoys
+  markOfflineStaleDeliveryBoys,
+  syncDeliveryPartnerPresence,
+  updateActiveOrderLocation,
+  getActiveOrderTracking
 } from './modules/delivery/services/firebaseRealtimeTrackingService.js';
 
 // Load environment variables
@@ -462,6 +465,29 @@ app.use((req, res, next) => {
 // Error handler (must be last)
 app.use(errorHandler);
 
+function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getCustomerCoordsFromOrder(order) {
+  const lat = Number(order?.address?.location?.coordinates?.[1]);
+  const lng = Number(order?.address?.location?.coordinates?.[0]);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { lat, lng };
+}
+
+function toFiniteNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
@@ -476,25 +502,13 @@ io.on('connection', (socket) => {
     let order = null;
     if (mongoose.Types.ObjectId.isValid(inputId)) {
       order = await Order.findById(inputId)
-        .populate({
-          path: 'deliveryPartnerId',
-          select: 'availability',
-          populate: {
-            path: 'availability.currentLocation'
-          }
-        })
+        .select('orderId _id address deliveryState.currentLocation deliveryPartnerId')
         .lean();
     }
 
     if (!order) {
       order = await Order.findOne({ orderId: inputId })
-        .populate({
-          path: 'deliveryPartnerId',
-          select: 'availability',
-          populate: {
-            path: 'availability.currentLocation'
-          }
-        })
+        .select('orderId _id address deliveryState.currentLocation deliveryPartnerId')
         .lean();
     }
 
@@ -507,6 +521,42 @@ io.on('connection', (socket) => {
     return { order, trackingIds };
   };
 
+  const getFirebaseLocationData = async (trackingIds, order, fallbackOrderId) => {
+    const idsToCheck = [...new Set([...(trackingIds || []), order?.orderId, order?._id?.toString()].filter(Boolean))];
+
+    for (const trackingId of idsToCheck) {
+      const tracking = await getActiveOrderTracking(trackingId);
+      const lat = toFiniteNumber(tracking?.boy_lat);
+      const lng = toFiniteNumber(tracking?.boy_lng);
+      if (lat === null || lng === null) continue;
+
+      const fallbackDistanceKm = (() => {
+        const customerCoords = getCustomerCoordsFromOrder(order);
+        if (!customerCoords) return null;
+        return calculateDistanceKm(lat, lng, customerCoords.lat, customerCoords.lng);
+      })();
+
+      const distanceToCustomerKm =
+        toFiniteNumber(tracking?.distance_to_customer_km) ?? fallbackDistanceKm;
+      const distanceToCustomerM =
+        toFiniteNumber(tracking?.distance_to_customer_m) ??
+        (distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null);
+
+      return {
+        orderId: order?.orderId || order?._id?.toString() || String(fallbackOrderId),
+        lat,
+        lng,
+        heading: toFiniteNumber(tracking?.heading) || 0,
+        progress: toFiniteNumber(tracking?.progress),
+        distanceToCustomerKm,
+        distanceToCustomerM,
+        timestamp: toFiniteNumber(tracking?.timestamp) || Date.now()
+      };
+    }
+
+    return null;
+  };
+
   // Delivery boy sends location update
   socket.on('update-location', async (data) => {
     try {
@@ -516,20 +566,12 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Broadcast location to customer tracking this order (only to specific room)
-      // Format: { orderId, lat, lng, heading }
-      const locationData = {
-        orderId: data.orderId,
-        lat: data.lat,
-        lng: data.lng,
-        heading: data.heading || 0,
-        timestamp: Date.now()
-      };
-
-      // Resolve all valid tracking IDs (custom orderId + mongo _id) and broadcast to all rooms/events
+      // Resolve all valid tracking IDs (custom orderId + mongo _id) and keep order context.
       let trackingIds = [String(data.orderId)];
+      let trackedOrder = null;
       try {
         const result = await getTrackedOrderAndIds(data.orderId);
+        trackedOrder = result?.order || null;
         if (result?.trackingIds?.length) {
           trackingIds = result.trackingIds;
         }
@@ -537,26 +579,75 @@ io.on('connection', (socket) => {
         console.warn('Could not resolve tracking IDs for update-location:', resolveError.message);
       }
 
+      const customerCoords = getCustomerCoordsFromOrder(trackedOrder);
+      const distanceToCustomerKm = customerCoords
+        ? calculateDistanceKm(data.lat, data.lng, customerCoords.lat, customerCoords.lng)
+        : null;
+      const distanceToCustomerM = distanceToCustomerKm !== null
+        ? Math.round(distanceToCustomerKm * 1000)
+        : null;
+      const timestamp = Date.now();
+
+      const deliveryIdFromOrder = trackedOrder?.deliveryPartnerId?._id?.toString?.() ||
+        trackedOrder?.deliveryPartnerId?.toString?.() ||
+        null;
+      const deliveryId = data.deliveryId ? String(data.deliveryId) : deliveryIdFromOrder;
+
+      // Keep Firebase Realtime Database node in sync for live user tracking.
+      await Promise.allSettled([
+        updateActiveOrderLocation(data.orderId, {
+          boy_id: deliveryId,
+          boy_lat: data.lat,
+          boy_lng: data.lng,
+          heading: data.heading || 0,
+          timestamp,
+          status: 'on_the_way',
+          distance_to_customer_km: distanceToCustomerKm,
+          distance_to_customer_m: distanceToCustomerM
+        }),
+        deliveryId
+          ? syncDeliveryPartnerPresence({
+            deliveryId,
+            lat: data.lat,
+            lng: data.lng,
+            isOnline: true,
+            activeOrderId: data.orderId
+          })
+          : Promise.resolve(false)
+      ]);
+
+      // Broadcast location to customer tracking this order.
+      const locationData = {
+        orderId: data.orderId,
+        lat: data.lat,
+        lng: data.lng,
+        heading: data.heading || 0,
+        distanceToCustomerKm,
+        distanceToCustomerM,
+        timestamp
+      };
+
       trackingIds.forEach((trackingId) => {
         io.to(`order:${trackingId}`).emit(`location-receive-${trackingId}`, locationData);
       });
 
-      console.log(`📍 Location broadcasted to order rooms [${trackingIds.join(', ')}]:`, {
+      console.log(`Location broadcasted to order rooms [${trackingIds.join(', ')}]:`, {
         lat: locationData.lat,
         lng: locationData.lng,
-        heading: locationData.heading
+        heading: locationData.heading,
+        distanceToCustomerKm: locationData.distanceToCustomerKm
       });
 
-      console.log(`📍 Location update for order ${data.orderId}:`, {
+      console.log(`Location update for order ${data.orderId}:`, {
         lat: data.lat,
         lng: data.lng,
-        heading: data.heading
+        heading: data.heading,
+        distanceToCustomerKm
       });
     } catch (error) {
       console.error('Error handling location update:', error);
     }
   });
-
   // Customer joins order tracking room
   socket.on('join-order-tracking', async (orderId) => {
     if (!orderId) return;
@@ -579,16 +670,29 @@ io.on('connection', (socket) => {
 
     try {
       const order = trackedOrder;
-      if (order?.deliveryPartnerId?.availability?.currentLocation) {
-        const coords = order.deliveryPartnerId.availability.currentLocation.coordinates;
-        const locationData = {
-          orderId: order.orderId || order._id?.toString() || String(orderId),
-          lat: coords[1],
-          lng: coords[0],
-          heading: 0,
-          timestamp: Date.now()
-        };
+      let locationData = await getFirebaseLocationData(trackingIds, order, orderId);
 
+      if (!locationData && order?.deliveryState?.currentLocation) {
+        const lat = toFiniteNumber(order.deliveryState.currentLocation.lat);
+        const lng = toFiniteNumber(order.deliveryState.currentLocation.lng);
+        if (lat !== null && lng !== null) {
+          const customerCoords = getCustomerCoordsFromOrder(order);
+          const distanceToCustomerKm = customerCoords
+            ? calculateDistanceKm(lat, lng, customerCoords.lat, customerCoords.lng)
+            : null;
+          locationData = {
+            orderId: order?.orderId || order?._id?.toString() || String(orderId),
+            lat,
+            lng,
+            heading: toFiniteNumber(order.deliveryState.currentLocation.bearing) || 0,
+            distanceToCustomerKm,
+            distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
+            timestamp: Date.now()
+          };
+        }
+      }
+
+      if (locationData) {
         trackingIds.forEach((trackingId) => {
           socket.emit(`current-location-${trackingId}`, locationData);
         });
@@ -605,18 +709,30 @@ io.on('connection', (socket) => {
 
     try {
       const { order, trackingIds } = await getTrackedOrderAndIds(orderId);
+      const emitIds = trackingIds.length ? trackingIds : [String(orderId)];
+      let locationData = await getFirebaseLocationData(emitIds, order, orderId);
 
-      if (order?.deliveryPartnerId?.availability?.currentLocation) {
-        const coords = order.deliveryPartnerId.availability.currentLocation.coordinates;
-        const locationData = {
-          orderId: order.orderId || order._id?.toString() || String(orderId),
-          lat: coords[1],
-          lng: coords[0],
-          heading: 0,
-          timestamp: Date.now()
-        };
+      if (!locationData && order?.deliveryState?.currentLocation) {
+        const lat = toFiniteNumber(order.deliveryState.currentLocation.lat);
+        const lng = toFiniteNumber(order.deliveryState.currentLocation.lng);
+        if (lat !== null && lng !== null) {
+          const customerCoords = getCustomerCoordsFromOrder(order);
+          const distanceToCustomerKm = customerCoords
+            ? calculateDistanceKm(lat, lng, customerCoords.lat, customerCoords.lng)
+            : null;
+          locationData = {
+            orderId: order?.orderId || order?._id?.toString() || String(orderId),
+            lat,
+            lng,
+            heading: toFiniteNumber(order.deliveryState.currentLocation.bearing) || 0,
+            distanceToCustomerKm,
+            distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
+            timestamp: Date.now()
+          };
+        }
+      }
 
-        const emitIds = trackingIds.length ? trackingIds : [String(orderId)];
+      if (locationData) {
         emitIds.forEach((trackingId) => {
           socket.emit(`current-location-${trackingId}`, locationData);
         });

@@ -29,6 +29,85 @@ const logger = winston.createLogger({
   ]
 });
 
+function normalizeRestaurantLocation(location = {}) {
+  if (!location || typeof location !== 'object') return location;
+  const normalized = { ...location };
+
+  if (Array.isArray(normalized.coordinates) && normalized.coordinates.length >= 2) {
+    if (!Number.isFinite(Number(normalized.longitude))) {
+      normalized.longitude = Number(normalized.coordinates[0]);
+    }
+    if (!Number.isFinite(Number(normalized.latitude))) {
+      normalized.latitude = Number(normalized.coordinates[1]);
+    }
+  } else if (
+    Number.isFinite(Number(normalized.longitude)) &&
+    Number.isFinite(Number(normalized.latitude))
+  ) {
+    normalized.coordinates = [Number(normalized.longitude), Number(normalized.latitude)];
+  }
+
+  return normalized;
+}
+
+function buildRestaurantQuery(rawRestaurantId) {
+  if (!rawRestaurantId) return null;
+  const value = String(rawRestaurantId).trim();
+  if (!value) return null;
+
+  if (mongoose.Types.ObjectId.isValid(value)) {
+    return { _id: value };
+  }
+
+  return {
+    $or: [
+      { restaurantId: value },
+      { slug: value }
+    ]
+  };
+}
+
+async function hydrateOrderRestaurant(order, cache = new Map()) {
+  if (!order) return order;
+
+  const existing = order.restaurantId;
+  if (existing && typeof existing === 'object' && existing.location) {
+    order.restaurantId = {
+      ...existing,
+      location: normalizeRestaurantLocation(existing.location)
+    };
+    order.restaurant = order.restaurantId;
+    return order;
+  }
+
+  const cacheKey = String(existing || '');
+  if (cacheKey && cache.has(cacheKey)) {
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      order.restaurantId = cached;
+      order.restaurant = cached;
+    }
+    return order;
+  }
+
+  const query = buildRestaurantQuery(existing);
+  if (!query) return order;
+
+  const restaurant = await Restaurant.findOne(query)
+    .select('name slug profileImage address location phone ownerPhone restaurantId')
+    .lean();
+  const normalizedRestaurant = restaurant
+    ? { ...restaurant, location: normalizeRestaurantLocation(restaurant.location) }
+    : null;
+
+  if (cacheKey) cache.set(cacheKey, normalizedRestaurant);
+  if (normalizedRestaurant) {
+    order.restaurantId = normalizedRestaurant;
+    order.restaurant = normalizedRestaurant;
+  }
+  return order;
+}
+
 const isPointInsideZone = (lat, lng, coordinates = []) => {
   if (!Array.isArray(coordinates) || coordinates.length < 3) return false;
 
@@ -199,8 +278,13 @@ export const getOrders = asyncHandler(async (req, res) => {
       total = await Order.countDocuments(query);
     }
 
+    const restaurantCache = new Map();
+    const hydratedOrders = await Promise.all(
+      orders.map((order) => hydrateOrderRestaurant(order, restaurantCache))
+    );
+
     return successResponse(res, 200, 'Orders retrieved successfully', {
-      orders,
+      orders: hydratedOrders,
       pagination: {
         page: parseInt(page),
         limit: limitNum,
@@ -244,6 +328,8 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     if (!order) {
       return errorResponse(res, 404, 'Order not found');
     }
+
+    await hydrateOrderRestaurant(order);
 
     // Check if order is assigned to this delivery partner OR if they were notified
     const orderDeliveryPartnerId = order.deliveryPartnerId?.toString();

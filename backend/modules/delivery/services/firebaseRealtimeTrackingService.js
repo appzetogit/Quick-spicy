@@ -6,6 +6,7 @@ const ORDER_TRACKING_HISTORY_NODE = 'order_tracking_history';
 const DEFAULT_ACTIVE_ORDER_STALE_MINUTES = 180; // 3 hours
 const DEFAULT_DELIVERY_STALE_MINUTES = 20; // 20 minutes
 const MALFORMED_ORDER_GRACE_MINUTES = 30;
+const knownActiveOrderKeys = new Set();
 
 function sanitizeFirebaseKey(key) {
   return String(key || '').replace(/[.#$/[\]]/g, '_');
@@ -25,6 +26,30 @@ function calculateDistanceKm(lat1, lng1, lat2, lng2) {
     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function normalizeLocationPayload(payload = {}) {
+  const normalized = { ...payload };
+  const numericFields = [
+    'boy_lat',
+    'boy_lng',
+    'heading',
+    'speed',
+    'progress',
+    'distance_covered',
+    'remaining_distance',
+    'timestamp',
+    'distance_to_customer_km',
+    'distance_to_customer_m'
+  ];
+
+  numericFields.forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(normalized, field)) {
+      normalized[field] = toNumberOrNull(normalized[field]);
+    }
+  });
+
+  return normalized;
 }
 
 export async function syncDeliveryPartnerPresence({
@@ -100,6 +125,7 @@ export async function upsertActiveOrderTracking({
     const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
     await orderRef.update(payload);
     await orderRef.child('created_at').transaction((current) => current || Date.now());
+    knownActiveOrderKeys.add(safeOrderId);
     return true;
   } catch (error) {
     console.warn(`⚠️ Failed to upsert active order tracking in Firebase: ${error.message}`);
@@ -107,27 +133,49 @@ export async function upsertActiveOrderTracking({
   }
 }
 
-export async function updateActiveOrderLocation(orderId, locationPayload) {
+export async function updateActiveOrderLocation(orderId, locationPayload, options = {}) {
   try {
     const db = getFirebaseRealtimeDb();
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
-    const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
-    const existing = await orderRef.once('value');
-    if (!existing.exists()) {
-      // Avoid creating malformed partial nodes from location-only updates.
-      return false;
+    const ensureExists = options.ensureExists !== false;
+
+    if (ensureExists && !knownActiveOrderKeys.has(safeOrderId)) {
+      const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
+      const existing = await orderRef.once('value');
+      if (!existing.exists()) {
+        // Avoid creating malformed partial nodes from location-only updates.
+        return false;
+      }
+      knownActiveOrderKeys.add(safeOrderId);
     }
 
-    await orderRef.update({
-      ...locationPayload,
+    await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).update({
+      ...normalizeLocationPayload(locationPayload),
       last_updated: Date.now()
     });
     return true;
   } catch (error) {
     console.warn(`⚠️ Failed to update active order location in Firebase: ${error.message}`);
     return false;
+  }
+}
+
+export async function getActiveOrderTracking(orderId) {
+  try {
+    const db = getFirebaseRealtimeDb();
+    if (!db || !orderId) return null;
+
+    const safeOrderId = sanitizeFirebaseKey(orderId);
+    const snapshot = await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).once('value');
+    if (!snapshot.exists()) return null;
+
+    const value = snapshot.val() || {};
+    return normalizeLocationPayload(value);
+  } catch (error) {
+    console.warn(`⚠️ Failed to read active order tracking from Firebase: ${error.message}`);
+    return null;
   }
 }
 
@@ -148,6 +196,7 @@ export async function removeActiveOrderTracking(orderId) {
       });
     }
     await activeRef.remove();
+    knownActiveOrderKeys.delete(safeOrderId);
     return true;
   } catch (error) {
     console.warn(`⚠️ Failed to remove active order tracking from Firebase: ${error.message}`);
@@ -226,6 +275,7 @@ export async function pruneStaleActiveOrders({
 
       if ((ts > 0 && ts < staleBefore) || isTerminal || malformedAndOld) {
         removals.push(db.ref(`${ACTIVE_ORDERS_NODE}/${orderId}`).remove());
+        knownActiveOrderKeys.delete(orderId);
         removed += 1;
       }
     }

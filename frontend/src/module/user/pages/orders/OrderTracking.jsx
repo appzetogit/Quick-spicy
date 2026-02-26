@@ -71,7 +71,15 @@ const AnimatedCheckmark = ({ delay = 0 }) => (
 
 // Real Delivery Map Component with User Live Location
 const DeliveryMap = ({ orderId, order, isVisible }) => {
-  // Get coordinates from order or use defaults (Indore)
+  const toPointFromGeoJSON = (coords) => {
+    if (!Array.isArray(coords) || coords.length < 2) return null;
+    const lng = Number(coords[0]);
+    const lat = Number(coords[1]);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+    return { lat, lng };
+  };
+
+  // Get coordinates from order payload (actual saved locations)
   const getRestaurantCoords = () => {
     console.log('🔍 Getting restaurant coordinates from order:', {
       hasOrder: !!order,
@@ -105,30 +113,29 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
       console.log('✅ Using restaurantId.location (lat/lng):', coords);
     }
 
-    if (coords && coords.length >= 2) {
-      // GeoJSON format is [longitude, latitude]
-      const result = {
-        lat: coords[1], // Latitude is second element
-        lng: coords[0]  // Longitude is first element
-      };
+    const fromCoords = toPointFromGeoJSON(coords);
+    if (fromCoords) {
+      const result = fromCoords;
       console.log('✅ Final restaurant coordinates (lat, lng):', result, 'from GeoJSON:', coords);
       return result;
     }
 
-    console.warn('⚠️ Restaurant coordinates not found, using default Indore coordinates');
-    // Default Indore coordinates
-    return { lat: 22.7196, lng: 75.8577 };
+    const fallbackLat = Number(order?.restaurantId?.location?.latitude ?? order?.restaurant?.location?.latitude);
+    const fallbackLng = Number(order?.restaurantId?.location?.longitude ?? order?.restaurant?.location?.longitude);
+    if (Number.isFinite(fallbackLat) && Number.isFinite(fallbackLng)) {
+      return { lat: fallbackLat, lng: fallbackLng };
+    }
+
+    console.warn('⚠️ Restaurant coordinates not found in order payload');
+    return null;
   };
 
   const getCustomerCoords = () => {
-    if (order?.address?.coordinates) {
-      return {
-        lat: order.address.coordinates[1],
-        lng: order.address.coordinates[0]
-      };
-    }
-    // Default Indore coordinates
-    return { lat: 22.7196, lng: 75.8577 };
+    const coords = order?.address?.coordinates || order?.address?.location?.coordinates;
+    const fromCoords = toPointFromGeoJSON(coords);
+    if (fromCoords) return fromCoords;
+
+    return null;
   };
 
   const restaurantCoords = getRestaurantCoords();
@@ -140,7 +147,7 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
     avatar: order.deliveryPartner.avatar || null
   } : null;
 
-  if (!isVisible || !orderId || !order) {
+  if (!isVisible || !orderId || !order || !restaurantCoords || !customerCoords) {
     return (
       <motion.div
         className="relative h-64 bg-gradient-to-b from-gray-100 to-gray-200"
@@ -265,9 +272,9 @@ export default function OrderTracking() {
       currentPhase === 'at_pickup' ||
       currentPhase === 'en_route_to_delivery';
 
-    // If delivery partner is assigned, reduce polling frequency to 30 seconds
-    // If not assigned, poll every 5 seconds to detect assignment
-    const pollInterval = hasDeliveryPartner ? 30000 : 5000;
+    // If delivery partner is assigned and live socket tracking is active, keep API polling low.
+    // If not assigned, poll faster to detect assignment quickly.
+    const pollInterval = hasDeliveryPartner ? 90000 : 5000;
 
     const interval = setInterval(async () => {
       try {
@@ -298,24 +305,20 @@ export default function OrderTracking() {
               newPhase: newPhase
             });
 
-            // Re-fetch and update order (same logic as initial fetch)
+            // Reuse location from populated order payload; avoid extra restaurant API call in polling path.
             let restaurantCoords = null;
-            if (apiOrder.restaurantId?.location?.coordinates &&
+            if (
+              apiOrder.restaurantId?.location?.coordinates &&
               Array.isArray(apiOrder.restaurantId.location.coordinates) &&
-              apiOrder.restaurantId.location.coordinates.length >= 2) {
+              apiOrder.restaurantId.location.coordinates.length >= 2
+            ) {
               restaurantCoords = apiOrder.restaurantId.location.coordinates;
-            } else if (typeof apiOrder.restaurantId === 'string') {
-              try {
-                const restaurantResponse = await restaurantAPI.getRestaurantById(apiOrder.restaurantId);
-                if (restaurantResponse?.data?.success && restaurantResponse.data.data?.restaurant) {
-                  const restaurant = restaurantResponse.data.data.restaurant;
-                  if (restaurant.location?.coordinates && Array.isArray(restaurant.location.coordinates) && restaurant.location.coordinates.length >= 2) {
-                    restaurantCoords = restaurant.location.coordinates;
-                  }
-                }
-              } catch (err) {
-                console.error('❌ Error fetching restaurant details:', err);
-              }
+            } else if (
+              apiOrder.restaurant?.location?.coordinates &&
+              Array.isArray(apiOrder.restaurant.location.coordinates) &&
+              apiOrder.restaurant.location.coordinates.length >= 2
+            ) {
+              restaurantCoords = apiOrder.restaurant.location.coordinates;
             }
 
             const transformedOrder = {
@@ -369,9 +372,17 @@ export default function OrderTracking() {
           // Try to preserve restaurantId if it exists
           console.log('⚠️ Context order missing restaurantId, will fetch from API');
         }
+        const hasRestaurantCoords =
+          Array.isArray(contextOrder?.restaurantLocation?.coordinates) &&
+          contextOrder.restaurantLocation.coordinates.length >= 2;
+
         setOrder(contextOrder)
-        setLoading(false)
-        return
+
+        // Keep UI responsive with cached data, but fetch fresh order if coords are missing.
+        if (hasRestaurantCoords) {
+          setLoading(false)
+          return
+        }
       }
 
       // If not in context, fetch from API

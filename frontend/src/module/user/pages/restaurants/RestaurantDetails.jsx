@@ -923,16 +923,13 @@ export default function RestaurantDetails() {
 
         // If incrementing quantity, trigger add animation with sourcePosition
         if (newQuantity > existingCartItem.quantity && sourcePosition) {
-          try {
-            addToCart(cartItem, sourcePosition)
-            if (newQuantity > existingCartItem.quantity + 1) {
-              updateQuantity(item.id, newQuantity)
-            }
-          } catch (error) {
-            // Handle restaurant mismatch error
-            console.error('❌ Error adding item to cart:', error);
-            toast.error(error.message || 'Cannot add item from different restaurant. Please clear cart first.');
-            return; // Don't update quantity if add failed
+          const result = addToCart(cartItem, sourcePosition)
+          if (result?.ok === false) {
+            toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
+            return
+          }
+          if (newQuantity > existingCartItem.quantity + 1) {
+            updateQuantity(item.id, newQuantity)
           }
         }
         // If decreasing quantity, trigger removal animation with sourcePosition
@@ -946,15 +943,13 @@ export default function RestaurantDetails() {
       } else {
         // Add to cart first (adds with quantity 1), then update to desired quantity
         // Pass sourcePosition when adding a new item
-        try {
-          addToCart(cartItem, sourcePosition)
-          if (newQuantity > 1) {
-            updateQuantity(item.id, newQuantity)
-          }
-        } catch (error) {
-          // Handle restaurant mismatch error
-          console.error('❌ Error adding item to cart:', error);
-          toast.error(error.message || 'Cannot add item from different restaurant. Please clear cart first.');
+        const result = addToCart(cartItem, sourcePosition)
+        if (result?.ok === false) {
+          toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
+          return
+        }
+        if (newQuantity > 1) {
+          updateQuantity(item.id, newQuantity)
         }
       }
     }
@@ -3186,4 +3181,5 @@ export default function RestaurantDetails() {
     </AnimatedPage>
   )
 }
+
 

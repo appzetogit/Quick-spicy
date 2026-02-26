@@ -20,6 +20,17 @@ import {
   removeActiveOrderTracking
 } from '../services/firebaseRealtimeTrackingService.js';
 
+function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 /**
  * Receive GPS update from delivery app
  * POST /api/delivery/location/update
@@ -29,7 +40,7 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
     const { orderId, lat, lng, speed, bearing, accuracy } = req.body;
     const deliveryBoyId = req.deliveryBoy?.id || req.user?.id;
     
-    if (!orderId || !lat || !lng) {
+    if (!orderId || lat === undefined || lat === null || lng === undefined || lng === null) {
       return errorResponse(res, 400, 'Missing required fields: orderId, lat, lng');
     }
     
@@ -55,6 +66,15 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
     const customerCoords = order.address?.location?.coordinates
       ? { lat: order.address.location.coordinates[1], lng: order.address.location.coordinates[0] }
       : null;
+
+    let distanceToCustomerKm = null;
+    if (
+      customerCoords &&
+      Number.isFinite(customerCoords.lat) &&
+      Number.isFinite(customerCoords.lng)
+    ) {
+      distanceToCustomerKm = calculateDistanceKm(Number(lat), Number(lng), customerCoords.lat, customerCoords.lng);
+    }
     
     // Process location (snap to road, smooth, match to route)
     const processedLocation = await processLocationUpdate(
@@ -96,6 +116,8 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         progress: processedLocation.progress,
         distance_covered: processedLocation.distanceCovered,
         remaining_distance: processedLocation.remainingDistance,
+        distance_to_customer_km: distanceToCustomerKm,
+        distance_to_customer_m: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
         on_route: processedLocation.onRoute,
         timestamp: processedLocation.timestamp,
         status: 'on_the_way'
@@ -120,6 +142,8 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         progress: processedLocation.progress,
         distanceCovered: processedLocation.distanceCovered,
         remainingDistance: processedLocation.remainingDistance,
+        distanceToCustomerKm,
+        distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
         timestamp: processedLocation.timestamp,
         snapped: processedLocation.snapped,
         onRoute: processedLocation.onRoute
@@ -132,6 +156,8 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         bearing: processedLocation.bearing,
         speed: processedLocation.speed,
         progress: processedLocation.progress,
+        distanceToCustomerKm,
+        distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
         timestamp: processedLocation.timestamp
       });
     }

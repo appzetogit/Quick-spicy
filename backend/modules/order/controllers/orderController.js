@@ -26,6 +26,53 @@ const logger = winston.createLogger({
   ]
 });
 
+function normalizeRestaurantLocation(location = {}) {
+  if (!location || typeof location !== 'object') return location;
+  const normalized = { ...location };
+
+  if (
+    Array.isArray(normalized.coordinates) &&
+    normalized.coordinates.length >= 2
+  ) {
+    if (!Number.isFinite(Number(normalized.longitude))) {
+      normalized.longitude = Number(normalized.coordinates[0]);
+    }
+    if (!Number.isFinite(Number(normalized.latitude))) {
+      normalized.latitude = Number(normalized.coordinates[1]);
+    }
+  } else if (
+    Number.isFinite(Number(normalized.longitude)) &&
+    Number.isFinite(Number(normalized.latitude))
+  ) {
+    normalized.coordinates = [Number(normalized.longitude), Number(normalized.latitude)];
+  }
+
+  return normalized;
+}
+
+async function resolveRestaurantForOrder(restaurantId) {
+  if (!restaurantId) return null;
+  const restaurantIdStr = String(restaurantId);
+  const query = mongoose.Types.ObjectId.isValid(restaurantIdStr)
+    ? { _id: restaurantIdStr }
+    : {
+        $or: [
+          { restaurantId: restaurantIdStr },
+          { slug: restaurantIdStr }
+        ]
+      };
+
+  const restaurant = await Restaurant.findOne(query)
+    .select('name slug profileImage address location phone ownerPhone restaurantId')
+    .lean();
+
+  if (!restaurant) return null;
+  return {
+    ...restaurant,
+    location: normalizeRestaurantLocation(restaurant.location)
+  };
+}
+
 /**
  * Point-in-polygon check for zone coordinates
  * @param {number} lat
@@ -1098,6 +1145,13 @@ export const getOrderDetails = async (req, res) => {
         success: false,
         message: 'Order not found'
       });
+    }
+
+    // Ensure user tracking always gets actual restaurant location (zone-setup pin).
+    const restaurantDoc = await resolveRestaurantForOrder(order.restaurantId);
+    if (restaurantDoc) {
+      order.restaurantId = restaurantDoc;
+      order.restaurant = restaurantDoc;
     }
 
     // Get payment details

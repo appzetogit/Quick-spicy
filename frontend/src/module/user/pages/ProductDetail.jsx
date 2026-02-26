@@ -132,7 +132,11 @@ export default function ProductDetail() {
   const handleAddToCart = () => {
     if (product) {
       for (let i = 0; i < quantity; i++) {
-        addToCart(product)
+        const result = addToCart(product)
+        if (result?.ok === false) {
+          alert(result.error || "Cannot add item from different restaurant. Please clear cart first.")
+          break
+        }
       }
     }
   }

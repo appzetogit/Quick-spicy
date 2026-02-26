@@ -59,6 +59,41 @@ export function CartProvider({ children }) {
   }, [cart])
 
   const addToCart = (item, sourcePosition = null) => {
+    if (cart.length > 0) {
+      const firstItemRestaurantId = cart[0]?.restaurantId
+      const firstItemRestaurantName = cart[0]?.restaurant
+      const newItemRestaurantId = item?.restaurantId
+      const newItemRestaurantName = item?.restaurant
+      const normalizeName = (name) => (name ? String(name).trim().toLowerCase() : '')
+
+      const firstRestaurantNameNormalized = normalizeName(firstItemRestaurantName)
+      const newRestaurantNameNormalized = normalizeName(newItemRestaurantName)
+      const hasNameMismatch =
+        firstRestaurantNameNormalized &&
+        newRestaurantNameNormalized &&
+        firstRestaurantNameNormalized !== newRestaurantNameNormalized
+
+      const hasIdMismatch =
+        !firstRestaurantNameNormalized &&
+        !newRestaurantNameNormalized &&
+        firstItemRestaurantId &&
+        newItemRestaurantId &&
+        String(firstItemRestaurantId) !== String(newItemRestaurantId)
+
+      if (hasNameMismatch || hasIdMismatch) {
+        const message = `Cart already contains items from "${firstItemRestaurantName || 'another restaurant'}". Please clear cart or complete order first.`
+        return { ok: false, error: message, code: 'RESTAURANT_MISMATCH' }
+      }
+    }
+
+    if (!item?.restaurantId && !item?.restaurant) {
+      return {
+        ok: false,
+        error: 'Item is missing restaurant information. Please refresh the page.',
+        code: 'MISSING_RESTAURANT'
+      }
+    }
+
     setCart((prev) => {
       // CRITICAL: Validate restaurant consistency
       // If cart already has items, ensure new item belongs to the same restaurant
@@ -83,7 +118,7 @@ export function CartProvider({ children }) {
               newItemRestaurantId: newItemRestaurantId,
               newItemRestaurantName: newItemRestaurantName
             });
-            throw new Error(`Cart already contains items from "${firstItemRestaurantName}". Please clear cart or complete order first.`);
+            return prev;
           }
           // Names match - allow it (even if IDs differ, it's the same restaurant)
         } else if (firstItemRestaurantId && newItemRestaurantId) {
@@ -95,7 +130,7 @@ export function CartProvider({ children }) {
               newItemRestaurantId: newItemRestaurantId,
               newItemRestaurantName: newItemRestaurantName
             });
-            throw new Error(`Cart already contains items from "${firstItemRestaurantName || 'another restaurant'}". Please clear cart or complete order first.`);
+            return prev;
           }
         }
       }
@@ -123,7 +158,7 @@ export function CartProvider({ children }) {
       // Validate item has required restaurant info
       if (!item.restaurantId && !item.restaurant) {
         console.error('❌ Cannot add item: Missing restaurant information!', item);
-        throw new Error('Item is missing restaurant information. Please refresh the page.');
+        return prev;
       }
       
       const newItem = { ...item, quantity: 1 }
@@ -144,6 +179,8 @@ export function CartProvider({ children }) {
       
       return [...prev, newItem]
     })
+
+    return { ok: true }
   }
 
   const removeFromCart = (itemId, sourcePosition = null, productInfo = null) => {
