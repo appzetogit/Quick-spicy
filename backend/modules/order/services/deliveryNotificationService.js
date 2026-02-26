@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Delivery from '../../delivery/models/Delivery.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
+import Payment from '../../payment/models/Payment.js';
 import mongoose from 'mongoose';
 
 // Dynamic import to avoid circular dependency
@@ -17,6 +18,32 @@ async function getIOInstance() {
 function isOrderEligibleForDeliveryDispatch(order) {
   const status = String(order?.status || '').toLowerCase();
   return ['preparing', 'ready'].includes(status);
+}
+
+function normalizePaymentMethod(value) {
+  const method = String(value || '').toLowerCase().trim();
+  if (method === 'cash' || method === 'cod' || method === 'cash on delivery') return 'cash';
+  if (method === 'wallet') return 'wallet';
+  return method || 'razorpay';
+}
+
+function buildPaymentMeta(order, paymentRecord = null) {
+  const paymentMethod = normalizePaymentMethod(paymentRecord?.method || order?.payment?.method);
+  const paymentStatus = String(paymentRecord?.status || order?.payment?.status || '').toLowerCase().trim();
+  const orderTotal = Number(order?.pricing?.total) || 0;
+  const isCOD = paymentMethod === 'cash';
+  const isCollected = isCOD && ['completed', 'paid', 'collected'].includes(paymentStatus);
+  const amountToCollect = isCOD && !isCollected ? orderTotal : 0;
+
+  return {
+    paymentMethod,
+    paymentStatus: paymentStatus || (isCOD ? 'pending' : 'completed'),
+    isCOD,
+    codAmount: isCOD ? orderTotal : 0,
+    amountToCollect,
+    cashToCollect: amountToCollect,
+    collectionAmount: amountToCollect
+  };
 }
 
 /**
@@ -178,10 +205,19 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
         : deliveryFeeFromOrder;
     }
 
+    let paymentRecord = null;
+    try {
+      paymentRecord = await Payment.findOne({ orderId: order._id }).select('method status').lean();
+    } catch (paymentLookupError) {
+      console.warn('Payment lookup failed in notifyDeliveryBoyNewOrder:', paymentLookupError.message);
+    }
+    const paymentMeta = buildPaymentMeta(order, paymentRecord);
+
     // Prepare order notification data
     const orderNotification = {
       orderId: order.orderId,
       orderMongoId: order._id.toString(),
+      id: order._id.toString(),
       restaurantId: order.restaurantId,
       restaurantName: order.restaurantName,
       restaurantLocation: restaurant?.location ? {
@@ -200,6 +236,7 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
         price: item.price
       })),
       total: order.pricing.total,
+      totalAmount: order.pricing.total,
       deliveryFee: deliveryFeeFromOrder,
       customerName: orderWithUser.userId?.name || 'Customer',
       customerPhone: orderWithUser.userId?.phone || '',
@@ -210,7 +247,8 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       pickupDistance: pickupDistance ? `${pickupDistance.toFixed(2)} km` : 'Distance not available',
       deliveryDistance: deliveryDistance ? `${deliveryDistance.toFixed(2)} km` : 'Calculating...',
       deliveryDistanceRaw: deliveryDistance || 0, // Raw distance number for calculations
-      estimatedEarnings
+      estimatedEarnings,
+      ...paymentMeta
     };
 
     // Get delivery namespace
@@ -478,11 +516,20 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       console.log(`⚠️ Using fallback earnings: ₹${typeof estimatedEarnings === 'object' ? estimatedEarnings.totalEarning : estimatedEarnings}`);
     }
 
+    let paymentRecord = null;
+    try {
+      paymentRecord = await Payment.findOne({ orderId: orderWithUser._id }).select('method status').lean();
+    } catch (paymentLookupError) {
+      console.warn('Payment lookup failed in notifyMultipleDeliveryBoys:', paymentLookupError.message);
+    }
+    const paymentMeta = buildPaymentMeta(orderWithUser, paymentRecord);
+
     // Prepare notification payload
     const orderNotification = {
       orderId: orderWithUser.orderId || orderWithUser._id,
       mongoId: orderWithUser._id?.toString(),
       orderMongoId: orderWithUser._id?.toString(), // Also include orderMongoId for compatibility
+      id: orderWithUser._id?.toString(),
       status: orderWithUser.status || 'preparing',
       restaurantName: orderWithUser.restaurantName || orderWithUser.restaurantId?.name,
       restaurantAddress: restaurantAddress,
@@ -501,10 +548,10 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         address: orderWithUser.address.formattedAddress || orderWithUser.address.address
       } : null,
       totalAmount: orderWithUser.pricing?.total || 0,
+      total: orderWithUser.pricing?.total || 0,
       deliveryFee: deliveryFeeFromOrder,
       estimatedEarnings: estimatedEarnings, // Include calculated earnings
       deliveryDistance: deliveryDistance > 0 ? `${deliveryDistance.toFixed(2)} km` : 'Calculating...',
-      paymentMethod: orderWithUser.payment?.method || 'cash',
       message: `New order available: ${orderWithUser.orderId || orderWithUser._id}`,
       timestamp: new Date().toISOString(),
       phase: phase, // 'priority' or 'expanded'
@@ -515,7 +562,8 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       deliveryLat: orderWithUser.address?.location?.coordinates?.[1] || orderWithUser.address?.location?.latitude,
       deliveryLng: orderWithUser.address?.location?.coordinates?.[0] || orderWithUser.address?.location?.longitude,
       // Include full order for frontend use
-      fullOrder: orderWithUser
+      fullOrder: orderWithUser,
+      ...paymentMeta
     };
 
     console.log(`📤 Notification payload for order ${orderWithUser.orderId}:`, {
