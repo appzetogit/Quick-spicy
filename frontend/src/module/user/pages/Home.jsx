@@ -38,6 +38,7 @@ import offerImage from "@/assets/offerimage.png"
 import api, { restaurantAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import OptimizedImage from "@/components/OptimizedImage"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 // Explore More Icons
 import exploreOffers from "@/assets/explore more icons/offers.png"
 import exploreGourmet from "@/assets/explore more icons/gourmet.png"
@@ -203,7 +204,16 @@ export default function Home() {
   const [realCategories, setRealCategories] = useState([])
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
+  const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setAvailabilityTick(Date.now())
+    }, 60000)
+
+    return () => clearInterval(intervalId)
+  }, [])
 
   // Merge API explore items with fallback to ensure all 4 cards are shown
   const finalExploreItems = useMemo(() => {
@@ -864,6 +874,7 @@ export default function Home() {
 
           return {
             id: restaurant.restaurantId || restaurant._id,
+            mongoId: restaurant._id || null,
             name: restaurant.name,
             cuisine: cuisine,
             rating: restaurant.rating || 4.5,
@@ -883,15 +894,38 @@ export default function Home() {
             location: restaurant.location, // Store location for distance recalculation
             isActive: restaurant.isActive !== false, // Default to true if not specified
             isAcceptingOrders: restaurant.isAcceptingOrders !== false, // Default to true if not specified
+            openDays: Array.isArray(restaurant.openDays) ? restaurant.openDays : [],
+            deliveryTimings: restaurant.deliveryTimings || null,
+            outletTimings: restaurant.outletTimings || null,
           }
         })
 
+        // Load outlet timings for each restaurant (source of truth for open/close window)
+        const restaurantsWithOutletTimings = await Promise.all(
+          transformedRestaurants.map(async (restaurant) => {
+            try {
+              if (!restaurant.mongoId) return restaurant
+              const outletResponse = await restaurantAPI.getOutletTimingsByRestaurantId(restaurant.mongoId)
+              const outletTimings =
+                outletResponse?.data?.data?.outletTimings ||
+                outletResponse?.data?.outletTimings ||
+                null
+              return {
+                ...restaurant,
+                outletTimings: outletTimings || restaurant.outletTimings || null,
+              }
+            } catch (_) {
+              return restaurant
+            }
+          })
+        )
+
         // Sort restaurants by distance (nearby first) - only if user location is available
         if (userLat && userLng) {
-          transformedRestaurants.sort((a, b) => {
+          restaurantsWithOutletTimings.sort((a, b) => {
             // Available restaurants first, then unavailable
-            const aAvailable = a.isActive && a.isAcceptingOrders
-            const bAvailable = b.isActive && b.isAcceptingOrders
+            const aAvailable = getRestaurantAvailabilityStatus(a).isOpen
+            const bAvailable = getRestaurantAvailabilityStatus(b).isOpen
 
             if (aAvailable !== bAvailable) {
               return aAvailable ? -1 : 1 // Available restaurants come first
@@ -904,8 +938,8 @@ export default function Home() {
           })
         }
 
-        console.log('Transformed and sorted restaurants:', transformedRestaurants)
-        setRestaurantsData(transformedRestaurants)
+        console.log('Transformed and sorted restaurants:', restaurantsWithOutletTimings)
+        setRestaurantsData(restaurantsWithOutletTimings)
       } else {
         console.warn('Invalid API response structure:', response.data)
         setRestaurantsData([])
@@ -1066,8 +1100,8 @@ export default function Home() {
       // This ensures all restaurants in zone are shown, but nearby ones appear first
       filtered.sort((a, b) => {
         // Available restaurants first, then unavailable
-        const aAvailable = a.isActive && a.isAcceptingOrders
-        const bAvailable = b.isActive && b.isAcceptingOrders
+        const aAvailable = getRestaurantAvailabilityStatus(a, new Date(availabilityTick)).isOpen
+        const bAvailable = getRestaurantAvailabilityStatus(b, new Date(availabilityTick)).isOpen
 
         if (aAvailable !== bAvailable) {
           return aAvailable ? -1 : 1 // Available restaurants come first
@@ -1081,7 +1115,7 @@ export default function Home() {
     }
 
     return filtered
-  }, [restaurantsData, activeFilters, selectedCuisine, sortBy])
+  }, [restaurantsData, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
   // Featured foods removed - will be handled by restaurants data from API
   const filteredFeaturedFoods = useMemo(() => {
@@ -1835,6 +1869,7 @@ export default function Home() {
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-3 sm:gap-4 lg:gap-5 xl:gap-6 pt-1 sm:pt-1.5 lg:pt-2 items-stretch ${isLoadingFilterResults || loadingRestaurants ? 'opacity-50' : 'opacity-100'} transition-opacity duration-300`}>
               {filteredRestaurants.map((restaurant, index) => {
                 const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
+                const availability = getRestaurantAvailabilityStatus(restaurant, new Date(availabilityTick))
                 // Direct favorite check - isFavorite is already memoized in context
                 const favorite = isFavorite(restaurantSlug)
 
@@ -1875,7 +1910,7 @@ export default function Home() {
                   >
                     <div className="h-full group">
                       <Link to={`/user/restaurants/${restaurantSlug}`} className="h-full flex">
-                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] border-background transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${isOutOfService ? 'grayscale opacity-75' : ''
+                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] border-background transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${isOutOfService || !availability.isOpen ? 'grayscale opacity-75' : ''
                           }`}>
                           {/* Image Section with Carousel */}
                           <div className="relative">
@@ -1920,6 +1955,9 @@ export default function Home() {
                                   <h3 className="text-md sm:text-md lg:text-xl font-bold text-gray-900 dark:text-white line-clamp-1 lg:line-clamp-2 transition-colors duration-300 group-hover:text-[#EB590E]">
                                     {restaurant.name}
                                   </h3>
+                                  <span className={`inline-flex mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                                    {availability.isOpen ? "Open now" : "Offline"}
+                                  </span>
                                 </div>
                                 <div className="flex-shrink-0 bg-green-600 text-white px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                                   <span className="text-sm lg:text-base font-bold">{restaurant.rating}</span>

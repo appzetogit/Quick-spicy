@@ -44,6 +44,7 @@ import { useProfile } from "../../context/ProfileContext"
 import AddToCartAnimation from "../../components/AddToCartAnimation"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 import fssaiLogo from "@/assets/fssai.png"
 
 
@@ -74,6 +75,7 @@ export default function RestaurantDetails() {
   const [showLargeOrderMenu, setShowLargeOrderMenu] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
+  const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const [showMenuOptionsSheet, setShowMenuOptionsSheet] = useState(false)
   const [expandedAddButtons, setExpandedAddButtons] = useState(new Set())
   const [expandedSections, setExpandedSections] = useState(new Set([0])) // Default: Recommended section is expanded
@@ -87,6 +89,14 @@ export default function RestaurantDetails() {
   const [loadingRestaurant, setLoadingRestaurant] = useState(true)
   const [restaurantError, setRestaurantError] = useState(null)
   const fetchedRestaurantRef = useRef(false) // Track if restaurant has been fetched for current slug
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setAvailabilityTick(Date.now())
+    }, 60000)
+
+    return () => clearInterval(intervalId)
+  }, [])
 
   // Fetch restaurant data from API
   useEffect(() => {
@@ -341,6 +351,7 @@ export default function RestaurantDetails() {
           // Handle both dining restaurant and regular restaurant data structures
           const transformedRestaurant = {
             id: actualRestaurant?.restaurantId || actualRestaurant?._id || actualRestaurant?.id || apiRestaurant?.restaurantId || apiRestaurant?._id || null,
+            mongoId: actualRestaurant?._id || apiRestaurant?._id || null,
             name: actualRestaurant?.name || apiRestaurant?.name || apiRestaurant?.restaurantName || "Unknown Restaurant",
             cuisine: (actualRestaurant?.cuisines && Array.isArray(actualRestaurant.cuisines) && actualRestaurant.cuisines.length > 0)
               ? actualRestaurant.cuisines[0]
@@ -390,11 +401,14 @@ export default function RestaurantDetails() {
             featuredDish: apiRestaurant?.featuredDish || "Special Dish",
             featuredPrice: apiRestaurant?.featuredPrice ?? 249,
             // Additional safety fields
-            openDays: Array.isArray(apiRestaurant?.openDays) ? apiRestaurant.openDays : [],
-            deliveryTimings: apiRestaurant?.deliveryTimings || {
+            openDays: Array.isArray(actualRestaurant?.openDays)
+              ? actualRestaurant.openDays
+              : (Array.isArray(apiRestaurant?.openDays) ? apiRestaurant.openDays : []),
+            deliveryTimings: actualRestaurant?.deliveryTimings || apiRestaurant?.deliveryTimings || {
               openingTime: "09:00",
               closingTime: "22:00",
             },
+            outletTimings: actualRestaurant?.outletTimings || apiRestaurant?.outletTimings || null,
             cuisines: Array.isArray(apiRestaurant?.cuisines) ? apiRestaurant.cuisines : [],
             profileImage: apiRestaurant?.profileImage || null,
             menuImages: Array.isArray(apiRestaurant?.menuImages) ? apiRestaurant.menuImages : [],
@@ -416,6 +430,20 @@ export default function RestaurantDetails() {
 
           setRestaurant(transformedRestaurant)
           fetchedRestaurantRef.current = true // Mark as fetched
+
+          // Load outlet timings from public endpoint (source of truth for daily opening slots)
+          try {
+            const outletRestaurantId = transformedRestaurant.mongoId || actualRestaurant?._id || apiRestaurant?._id
+            if (outletRestaurantId) {
+              const outletResponse = await restaurantAPI.getOutletTimingsByRestaurantId(outletRestaurantId)
+              const outletTimingsData = outletResponse?.data?.data?.outletTimings || outletResponse?.data?.outletTimings
+              if (outletTimingsData) {
+                setRestaurant((prev) => ({ ...prev, outletTimings: outletTimingsData }))
+              }
+            }
+          } catch (outletError) {
+            console.warn("Outlet timings fetch failed, falling back to delivery timings:", outletError?.message)
+          }
 
           // Fetch menu and inventory for this restaurant
           // If no restaurant ID, try to find matching restaurant by name
@@ -817,8 +845,11 @@ export default function RestaurantDetails() {
       return;
     }
 
-    // Note: We don't block cart operations based on restaurant availability
-    // Only block if user is out of service zone
+    const availability = getRestaurantAvailabilityStatus(restaurant)
+    if (!availability.isOpen) {
+      toast.error("Restaurant is currently offline. Please try again later.")
+      return
+    }
 
     // Update local state
     setQuantities((prev) => ({
@@ -1372,8 +1403,9 @@ export default function RestaurantDetails() {
     )
   }
 
-  // Only show grayscale when user is out of service (not based on restaurant availability)
-  const shouldShowGrayscale = isOutOfService
+  const availabilityStatus = getRestaurantAvailabilityStatus(restaurant, new Date(availabilityTick))
+  const isRestaurantOffline = !availabilityStatus.isOpen
+  const shouldShowGrayscale = isOutOfService || isRestaurantOffline
 
   return (
     <AnimatedPage
@@ -1482,7 +1514,16 @@ export default function RestaurantDetails() {
               <Clock className="h-4 w-4" />
               <span>{restaurant?.deliveryTime || "25-30 mins"}</span>
             </div>
+            <Badge className={`${isRestaurantOffline ? "bg-rose-600" : "bg-emerald-600"} text-white`}>
+              {isRestaurantOffline ? "Offline" : "Open now"}
+            </Badge>
           </div>
+
+          {isRestaurantOffline && (
+            <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+              This restaurant is currently offline. Orders are unavailable right now.
+            </div>
+          )}
 
           {/* Offers */}
           <div className="flex items-center justify-between">

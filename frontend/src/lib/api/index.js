@@ -629,6 +629,10 @@ export const restaurantAPI = {
   getRestaurantById: (id) => {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.BY_ID.replace(":id", id));
   },
+  // Get public outlet timings by restaurant MongoDB ID
+  getOutletTimingsByRestaurantId: (restaurantId) => {
+    return apiClient.get(`/restaurant/${restaurantId}/outlet-timings`);
+  },
   // Get coupons for item (public - for user cart)
   getCouponsByItemIdPublic: (restaurantId, itemId) => {
     return apiClient.get(

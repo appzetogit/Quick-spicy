@@ -104,9 +104,11 @@ export default function OutletTimings() {
     return getDefaultDays()
   })
 
-  // Save to localStorage whenever days change (but only if it's an internal update)
+  // Save to localStorage whenever days change.
+  // Also ensure we persist once when storage is empty so Status page can read configured timings.
   useEffect(() => {
-    if (isInternalUpdate.current) {
+    const hasPersistedTimings = !!localStorage.getItem(STORAGE_KEY)
+    if (isInternalUpdate.current || !hasPersistedTimings) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(days))
         // Dispatch event to notify other components
