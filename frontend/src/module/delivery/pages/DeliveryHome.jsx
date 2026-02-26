@@ -1777,7 +1777,11 @@ export default function DeliveryHome() {
                     accuracy: accuracy.toFixed(2) + 'm',
                     timeSinceLastSend: (timeSinceLastSend / 1000).toFixed(0) + 's'
                   });
-                  deliveryAPI.updateLocation(lat, lng, true)
+                  deliveryAPI.updateLocation(lat, lng, true, {
+                    heading: typeof position.coords.heading === 'number' ? position.coords.heading : 0,
+                    speed: typeof position.coords.speed === 'number' ? position.coords.speed : 0,
+                    accuracy
+                  })
                     .then(() => {
                       window.lastLocationSentTime = now;
                       console.log('✅ Fallback location sent to backend successfully');
@@ -1859,7 +1863,11 @@ export default function DeliveryHome() {
               if (timeSinceLastSend >= 5000) {
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   console.log('📤 Sending raw location to backend (not smoothed yet):', { lat, lng })
-                  deliveryAPI.updateLocation(lat, lng, true)
+                  deliveryAPI.updateLocation(lat, lng, true, {
+                    heading: typeof position.coords.heading === 'number' ? position.coords.heading : 0,
+                    speed: typeof position.coords.speed === 'number' ? position.coords.speed : 0,
+                    accuracy
+                  })
                     .then(() => {
                       window.lastLocationSentTime = now;
                       window.lastSentLocation = newLocation;
@@ -1988,7 +1996,11 @@ export default function DeliveryHome() {
                   timeSinceLastSend: `${(timeSinceLastSend / 1000).toFixed(1)}s`
                 });
                 
-                deliveryAPI.updateLocation(smoothedLat, smoothedLng, true)
+                deliveryAPI.updateLocation(smoothedLat, smoothedLng, true, {
+                  heading: typeof heading === 'number' ? heading : 0,
+                  speed: typeof position.coords.speed === 'number' ? position.coords.speed : 0,
+                  accuracy
+                })
                   .then(() => {
                     window.lastLocationSentTime = now;
                     window.lastSentLocation = smoothedLocation; // Store last sent location
@@ -6020,11 +6032,21 @@ export default function DeliveryHome() {
         // Only recalculate if moved >50 meters AND last recalculation was >30 seconds ago
         const timeSinceLastRecalc = Date.now() - (lastRouteRecalculationRef.current || 0);
         if (distance > 50 && timeSinceLastRecalc > 30000 && selectedRestaurant) {
+          const phase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '';
+          const isToCustomerPhase =
+            phase === 'en_route_to_delivery' ||
+            phase === 'at_delivery' ||
+            selectedRestaurant?.orderStatus === 'out_for_delivery' ||
+            selectedRestaurant?.status === 'out_for_delivery';
+          const destination = isToCustomerPhase && selectedRestaurant?.customerLat && selectedRestaurant?.customerLng
+            ? { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng }
+            : { lat: selectedRestaurant.lat, lng: selectedRestaurant.lng };
+
           console.log('🔄 Significant deviation detected, recalculating route...');
           lastRouteRecalculationRef.current = Date.now();
           calculateRouteWithDirectionsAPI(
             [newPosition.lat, newPosition.lng],
-            { lat: selectedRestaurant.lat, lng: selectedRestaurant.lng }
+            destination
           ).then(result => {
             if (result && result.routes && result.routes[0]) {
               // Extract route and create custom polyline (don't use DirectionsRenderer - it adds dots)

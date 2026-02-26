@@ -1,11 +1,15 @@
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import Delivery from '../models/Delivery.js';
+import Order from '../../order/models/Order.js';
 import Zone from '../../admin/models/Zone.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
-import { syncDeliveryPartnerPresence } from '../services/firebaseRealtimeTrackingService.js';
+import {
+  syncDeliveryPartnerPresence,
+  updateActiveOrderLocation
+} from '../services/firebaseRealtimeTrackingService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -17,6 +21,44 @@ const logger = winston.createLogger({
   ]
 });
 
+const realtimeSyncStateByDelivery = new Map();
+
+function toFiniteNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function calculateDistanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function shouldSyncRealtime(deliveryId, lat, lng, phase) {
+  const key = String(deliveryId || '');
+  const now = Date.now();
+  const previous = realtimeSyncStateByDelivery.get(key);
+  if (!previous) {
+    realtimeSyncStateByDelivery.set(key, { lat, lng, phase, ts: now });
+    return true;
+  }
+
+  const distanceMeters = calculateDistanceKm(previous.lat, previous.lng, lat, lng) * 1000;
+  const elapsedMs = now - previous.ts;
+  const phaseChanged = previous.phase !== phase;
+  const shouldSync = phaseChanged || distanceMeters >= 10 || elapsedMs >= 4000;
+
+  if (shouldSync) {
+    realtimeSyncStateByDelivery.set(key, { lat, lng, phase, ts: now });
+  }
+  return shouldSync;
+}
+
 /**
  * Update Delivery Partner Location
  * POST /api/delivery/location
@@ -25,13 +67,16 @@ const logger = winston.createLogger({
 const updateLocationSchema = Joi.object({
   latitude: Joi.number().min(-90).max(90).optional(),
   longitude: Joi.number().min(-180).max(180).optional(),
-  isOnline: Joi.boolean().optional()
+  isOnline: Joi.boolean().optional(),
+  heading: Joi.number().min(0).max(360).optional(),
+  speed: Joi.number().min(0).max(200).optional(),
+  accuracy: Joi.number().min(0).max(5000).optional()
 }).min(1); // At least one field must be provided
 
 export const updateLocation = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
-    const { latitude, longitude, isOnline } = req.body;
+    const { latitude, longitude, isOnline, heading, speed, accuracy } = req.body;
 
     // Manual validation: at least one field must be provided
     const hasLatitude = latitude !== undefined && latitude !== null;
@@ -95,21 +140,118 @@ export const updateLocation = asyncHandler(async (req, res) => {
     }
 
     const currentLocation = updatedDelivery.availability?.currentLocation;
-    const currentOrderId = updatedDelivery?.availability?.activeOrderId || null;
+    const lat = toFiniteNumber(currentLocation?.coordinates?.[1]);
+    const lng = toFiniteNumber(currentLocation?.coordinates?.[0]);
+    const normalizedHeading = toFiniteNumber(heading);
+    const normalizedSpeed = toFiniteNumber(speed);
+    const normalizedAccuracy = toFiniteNumber(accuracy);
+
+    // Resolve current active order for this rider so user tracking always has latest location.
+    const activeOrder = await Order.findOne({
+      deliveryPartnerId: updatedDelivery._id,
+      status: { $nin: ['delivered', 'cancelled'] },
+      $or: [
+        { 'deliveryState.currentPhase': { $ne: 'completed' } },
+        { 'deliveryState.currentPhase': { $exists: false } }
+      ]
+    })
+      .select('_id orderId status deliveryState.currentPhase address.location.coordinates')
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    const currentOrderId = activeOrder?.orderId || activeOrder?._id?.toString() || null;
 
     // Best-effort Firebase sync for online/offline + coordinates.
     await syncDeliveryPartnerPresence({
       deliveryId: updatedDelivery._id?.toString(),
-      lat: currentLocation?.coordinates?.[1],
-      lng: currentLocation?.coordinates?.[0],
+      lat,
+      lng,
       isOnline: updatedDelivery.availability?.isOnline || false,
       activeOrderId: currentOrderId
     });
+
+    // Keep order tracking location fresh for customer map + realtime socket feed.
+    if (
+      activeOrder &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng)
+    ) {
+      const phase = String(activeOrder?.deliveryState?.currentPhase || '').toLowerCase();
+      const trackingStatus =
+        phase === 'en_route_to_delivery' || activeOrder.status === 'out_for_delivery'
+          ? 'out_for_delivery'
+          : 'en_route_to_pickup';
+
+      await Order.findByIdAndUpdate(activeOrder._id, {
+        $set: {
+          'deliveryState.currentLocation': {
+            lat,
+            lng,
+            bearing: normalizedHeading ?? 0,
+            speed: normalizedSpeed ?? 0,
+            accuracy: normalizedAccuracy ?? null,
+            timestamp: new Date()
+          }
+        }
+      });
+
+      const customerLat = toFiniteNumber(activeOrder?.address?.location?.coordinates?.[1]);
+      const customerLng = toFiniteNumber(activeOrder?.address?.location?.coordinates?.[0]);
+      const distanceToCustomerKm =
+        Number.isFinite(customerLat) && Number.isFinite(customerLng)
+          ? calculateDistanceKm(lat, lng, customerLat, customerLng)
+          : null;
+
+      if (shouldSyncRealtime(updatedDelivery._id?.toString(), lat, lng, phase || trackingStatus)) {
+        const trackingPayload = {
+          boy_id: updatedDelivery._id?.toString(),
+          boy_lat: lat,
+          boy_lng: lng,
+          heading: normalizedHeading ?? 0,
+          speed: normalizedSpeed ?? 0,
+          status: trackingStatus,
+          timestamp: Date.now(),
+          distance_to_customer_km: distanceToCustomerKm,
+          distance_to_customer_m: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null
+        };
+
+        const trackingIds = [...new Set([
+          activeOrder.orderId ? String(activeOrder.orderId) : null,
+          activeOrder._id?.toString?.()
+        ].filter(Boolean))];
+
+        await Promise.allSettled(
+          trackingIds.map((trackingId) => updateActiveOrderLocation(trackingId, trackingPayload, { ensureExists: false }))
+        );
+
+        const io = req.app.get('io');
+        if (io) {
+          const locationData = {
+            orderId: activeOrder.orderId || activeOrder._id?.toString(),
+            lat,
+            lng,
+            heading: normalizedHeading ?? 0,
+            bearing: normalizedHeading ?? 0,
+            speed: normalizedSpeed ?? 0,
+            distanceToCustomerKm,
+            distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
+            timestamp: Date.now()
+          };
+
+          trackingIds.forEach((trackingId) => {
+            io.to(`order:${trackingId}`).emit(`location-receive-${trackingId}`, locationData);
+          });
+        }
+      }
+    }
 
     return successResponse(res, 200, 'Status updated successfully', {
       location: currentLocation ? {
         latitude: currentLocation.coordinates[1],
         longitude: currentLocation.coordinates[0],
+        heading: normalizedHeading ?? 0,
+        speed: normalizedSpeed ?? 0,
+        accuracy: normalizedAccuracy ?? null,
         isOnline: updatedDelivery.availability?.isOnline || false,
         lastUpdate: updatedDelivery.availability?.lastLocationUpdate
       } : null,

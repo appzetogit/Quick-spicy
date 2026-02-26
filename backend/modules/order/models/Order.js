@@ -294,7 +294,19 @@ const orderSchema = new mongoose.Schema({
       duration: Number, // in minutes
       calculatedAt: Date,
       method: String // 'osrm', 'dijkstra', 'haversine'
-    }
+    },
+    // Live rider position used by delivery/user tracking maps.
+    currentLocation: {
+      lat: Number,
+      lng: Number,
+      bearing: Number,
+      speed: Number,
+      accuracy: Number,
+      timestamp: Date
+    },
+    routeProgress: Number,
+    distanceCovered: Number,
+    remainingDistance: Number
   }
 }, {
   timestamps: true

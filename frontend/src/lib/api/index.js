@@ -1028,13 +1028,18 @@ export const deliveryAPI = {
   },
 
   // Update location
-  updateLocation: (latitude, longitude, isOnline = null) => {
+  updateLocation: (latitude, longitude, isOnline = null, meta = {}) => {
     const payload = {
       latitude,
       longitude,
     };
     if (typeof isOnline === "boolean") {
       payload.isOnline = isOnline;
+    }
+    if (meta && typeof meta === "object") {
+      if (typeof meta.heading === "number") payload.heading = meta.heading;
+      if (typeof meta.speed === "number") payload.speed = meta.speed;
+      if (typeof meta.accuracy === "number") payload.accuracy = meta.accuracy;
     }
     return apiClient.post(API_ENDPOINTS.DELIVERY.LOCATION, payload);
   },
