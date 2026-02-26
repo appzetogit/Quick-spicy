@@ -359,10 +359,10 @@ export default function ItemDetailsPage() {
     const files = Array.from(e.target.files)
 
     // Validate file types
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"]
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/heic", "image/heif"]
     const validFiles = files.filter(file => {
       if (!allowedTypes.includes(file.type)) {
-        toast.error(`${file.name}: Invalid file type. Please upload PNG, JPG, JPEG, or WEBP.`)
+        toast.error(`${file.name}: Invalid file type. Please upload PNG, JPG, JPEG, WEBP, HEIC, or HEIF.`)
         return false
       }
       // Validate file size (max 5MB)

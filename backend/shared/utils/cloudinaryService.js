@@ -10,9 +10,12 @@ const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = [
     // images
     'image/jpeg',
+    'image/jpg',
     'image/png',
     'image/webp',
     'image/gif',
+    'image/heic',
+    'image/heif',
     'image/svg+xml',
     // videos
     'video/mp4',

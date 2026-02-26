@@ -654,7 +654,7 @@ export const uploadMenuImage = asyncHandler(async (req, res) => {
     }
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'];
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
     if (!allowedMimeTypes.includes(req.file.mimetype)) {
       return errorResponse(res, 400, `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`);
     }
