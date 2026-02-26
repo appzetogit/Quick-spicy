@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -36,6 +36,19 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 const ONBOARDING_STORAGE_KEY = "restaurant_onboarding_data"
 const PAN_NUMBER_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
 
+const isUploadableFile = (value) => {
+  if (!value || typeof value !== "object") return false
+
+  if (typeof File !== "undefined" && value instanceof File) return true
+  if (typeof Blob !== "undefined" && value instanceof Blob) return true
+
+  return (
+    typeof value.type === "string" &&
+    typeof value.size === "number" &&
+    typeof value.slice === "function"
+  )
+}
+
 const getVerifiedPhoneFromStoredRestaurant = () => {
   try {
     const storedUser = localStorage.getItem("restaurant_user")
@@ -66,25 +79,25 @@ const saveOnboardingToLocalStorage = (step1, step2, step3, step4, currentStep) =
     const serializableStep2 = {
       ...step2,
       menuImages: step2.menuImages.map((file) => {
-        if (file instanceof File) {
+        if (isUploadableFile(file)) {
           return { name: file.name, size: file.size, type: file.type }
         }
         return file
       }),
-      profileImage: step2.profileImage instanceof File
+      profileImage: isUploadableFile(step2.profileImage)
         ? { name: step2.profileImage.name, size: step2.profileImage.size, type: step2.profileImage.type }
         : step2.profileImage,
     }
 
     const serializableStep3 = {
       ...step3,
-      panImage: step3.panImage instanceof File
+      panImage: isUploadableFile(step3.panImage)
         ? { name: step3.panImage.name, size: step3.panImage.size, type: step3.panImage.type }
         : step3.panImage,
-      gstImage: step3.gstImage instanceof File
+      gstImage: isUploadableFile(step3.gstImage)
         ? { name: step3.gstImage.name, size: step3.gstImage.size, type: step3.gstImage.type }
         : step3.gstImage,
-      fssaiImage: step3.fssaiImage instanceof File
+      fssaiImage: isUploadableFile(step3.fssaiImage)
         ? { name: step3.fssaiImage.name, size: step3.fssaiImage.size, type: step3.fssaiImage.type }
         : step3.fssaiImage,
     }
@@ -295,6 +308,28 @@ export default function RestaurantOnboarding() {
     featuredPrice: "",
     offer: "",
   })
+  const previewUrlCacheRef = useRef(new Map())
+
+  const getPreviewImageUrl = (value) => {
+    if (!value) return null
+    if (typeof value === "string") return value
+    if (value?.url && typeof value.url === "string") return value.url
+
+    if (isUploadableFile(value)) {
+      const cache = previewUrlCacheRef.current
+      const cached = cache.get(value)
+      if (cached) return cached
+      try {
+        const objectUrl = URL.createObjectURL(value)
+        cache.set(value, objectUrl)
+        return objectUrl
+      } catch {
+        return null
+      }
+    }
+
+    return null
+  }
 
 
   // Load from localStorage on mount and check URL parameter
@@ -404,6 +439,19 @@ export default function RestaurantOnboarding() {
   useEffect(() => {
     saveOnboardingToLocalStorage(step1, step2, step3, step4, step)
   }, [step1, step2, step3, step4, step])
+
+  useEffect(() => {
+    return () => {
+      previewUrlCacheRef.current.forEach((url) => {
+        try {
+          URL.revokeObjectURL(url)
+        } catch {
+          // Ignore revoke errors
+        }
+      })
+      previewUrlCacheRef.current.clear()
+    }
+  }, [])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -547,7 +595,7 @@ export default function RestaurantOnboarding() {
     } else {
       // Verify that menu images are either File objects or have valid URLs
       const validMenuImages = step2.menuImages.filter(img => {
-        if (img instanceof File) return true
+        if (isUploadableFile(img)) return true
         if (img?.url && typeof img.url === 'string') return true
         if (typeof img === 'string' && img.startsWith('http')) return true
         return false
@@ -563,7 +611,7 @@ export default function RestaurantOnboarding() {
     } else {
       // Verify profile image is either a File or has a valid URL
       const isValidProfileImage =
-        step2.profileImage instanceof File ||
+        isUploadableFile(step2.profileImage) ||
         (step2.profileImage?.url && typeof step2.profileImage.url === 'string') ||
         (typeof step2.profileImage === 'string' && step2.profileImage.startsWith('http'))
       if (!isValidProfileImage) {
@@ -620,7 +668,7 @@ export default function RestaurantOnboarding() {
       errors.push("PAN image is required")
     } else {
       const isValidPanImage =
-        step3.panImage instanceof File ||
+        isUploadableFile(step3.panImage) ||
         (step3.panImage?.url && typeof step3.panImage.url === 'string') ||
         (typeof step3.panImage === 'string' && step3.panImage.startsWith('http'))
       if (!isValidPanImage) {
@@ -639,7 +687,7 @@ export default function RestaurantOnboarding() {
       errors.push("FSSAI image is required")
     } else {
       const isValidFssaiImage =
-        step3.fssaiImage instanceof File ||
+        isUploadableFile(step3.fssaiImage) ||
         (step3.fssaiImage?.url && typeof step3.fssaiImage.url === 'string') ||
         (typeof step3.fssaiImage === 'string' && step3.fssaiImage.startsWith('http'))
       if (!isValidFssaiImage) {
@@ -663,7 +711,7 @@ export default function RestaurantOnboarding() {
         errors.push("GST image is required when GST registered")
       } else {
         const isValidGstImage =
-          step3.gstImage instanceof File ||
+          isUploadableFile(step3.gstImage) ||
           (step3.gstImage?.url && typeof step3.gstImage.url === 'string') ||
           (typeof step3.gstImage === 'string' && step3.gstImage.startsWith('http'))
         if (!isValidGstImage) {
@@ -806,7 +854,7 @@ export default function RestaurantOnboarding() {
       } else if (step === 2) {
         const menuUploads = []
         // Upload menu images if they are File objects
-        for (const file of step2.menuImages.filter((f) => f instanceof File)) {
+        for (const file of step2.menuImages.filter((f) => isUploadableFile(f))) {
           try {
             const uploaded = await handleUpload(file, "appzeto/restaurant/menu")
             // Verify upload was successful and has valid URL
@@ -820,7 +868,7 @@ export default function RestaurantOnboarding() {
           }
         }
         // If menuImages already have URLs (from previous save), include them
-        const existingMenuUrls = step2.menuImages.filter((img) => !(img instanceof File) && (img?.url || (typeof img === 'string' && img.startsWith('http'))))
+        const existingMenuUrls = step2.menuImages.filter((img) => !isUploadableFile(img) && (img?.url || (typeof img === 'string' && img.startsWith('http'))))
         const allMenuUrls = [...existingMenuUrls, ...menuUploads]
 
         // Verify we have at least one menu image
@@ -830,7 +878,7 @@ export default function RestaurantOnboarding() {
 
         // Upload profile image if it's a File object
         let profileUpload = null
-        if (step2.profileImage instanceof File) {
+        if (isUploadableFile(step2.profileImage)) {
           try {
             profileUpload = await handleUpload(step2.profileImage, "appzeto/restaurant/profile")
             // Verify upload was successful and has valid URL
@@ -899,7 +947,7 @@ export default function RestaurantOnboarding() {
       } else if (step === 3) {
         // Upload PAN image if it's a File object
         let panImageUpload = null
-        if (step3.panImage instanceof File) {
+        if (isUploadableFile(step3.panImage)) {
           try {
             panImageUpload = await handleUpload(step3.panImage, "appzeto/restaurant/pan")
             // Verify upload was successful and has valid URL
@@ -926,7 +974,7 @@ export default function RestaurantOnboarding() {
         // Upload GST image if it's a File object (only if GST registered)
         let gstImageUpload = null
         if (step3.gstRegistered) {
-          if (step3.gstImage instanceof File) {
+          if (isUploadableFile(step3.gstImage)) {
             try {
               gstImageUpload = await handleUpload(step3.gstImage, "appzeto/restaurant/gst")
               // Verify upload was successful and has valid URL
@@ -953,7 +1001,7 @@ export default function RestaurantOnboarding() {
 
         // Upload FSSAI image if it's a File object
         let fssaiImageUpload = null
-        if (step3.fssaiImage instanceof File) {
+        if (isUploadableFile(step3.fssaiImage)) {
           try {
             fssaiImageUpload = await handleUpload(step3.fssaiImage, "appzeto/restaurant/fssai")
             // Verify upload was successful and has valid URL
@@ -1286,9 +1334,9 @@ export default function RestaurantOnboarding() {
                 let imageUrl = null
                 let imageName = `Image ${idx + 1}`
 
-                if (file instanceof File) {
-                  imageUrl = URL.createObjectURL(file)
-                  imageName = file.name
+                if (isUploadableFile(file)) {
+                  imageUrl = getPreviewImageUrl(file)
+                  imageName = file.name || imageName
                 } else if (file?.url) {
                   // If it's an object with url property (from backend)
                   imageUrl = file.url
@@ -1350,17 +1398,7 @@ export default function RestaurantOnboarding() {
               <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden border border-gray-200">
                 {step2.profileImage ? (
                   (() => {
-                    let imageSrc = null;
-
-                    if (step2.profileImage instanceof File) {
-                      imageSrc = URL.createObjectURL(step2.profileImage);
-                    } else if (step2.profileImage?.url) {
-                      // If it's an object with url property (from backend)
-                      imageSrc = step2.profileImage.url;
-                    } else if (typeof step2.profileImage === 'string') {
-                      // If it's a direct URL string
-                      imageSrc = step2.profileImage;
-                    }
+                    const imageSrc = getPreviewImageUrl(step2.profileImage)
 
                     return imageSrc ? (
                       <img

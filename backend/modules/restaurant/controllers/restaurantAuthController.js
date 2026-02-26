@@ -39,6 +39,25 @@ const buildPhoneQuery = (normalizedPhone) => {
   }
 };
 
+const buildDefaultRestaurantName = (identifierType, identifier) => {
+  if (identifierType === 'phone') {
+    const digits = String(identifier || '').replace(/\D/g, '');
+    const suffix = digits.slice(-4) || 'NEW';
+    return `Restaurant ${suffix}`;
+  }
+
+  const emailLocalPart = String(identifier || '')
+    .split('@')[0]
+    .replace(/[^a-zA-Z0-9]+/g, ' ')
+    .trim();
+
+  if (emailLocalPart.length >= 2) {
+    return emailLocalPart.slice(0, 50);
+  }
+
+  return 'New Restaurant';
+};
+
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.json(),
@@ -111,6 +130,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     
     const identifier = normalizedPhone || email;
     const identifierType = normalizedPhone ? 'phone' : 'email';
+    const normalizedProvidedName = typeof name === 'string' ? name.trim() : '';
+    const resolvedRestaurantName = normalizedProvidedName || buildDefaultRestaurantName(identifierType, identifier);
 
     if (purpose === 'register') {
       // Registration flow
@@ -125,16 +146,11 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         return errorResponse(res, 400, `Restaurant already exists with this ${identifierType}. Please login.`);
       }
 
-      // Name is mandatory for explicit registration
-      if (!name) {
-        return errorResponse(res, 400, 'Restaurant name is required for registration');
-      }
-
       // Verify OTP (phone or email) before creating restaurant
       await otpService.verifyOTP(phone || null, otp, purpose, email || null);
 
       const restaurantData = {
-        name,
+        name: resolvedRestaurantName,
         signupMethod: normalizedPhone ? 'phone' : 'email'
       };
 
@@ -163,7 +179,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
 
       // Set owner name from restaurant name if not provided separately
-      restaurantData.ownerName = name;
+      restaurantData.ownerName = resolvedRestaurantName;
 
       // Set isActive to false - restaurant needs admin approval before becoming active
       restaurantData.isActive = false;
@@ -332,15 +348,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
       restaurant = await Restaurant.findOne(findQuery);
 
-      if (!restaurant && !name) {
-        // Tell the client that we need restaurant name to proceed with auto-registration
-        return successResponse(res, 200, 'Restaurant not found. Please provide restaurant name for registration.', {
-          needsName: true,
-          identifierType,
-          identifier
-        });
-      }
-
       // Handle reset-password purpose
       if (purpose === 'reset-password') {
         if (!restaurant) {
@@ -360,7 +367,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       if (!restaurant) {
         // Auto-register new restaurant after OTP verification
         const restaurantData = {
-          name,
+          name: resolvedRestaurantName,
           signupMethod: normalizedPhone ? 'phone' : 'email'
         };
 
@@ -386,7 +393,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           restaurantData.password = password;
         }
 
-        restaurantData.ownerName = name;
+        restaurantData.ownerName = resolvedRestaurantName;
 
         // Set isActive to false - restaurant needs admin approval before becoming active
         restaurantData.isActive = false;
