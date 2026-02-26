@@ -2108,8 +2108,15 @@ export default function DeliveryHome() {
 
       // Accept order via backend API and get route
       const acceptOrderAndShowRoute = async () => {
-        // Get order ID from selectedRestaurant or newOrder (define outside try-catch for error handling)
-        const orderId = selectedRestaurant?.id || newOrder?.orderMongoId || newOrder?.orderId
+        // Resolve order ID from all known payload variants.
+        const orderId =
+          selectedRestaurant?.id ||
+          selectedRestaurant?.orderId ||
+          newOrder?.orderMongoId ||
+          newOrder?.mongoId ||
+          newOrder?.id ||
+          newOrder?._id ||
+          newOrder?.orderId
         
         console.log('🔍 Order ID lookup:', {
           selectedRestaurantId: selectedRestaurant?.id,
@@ -2121,6 +2128,8 @@ export default function DeliveryHome() {
         if (!orderId) {
           console.error('❌ No order ID found to accept')
           toast.error('Order ID not found. Please try again.')
+          setNewOrderAcceptButtonProgress(0)
+          setNewOrderIsAnimatingToComplete(false)
           return
         }
 
@@ -2175,8 +2184,12 @@ export default function DeliveryHome() {
           // Call backend API to accept order
           // Backend expects currentLat and currentLng
           const response = await deliveryAPI.acceptOrder(orderId, {
-            lat: currentLocation[0], // latitude
-            lng: currentLocation[1]  // longitude
+            // Backend expects currentLat/currentLng for acceptance validations.
+            currentLat: currentLocation[0],
+            currentLng: currentLocation[1],
+            // Keep legacy keys for compatibility with any older handler.
+            lat: currentLocation[0],
+            lng: currentLocation[1]
           })
           
           console.log('📡 API Response:', response.data)
@@ -4902,6 +4915,7 @@ export default function DeliveryHome() {
             window.__googleMapsLoaded = true;
             window.__googleMapsLoading = false;
             await initializeGoogleMap();
+            return;
           } else {
             console.error('❌ No Google Maps API key found');
             window.__googleMapsLoading = false;
@@ -4926,41 +4940,15 @@ export default function DeliveryHome() {
         if (window.google && window.google.maps) {
           console.log('✅ Google Maps loaded via script tag');
           await initializeGoogleMap();
+          return;
         } else {
           console.error('❌ Google Maps failed to load');
           setMapLoading(false);
+          return;
         }
       }
+      // IMPORTANT: initializeGoogleMap() is intentionally called once per load path above.
 
-      // Wait for MapTypeId to be available (sometimes it loads slightly after maps)
-      if (window.google && window.google.maps && !window.google.maps.MapTypeId) {
-        console.log('📍 Waiting for MapTypeId to be available...');
-        let attempts = 0;
-        const maxAttempts = 20; // 2 seconds max wait
-        
-        while (!window.google.maps.MapTypeId && attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, 100));
-          attempts++;
-        }
-      }
-
-      // Initialize map once Google Maps is fully loaded
-      // Check for both maps and MapTypeId to ensure API is fully initialized
-      if (window.google && window.google.maps) {
-        // MapTypeId might still not be available, but we have a fallback
-        if (!window.google.maps.MapTypeId) {
-          console.warn('⚠️ MapTypeId not available, will use string fallback');
-        }
-        await initializeGoogleMap();
-      } else {
-        console.error('❌ Google Maps API still not available or not fully loaded');
-        console.error('❌ API status:', {
-          google: !!window.google,
-          maps: !!window.google?.maps,
-          MapTypeId: !!window.google?.maps?.MapTypeId
-        });
-        setMapLoading(false);
-      }
     };
 
     loadGoogleMapsIfNeeded();
@@ -5276,53 +5264,9 @@ export default function DeliveryHome() {
     }
   }, [showHomeSections, mapInitRetry]) // Re-run when showHomeSections or container retry
 
-  // Initialize map when riderLocation becomes available (if map not already initialized)
-  useEffect(() => {
-    if (showHomeSections) return
-    if (!riderLocation || riderLocation.length !== 2) return
-    if (window.deliveryMapInstance) return // Map already initialized
-    if (!window.google || !window.google.maps) return // Google Maps not loaded yet
-    if (!mapContainerRef.current) return // Container not ready
-
-    console.log('📍 Rider location available, initializing map...')
-    // Map initialization will happen in the main useEffect, but we can trigger it
-    // by calling initializeGoogleMap directly
-    const initializeMap = async () => {
-      try {
-        const initialCenter = { lat: riderLocation[0], lng: riderLocation[1] }
-        console.log('📍 Initializing map with rider location:', initialCenter)
-        
-        if (!window.google || !window.google.maps) return
-        
-        const map = new window.google.maps.Map(mapContainerRef.current, {
-          center: initialCenter,
-          zoom: 18,
-          minZoom: 10,
-          maxZoom: 21,
-          mapTypeId: window.google.maps.MapTypeId?.ROADMAP || 'roadmap',
-          tilt: 45,
-          heading: 0,
-          disableDefaultUI: false,
-          zoomControl: true,
-          mapTypeControl: false,
-          streetViewControl: false,
-          fullscreenControl: false
-        })
-        
-        window.deliveryMapInstance = map
-        console.log('✅ Map initialized with rider location')
-        
-        // Create bike marker
-        createOrUpdateBikeMarker(riderLocation[0], riderLocation[1], null, true)
-        setMapLoading(false)
-      } catch (error) {
-        console.error('❌ Error initializing map with rider location:', error)
-        setMapLoading(false)
-      }
-    }
-    
-    initializeMap()
-  }, [riderLocation, showHomeSections]) // Initialize when location is available
+  // Map is initialized by the primary loader effect above.
+  // Keep this no-op to avoid duplicate initialization flicker/glitches.
+  useEffect(() => {}, [riderLocation, showHomeSections])
 
   // Update bike marker when going online - ensure bike appears immediately
   useEffect(() => {
@@ -10687,3 +10631,6 @@ export default function DeliveryHome() {
     </div>
   )
 }
+
+
+

@@ -1043,6 +1043,15 @@ export const acceptOrder = asyncHandler(async (req, res) => {
 
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,
+      nextStep: 'reached_pickup',
+      workflow: {
+        currentStep: 'accepted',
+        nextStep: 'reached_pickup',
+        deliveryState: orderWithPayment?.deliveryState || {
+          status: 'accepted',
+          currentPhase: 'en_route_to_pickup'
+        }
+      },
       route: {
         coordinates: routeData.coordinates,
         distance: routeData.distance,
