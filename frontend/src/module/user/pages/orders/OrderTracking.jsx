@@ -552,8 +552,17 @@ export default function OrderTracking() {
 
       // Update order status in UI
       if (status === 'out_for_delivery') {
-        setOrderStatus('on_way');
+        setOrderStatus('pickup');
+      } else if (status === 'reached_pickup' || status === 'accepted') {
+        setOrderStatus('pickup');
+      } else if (status === 'delivered') {
+        setOrderStatus('delivered');
       }
+
+      // Pull latest order state immediately so user app doesn't require manual refresh.
+      setTimeout(() => {
+        handleRefresh();
+      }, 0);
 
       // Show notification toast
       if (message) {
@@ -579,7 +588,7 @@ export default function OrderTracking() {
     return () => {
       window.removeEventListener('orderStatusNotification', handleOrderStatusNotification);
     };
-  }, [])
+  }, [orderId])
 
   const handleCancelOrder = () => {
     // Check if order can be cancelled (only Razorpay orders that aren't delivered/cancelled)
@@ -804,6 +813,11 @@ export default function OrderTracking() {
       color: "bg-[#EB590E]"
     },
     pickup: {
+      title: "Order picked up",
+      subtitle: `Arriving in ${estimatedTime} mins`,
+      color: "bg-[#EB590E]"
+    },
+    on_way: {
       title: "Order picked up",
       subtitle: `Arriving in ${estimatedTime} mins`,
       color: "bg-[#EB590E]"

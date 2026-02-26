@@ -29,6 +29,46 @@ const logger = winston.createLogger({
   ]
 });
 
+let getIO = null;
+async function getIOInstance() {
+  if (!getIO) {
+    const serverModule = await import('../../../server.js');
+    getIO = serverModule.getIO;
+  }
+  return getIO ? getIO() : null;
+}
+
+async function emitOrderStatusRealtime(order, status, message, extra = {}) {
+  try {
+    const io = await getIOInstance();
+    if (!io || !order) return;
+
+    const trackingIds = [...new Set(
+      [order?._id?.toString?.(), order?.orderId, extra?.orderId]
+        .filter(Boolean)
+        .map((id) => String(id))
+    )];
+    if (trackingIds.length === 0) return;
+
+    const payload = {
+      title: 'Order Update',
+      message: message || 'Order status updated',
+      status: String(status || '').toLowerCase(),
+      orderId: order?.orderId || order?._id?.toString(),
+      orderMongoId: order?._id?.toString?.() || null,
+      deliveryState: order?.deliveryState || null,
+      updatedAt: new Date().toISOString(),
+      ...extra
+    };
+
+    trackingIds.forEach((trackingId) => {
+      io.to(`order:${trackingId}`).emit('order_status_update', payload);
+    });
+  } catch (emitError) {
+    console.warn('Order status realtime emit failed:', emitError.message);
+  }
+}
+
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
   const normalized = { ...location };
@@ -1041,6 +1081,12 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     const paymentMeta = buildDeliveryPaymentMeta(updatedOrder, paymentRecord);
     const orderWithPayment = { ...updatedOrder, ...paymentMeta };
 
+    await emitOrderStatusRealtime(
+      orderWithPayment,
+      'accepted',
+      'Delivery partner accepted your order and is heading to pickup.'
+    );
+
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,
       nextStep: 'reached_pickup',
@@ -1173,6 +1219,11 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
     await order.save();
 
     console.log(`✅ Delivery partner ${delivery._id} reached pickup for order ${order.orderId}`);
+    await emitOrderStatusRealtime(
+      order,
+      'reached_pickup',
+      'Delivery partner reached the restaurant.'
+    );
 
     // After 10 seconds, trigger order ID confirmation request
     // Use order._id (MongoDB ObjectId) instead of orderId string
@@ -1516,34 +1567,15 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
     const response = successResponse(res, 200, 'Order ID confirmed', responseData);
 
     // Emit socket event to customer asynchronously (don't block response)
-    (async () => {
-      try {
-        // Get IO instance dynamically to avoid circular dependencies
-        const serverModule = await import('../../../server.js');
-        const getIO = serverModule.getIO;
-        const io = getIO ? getIO() : null;
-
-        if (io) {
-          // Emit to customer tracking this order
-          // Format matches server.js: order:${orderId}
-          io.to(`order:${updatedOrder._id.toString()}`).emit('order_status_update', {
-            title: "Order Update",
-            message: "Your delivery partner is on the way! 🏍️",
-            status: 'out_for_delivery',
-            orderId: updatedOrder.orderId,
-            deliveryStartedAt: new Date(),
-            estimatedDeliveryTime: routeData.duration || null
-          });
-
-          console.log(`📢 Notified customer for order ${updatedOrder.orderId} - Delivery partner on the way`);
-        } else {
-          console.warn('⚠️ Socket.IO not initialized, skipping customer notification');
-        }
-      } catch (notifError) {
-        console.error('Error sending customer notification:', notifError);
-        // Don't fail the response if notification fails
+    emitOrderStatusRealtime(
+      updatedOrder,
+      'out_for_delivery',
+      'Your delivery partner is on the way! 🏍️',
+      {
+        deliveryStartedAt: new Date(),
+        estimatedDeliveryTime: routeData.duration || null
       }
-    })();
+    );
 
     return response;
   } catch (error) {
@@ -1705,6 +1737,11 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
 
     const orderIdForLog = finalOrder.orderId || finalOrder._id?.toString() || orderId;
     console.log(`✅ Delivery partner ${delivery._id} reached drop location for order ${orderIdForLog}`);
+    await emitOrderStatusRealtime(
+      finalOrder,
+      'at_delivery',
+      'Delivery partner has reached your location.'
+    );
 
     return successResponse(res, 200, 'Reached drop confirmed', {
       order: finalOrder,
@@ -2243,6 +2280,11 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     // Handle notifications asynchronously (don't block response)
     const orderIdForNotification = orderMongoId?.toString ? orderMongoId.toString() : orderMongoId;
     Promise.all([
+      emitOrderStatusRealtime(
+        updatedOrder,
+        'delivered',
+        'Order delivered successfully.'
+      ),
       // Notify restaurant about delivery completion
       (async () => {
         try {
