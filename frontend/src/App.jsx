@@ -810,11 +810,27 @@ export default function App() {
           {/* Delivery Signup Routes (Protected - require authentication) */}
           <Route
             path="/delivery/signup/details"
-            element={<Navigate to="/delivery/sign-in" replace />}
+            element={
+              <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
+                <DeliverySignupStep1 />
+              </ProtectedRoute>
+            }
           />
           <Route
             path="/delivery/signup/documents"
-            element={<Navigate to="/delivery/sign-in" replace />}
+            element={
+              <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
+                <DeliverySignupStep2 />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/delivery/onboarding"
+            element={
+              <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
+                <DeliverySignupStep1 />
+              </ProtectedRoute>
+            }
           />
 
           {/* Delivery Protected Routes */}
