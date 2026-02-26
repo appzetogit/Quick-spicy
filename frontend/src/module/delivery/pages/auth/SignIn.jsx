@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { deliveryAPI } from "@/lib/api"
+import { clearModuleAuth } from "@/lib/utils/auth"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
 // Common country codes
@@ -100,6 +101,8 @@ export default function DeliverySignIn() {
 
     try {
       setIsSending(true)
+      // Start a fresh login flow and prevent stale-token auto redirects.
+      clearModuleAuth("delivery")
 
       // Call backend to send OTP for delivery login
       await deliveryAPI.sendOTP(fullPhone, "login")

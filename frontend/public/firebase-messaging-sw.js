@@ -49,7 +49,12 @@ async function loadFirebaseWebConfig() {
   messaging.onBackgroundMessage((payload) => {
     const title = payload?.notification?.title || "New Notification";
     const body = payload?.notification?.body || "";
-    const image = payload?.notification?.image || payload?.data?.imageUrl || undefined;
+    const image =
+      payload?.notification?.image ||
+      payload?.notification?.imageUrl ||
+      payload?.data?.image ||
+      payload?.data?.imageUrl ||
+      undefined;
 
     self.registration.showNotification(title, {
       body,

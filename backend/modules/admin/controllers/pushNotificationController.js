@@ -140,14 +140,14 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     notification: {
       title: normalizedTitle,
       body: normalizedDescription,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl, image: normalizedImageUrl } : {}),
     },
     data: {
       type: "admin_push_notification",
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: String(zone || "All"),
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl, image: normalizedImageUrl } : {}),
       sentAt: new Date().toISOString(),
     },
     ...(normalizedImageUrl
@@ -163,6 +163,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
           android: {
             notification: {
               imageUrl: normalizedImageUrl,
+              image: normalizedImageUrl,
             },
           },
           apns: {

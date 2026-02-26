@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { deliveryAPI } from "@/lib/api"
+import { clearModuleAuth } from "@/lib/utils/auth"
 import loginBg from "@/assets/deliveryloginbanner.png"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
@@ -167,6 +168,8 @@ export default function DeliverySignup() {
 
     try {
       const fullPhone = `${formData.countryCode} ${formData.phone}`.trim()
+      // Start a fresh OTP auth flow and avoid stale session auto-login.
+      clearModuleAuth("delivery")
 
       // Match sign-in behavior: send OTP through backend
       await deliveryAPI.sendOTP(fullPhone, "login")

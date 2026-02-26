@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from "react"
 import { Search, Download, ChevronDown, Bell, Edit, Trash2, Upload, Settings, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
-import { adminAPI } from "@/lib/api"
+import { adminAPI, uploadAPI } from "@/lib/api"
 import { pushNotificationsDummy } from "../data/pushNotificationsDummy"
 // Using placeholders for notification images
 const notificationImage1 = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=400&fit=crop"
@@ -24,6 +24,7 @@ export default function PushNotification() {
     description: "",
   })
   const [bannerPreview, setBannerPreview] = useState("")
+  const [bannerFile, setBannerFile] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [notifications, setNotifications] = useState(pushNotificationsDummy)
   const [isSending, setIsSending] = useState(false)
@@ -60,9 +61,21 @@ export default function PushNotification() {
     }
 
     setIsSending(true)
+    let resolvedImageUrlForUi = formData.imageUrl.trim()
 
     try {
-      const normalizedImageUrl = formData.imageUrl.trim()
+      let normalizedImageUrl = formData.imageUrl.trim()
+
+      // If admin selected a local file but didn't provide URL, upload it first.
+      if (!normalizedImageUrl && bannerFile) {
+        const uploadResponse = await uploadAPI.uploadMedia(bannerFile, { folder: "appzeto/push-notifications" })
+        normalizedImageUrl =
+          uploadResponse?.data?.data?.url ||
+          uploadResponse?.data?.data?.secure_url ||
+          uploadResponse?.data?.url ||
+          ""
+      }
+
       const isHttpImageUrl = !normalizedImageUrl || /^https?:\/\//i.test(normalizedImageUrl)
       if (!isHttpImageUrl) {
         toast.error("Notification image URL must start with http:// or https://")
@@ -78,6 +91,7 @@ export default function PushNotification() {
         zone: formData.zone,
         ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
       }
+      resolvedImageUrlForUi = normalizedImageUrl
 
       const response = await adminAPI.sendPushNotification(payload)
       const data = response?.data?.data || {}
@@ -111,8 +125,8 @@ export default function PushNotification() {
       zone: formData.zone,
       target: formData.sendTo,
       status: true,
-      image: Boolean(bannerPreview),
-      imageUrl: formData.imageUrl.trim() || bannerPreview || null,
+      image: Boolean(resolvedImageUrlForUi || bannerPreview),
+      imageUrl: resolvedImageUrlForUi || bannerPreview || null,
     }
 
     setNotifications((prev) => [newNotification, ...prev])
@@ -129,6 +143,7 @@ export default function PushNotification() {
       description: "",
     })
     setBannerPreview("")
+    setBannerFile(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -143,6 +158,8 @@ export default function PushNotification() {
       event.target.value = ""
       return
     }
+
+    setBannerFile(file)
 
     const reader = new FileReader()
     reader.onload = () => {

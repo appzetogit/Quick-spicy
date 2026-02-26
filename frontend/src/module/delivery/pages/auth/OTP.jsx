@@ -22,39 +22,35 @@ export default function DeliveryOTP() {
   const inputRefs = useRef([])
 
   useEffect(() => {
-    // Check if user is already fully authenticated (has token and it's valid)
-    // Only redirect if token exists and is valid - don't redirect during OTP flow
-    const token = localStorage.getItem("delivery_accessToken")
-    const authenticated = localStorage.getItem("delivery_authenticated") === "true"
-
-    // Only redirect if both token and authenticated flag exist (user is fully logged in)
-    if (token && authenticated) {
-      // Check if token is not expired
-      try {
-        const parts = token.split('.')
-        if (parts.length === 3) {
-          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
-          const now = Math.floor(Date.now() / 1000)
-          // If token is valid and not expired, redirect to home
-          if (payload.exp && payload.exp > now) {
-            navigate("/delivery", { replace: true })
-            return
-          }
-        }
-      } catch (e) {
-        // Token parsing failed, continue with OTP flow
-      }
-    }
-
     // Get auth data from sessionStorage (delivery module key)
     const stored = sessionStorage.getItem("deliveryAuthData")
-    if (!stored) {
+    if (stored) {
+      const data = JSON.parse(stored)
+      setAuthData(data)
+    } else {
+      // No active OTP flow: if already authenticated, go to delivery home
+      const token = localStorage.getItem("delivery_accessToken")
+      const authenticated = localStorage.getItem("delivery_authenticated") === "true"
+      if (token && authenticated) {
+        try {
+          const parts = token.split('.')
+          if (parts.length === 3) {
+            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+            const now = Math.floor(Date.now() / 1000)
+            if (payload.exp && payload.exp > now) {
+              navigate("/delivery", { replace: true })
+              return
+            }
+          }
+        } catch (e) {
+          // Ignore token parse errors and continue to sign-in redirect
+        }
+      }
+
       // No auth data, redirect to sign in
       navigate("/delivery/sign-in", { replace: true })
       return
     }
-    const data = JSON.parse(stored)
-    setAuthData(data)
 
     // OTP field should be empty - delivery boy needs to enter it manually
     // No auto-fill for delivery OTP

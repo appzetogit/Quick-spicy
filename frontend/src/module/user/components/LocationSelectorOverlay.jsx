@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react"
-import { useNavigate } from "react-router-dom"
 import { ChevronLeft, Search, ChevronRight, Plus, MapPin, MoreHorizontal, Navigation, Home, Building2, Briefcase, Phone, X, Crosshair } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -41,11 +40,10 @@ const getAddressIcon = (address) => {
 }
 
 export default function LocationSelectorOverlay({ isOpen, onClose }) {
-  const navigate = useNavigate()
   const inputRef = useRef(null)
   const [searchValue, setSearchValue] = useState("")
   const { location, loading, requestLocation } = useGeoLocation()
-  const { addresses = [], addAddress, updateAddress, userProfile } = useProfile()
+  const { addresses = [], addAddress, updateAddress, setDefaultAddress, userProfile } = useProfile()
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [mapPosition, setMapPosition] = useState([22.7196, 75.8577]) // Default Indore coordinates [lat, lng]
   const [addressFormData, setAddressFormData] = useState({
@@ -70,6 +68,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const locationUpdateTimeoutRef = useRef(null) // Timeout for location updates
   const [currentAddress, setCurrentAddress] = useState("")
   const [GOOGLE_MAPS_API_KEY, setGOOGLE_MAPS_API_KEY] = useState(null)
+  const getAddressId = (address) => address?.id || address?._id || null
 
   // Load Google Maps API key from backend
   useEffect(() => {
@@ -880,18 +879,23 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         }
       }
 
-      // Success toast with address preview
-      const addressPreview = locationData?.formattedAddress || locationData?.address || "Location updated"
-      toast.success(`Location updated: ${addressPreview.split(',').slice(0, 2).join(', ')}`, {
-        id: "location-request",
-        duration: 2000,
-      })
+      // Zomato-style flow: move to address form, let user confirm flat/house and save.
+      setShowAddressForm(true)
+      setAddressFormData((prev) => ({
+        ...prev,
+        street: locationData.street || locationData.area || prev.street,
+        city: locationData.city || prev.city,
+        state: locationData.state || prev.state,
+        zipCode: locationData.postalCode || prev.zipCode,
+        additionalDetails: locationData.formattedAddress || prev.additionalDetails,
+        phone: prev.phone || userProfile?.phone || "",
+      }))
 
-      // Wait 2 seconds then redirect to home page
-      setTimeout(() => {
-        onClose()
-        navigate("/")
-      }, 2000)
+      const addressPreview = locationData?.formattedAddress || locationData?.address || "Location updated"
+      toast.success(`Location ready: ${addressPreview.split(',').slice(0, 2).join(', ')}`, {
+        id: "location-request",
+        duration: 2400,
+      })
     } catch (error) {
       // Handle permission denied or other errors
       if (error.code === 1 || error.message?.includes("denied") || error.message?.includes("permission")) {
@@ -2007,16 +2011,22 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       const existingAddressWithSameLabel = addresses.find(addr => addr.label === normalizedLabel)
       const existingAddressId = existingAddressWithSameLabel?.id || existingAddressWithSameLabel?._id
 
+      let savedAddress = null
       if (existingAddressWithSameLabel && existingAddressId) {
         // Update existing address instead of creating a new one
         console.log("🔄 Updating existing address with label:", normalizedLabel)
-        await updateAddress(existingAddressId, addressToSave)
+        savedAddress = await updateAddress(existingAddressId, addressToSave)
         toast.success(`Address updated for ${normalizedLabel}!`)
       } else {
         // Create new address
         console.log("💾 Saving new address:", addressToSave)
-        await addAddress(addressToSave)
+        savedAddress = await addAddress(addressToSave)
         toast.success(`Address saved as ${normalizedLabel}!`)
+      }
+
+      const savedAddressId = getAddressId(savedAddress) || existingAddressId
+      if (savedAddressId) {
+        setDefaultAddress(savedAddressId)
       }
 
       // Reset form
@@ -2032,9 +2042,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       setShowAddressForm(false)
       setLoadingAddress(false)
 
-      // Close overlay and redirect to home page
+      // Close overlay and keep user in current flow
       onClose()
-      navigate("/")
     } catch (error) {
       console.error("❌ Error saving address:", error)
       console.error("❌ Error details:", {
@@ -2070,7 +2079,6 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       label: "Home",
       phone: "",
     })
-    navigate("/")
   }
 
   const handleSelectSavedAddress = async (address) => {
@@ -2149,9 +2157,11 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         }, 300)
       }
 
-      // Don't close overlay - keep user on select location page
-      // onClose()
-      // window.location.reload()
+      const selectedAddressId = getAddressId(address)
+      if (selectedAddressId) {
+        setDefaultAddress(selectedAddressId)
+      }
+      onClose()
     } catch (error) {
       console.error("Error selecting saved address:", error)
       toast.error("Failed to update location. Please try again.")
@@ -2421,7 +2431,6 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               size="icon"
               onClick={() => {
                 onClose()
-                navigate("/")
               }}
               className="rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 -ml-2"
             >
