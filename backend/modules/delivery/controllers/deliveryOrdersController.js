@@ -69,6 +69,49 @@ async function emitOrderStatusRealtime(order, status, message, extra = {}) {
   }
 }
 
+function extractOrderCoords(order = {}) {
+  const restaurantCoords = order?.restaurantId?.location?.coordinates;
+  const customerCoords = order?.address?.location?.coordinates;
+
+  const restaurant = Array.isArray(restaurantCoords) && restaurantCoords.length >= 2
+    ? { lat: Number(restaurantCoords[1]), lng: Number(restaurantCoords[0]) }
+    : null;
+  const customer = Array.isArray(customerCoords) && customerCoords.length >= 2
+    ? { lat: Number(customerCoords[1]), lng: Number(customerCoords[0]) }
+    : null;
+
+  return { restaurant, customer };
+}
+
+async function syncOrderPhaseToRealtime(order = {}, deliveryId, status) {
+  try {
+    const orderTrackingId = order?.orderId || order?._id?.toString?.();
+    if (!orderTrackingId || !deliveryId) return false;
+
+    const deliveryDoc = await Delivery.findById(deliveryId)
+      .select('availability.currentLocation')
+      .lean();
+    const deliveryCoords = deliveryDoc?.availability?.currentLocation?.coordinates;
+    const boyLat = Array.isArray(deliveryCoords) ? Number(deliveryCoords[1]) : null;
+    const boyLng = Array.isArray(deliveryCoords) ? Number(deliveryCoords[0]) : null;
+
+    const { restaurant, customer } = extractOrderCoords(order);
+
+    return await upsertActiveOrderTracking({
+      orderId: orderTrackingId,
+      deliveryBoyId: String(deliveryId),
+      boyLat,
+      boyLng,
+      status: status || 'in_progress',
+      restaurant,
+      customer
+    });
+  } catch (realtimeError) {
+    logger.warn(`Failed to sync order phase to Firebase RTDB: ${realtimeError.message}`);
+    return false;
+  }
+}
+
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
   const normalized = { ...location };
@@ -1086,6 +1129,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       'accepted',
       'Delivery partner accepted your order and is heading to pickup.'
     );
+    await syncOrderPhaseToRealtime(orderWithPayment, delivery._id, 'accepted');
 
     return successResponse(res, 200, 'Order accepted successfully', {
       order: orderWithPayment,
@@ -1224,6 +1268,7 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
       'reached_pickup',
       'Delivery partner reached the restaurant.'
     );
+    await syncOrderPhaseToRealtime(order, delivery._id, 'reached_pickup');
 
     // After 10 seconds, trigger order ID confirmation request
     // Use order._id (MongoDB ObjectId) instead of orderId string
@@ -1576,6 +1621,7 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
         estimatedDeliveryTime: routeData.duration || null
       }
     );
+    syncOrderPhaseToRealtime(updatedOrder, delivery._id, 'out_for_delivery');
 
     return response;
   } catch (error) {
@@ -1742,6 +1788,7 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
       'at_delivery',
       'Delivery partner has reached your location.'
     );
+    await syncOrderPhaseToRealtime(finalOrder, delivery._id, 'at_delivery');
 
     return successResponse(res, 200, 'Reached drop confirmed', {
       order: finalOrder,

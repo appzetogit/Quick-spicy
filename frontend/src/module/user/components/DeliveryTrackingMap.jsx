@@ -734,7 +734,7 @@ const DeliveryTrackingMap = ({
 
       const locationRequestInterval = setInterval(() => {
         requestCurrentLocationForTrackingIds();
-      }, 15000);
+      }, 30000);
 
       socketRef.current._locationRequestInterval = locationRequestInterval;
     });
@@ -1161,8 +1161,8 @@ const DeliveryTrackingMap = ({
     if (routeColorChanged) {
       lastRouteColorRef.current = routeColor;
     }
-    if (!routeColorChanged && lastRouteUpdateRef.current && (now - lastRouteUpdateRef.current) < 10000) {
-      return; // Skip if updated less than 10 seconds ago
+    if (!routeColorChanged && lastRouteUpdateRef.current && (now - lastRouteUpdateRef.current) < 20000) {
+      return; // Skip if updated less than 20 seconds ago
     }
 
     // Only draw route if delivery partner is assigned

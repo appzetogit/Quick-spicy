@@ -1,5 +1,5 @@
 import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import {
@@ -217,6 +217,7 @@ export default function OrderTracking() {
   const [cancellationReason, setCancellationReason] = useState("")
   const [isCancelling, setIsCancelling] = useState(false)
   const [timerNow, setTimerNow] = useState(Date.now())
+  const lastRealtimeRefreshRef = useRef(0)
 
   const defaultAddress = getDefaultAddress()
 
@@ -272,9 +273,9 @@ export default function OrderTracking() {
       currentPhase === 'at_pickup' ||
       currentPhase === 'en_route_to_delivery';
 
-    // If delivery partner is assigned and live socket tracking is active, keep API polling low.
-    // If not assigned, poll faster to detect assignment quickly.
-    const pollInterval = hasDeliveryPartner ? 90000 : 5000;
+    // Zomato-style fallback: still poll during live delivery, but not too aggressively.
+    // This prevents stale UI if socket momentarily disconnects.
+    const pollInterval = hasDeliveryPartner ? 15000 : 5000;
 
     const interval = setInterval(async () => {
       try {
@@ -559,10 +560,14 @@ export default function OrderTracking() {
         setOrderStatus('delivered');
       }
 
-      // Pull latest order state immediately so user app doesn't require manual refresh.
-      setTimeout(() => {
-        handleRefresh();
-      }, 0);
+      // Pull latest order state without refresh spam on bursty socket events.
+      const now = Date.now();
+      if (now - lastRealtimeRefreshRef.current > 1500) {
+        lastRealtimeRefreshRef.current = now;
+        setTimeout(() => {
+          handleRefresh();
+        }, 0);
+      }
 
       // Show notification toast
       if (message) {

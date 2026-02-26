@@ -420,6 +420,8 @@ export default function DeliveryHome() {
   const directionsServiceRef = useRef(null) // Directions Service instance
   const directionsRendererRef = useRef(null) // Directions Renderer instance
   const directionsMapInstanceRef = useRef(null) // Directions map instance
+  const directionsApiCacheRef = useRef(new Map()) // Cache directions results to reduce API usage
+  const directionsApiLastRequestRef = useRef({ key: null, timestamp: 0 }) // Prevent duplicate rapid requests
   const restaurantMarkerRef = useRef(null) // Restaurant marker on directions map
   const directionsBikeMarkerRef = useRef(null) // Bike marker on directions map
   const lastRouteRecalculationRef = useRef(null) // Track last route recalculation time (API cost optimization)
@@ -5510,6 +5512,44 @@ export default function DeliveryHome() {
       return null;
     }
 
+    if (!Array.isArray(origin) || origin.length < 2 || !destination) {
+      return null;
+    }
+
+    const originLat = Number(origin[0]);
+    const originLng = Number(origin[1]);
+    const destLat = Number(destination.lat);
+    const destLng = Number(destination.lng);
+    if (
+      !Number.isFinite(originLat) ||
+      !Number.isFinite(originLng) ||
+      !Number.isFinite(destLat) ||
+      !Number.isFinite(destLng)
+    ) {
+      return null;
+    }
+
+    const round = (v) => Math.round(v * 10000) / 10000; // ~11m precision
+    const routeKey = `${round(originLat)},${round(originLng)}|${round(destLat)},${round(destLng)}`;
+    const now = Date.now();
+
+    // Reuse recently fetched route to minimize Google Directions calls.
+    const cached = directionsApiCacheRef.current.get(routeKey);
+    if (cached && (now - cached.timestamp) < 180000) { // 3 minutes
+      setDirectionsResponse(cached.result);
+      directionsResponseRef.current = cached.result;
+      return cached.result;
+    }
+
+    // Skip duplicate back-to-back requests for same route.
+    if (
+      directionsApiLastRequestRef.current.key === routeKey &&
+      (now - directionsApiLastRequestRef.current.timestamp) < 10000
+    ) {
+      return directionsResponseRef.current || null;
+    }
+    directionsApiLastRequestRef.current = { key: routeKey, timestamp: now };
+
     try {
       // Initialize Directions Service if not already created
       if (!directionsServiceRef.current) {
@@ -5540,6 +5580,14 @@ export default function DeliveryHome() {
                 });
                 setDirectionsResponse(result);
                 directionsResponseRef.current = result; // Store in ref for callbacks
+                directionsApiCacheRef.current.set(routeKey, { result, timestamp: Date.now() });
+                // Cleanup old cache entries (>10 min)
+                const cutoff = Date.now() - 600000;
+                for (const [key, value] of directionsApiCacheRef.current.entries()) {
+                  if (!value?.timestamp || value.timestamp < cutoff) {
+                    directionsApiCacheRef.current.delete(key);
+                  }
+                }
                 resolve(result);
               } else {
                 // Handle specific error cases - suppress console errors for REQUEST_DENIED
