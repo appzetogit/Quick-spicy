@@ -6,6 +6,7 @@ import { getFirebaseCredentials } from '../shared/utils/envService.js';
 const REALTIME_APP_NAME = 'realtime-db-app';
 let realtimeDb = null;
 let initPromise = null;
+let hasLoggedMissingRealtimeWarning = false;
 
 function normalizePrivateKey(privateKey = '') {
   let key = String(privateKey || '').trim();
@@ -41,6 +42,10 @@ function deriveDatabaseUrl(projectId, explicitUrl) {
 function loadServiceAccountFromFile() {
   try {
     const projectRoot = process.cwd();
+    // Place Firebase Admin service account JSON in one of these paths:
+    // 1) backend/config/<service-account>.json
+    // 2) backend/firebaseconfig.json
+    // 3) backend/serviceAccountKey.json
     const candidatePaths = [
       path.resolve(projectRoot, 'config', 'zomato-607fa-firebase-adminsdk-fbsvc-f5f782c2cc.json'),
       path.resolve(projectRoot, 'firebaseconfig.json'),
@@ -135,11 +140,14 @@ export async function initializeFirebaseRealtime() {
       const { projectId, clientEmail, privateKey, databaseURL } = await loadRealtimeConfig();
 
       if (!projectId || !clientEmail || !privateKey) {
+        // Required vars for env-based setup:
+        // FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
         console.warn('⚠️ Firebase Realtime Database credentials missing. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.');
         return null;
       }
 
       if (!databaseURL) {
+        // Example: https://<project-id>-default-rtdb.firebaseio.com
         console.warn('⚠️ Firebase Realtime Database URL missing. Set FIREBASE_DATABASE_URL.');
         return null;
       }
@@ -162,6 +170,7 @@ export async function initializeFirebaseRealtime() {
       }
 
       realtimeDb = admin.database(realtimeApp);
+      hasLoggedMissingRealtimeWarning = false;
       console.log('✅ Firebase Realtime Database initialized');
       return realtimeDb;
     } catch (error) {
@@ -177,7 +186,10 @@ export async function initializeFirebaseRealtime() {
 
 export function getFirebaseRealtimeDb() {
   if (!realtimeDb) {
-    console.warn('⚠️ Firebase Realtime Database not initialized. Call initializeFirebaseRealtime() first.');
+    if (!hasLoggedMissingRealtimeWarning) {
+      console.warn('Firebase Realtime Database not initialized. Call initializeFirebaseRealtime() first.');
+      hasLoggedMissingRealtimeWarning = true;
+    }
     return null;
   }
   return realtimeDb;
@@ -185,4 +197,11 @@ export function getFirebaseRealtimeDb() {
 
 export function isFirebaseRealtimeReady() {
   return !!realtimeDb;
+}
+
+
+export async function getFirebaseRealtimeDbSafe() {
+  if (realtimeDb) return realtimeDb;
+  await initializeFirebaseRealtime();
+  return getFirebaseRealtimeDb();
 }

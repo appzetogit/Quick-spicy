@@ -11,6 +11,9 @@ const logger = winston.createLogger({
   ]
 });
 
+const ENABLE_GOOGLE_GEOCODING = process.env.ENABLE_GOOGLE_GEOCODING === 'true';
+const ENABLE_GOOGLE_PLACES = process.env.ENABLE_GOOGLE_PLACES === 'true';
+
 /**
  * Reverse geocode coordinates to address using OLA Maps API
  */
@@ -189,13 +192,14 @@ export const reverseGeocode = async (req, res) => {
           });
           
           try {
-              // Try Google Maps Geocoding API first (better sublocality data)
               let fallbackResponse = null;
-              // Get Google Maps API key from database (NO FALLBACK)
-              const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
-              const googleApiKey = await getGoogleMapsApiKey();
+              let googleApiKey = null;
+              if (ENABLE_GOOGLE_GEOCODING) {
+                const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
+                googleApiKey = await getGoogleMapsApiKey();
+              }
               
-              if (googleApiKey) {
+              if (ENABLE_GOOGLE_GEOCODING && googleApiKey) {
                 try {
                   fallbackResponse = await axios.get(
                     `https://maps.googleapis.com/maps/api/geocode/json`,
@@ -251,7 +255,7 @@ export const reverseGeocode = async (req, res) => {
                     }
                     
                     // If still no area, try Google Places Nearby Search for more specific location
-                    if (!area && googleApiKey) {
+                    if (!area && ENABLE_GOOGLE_PLACES && googleApiKey) {
                       try {
                         const placesResponse = await axios.get(
                           `https://maps.googleapis.com/maps/api/place/nearbysearch/json`,
@@ -306,13 +310,13 @@ export const reverseGeocode = async (req, res) => {
                     });
                   }
                 } catch (googleErr) {
-                  logger.warn('Google Maps geocoding failed, using bigdatacloud fallback', {
+                  logger.warn('Google Maps geocoding failed, using BigDataCloud fallback', {
                     error: googleErr.message
                   });
                 }
               }
               
-              // Fallback to bigdatacloud if Google Maps not available or failed
+              // Fallback to BigDataCloud if OLA/Google is not available or failed
               fallbackResponse = await axios.get(
                 `https://api.bigdatacloud.net/data/reverse-geocode-client`,
                 {
@@ -658,7 +662,7 @@ export const reverseGeocode = async (req, res) => {
 };
 
 /**
- * Get nearby locations/places using OLA Maps or Google Places API
+ * Get nearby locations/places using OLA Maps or optional Google Places API
  * GET /location/nearby?lat=...&lng=...&radius=...
  */
 export const getNearbyLocations = async (req, res) => {
@@ -684,14 +688,16 @@ export const getNearbyLocations = async (req, res) => {
     }
 
     const apiKey = process.env.OLA_MAPS_API_KEY;
-    // Get Google Maps API key from database (NO FALLBACK)
-    const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
-    const googleApiKey = await getGoogleMapsApiKey();
+    let googleApiKey = null;
+    if (ENABLE_GOOGLE_PLACES) {
+      const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
+      googleApiKey = await getGoogleMapsApiKey();
+    }
 
     let nearbyPlaces = [];
 
-    // Try Google Places API first (better results)
-    if (googleApiKey) {
+    // Optional Google Places API path (disabled by default).
+    if (ENABLE_GOOGLE_PLACES && googleApiKey) {
       try {
         const response = await axios.get(
           'https://maps.googleapis.com/maps/api/place/nearbysearch/json',

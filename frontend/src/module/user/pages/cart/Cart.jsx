@@ -747,6 +747,13 @@ export default function Cart() {
     return Number(feeSettings.deliveryFee || 0)
   })()
   const deliveryFee = pricing?.deliveryFee ?? fallbackDeliveryFee
+  const deliveryFeeBreakdown = pricing?.deliveryFeeBreakdown || null
+  const hasDistanceDeliveryBreakdown =
+    deliveryFeeBreakdown?.source === "distance" &&
+    Number.isFinite(Number(deliveryFeeBreakdown?.distanceKm))
+  const deliveryFeeBreakdownText = hasDistanceDeliveryBreakdown
+    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ₹${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km × ₹${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
+    : null
   const platformFee = pricing?.platformFee || feeSettings.platformFee
   const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
   const discount = pricing?.discount || (appliedCoupon ? Math.min(appliedCoupon.discount, subtotal * 0.5) : 0)
@@ -1973,6 +1980,11 @@ export default function Cart() {
                         {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
                       </span>
                     </div>
+                    {deliveryFeeBreakdownText && (
+                      <div className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                        {deliveryFeeBreakdownText}
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
                       <span className="text-gray-800 dark:text-gray-200">₹{platformFee}</span>
@@ -2014,6 +2026,11 @@ export default function Cart() {
                         {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
                       </span>
                     </div>
+                    {deliveryFeeBreakdownText && (
+                      <div className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                        {deliveryFeeBreakdownText}
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
                       <span className="text-gray-800 dark:text-gray-200">₹{platformFee}</span>

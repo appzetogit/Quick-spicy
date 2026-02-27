@@ -316,6 +316,10 @@ async function initializeServices() {
   // Initialize Firebase Realtime before routes/sockets start accepting traffic
   const firebaseDb = await initializeFirebaseRealtime();
   if (!firebaseDb) {
+    const strictRealtime = process.env.FIREBASE_REALTIME_REQUIRED === 'true';
+    if (strictRealtime) {
+      throw new Error('Firebase Realtime Database not available (FIREBASE_REALTIME_REQUIRED=true).');
+    }
     console.warn('⚠️ Firebase Realtime Database not available');
   }
 

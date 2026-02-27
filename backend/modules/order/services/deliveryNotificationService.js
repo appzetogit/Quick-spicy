@@ -858,7 +858,8 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
 
 /**
  * Calculate estimated earnings for delivery boy based on admin commission rules
- * Uses DeliveryBoyCommission model to calculate: Base Payout + (Distance × Per Km) if distance > minDistance
+ * Uses DeliveryBoyCommission model to calculate:
+ * Base Payout + ((Distance - MinDistance) × Per Km) when distance exceeds minDistance
  */
 async function calculateEstimatedEarnings(deliveryDistance) {
   try {
@@ -895,7 +896,8 @@ async function calculateEstimatedEarnings(deliveryDistance) {
     // Create breakdown text
     let breakdown = `Base payout: ₹${basePayout}`;
     if (distance > commissionResult.rule.minDistance) {
-      breakdown += ` + Distance (${distance.toFixed(1)} km × ₹${commissionPerKm}/km) = ₹${distanceCommission.toFixed(0)}`;
+      const extraDistance = distance - commissionResult.rule.minDistance;
+      breakdown += ` + Extra Distance (${extraDistance.toFixed(1)} km × ₹${commissionPerKm}/km) = ₹${distanceCommission.toFixed(0)}`;
     } else {
       breakdown += ` (Distance ${distance.toFixed(1)} km ≤ ${commissionResult.rule.minDistance} km, per km not applicable)`;
     }
@@ -913,13 +915,30 @@ async function calculateEstimatedEarnings(deliveryDistance) {
     };
   } catch (error) {
     console.error('Error calculating estimated earnings:', error);
-    // Fallback to default calculation
+    // Fallback to default calculation without hardcoded threshold.
+    let fallbackMinDistance = 0;
+    let fallbackBasePayout = 10;
+    let fallbackCommissionPerKm = 5;
+    try {
+      const DeliveryBoyCommission = (await import('../../admin/models/DeliveryBoyCommission.js')).default;
+      const fallbackRule = await DeliveryBoyCommission.findOne({ status: true }).sort({ minDistance: 1 }).lean();
+      if (fallbackRule) {
+        fallbackMinDistance = Number(fallbackRule.minDistance) || 0;
+        fallbackBasePayout = Number(fallbackRule.basePayout) || 10;
+        fallbackCommissionPerKm = Number(fallbackRule.commissionPerKm) || 5;
+      }
+    } catch (fallbackError) {
+      console.error('Error loading fallback commission rule:', fallbackError);
+    }
+    const normalizedDistance = deliveryDistance || 0;
+    const extraDistance = Math.max(0, normalizedDistance - fallbackMinDistance);
+    const distanceCommission = extraDistance * fallbackCommissionPerKm;
     return {
-      basePayout: 10,
-      distance: deliveryDistance || 0,
-      commissionPerKm: 5,
-      distanceCommission: deliveryDistance && deliveryDistance > 4 ? deliveryDistance * 5 : 0,
-      totalEarning: 10 + (deliveryDistance && deliveryDistance > 4 ? deliveryDistance * 5 : 0),
+      basePayout: fallbackBasePayout,
+      distance: normalizedDistance,
+      commissionPerKm: fallbackCommissionPerKm,
+      distanceCommission,
+      totalEarning: fallbackBasePayout + distanceCommission,
       breakdown: 'Default calculation'
     };
   }

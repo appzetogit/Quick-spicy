@@ -1,6 +1,7 @@
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Offer from '../../restaurant/models/Offer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
+import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import mongoose from 'mongoose';
 
 /**
@@ -40,8 +41,68 @@ const getFeeSettings = async () => {
  * Calculate delivery fee based on order value, distance, and restaurant settings
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
+  const round2 = (value) => Math.round(Number(value || 0) * 100) / 100;
+  const getCoordinates = (location) => {
+    if (!location || typeof location !== 'object') return null;
+    if (
+      Array.isArray(location.coordinates) &&
+      location.coordinates.length >= 2 &&
+      Number.isFinite(Number(location.coordinates[0])) &&
+      Number.isFinite(Number(location.coordinates[1]))
+    ) {
+      return [Number(location.coordinates[0]), Number(location.coordinates[1])];
+    }
+    if (
+      Number.isFinite(Number(location.longitude)) &&
+      Number.isFinite(Number(location.latitude))
+    ) {
+      return [Number(location.longitude), Number(location.latitude)];
+    }
+    return null;
+  };
+
   // Get fee settings from database
   const feeSettings = await getFeeSettings();
+
+  // Distance-based delivery charge (preferred when coordinates + commission rule are available)
+  try {
+    const restaurantCoords = getCoordinates(restaurant?.location);
+    const customerCoords = getCoordinates(deliveryAddress?.location);
+    if (restaurantCoords && customerCoords) {
+      const distanceKm = calculateDistance(restaurantCoords, customerCoords);
+      if (Number.isFinite(distanceKm) && distanceKm >= 0) {
+        const commissionResult = await DeliveryBoyCommission.calculateCommission(distanceKm);
+        const minDistance = Number(
+          commissionResult?.rule?.minDistance ??
+          commissionResult?.breakdown?.minDistance ??
+          0
+        );
+        const basePayout = Number(commissionResult?.breakdown?.basePayout || 0);
+        const commissionPerKm = Number(commissionResult?.breakdown?.commissionPerKm || 0);
+        const distanceCharge = Number(commissionResult?.breakdown?.distanceCommission || 0);
+        const totalFee = Number(commissionResult?.commission || 0);
+
+        if (Number.isFinite(totalFee) && totalFee >= 0) {
+          return {
+            fee: round2(totalFee),
+            breakdown: {
+              source: 'distance',
+              distanceKm: round2(distanceKm),
+              minDistanceKm: round2(minDistance),
+              basePayout: round2(basePayout),
+              commissionPerKm: round2(commissionPerKm),
+              extraDistanceKm: round2(Math.max(0, distanceKm - minDistance)),
+              distanceCharge: round2(distanceCharge),
+              total: round2(totalFee)
+            }
+          };
+        }
+      }
+    }
+  } catch (error) {
+    // Fallback to existing fee-settings logic if distance-based calculation is not available.
+    console.warn('Distance-based delivery fee calculation fallback:', error.message);
+  }
 
   // 1) If delivery fee ranges are configured, they are the source of truth.
   // This avoids unintended FREE delivery from threshold defaults.
@@ -58,28 +119,44 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
       if (isLastRange) {
         // Last range: include max value
         if (orderValue >= range.min && orderValue <= range.max) {
-          return range.fee;
+          return {
+            fee: Number(range.fee),
+            breakdown: {
+              source: 'range',
+              min: Number(range.min),
+              max: Number(range.max),
+              total: Number(range.fee)
+            }
+          };
         }
       } else {
         // Other ranges: exclude max value (handled by next range)
         if (orderValue >= range.min && orderValue < range.max) {
-          return range.fee;
+          return {
+            fee: Number(range.fee),
+            breakdown: {
+              source: 'range',
+              min: Number(range.min),
+              max: Number(range.max),
+              total: Number(range.fee)
+            }
+          };
         }
       }
     }
 
     // If ranges exist but none matched, treat as free delivery.
-    return 0;
+    return { fee: 0, breakdown: { source: 'range', total: 0 } };
   }
 
   // 2) No ranges configured, use threshold-based free delivery logic.
   if (restaurant?.freeDeliveryAbove && orderValue >= restaurant.freeDeliveryAbove) {
-    return 0;
+    return { fee: 0, breakdown: { source: 'threshold', total: 0 } };
   }
 
   const freeDeliveryThreshold = feeSettings.freeDeliveryThreshold || 149;
   if (orderValue >= freeDeliveryThreshold) {
-    return 0;
+    return { fee: 0, breakdown: { source: 'threshold', total: 0 } };
   }
 
   // 3) Base delivery fee fallback.
@@ -94,7 +171,13 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
   //   deliveryFee = baseFee + (distance * perKmFee);
   // }
   
-  return baseDeliveryFee;
+  return {
+    fee: Number(baseDeliveryFee),
+    breakdown: {
+      source: 'base',
+      total: Number(baseDeliveryFee)
+    }
+  };
 };
 
 /**
@@ -294,14 +377,21 @@ export const calculateOrderPricing = async ({
     }
     
     // Calculate delivery fee
-    const deliveryFee = await calculateDeliveryFee(
+    const deliveryFeeResult = await calculateDeliveryFee(
       subtotal,
       restaurant,
       deliveryAddress
     );
+    const deliveryFee = Number(deliveryFeeResult?.fee ?? deliveryFeeResult ?? 0);
     
     // Apply free delivery from coupon
     const finalDeliveryFee = appliedCoupon?.freeDelivery ? 0 : deliveryFee;
+    const deliveryFeeBreakdown = {
+      ...(deliveryFeeResult?.breakdown || {}),
+      originalFee: Math.round(deliveryFee),
+      finalFee: Math.round(finalDeliveryFee),
+      freeDeliveryApplied: Boolean(appliedCoupon?.freeDelivery)
+    };
     
     // Calculate platform fee
     const platformFee = await calculatePlatformFee();
@@ -328,6 +418,7 @@ export const calculateOrderPricing = async ({
         discount: discount,
         freeDelivery: appliedCoupon.freeDelivery || false
       } : null,
+      deliveryFeeBreakdown,
       breakdown: {
         itemTotal: Math.round(subtotal),
         discountAmount: Math.round(discount),

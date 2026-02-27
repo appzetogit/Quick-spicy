@@ -168,19 +168,12 @@ deliveryBoyCommissionSchema.statics.calculateCommission = async function(distanc
   let basePayout = applicableRule.basePayout;
   let distanceCommission = 0;
   
-  // Per km commission logic based on user requirement:
-  // - Base payout: ₹10 (always given)
-  // - If distance > 4 km: Additional ₹5 per km for the entire distance
-  // Example scenarios:
-  // - Distance = 4 km: commission = ₹10 (base only, 4 is not > 4)
-  // - Distance = 5 km: commission = ₹10 + (5 × ₹5) = ₹35
-  // - Distance = 6 km: commission = ₹10 + (6 × ₹5) = ₹40
-  // - Distance = 2 km: commission = ₹10 (base only, 2 < 4)
+  // Per km commission logic:
+  // Base payout is fixed up to minDistance (for example 0-4 km).
+  // Extra per-km applies only after minDistance.
   if (distance > applicableRule.minDistance) {
-    // Apply per km commission for the entire distance if distance > minDistance
-    // Example: If minDistance = 4, commissionPerKm = 5, distance = 5
-    // Then: 5 × 5 = ₹25 additional, total = ₹10 + ₹25 = ₹35
-    distanceCommission = distance * applicableRule.commissionPerKm;
+    const extraDistance = distance - applicableRule.minDistance;
+    distanceCommission = extraDistance * applicableRule.commissionPerKm;
   }
   // If distance <= minDistance, only base payout is given (distanceCommission = 0)
   
@@ -192,7 +185,7 @@ deliveryBoyCommissionSchema.statics.calculateCommission = async function(distanc
     maxDistance: applicableRule.maxDistance,
     basePayout: basePayout,
     commissionPerKm: applicableRule.commissionPerKm,
-    perKmApplied: distance >= applicableRule.minDistance,
+    perKmApplied: distance > applicableRule.minDistance,
     distanceCommission: distanceCommission,
     totalCommission: commission
   });
@@ -208,7 +201,7 @@ deliveryBoyCommissionSchema.statics.calculateCommission = async function(distanc
       commissionPerKm: applicableRule.commissionPerKm,
       distanceCommission: distanceCommission,
       // Flag to indicate if per km commission was applied
-      perKmApplied: distance >= applicableRule.minDistance
+      perKmApplied: distance > applicableRule.minDistance
     }
   };
 };

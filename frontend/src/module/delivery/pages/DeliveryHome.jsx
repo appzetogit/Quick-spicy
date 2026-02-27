@@ -9837,7 +9837,7 @@ export default function DeliveryHome() {
                             <p className="text-green-700 text-xs">
                               Base: ₹{earnings.basePayout?.toFixed(0) || '0'}
                               {earnings.distanceCommission > 0 && (
-                                <> + Distance ({earnings.distance?.toFixed(1)} km × ₹{earnings.commissionPerKm?.toFixed(0)}/km) = ₹{earnings.distanceCommission?.toFixed(0)}</>
+                                <> + Extra Distance ({Math.max(0, (earnings.distance || 0) - (earnings.minDistance || 0)).toFixed(1)} km × ₹{earnings.commissionPerKm?.toFixed(0)}/km) = ₹{earnings.distanceCommission?.toFixed(0)}</>
                               )}
                             </p>
                             {earnings.distance <= earnings.minDistance && earnings.distanceCommission === 0 && (

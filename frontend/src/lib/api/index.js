@@ -1170,6 +1170,14 @@ export const adminAPI = {
     return apiClient.post(API_ENDPOINTS.ADMIN.RESTAURANTS, data);
   },
 
+  // Update restaurant details
+  updateRestaurant: (id, data) => {
+    return apiClient.put(
+      API_ENDPOINTS.ADMIN.RESTAURANT_BY_ID.replace(":id", id),
+      data,
+    );
+  },
+
   // Get restaurant by ID
   getRestaurantById: (id) => {
     return apiClient.get(

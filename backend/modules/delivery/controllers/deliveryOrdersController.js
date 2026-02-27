@@ -1158,7 +1158,12 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       }
       
       const breakdown = commissionResult.breakdown || {};
-      const rule = commissionResult.rule || { minDistance: 4 };
+      const rule = commissionResult.rule || {};
+      const minDistance = Number(
+        rule.minDistance ??
+        breakdown.minDistance ??
+        0
+      );
       
       estimatedEarnings = {
         basePayout: Math.round((breakdown.basePayout || 10) * 100) / 100,
@@ -1171,7 +1176,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
           distance: deliveryDistance,
           commissionPerKm: breakdown.commissionPerKm || 5,
           distanceCommission: breakdown.distanceCommission || 0,
-          minDistance: rule.minDistance || 4
+          minDistance
         }
       };
       
@@ -1179,19 +1184,35 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     } catch (earningsError) {
       console.error('❌ Error calculating estimated earnings:', earningsError);
       console.error('❌ Earnings error stack:', earningsError.stack);
-      // Fallback to default
+      // Fallback to lowest active rule if available (no hardcoded threshold).
+      let minDistance = 0;
+      let basePayout = 10;
+      let commissionPerKm = 5;
+      try {
+        const DeliveryBoyCommission = (await import('../../admin/models/DeliveryBoyCommission.js')).default;
+        const fallbackRule = await DeliveryBoyCommission.findOne({ status: true }).sort({ minDistance: 1 }).lean();
+        if (fallbackRule) {
+          minDistance = Number(fallbackRule.minDistance) || 0;
+          basePayout = Number(fallbackRule.basePayout) || 10;
+          commissionPerKm = Number(fallbackRule.commissionPerKm) || 5;
+        }
+      } catch (fallbackError) {
+        console.error('❌ Error loading fallback commission rule:', fallbackError);
+      }
+      const extraDistance = Math.max(0, deliveryDistance - minDistance);
+      const distanceCommission = Math.round(extraDistance * commissionPerKm * 100) / 100;
       estimatedEarnings = {
-        basePayout: 10,
+        basePayout,
         distance: Math.round(deliveryDistance * 100) / 100,
-        commissionPerKm: 5,
-        distanceCommission: deliveryDistance > 4 ? Math.round(deliveryDistance * 5 * 100) / 100 : 0,
-        totalEarning: 10 + (deliveryDistance > 4 ? Math.round(deliveryDistance * 5 * 100) / 100 : 0),
+        commissionPerKm,
+        distanceCommission,
+        totalEarning: basePayout + distanceCommission,
         breakdown: {
-          basePayout: 10,
+          basePayout,
           distance: deliveryDistance,
-          commissionPerKm: 5,
-          distanceCommission: deliveryDistance > 4 ? deliveryDistance * 5 : 0,
-          minDistance: 4
+          commissionPerKm,
+          distanceCommission: extraDistance * commissionPerKm,
+          minDistance
         }
       };
     }

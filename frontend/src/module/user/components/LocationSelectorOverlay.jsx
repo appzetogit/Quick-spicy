@@ -68,6 +68,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const locationUpdateTimeoutRef = useRef(null) // Timeout for location updates
   const [currentAddress, setCurrentAddress] = useState("")
   const [GOOGLE_MAPS_API_KEY, setGOOGLE_MAPS_API_KEY] = useState(null)
+  const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING === "true"
   const getAddressId = (address) => address?.id || address?._id || null
 
   // Load Google Maps API key from backend
@@ -398,8 +399,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       try {
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
-          version: "weekly",
-          libraries: ["places", "geocoding"]
+          version: "weekly"
         })
 
         const google = await loader.load()
@@ -1527,7 +1527,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         let pointOfInterest = ""
         let premise = ""
 
-        if (GOOGLE_MAPS_API_KEY) {
+        if (GOOGLE_MAPS_API_KEY && ENABLE_GOOGLE_GEOCODING) {
           try {
             // Step 1: Use Google Geocoding API for address components
             // Get API key dynamically from backend

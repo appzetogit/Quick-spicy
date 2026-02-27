@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Eye, Settings, ArrowUpDown, Loader2, X, MapPin, Phone, Mail, Clock, Star, Building2, User, FileText, CreditCard, Calendar, Image as ImageIcon, ExternalLink, ShieldX, AlertTriangle, Trash2, Plus } from "lucide-react"
-import { adminAPI, restaurantAPI, locationAPI } from "../../../../lib/api"
+import { adminAPI, restaurantAPI, locationAPI, uploadAPI } from "../../../../lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportRestaurantsToPDF } from "../../components/restaurants/restaurantsExportUtils"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
@@ -25,6 +25,24 @@ export default function RestaurantsList() {
   const [deleteConfirmDialog, setDeleteConfirmDialog] = useState(null) // { restaurant }
   const [deleting, setDeleting] = useState(false)
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" })
+  const [isEditingDetails, setIsEditingDetails] = useState(false)
+  const [savingDetails, setSavingDetails] = useState(false)
+  const [detailsForm, setDetailsForm] = useState({
+    name: "",
+    ownerName: "",
+    ownerEmail: "",
+    ownerPhone: "",
+    primaryContactNumber: "",
+    email: "",
+    cuisinesText: "",
+    estimatedDeliveryTime: "",
+    offer: "",
+    openingTime: "",
+    closingTime: "",
+    isActive: true,
+  })
+  const [profileImageFile, setProfileImageFile] = useState(null)
+  const [profileImagePreview, setProfileImagePreview] = useState("")
   const [isEditingLocation, setIsEditingLocation] = useState(false)
   const [savingLocation, setSavingLocation] = useState(false)
   const [resolvingAddress, setResolvingAddress] = useState(false)
@@ -484,6 +502,10 @@ export default function RestaurantsList() {
 
   // Handle view restaurant details
   const handleViewDetails = async (restaurant) => {
+    setIsEditingDetails(false)
+    setProfileImageFile(null)
+    setProfileImagePreview("")
+    setIsEditingLocation(false)
     setSelectedRestaurant(restaurant)
     setLoadingDetails(true)
     setRestaurantDetails(null)
@@ -648,7 +670,143 @@ export default function RestaurantsList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditingLocation, selectedRestaurant, restaurantDetails?._id])
 
+  const getDetailsEditSource = () => {
+    return restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant || null
+  }
+
+  const buildDetailsFormFromRestaurant = (restaurant) => {
+    if (!restaurant) {
+      return {
+        name: "",
+        ownerName: "",
+        ownerEmail: "",
+        ownerPhone: "",
+        primaryContactNumber: "",
+        email: "",
+        cuisinesText: "",
+        estimatedDeliveryTime: "",
+        offer: "",
+        openingTime: "",
+        closingTime: "",
+        isActive: true,
+      }
+    }
+
+    return {
+      name: restaurant.name || "",
+      ownerName: restaurant.ownerName || "",
+      ownerEmail: restaurant.ownerEmail || "",
+      ownerPhone: restaurant.ownerPhone || "",
+      primaryContactNumber: restaurant.primaryContactNumber || "",
+      email: restaurant.email || "",
+      cuisinesText: Array.isArray(restaurant.cuisines) ? restaurant.cuisines.join(", ") : "",
+      estimatedDeliveryTime: restaurant.estimatedDeliveryTime || "",
+      offer: restaurant.offer || "",
+      openingTime: restaurant.deliveryTimings?.openingTime || "",
+      closingTime: restaurant.deliveryTimings?.closingTime || "",
+      isActive: restaurant.isActive !== false,
+    }
+  }
+
+  const handleStartEditDetails = () => {
+    const source = getDetailsEditSource()
+    setDetailsForm(buildDetailsFormFromRestaurant(source))
+    setProfileImageFile(null)
+    setProfileImagePreview(source?.profileImage?.url || source?.logo || "")
+    setIsEditingLocation(false)
+    setIsEditingDetails(true)
+  }
+
+  const handleCancelEditDetails = () => {
+    setIsEditingDetails(false)
+    setProfileImageFile(null)
+    setProfileImagePreview("")
+  }
+
+  const handleSaveDetails = async () => {
+    if (!selectedRestaurant) return
+    const restaurantId = selectedRestaurant._id || selectedRestaurant.id
+
+    try {
+      setSavingDetails(true)
+
+      let profileImage = undefined
+      if (profileImageFile) {
+        const uploadRes = await uploadAPI.uploadMedia(profileImageFile, {
+          folder: "appzeto/restaurant/profile",
+        })
+        const media = uploadRes?.data?.data?.file || uploadRes?.data?.data || uploadRes?.data?.file
+        if (media?.url) {
+          profileImage = { url: media.url, publicId: media.publicId || media.public_id }
+        }
+      }
+
+      const payload = {
+        name: detailsForm.name.trim(),
+        ownerName: detailsForm.ownerName.trim(),
+        ownerEmail: detailsForm.ownerEmail.trim(),
+        ownerPhone: detailsForm.ownerPhone.trim(),
+        primaryContactNumber: detailsForm.primaryContactNumber.trim(),
+        email: detailsForm.email.trim(),
+        cuisines: detailsForm.cuisinesText
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean),
+        estimatedDeliveryTime: detailsForm.estimatedDeliveryTime.trim(),
+        offer: detailsForm.offer.trim(),
+        openingTime: detailsForm.openingTime.trim(),
+        closingTime: detailsForm.closingTime.trim(),
+        isActive: detailsForm.isActive,
+      }
+
+      if (profileImage) {
+        payload.profileImage = profileImage
+      }
+
+      const response = await adminAPI.updateRestaurant(restaurantId, payload)
+      const updatedRestaurant = response?.data?.data?.restaurant
+
+      if (updatedRestaurant) {
+        setRestaurantDetails(updatedRestaurant)
+        setRestaurants((prev) =>
+          prev.map((item) =>
+            (item._id === restaurantId || item.id === restaurantId)
+              ? {
+                ...item,
+                name: updatedRestaurant.name || item.name,
+                ownerName: updatedRestaurant.ownerName || item.ownerName,
+                ownerPhone: updatedRestaurant.ownerPhone || updatedRestaurant.phone || item.ownerPhone,
+                cuisine: Array.isArray(updatedRestaurant.cuisines) && updatedRestaurant.cuisines.length > 0
+                  ? updatedRestaurant.cuisines[0]
+                  : item.cuisine,
+                zone: updatedRestaurant.location?.area || updatedRestaurant.location?.city || item.zone,
+                status: updatedRestaurant.isActive !== false,
+                logo: updatedRestaurant.profileImage?.url || item.logo,
+                originalData: {
+                  ...(item.originalData || {}),
+                  ...updatedRestaurant,
+                },
+              }
+              : item,
+          ),
+        )
+      }
+
+      setIsEditingDetails(false)
+      setProfileImageFile(null)
+      alert("Restaurant details updated successfully")
+    } catch (err) {
+      console.error("Error updating restaurant details:", err)
+      alert(err?.response?.data?.message || "Failed to update restaurant details")
+    } finally {
+      setSavingDetails(false)
+    }
+  }
+
   const closeDetailsModal = () => {
+    setIsEditingDetails(false)
+    setProfileImageFile(null)
+    setProfileImagePreview("")
     setIsEditingLocation(false)
     setMapError("")
     setSelectedRestaurant(null)
@@ -1068,12 +1226,40 @@ export default function RestaurantsList() {
                 <h2 className="text-2xl font-bold text-slate-900">Restaurant Details</h2>
                 <p className="text-sm text-slate-500 mt-1">Detailed overview and information</p>
               </div>
-              <button
-                onClick={closeDetailsModal}
-                className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all duration-200 bg-slate-50"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {!isEditingDetails ? (
+                  <button
+                    onClick={handleStartEditDetails}
+                    className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+                  >
+                    Edit Details
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleCancelEditDetails}
+                      disabled={savingDetails}
+                      className="px-3 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium transition-colors disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveDetails}
+                      disabled={savingDetails}
+                      className="px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {savingDetails && <Loader2 className="w-4 h-4 animate-spin" />}
+                      {savingDetails ? "Saving..." : "Save Changes"}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={closeDetailsModal}
+                  className="p-2.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all duration-200 bg-slate-50"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Content - Scrollable area */}
@@ -1087,7 +1273,97 @@ export default function RestaurantsList() {
                   <span className="mt-4 text-slate-500 font-medium tracking-wide">Fetching restaurant data...</span>
                 </div>
               )}
-              {!loadingDetails && (restaurantDetails || selectedRestaurant) && (
+              {!loadingDetails && isEditingDetails && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <p className="text-xs text-slate-500 mb-2">Profile Image</p>
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                          {profileImagePreview ? (
+                            <img src={profileImagePreview} alt="Profile preview" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400">
+                              <ImageIcon className="w-6 h-6" />
+                            </div>
+                          )}
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0]
+                            setProfileImageFile(file || null)
+                            if (file) {
+                              const localUrl = URL.createObjectURL(file)
+                              setProfileImagePreview(localUrl)
+                            }
+                          }}
+                          className="block w-full text-sm text-slate-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Restaurant Name</label>
+                      <input type="text" value={detailsForm.name} onChange={(e) => setDetailsForm((prev) => ({ ...prev, name: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Restaurant Email</label>
+                      <input type="email" value={detailsForm.email} onChange={(e) => setDetailsForm((prev) => ({ ...prev, email: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Owner Name</label>
+                      <input type="text" value={detailsForm.ownerName} onChange={(e) => setDetailsForm((prev) => ({ ...prev, ownerName: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Owner Email</label>
+                      <input type="email" value={detailsForm.ownerEmail} onChange={(e) => setDetailsForm((prev) => ({ ...prev, ownerEmail: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Owner Phone</label>
+                      <input type="text" value={detailsForm.ownerPhone} onChange={(e) => setDetailsForm((prev) => ({ ...prev, ownerPhone: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Primary Contact</label>
+                      <input type="text" value={detailsForm.primaryContactNumber} onChange={(e) => setDetailsForm((prev) => ({ ...prev, primaryContactNumber: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs text-slate-500 mb-1">Cuisines (comma separated)</label>
+                      <input type="text" value={detailsForm.cuisinesText} onChange={(e) => setDetailsForm((prev) => ({ ...prev, cuisinesText: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Opening Time</label>
+                      <input type="text" value={detailsForm.openingTime} onChange={(e) => setDetailsForm((prev) => ({ ...prev, openingTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Closing Time</label>
+                      <input type="text" value={detailsForm.closingTime} onChange={(e) => setDetailsForm((prev) => ({ ...prev, closingTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Estimated Delivery Time</label>
+                      <input type="text" value={detailsForm.estimatedDeliveryTime} onChange={(e) => setDetailsForm((prev) => ({ ...prev, estimatedDeliveryTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Offer</label>
+                      <input type="text" value={detailsForm.offer} onChange={(e) => setDetailsForm((prev) => ({ ...prev, offer: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div className="md:col-span-2 flex items-center gap-3">
+                      <input
+                        id="restaurant-status-active"
+                        type="checkbox"
+                        checked={detailsForm.isActive}
+                        onChange={(e) => setDetailsForm((prev) => ({ ...prev, isActive: e.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                      />
+                      <label htmlFor="restaurant-status-active" className="text-sm text-slate-700">
+                        Restaurant is active
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!loadingDetails && !isEditingDetails && (restaurantDetails || selectedRestaurant) && (
                 <div className="space-y-10">
                   {/* Restaurant Basic Info */}
                   <div className="flex flex-col md:flex-row items-center md:items-start gap-8">

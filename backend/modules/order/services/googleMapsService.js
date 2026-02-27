@@ -9,6 +9,7 @@ class GoogleMapsService {
   constructor() {
     this.apiKey = null; // Will be loaded from database when needed
     this.baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
+    this.distanceMatrixEnabled = process.env.ENABLE_GOOGLE_DISTANCE_MATRIX === 'true';
   }
 
   /**
@@ -33,6 +34,10 @@ class GoogleMapsService {
    * @returns {Promise<Object>} - { distance (km), duration (minutes), trafficLevel }
    */
   async getTravelTime(origin, destination, mode = 'driving', trafficModel = 'best_guess') {
+    if (!this.distanceMatrixEnabled) {
+      return this.calculateHaversineDistance(origin, destination);
+    }
+
     const apiKey = await this.getApiKey();
     if (!apiKey) {
       // Fallback to haversine distance calculation if API key not available

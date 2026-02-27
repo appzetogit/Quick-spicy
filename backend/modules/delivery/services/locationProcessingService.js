@@ -29,6 +29,7 @@ const SNAP_TO_ROAD_THROTTLE_MS = 10000; // Only call snapToRoads every 10 second
 const SNAP_TO_ROAD_CACHE_DISTANCE_M = 50; // Cache snap results within 50 meters
 const DIRECTIONS_CACHE_TTL_MS = 300000; // Cache directions for 5 minutes
 const SNAP_TO_ROAD_ENABLED = false; // DISABLE by default - very expensive! Use only when needed
+const GOOGLE_DIRECTIONS_ENABLED = process.env.ENABLE_GOOGLE_DIRECTIONS === 'true';
 
 /**
  * Calculate distance between two points (Haversine formula) - helper for cache
@@ -189,6 +190,20 @@ export async function snapToRoad(points, riderId = null) {
  */
 export async function generateRoutePolyline(start, waypoint, end) {
   try {
+    if (!GOOGLE_DIRECTIONS_ENABLED) {
+      const points = waypoint ? [start, waypoint, end] : [start, end];
+      let totalDistance = 0;
+      for (let i = 1; i < points.length; i++) {
+        totalDistance += calculateDistance(points[i - 1], points[i]);
+      }
+      return {
+        points,
+        totalDistance,
+        polyline: null,
+        duration: Math.round((totalDistance / 1000 / 25) * 3600)
+      };
+    }
+
     const apiKey = await getGoogleMapsApiKey();
     if (!apiKey) {
       console.warn('⚠️ Google Maps API key not found, cannot generate route');

@@ -1,4 +1,4 @@
-import { getFirebaseRealtimeDb } from '../../../config/firebaseRealtime.js';
+import { getFirebaseRealtimeDbSafe } from '../../../config/firebaseRealtime.js';
 
 const DELIVERY_BOYS_NODE = 'delivery_boys';
 const ACTIVE_ORDERS_NODE = 'active_orders';
@@ -60,7 +60,7 @@ export async function syncDeliveryPartnerPresence({
   activeOrderId = null
 }) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db || !deliveryId) return false;
 
     const safeDeliveryId = sanitizeFirebaseKey(deliveryId);
@@ -95,7 +95,7 @@ export async function upsertActiveOrderTracking({
   duration = null
 }) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
@@ -135,7 +135,7 @@ export async function upsertActiveOrderTracking({
 
 export async function updateActiveOrderLocation(orderId, locationPayload, options = {}) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
@@ -164,7 +164,7 @@ export async function updateActiveOrderLocation(orderId, locationPayload, option
 
 export async function getActiveOrderTracking(orderId) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db || !orderId) return null;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
@@ -181,7 +181,7 @@ export async function getActiveOrderTracking(orderId) {
 
 export async function removeActiveOrderTracking(orderId) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db || !orderId) return false;
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
@@ -211,7 +211,7 @@ export async function findNearestOnlineDeliveryBoys({
   limit = 5
 }) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db) return [];
 
     const lat = toNumberOrNull(restaurantLat);
@@ -248,7 +248,7 @@ export async function pruneStaleActiveOrders({
   maxRemovals = 1000
 } = {}) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db) return { removed: 0 };
 
     const now = Date.now();
@@ -294,7 +294,7 @@ export async function markOfflineStaleDeliveryBoys({
   staleMinutes = DEFAULT_DELIVERY_STALE_MINUTES
 } = {}) {
   try {
-    const db = getFirebaseRealtimeDb();
+    const db = await getFirebaseRealtimeDbSafe();
     if (!db) return { markedOffline: 0 };
 
     const staleBefore = Date.now() - (staleMinutes * 60 * 1000);
@@ -330,3 +330,4 @@ export async function markOfflineStaleDeliveryBoys({
     return { markedOffline: 0 };
   }
 }
+

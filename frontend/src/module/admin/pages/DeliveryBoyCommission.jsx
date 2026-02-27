@@ -18,7 +18,6 @@ export default function DeliveryBoyCommission() {
   const [formData, setFormData] = useState({
     name: "",
     minDistance: "",
-    maxDistance: "",
     commissionPerKm: "",
     basePayout: "",
   })
@@ -53,8 +52,9 @@ export default function DeliveryBoyCommission() {
     if (distance < commission.minDistance) return 0
     if (commission.maxDistance !== null && distance > commission.maxDistance) return 0
     
-    // Calculate commission: base payout + (distance × commission per km)
-    const distanceCommission = distance * commission.commissionPerKm
+    // Calculate commission: base payout + (extra distance beyond minDistance × commission per km)
+    const extraDistance = Math.max(0, distance - commission.minDistance)
+    const distanceCommission = extraDistance * commission.commissionPerKm
     return commission.basePayout + distanceCommission
   }
 
@@ -147,7 +147,7 @@ export default function DeliveryBoyCommission() {
 
   const handleAdd = () => {
     setSelectedCommission(null)
-    setFormData({ name: "", minDistance: "", maxDistance: "", commissionPerKm: "", basePayout: "" })
+    setFormData({ name: "", minDistance: "", commissionPerKm: "", basePayout: "" })
     setFormErrors({})
     setIsAddEditOpen(true)
   }
@@ -156,8 +156,7 @@ export default function DeliveryBoyCommission() {
     setSelectedCommission(commission)
     setFormData({
       name: commission.name,
-      minDistance: commission.minDistance.toString(),
-      maxDistance: commission.maxDistance === null ? "" : commission.maxDistance.toString(),
+      minDistance: commission.minDistance?.toString?.() ?? "",
       commissionPerKm: commission.commissionPerKm.toString(),
       basePayout: commission.basePayout.toString(),
     })
@@ -198,12 +197,8 @@ export default function DeliveryBoyCommission() {
 
   const validateForm = () => {
     const errors = {}
-    if (!formData.name.trim()) errors.name = "Name is required"
     if (!formData.minDistance.trim() || parseFloat(formData.minDistance) < 0) {
       errors.minDistance = "Minimum distance must be 0 or greater"
-    }
-    if (formData.maxDistance.trim() && parseFloat(formData.maxDistance) <= parseFloat(formData.minDistance || 0)) {
-      errors.maxDistance = "Maximum distance must be greater than minimum distance"
     }
     if (!formData.commissionPerKm.trim() || parseFloat(formData.commissionPerKm) < 0) {
       errors.commissionPerKm = "Commission per km must be 0 or greater"
@@ -221,10 +216,11 @@ export default function DeliveryBoyCommission() {
     
     try {
       setSaving(true)
+      const minDistance = parseFloat(formData.minDistance)
       const commissionData = {
-        name: formData.name.trim(),
-        minDistance: parseFloat(formData.minDistance),
-        maxDistance: formData.maxDistance.trim() ? parseFloat(formData.maxDistance) : null,
+        name: formData.name.trim() || `Base (0-${minDistance} km)`,
+        minDistance,
+        maxDistance: null,
         commissionPerKm: parseFloat(formData.commissionPerKm),
         basePayout: parseFloat(formData.basePayout),
         status: selectedCommission ? selectedCommission.status : true,
@@ -281,7 +277,7 @@ export default function DeliveryBoyCommission() {
       }
       
       setIsAddEditOpen(false)
-      setFormData({ name: "", minDistance: "", maxDistance: "", commissionPerKm: "", basePayout: "" })
+      setFormData({ name: "", minDistance: "", commissionPerKm: "", basePayout: "" })
       setSelectedCommission(null)
     } catch (error) {
       console.error('Error saving commission rule:', error)
@@ -384,6 +380,11 @@ export default function DeliveryBoyCommission() {
     actions: "Actions",
   }
 
+  const configuredMinDistance = Number(
+    formData.minDistance !== "" ? formData.minDistance : selectedCommission?.minDistance
+  )
+  const formulaMinDistance = Number.isFinite(configuredMinDistance) ? configuredMinDistance : 0
+
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -420,10 +421,10 @@ export default function DeliveryBoyCommission() {
             <div className="flex items-start gap-3">
               <MapPin className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-slate-700">
-                <p className="font-semibold text-blue-900 mb-1">Distance-Based Commission System</p>
+                <p className="font-semibold text-blue-900 mb-1">Fixed + Extra Distance Commission</p>
                 <p className="text-slate-600">
-                  Commission is calculated as: <strong>Base Payout + (Distance × Commission Per Km)</strong>. 
-                  Each rule applies to a specific distance range. For orders outside any range, the nearest applicable rule will be used.
+                  Commission is calculated as: <strong>Base payout for 0-{formulaMinDistance} km + Extra per km after {formulaMinDistance} km</strong>.
+                  Example: if base is ₹25 and extra is ₹5/km, then 6 km earns ₹25 + (2 × ₹5) = ₹35.
                 </p>
               </div>
             </div>
@@ -585,7 +586,7 @@ export default function DeliveryBoyCommission() {
           <div className="px-6 pb-6 space-y-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Name <span className="text-red-500">*</span>
+                Rule Name
               </label>
               <input
                 type="text"
@@ -594,47 +595,33 @@ export default function DeliveryBoyCommission() {
                 className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                   formErrors.name ? "border-red-500" : "border-slate-300"
                 }`}
-                placeholder="e.g., Short Distance (0-2 km)"
+                placeholder={`e.g., Base (0-${formulaMinDistance} km)`}
               />
               {formErrors.name && <p className="text-xs text-red-500 mt-1">{formErrors.name}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Minimum Distance (km) <span className="text-red-500">*</span>
+                Minimum Distance Slab (km) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
-                step="0.1"
+                step="0.01"
                 min="0"
                 value={formData.minDistance}
                 onChange={(e) => setFormData({ ...formData, minDistance: e.target.value })}
                 className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                   formErrors.minDistance ? "border-red-500" : "border-slate-300"
                 }`}
-                placeholder="e.g., 0"
+                placeholder="e.g., 4"
               />
               {formErrors.minDistance && <p className="text-xs text-red-500 mt-1">{formErrors.minDistance}</p>}
             </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Maximum Distance (km) <span className="text-slate-500 text-xs">(Leave empty for unlimited)</span>
-              </label>
-              <input
-                type="number"
-                step="0.1"
-                min="0"
-                value={formData.maxDistance}
-                onChange={(e) => setFormData({ ...formData, maxDistance: e.target.value })}
-                className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
-                  formErrors.maxDistance ? "border-red-500" : "border-slate-300"
-                }`}
-                placeholder="e.g., 2 (or leave empty)"
-              />
-              {formErrors.maxDistance && <p className="text-xs text-red-500 mt-1">{formErrors.maxDistance}</p>}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              Fixed distance slab: <strong>0-{formulaMinDistance} km</strong>
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Commission Per Kilometer (₹) <span className="text-red-500">*</span>
+                Extra Per Kilometer after {formulaMinDistance} km (₹) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -645,13 +632,13 @@ export default function DeliveryBoyCommission() {
                 className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                   formErrors.commissionPerKm ? "border-red-500" : "border-slate-300"
                 }`}
-                placeholder="e.g., 15"
+                placeholder="e.g., 5"
               />
               {formErrors.commissionPerKm && <p className="text-xs text-red-500 mt-1">{formErrors.commissionPerKm}</p>}
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Base Payout (₹) <span className="text-red-500">*</span>
+                Fixed Payout for 0-{formulaMinDistance} km (₹) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -662,11 +649,11 @@ export default function DeliveryBoyCommission() {
                 className={`w-full px-4 py-2.5 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm ${
                   formErrors.basePayout ? "border-red-500" : "border-slate-300"
                 }`}
-                placeholder="e.g., 20"
+                placeholder="e.g., 25"
               />
               {formErrors.basePayout && <p className="text-xs text-red-500 mt-1">{formErrors.basePayout}</p>}
               <p className="text-xs text-slate-500 mt-1">
-                Base payout is given regardless of distance, plus commission per km
+                Formula: Base payout + (max(0, distance - {formulaMinDistance}) × extra per km)
               </p>
             </div>
           </div>

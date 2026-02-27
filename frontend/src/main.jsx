@@ -4,7 +4,6 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.jsx'
-import { getGoogleMapsApiKey } from './lib/utils/googleMapsApiKey.js'
 import { loadBusinessSettings } from './lib/utils/businessSettings.js'
 
 // Load business settings on app start (favicon, title)
@@ -13,69 +12,6 @@ loadBusinessSettings().catch(() => {
   // Silently fail - settings will load when admin is authenticated
 })
 
-// Global flag to track Google Maps loading state
-window.__googleMapsLoading = window.__googleMapsLoading || false;
-window.__googleMapsLoaded = window.__googleMapsLoaded || false;
-
-// Load Google Maps API dynamically from backend database
-// Only load if not already loaded to prevent multiple loads
-(async () => {
-  // Check if Google Maps is already loaded
-  if (window.google && window.google.maps) {
-    console.log('✅ Google Maps already loaded');
-    window.__googleMapsLoaded = true;
-    return;
-  }
-  
-  // Check if script is already being loaded
-  const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
-  if (existingScript) {
-    console.log('✅ Google Maps script already exists, waiting for it to load...');
-    window.__googleMapsLoading = true;
-    
-    // Wait for script to load
-    existingScript.addEventListener('load', () => {
-      window.__googleMapsLoaded = true;
-      window.__googleMapsLoading = false;
-    });
-    return;
-  }
-  
-  // Check if Loader is already loading
-  if (window.__googleMapsLoading) {
-    console.log('✅ Google Maps is already being loaded, waiting...');
-    return;
-  }
-  
-  window.__googleMapsLoading = true;
-  
-  try {
-    const googleMapsApiKey = await getGoogleMapsApiKey()
-    if (googleMapsApiKey) {
-      const script = document.createElement('script')
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places,geometry,drawing`
-      script.async = true
-      script.defer = true
-      script.onload = () => {
-        console.log('✅ Google Maps API loaded via script tag');
-        window.__googleMapsLoaded = true;
-        window.__googleMapsLoading = false;
-      }
-      script.onerror = () => {
-        console.error('❌ Failed to load Google Maps API script');
-        window.__googleMapsLoading = false;
-      }
-      document.head.appendChild(script)
-    } else {
-      window.__googleMapsLoading = false;
-    }
-  } catch (error) {
-    console.warn('Failed to load Google Maps API key:', error.message)
-    window.__googleMapsLoading = false;
-    // No fallback - Google Maps will not load if key is not in database
-    console.warn('⚠️ Google Maps API key not available. Please set it in Admin → System → Environment Variables');
-  }
-})()
 
 // Apply theme on app initialization
 const savedTheme = localStorage.getItem('appTheme') || 'light'

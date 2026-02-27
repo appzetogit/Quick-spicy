@@ -1296,6 +1296,329 @@ export const updateRestaurantStatus = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Update Restaurant Details (Admin)
+ * PUT /api/admin/restaurants/:id
+ */
+export const updateRestaurant = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse(res, 400, "Invalid restaurant ID");
+    }
+
+    const restaurant = await Restaurant.findById(id);
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    const payload = req.body || {};
+    let cloudinaryInitialized = false;
+
+    const ensureCloudinary = async () => {
+      if (!cloudinaryInitialized) {
+        await initializeCloudinary();
+        cloudinaryInitialized = true;
+      }
+    };
+
+    const resolveImageInput = async (value, folder) => {
+      if (!value) return null;
+
+      if (typeof value === "string") {
+        if (value.startsWith("data:")) {
+          await ensureCloudinary();
+          const base64Data = value.replace(/^data:image\/\w+;base64,/, "");
+          const buffer = Buffer.from(base64Data, "base64");
+          const result = await uploadToCloudinary(buffer, {
+            folder,
+            resource_type: "image",
+          });
+          return {
+            url: result.secure_url,
+            publicId: result.public_id,
+          };
+        }
+
+        if (value.startsWith("http")) {
+          return { url: value };
+        }
+
+        return null;
+      }
+
+      if (typeof value === "object" && value.url) {
+        return {
+          url: value.url,
+          ...(value.publicId ? { publicId: value.publicId } : {}),
+        };
+      }
+
+      return null;
+    };
+
+    const ensureOnboarding = () => {
+      if (!restaurant.onboarding) restaurant.onboarding = {};
+      if (!restaurant.onboarding.step1) restaurant.onboarding.step1 = {};
+      if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+      if (!restaurant.onboarding.step4) restaurant.onboarding.step4 = {};
+    };
+
+    // Restaurant name
+    const previousName = restaurant.name;
+    const nextName = (payload.restaurantName ?? payload.name)?.trim();
+    if (nextName) {
+      restaurant.name = nextName;
+      ensureOnboarding();
+      restaurant.onboarding.step1.restaurantName = nextName;
+
+      if (nextName !== previousName) {
+        let baseSlug = nextName
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+
+        if (!baseSlug) {
+          baseSlug = `restaurant-${restaurant._id}`;
+        }
+
+        let slug = baseSlug;
+        let slugExists = await Restaurant.findOne({
+          slug,
+          _id: { $ne: restaurant._id },
+        });
+
+        let counter = 1;
+        while (slugExists) {
+          slug = `${baseSlug}-${counter}`;
+          slugExists = await Restaurant.findOne({
+            slug,
+            _id: { $ne: restaurant._id },
+          });
+          counter += 1;
+        }
+
+        restaurant.slug = slug;
+      }
+    }
+
+    // Owner fields
+    if (payload.ownerName !== undefined) {
+      const value = String(payload.ownerName || "").trim();
+      restaurant.ownerName = value || restaurant.ownerName;
+      ensureOnboarding();
+      restaurant.onboarding.step1.ownerName = restaurant.ownerName;
+    }
+
+    if (payload.ownerEmail !== undefined) {
+      const value = String(payload.ownerEmail || "").trim().toLowerCase();
+      restaurant.ownerEmail = value;
+      ensureOnboarding();
+      restaurant.onboarding.step1.ownerEmail = value;
+    }
+
+    if (payload.ownerPhone !== undefined) {
+      const normalized = payload.ownerPhone
+        ? normalizePhoneNumber(payload.ownerPhone)
+        : "";
+      if (payload.ownerPhone && !normalized) {
+        return errorResponse(res, 400, "Invalid owner phone number format");
+      }
+      restaurant.ownerPhone = normalized || "";
+      ensureOnboarding();
+      restaurant.onboarding.step1.ownerPhone = restaurant.ownerPhone;
+    }
+
+    if (payload.primaryContactNumber !== undefined) {
+      const normalized = payload.primaryContactNumber
+        ? normalizePhoneNumber(payload.primaryContactNumber)
+        : "";
+      if (payload.primaryContactNumber && !normalized) {
+        return errorResponse(
+          res,
+          400,
+          "Invalid primary contact number format",
+        );
+      }
+      restaurant.primaryContactNumber = normalized || "";
+      ensureOnboarding();
+      restaurant.onboarding.step1.primaryContactNumber =
+        restaurant.primaryContactNumber;
+    }
+
+    // Login email / phone
+    if (payload.email !== undefined) {
+      restaurant.email = payload.email
+        ? String(payload.email).trim().toLowerCase()
+        : undefined;
+    }
+
+    if (payload.phone !== undefined) {
+      const normalized = payload.phone ? normalizePhoneNumber(payload.phone) : "";
+      if (payload.phone && !normalized) {
+        return errorResponse(res, 400, "Invalid phone number format");
+      }
+      restaurant.phone = normalized || undefined;
+    }
+
+    // Cuisines
+    if (payload.cuisines !== undefined) {
+      const cuisinesArray = Array.isArray(payload.cuisines)
+        ? payload.cuisines
+        : String(payload.cuisines || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+
+      restaurant.cuisines = cuisinesArray;
+      ensureOnboarding();
+      restaurant.onboarding.step2.cuisines = cuisinesArray;
+    }
+
+    // Delivery timings
+    const openingTime = payload.openingTime ?? payload.deliveryTimings?.openingTime;
+    const closingTime = payload.closingTime ?? payload.deliveryTimings?.closingTime;
+    if (openingTime !== undefined || closingTime !== undefined) {
+      restaurant.deliveryTimings = {
+        ...(restaurant.deliveryTimings?.toObject?.() || {}),
+        ...(openingTime !== undefined ? { openingTime } : {}),
+        ...(closingTime !== undefined ? { closingTime } : {}),
+      };
+      ensureOnboarding();
+      restaurant.onboarding.step2.deliveryTimings = {
+        ...(restaurant.onboarding.step2.deliveryTimings?.toObject?.() || {}),
+        ...(openingTime !== undefined ? { openingTime } : {}),
+        ...(closingTime !== undefined ? { closingTime } : {}),
+      };
+    }
+
+    if (payload.openDays !== undefined) {
+      const openDays = Array.isArray(payload.openDays)
+        ? payload.openDays
+        : String(payload.openDays || "")
+            .split(",")
+            .map((item) => item.trim())
+            .filter(Boolean);
+      restaurant.openDays = openDays;
+      ensureOnboarding();
+      restaurant.onboarding.step2.openDays = openDays;
+    }
+
+    // Display fields
+    if (payload.estimatedDeliveryTime !== undefined) {
+      restaurant.estimatedDeliveryTime = String(
+        payload.estimatedDeliveryTime || "",
+      ).trim();
+      ensureOnboarding();
+      restaurant.onboarding.step4.estimatedDeliveryTime =
+        restaurant.estimatedDeliveryTime;
+    }
+
+    if (payload.featuredDish !== undefined) {
+      restaurant.featuredDish = String(payload.featuredDish || "").trim();
+      ensureOnboarding();
+      restaurant.onboarding.step4.featuredDish = restaurant.featuredDish;
+    }
+
+    if (payload.featuredPrice !== undefined) {
+      const featuredPrice = Number(payload.featuredPrice);
+      if (Number.isFinite(featuredPrice)) {
+        restaurant.featuredPrice = featuredPrice;
+      }
+    }
+
+    if (payload.offer !== undefined) {
+      restaurant.offer = String(payload.offer || "").trim();
+      ensureOnboarding();
+      restaurant.onboarding.step4.offer = restaurant.offer;
+    }
+
+    // Profile image
+    if (payload.profileImage !== undefined) {
+      const imageData = await resolveImageInput(
+        payload.profileImage,
+        "appzeto/restaurant/profile",
+      );
+      if (imageData) {
+        restaurant.profileImage = imageData;
+        ensureOnboarding();
+        restaurant.onboarding.step2.profileImageUrl = imageData;
+      }
+    }
+
+    // Menu images
+    if (payload.menuImages !== undefined && Array.isArray(payload.menuImages)) {
+      const menuImages = [];
+      for (const img of payload.menuImages) {
+        const imageData = await resolveImageInput(img, "appzeto/restaurant/menu");
+        if (imageData) {
+          menuImages.push(imageData);
+        }
+      }
+      restaurant.menuImages = menuImages;
+      ensureOnboarding();
+      restaurant.onboarding.step2.menuImageUrls = menuImages;
+    }
+
+    // Status flags
+    if (typeof payload.isActive === "boolean") {
+      restaurant.isActive = payload.isActive;
+    }
+    if (typeof payload.isAcceptingOrders === "boolean") {
+      restaurant.isAcceptingOrders = payload.isAcceptingOrders;
+    }
+
+    // Optional full location update inside generic endpoint
+    if (payload.location && typeof payload.location === "object") {
+      const location = payload.location;
+      const latitude = Number(location.latitude);
+      const longitude = Number(location.longitude);
+      const hasValidLatLng =
+        Number.isFinite(latitude) &&
+        Number.isFinite(longitude) &&
+        latitude >= -90 &&
+        latitude <= 90 &&
+        longitude >= -180 &&
+        longitude <= 180;
+
+      const nextLocation = {
+        ...(restaurant.location?.toObject?.() || {}),
+        ...location,
+        ...(hasValidLatLng
+          ? {
+              latitude,
+              longitude,
+              coordinates: [longitude, latitude],
+            }
+          : {}),
+      };
+
+      restaurant.location = nextLocation;
+      ensureOnboarding();
+      restaurant.onboarding.step1.location = {
+        ...(restaurant.onboarding.step1.location?.toObject?.() || {}),
+        ...nextLocation,
+      };
+    }
+
+    await restaurant.save();
+
+    logger.info(`Restaurant details updated: ${id}`, {
+      updatedBy: req.user._id,
+    });
+
+    return successResponse(res, 200, "Restaurant updated successfully", {
+      restaurant,
+    });
+  } catch (error) {
+    logger.error(`Error updating restaurant: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to update restaurant");
+  }
+});
+
+/**
  * Update Restaurant Location
  * PUT /api/admin/restaurants/:id/location
  */
