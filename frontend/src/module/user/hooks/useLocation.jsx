@@ -13,6 +13,21 @@ export function useLocation() {
   const lastGeocodeAtRef = useRef(0)
   const lastGeocodedCoordsRef = useRef({ latitude: null, longitude: null })
   const lastResolvedAddressRef = useRef(null)
+  const geocodeCacheRef = useRef(new Map())
+  const googleMapsApiKeyRef = useRef(null)
+  const googleMapsApiKeyFetchedAtRef = useRef(0)
+  const lastDbLocationFetchAtRef = useRef(0)
+  const lastDbLocationRef = useRef(null)
+  const lastDbUpdateAtRef = useRef(0)
+  const lastDbUpdatedCoordsRef = useRef({ latitude: null, longitude: null })
+
+  const GEOCODE_REUSE_DISTANCE_METERS = 120
+  const GEOCODE_REUSE_TIME_MS = 10 * 60 * 1000
+  const GEOCODE_CACHE_TTL_MS = 15 * 60 * 1000
+  const GOOGLE_KEY_CACHE_TTL_MS = 60 * 60 * 1000
+  const DB_LOCATION_FETCH_TTL_MS = 2 * 60 * 1000
+  const DB_UPDATE_MIN_DISTANCE_METERS = 30
+  const DB_UPDATE_MIN_INTERVAL_MS = 90 * 1000
 
   const getDistanceMeters = (lat1, lng1, lat2, lng2) => {
     if (
@@ -26,6 +41,42 @@ export function useLocation() {
     const latDiff = lat2 - lat1
     const lngDiff = lng2 - lng1
     return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111320
+  }
+
+  const getGeocodeCacheKey = (latitude, longitude) =>
+    `${Number(latitude).toFixed(4)},${Number(longitude).toFixed(4)}`
+
+  const getCachedGeocode = (latitude, longitude) => {
+    const key = getGeocodeCacheKey(latitude, longitude)
+    const cached = geocodeCacheRef.current.get(key)
+    if (!cached) return null
+    if (Date.now() - cached.savedAt > GEOCODE_CACHE_TTL_MS) {
+      geocodeCacheRef.current.delete(key)
+      return null
+    }
+    return cached.value
+  }
+
+  const setCachedGeocode = (latitude, longitude, value) => {
+    const key = getGeocodeCacheKey(latitude, longitude)
+    geocodeCacheRef.current.set(key, { value, savedAt: Date.now() })
+    if (geocodeCacheRef.current.size > 50) {
+      const oldestKey = geocodeCacheRef.current.keys().next().value
+      geocodeCacheRef.current.delete(oldestKey)
+    }
+  }
+
+  const getGoogleMapsApiKeyCached = async () => {
+    const keyAgeMs = Date.now() - googleMapsApiKeyFetchedAtRef.current
+    if (googleMapsApiKeyRef.current && keyAgeMs < GOOGLE_KEY_CACHE_TTL_MS) {
+      return googleMapsApiKeyRef.current
+    }
+
+    const { getGoogleMapsApiKey } = await import("@/lib/utils/googleMapsApiKey.js")
+    const apiKey = await getGoogleMapsApiKey()
+    googleMapsApiKeyRef.current = apiKey || null
+    googleMapsApiKeyFetchedAtRef.current = Date.now()
+    return apiKey
   }
 
   /* ===================== DB UPDATE (LIVE LOCATION TRACKING) ===================== */
@@ -52,6 +103,24 @@ export function useLocation() {
       if (!userToken || userToken === 'null' || userToken === 'undefined') {
         // User not logged in - skip DB update, just use localStorage
         console.log("ℹ️ User not authenticated, skipping DB update (using localStorage only)")
+        return
+      }
+
+      const dbUpdateDistanceMeters = getDistanceMeters(
+        lastDbUpdatedCoordsRef.current.latitude,
+        lastDbUpdatedCoordsRef.current.longitude,
+        locationData.latitude,
+        locationData.longitude
+      )
+      const dbUpdateAgeMs = Date.now() - lastDbUpdateAtRef.current
+      const shouldSkipDbUpdate =
+        dbUpdateDistanceMeters < DB_UPDATE_MIN_DISTANCE_METERS &&
+        dbUpdateAgeMs < DB_UPDATE_MIN_INTERVAL_MS
+      if (shouldSkipDbUpdate) {
+        console.log("Skipping DB update (small movement + recent update):", {
+          dbUpdateDistanceMeters: dbUpdateDistanceMeters.toFixed(1),
+          dbUpdateAgeMs
+        })
         return
       }
 
@@ -89,6 +158,11 @@ export function useLocation() {
       })
 
       await userAPI.updateLocation(locationPayload)
+      lastDbUpdatedCoordsRef.current = {
+        latitude: locationPayload.latitude,
+        longitude: locationPayload.longitude
+      }
+      lastDbUpdateAtRef.current = Date.now()
 
       console.log("✅ Live location successfully stored in database")
     } catch (err) {
@@ -140,11 +214,17 @@ export function useLocation() {
   }
 
   /* ===================== GOOGLE MAPS REVERSE GEOCODE ===================== */
-  const reverseGeocodeWithGoogleMaps = async (latitude, longitude) => {
+  const reverseGeocodeWithGoogleMaps = async (latitude, longitude, options = {}) => {
+    const includePlaceDetails = options.includePlaceDetails === true
     try {
+      const cachedGeocode = getCachedGeocode(latitude, longitude)
+      if (cachedGeocode) {
+        console.log("Using cached reverse-geocode result")
+        return cachedGeocode
+      }
+
       // Get Google Maps API key from backend database
-      const { getGoogleMapsApiKey } = await import('@/lib/utils/googleMapsApiKey.js');
-      const GOOGLE_MAPS_API_KEY = await getGoogleMapsApiKey();
+      const GOOGLE_MAPS_API_KEY = await getGoogleMapsApiKeyCached();
 
       if (!GOOGLE_MAPS_API_KEY) {
         console.warn("⚠️ Google Maps API key not found, using fallback");
@@ -456,7 +536,7 @@ export function useLocation() {
       }
 
       // ===================== GOOGLE PLACES API - GET DETAILED PLACE INFORMATION =====================
-      // Use Places API to get comprehensive details (name, phone, website, rating, etc.)
+      // Cost control: only fetch place details on explicit high-detail requests.
       let placeDetails = null;
       let placeId = null;
       let placeName = "";
@@ -466,130 +546,129 @@ export function useLocation() {
       let placeOpeningHours = null;
       let placePhotos = [];
 
-      try {
-        // Get API key dynamically from backend
-        const { getGoogleMapsApiKey } = await import('@/lib/utils/googleMapsApiKey.js');
-        const apiKey = await getGoogleMapsApiKey();
-
-        if (!apiKey) {
-          console.warn("⚠️ Google Maps API key not found, skipping Places API");
-          return null;
-        }
-
-        // Step 1: Use Nearby Search to find the closest place
-        console.log("🔍 Using Google Places Nearby Search for detailed information...");
-        const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=50&key=${apiKey}&language=en`;
-
-        // Add timeout for Nearby Search
-        const nearbyController = new AbortController();
-        const nearbyTimeoutId = setTimeout(() => nearbyController.abort(), 15000); // 15 seconds
-
-        let nearbyResponse;
+      if (includePlaceDetails) {
         try {
-          const nearbyRes = await fetch(nearbySearchUrl, { signal: nearbyController.signal });
-          clearTimeout(nearbyTimeoutId);
-          if (!nearbyRes.ok) {
-            throw new Error(`HTTP error! status: ${nearbyRes.status}`);
-          }
-          nearbyResponse = await nearbyRes.json();
-        } catch (error) {
-          clearTimeout(nearbyTimeoutId);
-          if (error.name === 'AbortError') {
-            console.warn("⚠️ Google Places Nearby Search timeout, skipping Places API");
-            throw new Error("Google Places Nearby Search timeout");
-          }
-          throw error;
-        }
+          const apiKey = GOOGLE_MAPS_API_KEY
 
-        if (nearbyResponse.status === "OK" && nearbyResponse.results && nearbyResponse.results.length > 0) {
-          // Find the closest place (first result is usually the closest)
-          const closestPlace = nearbyResponse.results[0];
-          placeId = closestPlace.place_id;
-          placeName = closestPlace.name || "";
+          if (!apiKey) {
+            console.warn("⚠️ Google Maps API key not found, skipping Places API");
+          } else {
+            // Step 1: Use Nearby Search to find the closest place
+            console.log("🔍 Using Google Places Nearby Search for detailed information...");
+            const nearbySearchUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${latitude},${longitude}&radius=50&key=${apiKey}&language=en`;
 
-          console.log("✅ Found nearby place:", {
-            name: placeName,
-            placeId: placeId,
-            types: closestPlace.types,
-            vicinity: closestPlace.vicinity
-          });
+            // Add timeout for Nearby Search
+            const nearbyController = new AbortController();
+            const nearbyTimeoutId = setTimeout(() => nearbyController.abort(), 15000); // 15 seconds
 
-          // Step 2: Get detailed place information using Place Details API
-          if (placeId) {
-            console.log("🔍 Fetching detailed place information...");
-            const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,rating,opening_hours,photos,address_components,geometry,types&key=${apiKey}&language=en`;
-
-            // Add timeout for Place Details
-            const detailsController = new AbortController();
-            const detailsTimeoutId = setTimeout(() => detailsController.abort(), 15000); // 15 seconds
-
-            let detailsResponse;
+            let nearbyResponse;
             try {
-              const detailsRes = await fetch(placeDetailsUrl, { signal: detailsController.signal });
-              clearTimeout(detailsTimeoutId);
-              if (!detailsRes.ok) {
-                throw new Error(`HTTP error! status: ${detailsRes.status}`);
+              const nearbyRes = await fetch(nearbySearchUrl, { signal: nearbyController.signal });
+              clearTimeout(nearbyTimeoutId);
+              if (!nearbyRes.ok) {
+                throw new Error(`HTTP error! status: ${nearbyRes.status}`);
               }
-              detailsResponse = await detailsRes.json();
+              nearbyResponse = await nearbyRes.json();
             } catch (error) {
-              clearTimeout(detailsTimeoutId);
+              clearTimeout(nearbyTimeoutId);
               if (error.name === 'AbortError') {
-                console.warn("⚠️ Google Places Details timeout, using geocoding results only");
-                throw new Error("Google Places Details timeout");
+                console.warn("⚠️ Google Places Nearby Search timeout, skipping Places API");
+                throw new Error("Google Places Nearby Search timeout");
               }
               throw error;
             }
 
-            if (detailsResponse.status === "OK" && detailsResponse.result) {
-              placeDetails = detailsResponse.result;
-              placeName = placeDetails.name || placeName;
-              placePhone = placeDetails.formatted_phone_number || "";
-              placeWebsite = placeDetails.website || "";
-              placeRating = placeDetails.rating || null;
-              placeOpeningHours = placeDetails.opening_hours || null;
+            if (nearbyResponse.status === "OK" && nearbyResponse.results && nearbyResponse.results.length > 0) {
+              // Find the closest place (first result is usually the closest)
+              const closestPlace = nearbyResponse.results[0];
+              placeId = closestPlace.place_id;
+              placeName = closestPlace.name || "";
 
-              // Get photo references (first 3 photos)
-              if (placeDetails.photos && placeDetails.photos.length > 0) {
-                placePhotos = placeDetails.photos.slice(0, 3).map(photo => ({
-                  reference: photo.photo_reference,
-                  width: photo.width,
-                  height: photo.height,
-                  url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`
-                }));
-              }
-
-              console.log("✅✅✅ Google Places API - Complete Details:", {
+              console.log("✅ Found nearby place:", {
                 name: placeName,
-                phone: placePhone,
-                website: placeWebsite,
-                rating: placeRating,
-                hasOpeningHours: !!placeOpeningHours,
-                photosCount: placePhotos.length,
-                address: placeDetails.formatted_address
+                placeId: placeId,
+                types: closestPlace.types,
+                vicinity: closestPlace.vicinity
               });
 
-              // If Places API has better address components, use them
-              if (placeDetails.address_components && placeDetails.address_components.length > addressComponents.length) {
-                console.log("✅ Using address components from Places API (more detailed)");
-                // Merge Places API address components with geocoding results
-                const placesComponents = placeDetails.address_components;
-                // Update missing components from Places API
-                for (const comp of placesComponents) {
-                  const types = comp.types || [];
-                  if (types.includes("point_of_interest") && !pointOfInterest) {
-                    pointOfInterest = comp.long_name;
+              // Step 2: Get detailed place information using Place Details API
+              if (placeId) {
+                console.log("🔍 Fetching detailed place information...");
+                const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=name,formatted_address,formatted_phone_number,website,rating,opening_hours,photos,address_components,geometry,types&key=${apiKey}&language=en`;
+
+                // Add timeout for Place Details
+                const detailsController = new AbortController();
+                const detailsTimeoutId = setTimeout(() => detailsController.abort(), 15000); // 15 seconds
+
+                let detailsResponse;
+                try {
+                  const detailsRes = await fetch(placeDetailsUrl, { signal: detailsController.signal });
+                  clearTimeout(detailsTimeoutId);
+                  if (!detailsRes.ok) {
+                    throw new Error(`HTTP error! status: ${detailsRes.status}`);
                   }
-                  if (types.includes("premise") && !premise) {
-                    premise = comp.long_name;
+                  detailsResponse = await detailsRes.json();
+                } catch (error) {
+                  clearTimeout(detailsTimeoutId);
+                  if (error.name === 'AbortError') {
+                    console.warn("⚠️ Google Places Details timeout, using geocoding results only");
+                    throw new Error("Google Places Details timeout");
+                  }
+                  throw error;
+                }
+
+                if (detailsResponse.status === "OK" && detailsResponse.result) {
+                  placeDetails = detailsResponse.result;
+                  placeName = placeDetails.name || placeName;
+                  placePhone = placeDetails.formatted_phone_number || "";
+                  placeWebsite = placeDetails.website || "";
+                  placeRating = placeDetails.rating || null;
+                  placeOpeningHours = placeDetails.opening_hours || null;
+
+                  // Get photo references (first 3 photos)
+                  if (placeDetails.photos && placeDetails.photos.length > 0) {
+                    placePhotos = placeDetails.photos.slice(0, 3).map(photo => ({
+                      reference: photo.photo_reference,
+                      width: photo.width,
+                      height: photo.height,
+                      url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${apiKey}`
+                    }));
+                  }
+
+                  console.log("✅✅✅ Google Places API - Complete Details:", {
+                    name: placeName,
+                    phone: placePhone,
+                    website: placeWebsite,
+                    rating: placeRating,
+                    hasOpeningHours: !!placeOpeningHours,
+                    photosCount: placePhotos.length,
+                    address: placeDetails.formatted_address
+                  });
+
+                  // If Places API has better address components, use them
+                  if (placeDetails.address_components && placeDetails.address_components.length > addressComponents.length) {
+                    console.log("✅ Using address components from Places API (more detailed)");
+                    // Merge Places API address components with geocoding results
+                    const placesComponents = placeDetails.address_components;
+                    // Update missing components from Places API
+                    for (const comp of placesComponents) {
+                      const types = comp.types || [];
+                      if (types.includes("point_of_interest") && !pointOfInterest) {
+                        pointOfInterest = comp.long_name;
+                      }
+                      if (types.includes("premise") && !premise) {
+                        premise = comp.long_name;
+                      }
+                    }
                   }
                 }
               }
             }
           }
+        } catch (placesError) {
+          console.warn("⚠️ Google Places API error (non-critical):", placesError.message);
+          // Continue with geocoding results even if Places API fails
         }
-      } catch (placesError) {
-        console.warn("⚠️ Google Places API error (non-critical):", placesError.message);
-        // Continue with geocoding results even if Places API fails
       }
 
       // ZOMATO-STYLE: Extract exact building/cafe name (Mama Loca Cafe, Princess Center)
@@ -907,6 +986,7 @@ export function useLocation() {
           locationResult.formattedAddress.split(',').length >= 4
       });
 
+      setCachedGeocode(latitude, longitude, locationResult)
       return locationResult;
     } catch (error) {
       console.error("❌❌❌ Google Maps Reverse Geocode Error:", error);
@@ -1357,6 +1437,11 @@ export function useLocation() {
         return null
       }
 
+      const dbLocationAgeMs = Date.now() - lastDbLocationFetchAtRef.current
+      if (lastDbLocationRef.current && dbLocationAgeMs < DB_LOCATION_FETCH_TTL_MS) {
+        return lastDbLocationRef.current
+      }
+
       const res = await userAPI.getLocation()
       const loc = res?.data?.data?.location
       if (loc?.latitude && loc?.longitude) {
@@ -1366,7 +1451,7 @@ export function useLocation() {
         if (!isInIndiaRange || loc.longitude < 0) {
           // Coordinates are outside India - return placeholder
           console.warn("⚠️ Coordinates from DB are outside India range:", { latitude: loc.latitude, longitude: loc.longitude })
-          return {
+          const outOfRangeLocation = {
             latitude: loc.latitude,
             longitude: loc.longitude,
             city: "Current Location",
@@ -1376,18 +1461,46 @@ export function useLocation() {
             address: "Select location",
             formattedAddress: "Select location",
           }
+          lastDbLocationRef.current = outOfRangeLocation
+          lastDbLocationFetchAtRef.current = Date.now()
+          return outOfRangeLocation
+        }
+
+        const hasUsableStoredAddress =
+          (loc.formattedAddress && loc.formattedAddress !== "Select location") ||
+          (loc.address && loc.address !== "Select location") ||
+          (loc.city && loc.city !== "Current Location")
+
+        if (hasUsableStoredAddress) {
+          const storedLocation = {
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            city: loc.city || "Current Location",
+            area: loc.area || "",
+            state: loc.state || "",
+            country: loc.country || "",
+            address: loc.address || loc.formattedAddress || "Select location",
+            formattedAddress: loc.formattedAddress || loc.address || "Select location"
+          }
+          lastDbLocationRef.current = storedLocation
+          lastDbLocationFetchAtRef.current = Date.now()
+          return storedLocation
         }
 
         try {
           const addr = await reverseGeocodeWithGoogleMaps(
             loc.latitude,
-            loc.longitude
+            loc.longitude,
+            { includePlaceDetails: false }
           )
-          return { ...addr, latitude: loc.latitude, longitude: loc.longitude }
+          const resolvedLocation = { ...addr, latitude: loc.latitude, longitude: loc.longitude }
+          lastDbLocationRef.current = resolvedLocation
+          lastDbLocationFetchAtRef.current = Date.now()
+          return resolvedLocation
         } catch (geocodeErr) {
           // If reverse geocoding fails, return location without coordinates in address
           console.warn("⚠️ Reverse geocoding failed in fetchLocationFromDB:", geocodeErr.message)
-          return {
+          const fallbackLocation = {
             latitude: loc.latitude,
             longitude: loc.longitude,
             city: "Current Location",
@@ -1396,6 +1509,9 @@ export function useLocation() {
             address: "Select location", // Don't show coordinates
             formattedAddress: "Select location", // Don't show coordinates
           }
+          lastDbLocationRef.current = fallbackLocation
+          lastDbLocationFetchAtRef.current = Date.now()
+          return fallbackLocation
         }
       }
     } catch (err) {
@@ -1472,7 +1588,9 @@ export function useLocation() {
                 console.log("🔍 Calling reverse geocode with coordinates:", { latitude, longitude })
                 try {
                   // Try Google Maps first
-                  addr = await reverseGeocodeWithGoogleMaps(latitude, longitude)
+                  addr = await reverseGeocodeWithGoogleMaps(latitude, longitude, {
+                    includePlaceDetails: Boolean(forceFresh && showLoading)
+                  })
                   console.log("✅ Google Maps geocoding successful:", addr)
                 } catch (geocodeErr) {
                   console.warn("⚠️ Google Maps geocoding failed, trying fallback:", geocodeErr.message)
@@ -1506,8 +1624,12 @@ export function useLocation() {
                   }
                 }
               }
-              console.log("✅ Reverse geocode result:", addr)
-
+              console.log("Reverse geocode result:", addr)
+              if (addr?.formattedAddress && addr.formattedAddress !== "Select location") {
+                lastResolvedAddressRef.current = addr
+                lastGeocodedCoordsRef.current = { latitude, longitude }
+                lastGeocodeAtRef.current = Date.now()
+              }
               // Ensure we don't use coordinates as address if we have area/city
               // Keep the complete formattedAddress from Google Maps (it has all details)
               const completeFormattedAddress = addr.formattedAddress || "";
@@ -1774,8 +1896,8 @@ export function useLocation() {
               const geocodeAgeMs = Date.now() - lastGeocodeAtRef.current
               const canReuseRecentAddress =
                 !!lastResolvedAddressRef.current &&
-                geocodeDistanceMeters < 40 &&
-                geocodeAgeMs < 2 * 60 * 1000
+                geocodeDistanceMeters < GEOCODE_REUSE_DISTANCE_METERS &&
+                geocodeAgeMs < GEOCODE_REUSE_TIME_MS
 
               if (canReuseRecentAddress) {
                 addr = lastResolvedAddressRef.current
@@ -1785,7 +1907,9 @@ export function useLocation() {
                 })
               } else {
                 try {
-                  addr = await reverseGeocodeWithGoogleMaps(latitude, longitude)
+                  addr = await reverseGeocodeWithGoogleMaps(latitude, longitude, {
+                    includePlaceDetails: false
+                  })
                   lastResolvedAddressRef.current = addr
                   lastGeocodedCoordsRef.current = { latitude, longitude }
                   lastGeocodeAtRef.current = Date.now()
