@@ -299,6 +299,7 @@ function animateMarkerSmoothly(marker, newPosition, duration = 1500, animationRe
 }
 
 export default function DeliveryHome() {
+  const ENABLE_GOOGLE_DIRECTIONS = import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true'
   const DELIVERY_DROP_OTP_LENGTH = 4
   const DELIVERY_ACTIVE_ORDER_KEY = 'deliveryActiveOrder'
   const companyName = useCompanyName()
@@ -5878,6 +5879,9 @@ export default function DeliveryHome() {
   // Optimized for TWO_WHEELER mode with DRIVING fallback
   // NOTE: Must be defined BEFORE the useEffect that uses it (Rules of Hooks)
   const calculateRouteWithDirectionsAPI = useCallback(async (origin, destination) => {
+    if (!ENABLE_GOOGLE_DIRECTIONS) {
+      return null;
+    }
     if (!window.google || !window.google.maps || !window.google.maps.DirectionsService) {
       console.warn('⚠️ Google Maps Directions API not available');
       return null;
@@ -6000,7 +6004,7 @@ export default function DeliveryHome() {
       return null; // Return null to trigger fallback
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ENABLE_GOOGLE_DIRECTIONS]);
 
   /**
    * Update live tracking polyline - Rapido/Zomato style

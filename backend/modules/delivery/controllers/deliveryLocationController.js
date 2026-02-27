@@ -221,7 +221,7 @@ export const updateLocation = asyncHandler(async (req, res) => {
         ].filter(Boolean))];
 
         await Promise.allSettled(
-          trackingIds.map((trackingId) => updateActiveOrderLocation(trackingId, trackingPayload, { ensureExists: false }))
+          trackingIds.map((trackingId) => updateActiveOrderLocation(trackingId, trackingPayload))
         );
 
         const io = req.app.get('io');

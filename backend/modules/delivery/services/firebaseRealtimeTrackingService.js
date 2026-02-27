@@ -7,6 +7,21 @@ const DEFAULT_ACTIVE_ORDER_STALE_MINUTES = 180; // 3 hours
 const DEFAULT_DELIVERY_STALE_MINUTES = 20; // 20 minutes
 const MALFORMED_ORDER_GRACE_MINUTES = 30;
 const knownActiveOrderKeys = new Set();
+const ACTIVE_ORDER_REQUIRED_FIELDS = [
+  'boy_id',
+  'boy_lat',
+  'boy_lng',
+  'created_at',
+  'customer_lat',
+  'customer_lng',
+  'distance',
+  'duration',
+  'last_updated',
+  'polyline',
+  'restaurant_lat',
+  'restaurant_lng',
+  'status'
+];
 
 function sanitizeFirebaseKey(key) {
   return String(key || '').replace(/[.#$/[\]]/g, '_');
@@ -52,6 +67,83 @@ function normalizeLocationPayload(payload = {}) {
   return normalized;
 }
 
+function normalizeOrderStatus(status) {
+  const normalized = String(status || '').trim().toLowerCase();
+  return normalized || 'assigned';
+}
+
+function normalizeDeliveryStatus(status, isOnline, activeOrderId) {
+  const normalized = String(status || '').trim().toLowerCase();
+  if (['offline', 'online', 'busy'].includes(normalized)) return normalized;
+  if (!isOnline) return 'offline';
+  return activeOrderId ? 'busy' : 'online';
+}
+
+function normalizeActiveOrderRecord(payload = {}, existing = {}) {
+  const merged = normalizeLocationPayload({
+    ...existing,
+    ...payload
+  });
+
+  const normalized = {
+    boy_id: merged.boy_id ? String(merged.boy_id) : null,
+    boy_lat: toNumberOrNull(merged.boy_lat),
+    boy_lng: toNumberOrNull(merged.boy_lng),
+    created_at: toNumberOrNull(merged.created_at) || Date.now(),
+    customer_lat: toNumberOrNull(merged.customer_lat),
+    customer_lng: toNumberOrNull(merged.customer_lng),
+    distance: toNumberOrNull(merged.distance),
+    duration: toNumberOrNull(merged.duration),
+    last_updated: toNumberOrNull(merged.last_updated) || Date.now(),
+    polyline: merged.polyline ? String(merged.polyline) : null,
+    restaurant_lat: toNumberOrNull(merged.restaurant_lat),
+    restaurant_lng: toNumberOrNull(merged.restaurant_lng),
+    status: normalizeOrderStatus(merged.status)
+  };
+
+  Object.entries(merged).forEach(([key, value]) => {
+    if (!Object.prototype.hasOwnProperty.call(normalized, key)) {
+      normalized[key] = value;
+    }
+  });
+
+  return normalized;
+}
+
+function normalizeDeliveryBoyRecord(payload = {}, existing = {}) {
+  const merged = {
+    ...existing,
+    ...payload
+  };
+
+  const isOnline =
+    merged.isOnline === true ||
+    merged.status === 'online' ||
+    merged.status === 'busy';
+  const activeOrderId = merged.activeOrderId ? String(merged.activeOrderId) : null;
+
+  const normalized = {
+    lat: toNumberOrNull(merged.lat),
+    lng: toNumberOrNull(merged.lng),
+    status: normalizeDeliveryStatus(merged.status, isOnline, activeOrderId),
+    last_updated: toNumberOrNull(merged.last_updated) || Date.now(),
+    isOnline,
+    activeOrderId
+  };
+
+  Object.entries(merged).forEach(([key, value]) => {
+    if (!Object.prototype.hasOwnProperty.call(normalized, key)) {
+      normalized[key] = value;
+    }
+  });
+
+  return normalized;
+}
+
+function isSameJson(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 export async function syncDeliveryPartnerPresence({
   deliveryId,
   lat,
@@ -73,10 +165,13 @@ export async function syncDeliveryPartnerPresence({
       last_updated: Date.now()
     };
 
-    await db.ref(`${DELIVERY_BOYS_NODE}/${safeDeliveryId}`).update(payload);
+    const deliveryRef = db.ref(`${DELIVERY_BOYS_NODE}/${safeDeliveryId}`);
+    const existing = await deliveryRef.once('value');
+    const normalized = normalizeDeliveryBoyRecord(payload, existing.val() || {});
+    await deliveryRef.set(normalized);
     return true;
   } catch (error) {
-    console.warn(`⚠️ Failed to sync delivery partner presence to Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to sync delivery partner presence to Firebase: ${error.message}`);
     return false;
   }
 }
@@ -123,12 +218,13 @@ export async function upsertActiveOrderTracking({
     if (duration !== null && duration !== undefined) payload.duration = toNumberOrNull(duration);
 
     const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
-    await orderRef.update(payload);
-    await orderRef.child('created_at').transaction((current) => current || Date.now());
+    const existing = await orderRef.once('value');
+    const normalized = normalizeActiveOrderRecord(payload, existing.val() || {});
+    await orderRef.set(normalized);
     knownActiveOrderKeys.add(safeOrderId);
     return true;
   } catch (error) {
-    console.warn(`⚠️ Failed to upsert active order tracking in Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to upsert active order tracking in Firebase: ${error.message}`);
     return false;
   }
 }
@@ -140,24 +236,33 @@ export async function updateActiveOrderLocation(orderId, locationPayload, option
 
     const safeOrderId = sanitizeFirebaseKey(orderId);
     const ensureExists = options.ensureExists !== false;
+    const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
+    let existingRecord = null;
 
     if (ensureExists && !knownActiveOrderKeys.has(safeOrderId)) {
-      const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
       const existing = await orderRef.once('value');
       if (!existing.exists()) {
         // Avoid creating malformed partial nodes from location-only updates.
         return false;
       }
+      existingRecord = existing.val() || {};
       knownActiveOrderKeys.add(safeOrderId);
     }
 
-    await db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`).update({
+    if (!existingRecord) {
+      const existing = await orderRef.once('value');
+      existingRecord = existing.val() || {};
+    }
+
+    const normalized = normalizeActiveOrderRecord({
       ...normalizeLocationPayload(locationPayload),
       last_updated: Date.now()
-    });
+    }, existingRecord);
+
+    await orderRef.set(normalized);
     return true;
   } catch (error) {
-    console.warn(`⚠️ Failed to update active order location in Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to update active order location in Firebase: ${error.message}`);
     return false;
   }
 }
@@ -172,10 +277,51 @@ export async function getActiveOrderTracking(orderId) {
     if (!snapshot.exists()) return null;
 
     const value = snapshot.val() || {};
-    return normalizeLocationPayload(value);
+    return normalizeActiveOrderRecord(value);
   } catch (error) {
-    console.warn(`⚠️ Failed to read active order tracking from Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to read active order tracking from Firebase: ${error.message}`);
     return null;
+  }
+}
+
+export async function enforceRealtimeSchemas({
+  maxActiveOrders = 5000,
+  maxDeliveryBoys = 5000
+} = {}) {
+  try {
+    const db = await getFirebaseRealtimeDbSafe();
+    if (!db) return { activeOrdersFixed: 0, deliveryBoysFixed: 0 };
+
+    let activeOrdersFixed = 0;
+    let deliveryBoysFixed = 0;
+
+    const activeSnapshot = await db.ref(ACTIVE_ORDERS_NODE).once('value');
+    const activeOrders = activeSnapshot.val() || {};
+    for (const [orderId, value] of Object.entries(activeOrders)) {
+      if (activeOrdersFixed >= maxActiveOrders) break;
+      const normalized = normalizeActiveOrderRecord(value || {});
+      const missingRequired = ACTIVE_ORDER_REQUIRED_FIELDS.some((field) => !Object.prototype.hasOwnProperty.call(value || {}, field));
+      if (missingRequired || !isSameJson(value, normalized)) {
+        await db.ref(`${ACTIVE_ORDERS_NODE}/${orderId}`).set(normalized);
+        activeOrdersFixed += 1;
+      }
+    }
+
+    const deliverySnapshot = await db.ref(DELIVERY_BOYS_NODE).once('value');
+    const deliveryBoys = deliverySnapshot.val() || {};
+    for (const [deliveryId, value] of Object.entries(deliveryBoys)) {
+      if (deliveryBoysFixed >= maxDeliveryBoys) break;
+      const normalized = normalizeDeliveryBoyRecord(value || {});
+      if (!isSameJson(value, normalized)) {
+        await db.ref(`${DELIVERY_BOYS_NODE}/${deliveryId}`).set(normalized);
+        deliveryBoysFixed += 1;
+      }
+    }
+
+    return { activeOrdersFixed, deliveryBoysFixed };
+  } catch (error) {
+    console.warn(`WARN: Failed to enforce Firebase schemas: ${error.message}`);
+    return { activeOrdersFixed: 0, deliveryBoysFixed: 0 };
   }
 }
 
@@ -199,7 +345,7 @@ export async function removeActiveOrderTracking(orderId) {
     knownActiveOrderKeys.delete(safeOrderId);
     return true;
   } catch (error) {
-    console.warn(`⚠️ Failed to remove active order tracking from Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to remove active order tracking from Firebase: ${error.message}`);
     return false;
   }
 }
@@ -238,7 +384,7 @@ export async function findNearestOnlineDeliveryBoys({
 
     return nearby;
   } catch (error) {
-    console.warn(`⚠️ Failed to find nearest delivery boys from Firebase: ${error.message}`);
+    console.warn(`WARN: Failed to find nearest delivery boys from Firebase: ${error.message}`);
     return [];
   }
 }
@@ -285,7 +431,7 @@ export async function pruneStaleActiveOrders({
     }
     return { removed };
   } catch (error) {
-    console.warn(`⚠️ Failed to prune stale active orders: ${error.message}`);
+    console.warn(`WARN: Failed to prune stale active orders: ${error.message}`);
     return { removed: 0 };
   }
 }
@@ -326,8 +472,9 @@ export async function markOfflineStaleDeliveryBoys({
 
     return { markedOffline };
   } catch (error) {
-    console.warn(`⚠️ Failed to mark stale delivery boys offline: ${error.message}`);
+    console.warn(`WARN: Failed to mark stale delivery boys offline: ${error.message}`);
     return { markedOffline: 0 };
   }
 }
+
 

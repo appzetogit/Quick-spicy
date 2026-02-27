@@ -12,6 +12,7 @@ import mongoose from 'mongoose';
 import {
   pruneStaleActiveOrders,
   markOfflineStaleDeliveryBoys,
+  enforceRealtimeSchemas,
   syncDeliveryPartnerPresence,
   updateActiveOrderLocation,
   getActiveOrderTracking
@@ -23,7 +24,7 @@ dotenv.config();
 // Import configurations
 import { connectDB } from './config/database.js';
 import { connectRedis } from './config/redis.js';
-import { initializeFirebaseRealtime } from './config/firebaseRealtime.js';
+import { initializeFirebaseRealtime, isFirebaseRealtimeReady } from './config/firebaseRealtime.js';
 
 // Import middleware
 import { errorHandler } from './shared/middleware/errorHandler.js';
@@ -159,6 +160,30 @@ const io = new Server(httpServer, {
   pingInterval: 25000
 });
 
+async function ensureFirebaseRealtimeBeforeSocket(next) {
+  try {
+    if (isFirebaseRealtimeReady()) return next();
+
+    const firebaseDb = await initializeFirebaseRealtime();
+    if (firebaseDb) return next();
+
+    if (process.env.FIREBASE_REALTIME_REQUIRED === 'true') {
+      return next(new Error('Firebase Realtime Database unavailable'));
+    }
+
+    return next();
+  } catch (error) {
+    if (process.env.FIREBASE_REALTIME_REQUIRED === 'true') {
+      return next(new Error(`Firebase init error: ${error.message}`));
+    }
+    return next();
+  }
+}
+
+io.use(async (_socket, next) => {
+  await ensureFirebaseRealtimeBeforeSocket(next);
+});
+
 // Export getIO function for use in other modules
 export function getIO() {
   return io;
@@ -166,6 +191,9 @@ export function getIO() {
 
 // Restaurant namespace for order notifications
 const restaurantNamespace = io.of('/restaurant');
+restaurantNamespace.use(async (_socket, next) => {
+  await ensureFirebaseRealtimeBeforeSocket(next);
+});
 
 // Add connection error handling before connection event
 restaurantNamespace.use((socket, next) => {
@@ -255,6 +283,9 @@ restaurantNamespace.on('connection', (socket) => {
 
 // Delivery namespace for order assignments
 const deliveryNamespace = io.of('/delivery');
+deliveryNamespace.use(async (_socket, next) => {
+  await ensureFirebaseRealtimeBeforeSocket(next);
+});
 
 deliveryNamespace.on('connection', (socket) => {
   console.log('🚴 Delivery client connected:', socket.id);
@@ -321,6 +352,14 @@ async function initializeServices() {
       throw new Error('Firebase Realtime Database not available (FIREBASE_REALTIME_REQUIRED=true).');
     }
     console.warn('⚠️ Firebase Realtime Database not available');
+  } else {
+    const schemaRepairResult = await enforceRealtimeSchemas({
+      maxActiveOrders: 5000,
+      maxDeliveryBoys: 5000
+    });
+    if ((schemaRepairResult.activeOrdersFixed || 0) > 0 || (schemaRepairResult.deliveryBoysFixed || 0) > 0) {
+      console.log(`[Realtime Schema Repair] active_orders fixed=${schemaRepairResult.activeOrdersFixed || 0}, delivery_boys fixed=${schemaRepairResult.deliveryBoysFixed || 0}`);
+    }
   }
 
   // Redis connection is optional - only connects if REDIS_ENABLED=true
@@ -765,6 +804,7 @@ const PORT = process.env.PORT || 5000;
 
 async function startServer() {
   await initializeServices();
+  console.log(`Firebase Realtime ready before listening: ${isFirebaseRealtimeReady() ? 'yes' : 'no'}`);
 
   httpServer.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);

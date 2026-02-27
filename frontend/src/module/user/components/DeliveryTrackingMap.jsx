@@ -3,7 +3,7 @@ import io from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/api/config';
 import bikeLogo from '@/assets/bikelogo.png';
 import { RouteBasedAnimationController } from '@/module/user/utils/routeBasedAnimation';
-import { extractPolylineFromDirections, findNearestPointOnPolyline } from '@/module/delivery/utils/liveTrackingPolyline';
+import { decodePolyline, extractPolylineFromDirections, findNearestPointOnPolyline } from '@/module/delivery/utils/liveTrackingPolyline';
 import './DeliveryTrackingMap.css';
 
 // Helper function to calculate Haversine distance
@@ -52,6 +52,7 @@ const DeliveryTrackingMap = ({
   const lastRouteRequestRef = useRef({ start: null, end: null, timestamp: 0 });
 
   const backendUrl = API_BASE_URL.replace('/api', '');
+  const ENABLE_GOOGLE_DIRECTIONS = import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true';
   const [GOOGLE_MAPS_API_KEY, setGOOGLE_MAPS_API_KEY] = useState("");
   const trackingIds = useMemo(() => {
     const ids = [orderId, ...(Array.isArray(orderTrackingIds) ? orderTrackingIds : [])]
@@ -134,6 +135,7 @@ const DeliveryTrackingMap = ({
   // Draw route using Google Maps Directions API with live updates
   // OPTIMIZED: Added caching to reduce API calls
   const drawRoute = useCallback((start, end) => {
+    if (!ENABLE_GOOGLE_DIRECTIONS) return;
     if (!mapInstance.current || !directionsServiceRef.current || !directionsRendererRef.current) return;
 
     // Validate coordinates before making API call
@@ -338,7 +340,73 @@ const DeliveryTrackingMap = ({
     } catch (error) {
       console.warn('Error calling Directions API:', error);
     }
-  }, [routeColor, preserveViewportState, restoreViewportState]);
+  }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, preserveViewportState, restoreViewportState]);
+
+  const getStoredRoutePoints = useCallback(() => {
+    const routeCoordinates = isOrderPickedUp
+      ? order?.deliveryState?.routeToDelivery?.coordinates
+      : order?.deliveryState?.routeToPickup?.coordinates;
+
+    if (Array.isArray(routeCoordinates) && routeCoordinates.length > 1) {
+      return routeCoordinates
+        .map((coord) => ({
+          lat: Number(coord?.[0]),
+          lng: Number(coord?.[1])
+        }))
+        .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+    }
+
+    const encodedPolyline = (
+      order?.deliveryState?.polyline ||
+      deliveryBoyData?.polyline ||
+      order?.polyline ||
+      ''
+    );
+
+    if (typeof encodedPolyline === 'string' && encodedPolyline.trim()) {
+      return decodePolyline(encodedPolyline);
+    }
+
+    return [];
+  }, [
+    isOrderPickedUp,
+    order?.deliveryState?.routeToDelivery?.coordinates,
+    order?.deliveryState?.routeToPickup?.coordinates,
+    order?.deliveryState?.polyline,
+    order?.polyline,
+    deliveryBoyData?.polyline
+  ]);
+
+  useEffect(() => {
+    if (ENABLE_GOOGLE_DIRECTIONS) return;
+    if (!isMapLoaded || !mapInstance.current || !window.google?.maps) return;
+
+    const storedPoints = getStoredRoutePoints();
+    if (!storedPoints || storedPoints.length < 2) return;
+
+    routePolylinePointsRef.current = storedPoints;
+
+    if (bikeMarkerRef.current && !animationControllerRef.current) {
+      animationControllerRef.current = new RouteBasedAnimationController(
+        bikeMarkerRef.current,
+        storedPoints
+      );
+    }
+
+    if (routePolylineRef.current) {
+      routePolylineRef.current.setMap(null);
+    }
+
+    routePolylineRef.current = new window.google.maps.Polyline({
+      path: storedPoints,
+      geodesic: true,
+      strokeColor: routeColor,
+      strokeOpacity: 0.8,
+      strokeWeight: 4,
+      map: mapInstance.current,
+      zIndex: 1
+    });
+  }, [ENABLE_GOOGLE_DIRECTIONS, getStoredRoutePoints, isMapLoaded, routeColor]);
 
   // Check if delivery partner is assigned (memoized to avoid dependency issues)
   // MUST be defined BEFORE any useEffect that uses it
@@ -967,21 +1035,26 @@ const DeliveryTrackingMap = ({
           }
         });
 
-        // Initialize Directions Service and Renderer
-        directionsServiceRef.current = new window.google.maps.DirectionsService();
-        directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
-          map: mapInstance.current,
-          suppressMarkers: true, // We'll add custom markers
-          preserveViewport: true, // CRITICAL: Don't auto-adjust viewport when route is set - keep map stable
-          polylineOptions: {
-            strokeColor: routeColor,
-            strokeWeight: 0, // Hide default polyline, we'll use custom dashed one
-            strokeOpacity: 0
-          }
-        });
+        if (ENABLE_GOOGLE_DIRECTIONS) {
+          // Initialize Directions Service and Renderer
+          directionsServiceRef.current = new window.google.maps.DirectionsService();
+          directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+            map: mapInstance.current,
+            suppressMarkers: true, // We'll add custom markers
+            preserveViewport: true, // CRITICAL: Don't auto-adjust viewport when route is set - keep map stable
+            polylineOptions: {
+              strokeColor: routeColor,
+              strokeWeight: 0, // Hide default polyline, we'll use custom dashed one
+              strokeOpacity: 0
+            }
+          });
 
-        // Ensure viewport never changes automatically - map stays stable
-        directionsRendererRef.current.setOptions({ preserveViewport: true });
+          // Ensure viewport never changes automatically - map stays stable
+          directionsRendererRef.current.setOptions({ preserveViewport: true });
+        } else {
+          directionsServiceRef.current = null;
+          directionsRendererRef.current = null;
+        }
 
         // Add restaurant marker with home icon (only once)
         if (!mapInstance.current._restaurantMarker) {
@@ -1133,7 +1206,7 @@ const DeliveryTrackingMap = ({
         console.error('❌ Map initialization error:', error);
       }
     }
-  }, [restaurantCoords, customerCoords]); // Removed dependencies that cause re-initialization
+  }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, restaurantCoords, customerCoords]); // Removed dependencies that cause re-initialization
 
   // Memoize restaurant and customer coordinates to avoid dependency issues
   const restaurantLat = restaurantCoords?.lat;

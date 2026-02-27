@@ -1,17 +1,25 @@
 import admin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { getFirebaseCredentials } from '../shared/utils/envService.js';
 
 const REALTIME_APP_NAME = 'realtime-db-app';
+const INIT_RETRY_COOLDOWN_MS = 30 * 1000;
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const backendRoot = path.resolve(__dirname, '..');
+
 let realtimeDb = null;
 let initPromise = null;
 let hasLoggedMissingRealtimeWarning = false;
+let lastInitFailureAt = 0;
+let lastInitFailureReason = '';
 
 function normalizePrivateKey(privateKey = '') {
   let key = String(privateKey || '').trim();
 
-  // Remove wrapping quotes if present.
   if (
     (key.startsWith('"') && key.endsWith('"')) ||
     (key.startsWith("'") && key.endsWith("'"))
@@ -19,13 +27,10 @@ function normalizePrivateKey(privateKey = '') {
     key = key.slice(1, -1).trim();
   }
 
-  // Normalize escaped and real line breaks.
-  key = key
+  return key
     .replace(/\\r\\n/g, '\n')
     .replace(/\\n/g, '\n')
     .replace(/\r\n/g, '\n');
-
-  return key;
 }
 
 function sanitizeUrl(url = '') {
@@ -39,19 +44,70 @@ function deriveDatabaseUrl(projectId, explicitUrl) {
   return `https://${projectId}-default-rtdb.firebaseio.com`;
 }
 
+function getCandidateServiceAccountPaths() {
+  const envConfiguredPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH
+    ? path.resolve(process.cwd(), process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
+    : null;
+
+  const fixedCandidates = [
+    envConfiguredPath,
+    path.resolve(process.cwd(), 'config', 'zomato-607fa-firebase-adminsdk-fbsvc-f5f782c2cc.json'),
+    path.resolve(process.cwd(), 'firebaseconfig.json'),
+    path.resolve(process.cwd(), 'serviceAccountKey.json'),
+    path.resolve(backendRoot, 'config', 'zomato-607fa-firebase-adminsdk-fbsvc-f5f782c2cc.json'),
+    path.resolve(backendRoot, 'firebaseconfig.json'),
+    path.resolve(backendRoot, 'serviceAccountKey.json')
+  ].filter(Boolean);
+
+  const dynamicDirs = [
+    path.resolve(process.cwd(), 'config'),
+    process.cwd(),
+    path.resolve(backendRoot, 'config'),
+    backendRoot
+  ];
+
+  const dynamicCandidates = [];
+
+  dynamicDirs.forEach((dirPath) => {
+    if (!fs.existsSync(dirPath)) return;
+
+    let stat;
+    try {
+      stat = fs.statSync(dirPath);
+    } catch {
+      return;
+    }
+
+    if (!stat.isDirectory()) return;
+
+    let files = [];
+    try {
+      files = fs.readdirSync(dirPath);
+    } catch {
+      return;
+    }
+
+    files.forEach((fileName) => {
+      const normalized = fileName.toLowerCase();
+      const isJson = normalized.endsWith('.json');
+      const looksLikeFirebaseKey =
+        normalized.includes('firebase-adminsdk') ||
+        normalized.includes('serviceaccount') ||
+        normalized === 'firebaseconfig.json' ||
+        normalized === 'serviceaccountkey.json';
+
+      if (isJson && looksLikeFirebaseKey) {
+        dynamicCandidates.push(path.resolve(dirPath, fileName));
+      }
+    });
+  });
+
+  return [...new Set([...fixedCandidates, ...dynamicCandidates])];
+}
+
 function loadServiceAccountFromFile() {
   try {
-    const projectRoot = process.cwd();
-    // Place Firebase Admin service account JSON in one of these paths:
-    // 1) backend/config/<service-account>.json
-    // 2) backend/firebaseconfig.json
-    // 3) backend/serviceAccountKey.json
-    const candidatePaths = [
-      path.resolve(projectRoot, 'config', 'zomato-607fa-firebase-adminsdk-fbsvc-f5f782c2cc.json'),
-      path.resolve(projectRoot, 'firebaseconfig.json'),
-      path.resolve(projectRoot, 'serviceAccountKey.json')
-    ];
-
+    const candidatePaths = getCandidateServiceAccountPaths();
     const serviceAccountPath = candidatePaths.find((candidatePath) => fs.existsSync(candidatePath));
     if (!serviceAccountPath) return {};
 
@@ -114,6 +170,8 @@ async function loadRealtimeConfig() {
     isPemKey(filePrivateKey)
   );
 
+  const source = useDbCreds ? 'db' : (useEnvCreds ? 'env' : (useFileCreds ? 'file' : 'none'));
+
   const projectId = useDbCreds
     ? dbProjectId
     : (useEnvCreds ? envProjectId : fileProjectId);
@@ -128,26 +186,31 @@ async function loadRealtimeConfig() {
     (useDbCreds ? dbDatabaseURL : '') || (useEnvCreds ? envDatabaseURL : '') || fileDatabaseURL
   );
 
-  return { projectId, clientEmail, privateKey, databaseURL };
+  return { projectId, clientEmail, privateKey, databaseURL, source };
 }
 
 export async function initializeFirebaseRealtime() {
   if (realtimeDb) return realtimeDb;
   if (initPromise) return initPromise;
 
+  if (lastInitFailureAt && (Date.now() - lastInitFailureAt) < INIT_RETRY_COOLDOWN_MS) {
+    return null;
+  }
+
   initPromise = (async () => {
     try {
-      const { projectId, clientEmail, privateKey, databaseURL } = await loadRealtimeConfig();
+      const { projectId, clientEmail, privateKey, databaseURL, source } = await loadRealtimeConfig();
 
       if (!projectId || !clientEmail || !privateKey) {
-        // Required vars for env-based setup:
-        // FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY
-        console.warn('⚠️ Firebase Realtime Database credentials missing. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY.');
+        lastInitFailureAt = Date.now();
+        lastInitFailureReason = 'missing_credentials';
+        console.warn('⚠️ Firebase Realtime Database credentials missing. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY or FIREBASE_SERVICE_ACCOUNT_PATH.');
         return null;
       }
 
       if (!databaseURL) {
-        // Example: https://<project-id>-default-rtdb.firebaseio.com
+        lastInitFailureAt = Date.now();
+        lastInitFailureReason = 'missing_database_url';
         console.warn('⚠️ Firebase Realtime Database URL missing. Set FIREBASE_DATABASE_URL.');
         return null;
       }
@@ -155,7 +218,7 @@ export async function initializeFirebaseRealtime() {
       let realtimeApp;
       try {
         realtimeApp = admin.app(REALTIME_APP_NAME);
-      } catch (error) {
+      } catch {
         realtimeApp = admin.initializeApp(
           {
             credential: admin.credential.cert({
@@ -171,9 +234,13 @@ export async function initializeFirebaseRealtime() {
 
       realtimeDb = admin.database(realtimeApp);
       hasLoggedMissingRealtimeWarning = false;
-      console.log('✅ Firebase Realtime Database initialized');
+      lastInitFailureAt = 0;
+      lastInitFailureReason = '';
+      console.log(`✅ Firebase Realtime Database initialized (source=${source})`);
       return realtimeDb;
     } catch (error) {
+      lastInitFailureAt = Date.now();
+      lastInitFailureReason = error?.message || 'unknown_error';
       console.warn(`⚠️ Failed to initialize Firebase Realtime Database: ${error.message}`);
       return null;
     } finally {
@@ -187,7 +254,8 @@ export async function initializeFirebaseRealtime() {
 export function getFirebaseRealtimeDb() {
   if (!realtimeDb) {
     if (!hasLoggedMissingRealtimeWarning) {
-      console.warn('Firebase Realtime Database not initialized. Call initializeFirebaseRealtime() first.');
+      const failureHint = lastInitFailureReason ? ` Last init failure: ${lastInitFailureReason}.` : '';
+      console.warn(`Firebase Realtime Database not initialized. Call initializeFirebaseRealtime() first.${failureHint}`);
       hasLoggedMissingRealtimeWarning = true;
     }
     return null;
@@ -198,7 +266,6 @@ export function getFirebaseRealtimeDb() {
 export function isFirebaseRealtimeReady() {
   return !!realtimeDb;
 }
-
 
 export async function getFirebaseRealtimeDbSafe() {
   if (realtimeDb) return realtimeDb;
