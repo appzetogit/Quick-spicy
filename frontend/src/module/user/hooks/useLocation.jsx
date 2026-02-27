@@ -10,6 +10,23 @@ export function useLocation() {
   const watchIdRef = useRef(null)
   const updateTimerRef = useRef(null)
   const prevLocationCoordsRef = useRef({ latitude: null, longitude: null })
+  const lastGeocodeAtRef = useRef(0)
+  const lastGeocodedCoordsRef = useRef({ latitude: null, longitude: null })
+  const lastResolvedAddressRef = useRef(null)
+
+  const getDistanceMeters = (lat1, lng1, lat2, lng2) => {
+    if (
+      typeof lat1 !== "number" ||
+      typeof lng1 !== "number" ||
+      typeof lat2 !== "number" ||
+      typeof lng2 !== "number"
+    ) {
+      return Number.POSITIVE_INFINITY
+    }
+    const latDiff = lat2 - lat1
+    const lngDiff = lng2 - lng1
+    return Math.sqrt(latDiff * latDiff + lngDiff * lngDiff) * 111320
+  }
 
   /* ===================== DB UPDATE (LIVE LOCATION TRACKING) ===================== */
   const updateLocationInDB = async (locationData) => {
@@ -1733,7 +1750,8 @@ export function useLocation() {
             // India: Latitude 6.5° to 37.1° N, Longitude 68.7° to 97.4° E
             const isInIndiaRange = latitude >= 6.5 && latitude <= 37.1 && longitude >= 68.7 && longitude <= 97.4 && longitude > 0
 
-            // Get address from Google Maps API with error handling
+            // Get address from Google Maps API with error handling.
+            // Cost control: reuse last resolved address when movement is tiny and recent.
             let addr
             if (!isInIndiaRange || longitude < 0) {
               // Coordinates are outside India - skip geocoding and use placeholder
@@ -1747,33 +1765,59 @@ export function useLocation() {
                 formattedAddress: "Select location",
               }
             } else {
-              try {
-                addr = await reverseGeocodeWithGoogleMaps(latitude, longitude)
-                console.log("✅ Reverse geocoding successful:", {
-                  city: addr.city,
-                  area: addr.area,
-                  formattedAddress: addr.formattedAddress
+              const geocodeDistanceMeters = getDistanceMeters(
+                lastGeocodedCoordsRef.current.latitude,
+                lastGeocodedCoordsRef.current.longitude,
+                latitude,
+                longitude
+              )
+              const geocodeAgeMs = Date.now() - lastGeocodeAtRef.current
+              const canReuseRecentAddress =
+                !!lastResolvedAddressRef.current &&
+                geocodeDistanceMeters < 40 &&
+                geocodeAgeMs < 2 * 60 * 1000
+
+              if (canReuseRecentAddress) {
+                addr = lastResolvedAddressRef.current
+                console.log("📍 Reusing recent geocoded address (skip Google call):", {
+                  geocodeDistanceMeters: geocodeDistanceMeters.toFixed(1),
+                  geocodeAgeMs
                 })
-              } catch (geocodeErr) {
-                console.error("❌ Google Maps reverse geocoding failed:", geocodeErr.message)
-                // Try fallback geocoding
+              } else {
                 try {
-                  console.log("🔄 Trying fallback geocoding...")
-                  addr = await reverseGeocodeDirect(latitude, longitude)
-                  console.log("✅ Fallback geocoding successful:", {
+                  addr = await reverseGeocodeWithGoogleMaps(latitude, longitude)
+                  lastResolvedAddressRef.current = addr
+                  lastGeocodedCoordsRef.current = { latitude, longitude }
+                  lastGeocodeAtRef.current = Date.now()
+                  console.log("✅ Reverse geocoding successful:", {
                     city: addr.city,
-                    area: addr.area
+                    area: addr.area,
+                    formattedAddress: addr.formattedAddress
                   })
-                } catch (fallbackErr) {
-                  console.error("❌ Fallback geocoding also failed:", fallbackErr.message)
-                  // Don't use coordinates - use placeholder instead
-                  addr = {
-                    city: "Current Location",
-                    state: "",
-                    country: "",
-                    area: "",
-                    address: "Select location", // Don't show coordinates
-                    formattedAddress: "Select location", // Don't show coordinates
+                } catch (geocodeErr) {
+                  console.error("❌ Google Maps reverse geocoding failed:", geocodeErr.message)
+                  // Try fallback geocoding
+                  try {
+                    console.log("🔄 Trying fallback geocoding...")
+                    addr = await reverseGeocodeDirect(latitude, longitude)
+                    lastResolvedAddressRef.current = addr
+                    lastGeocodedCoordsRef.current = { latitude, longitude }
+                    lastGeocodeAtRef.current = Date.now()
+                    console.log("✅ Fallback geocoding successful:", {
+                      city: addr.city,
+                      area: addr.area
+                    })
+                  } catch (fallbackErr) {
+                    console.error("❌ Fallback geocoding also failed:", fallbackErr.message)
+                    // Don't use coordinates - use placeholder instead
+                    addr = {
+                      city: "Current Location",
+                      state: "",
+                      country: "",
+                      area: "",
+                      address: "Select location", // Don't show coordinates
+                      formattedAddress: "Select location", // Don't show coordinates
+                    }
                   }
                 }
               }

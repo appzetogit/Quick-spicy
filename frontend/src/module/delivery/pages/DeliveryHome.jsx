@@ -299,6 +299,7 @@ function animateMarkerSmoothly(marker, newPosition, duration = 1500, animationRe
 }
 
 export default function DeliveryHome() {
+  const DELIVERY_ACTIVE_ORDER_KEY = 'deliveryActiveOrder'
   const companyName = useCompanyName()
   const navigate = useNavigate()
   const location = useLocation()
@@ -632,6 +633,8 @@ export default function DeliveryHome() {
   const reachedDropSwipeStartX = useRef(0)
   const reachedDropSwipeStartY = useRef(0)
   const reachedDropIsSwiping = useRef(false)
+  const reachedDropHoldTimerRef = useRef(null)
+  const reachedDropHoldTriggeredRef = useRef(false)
   const [orderIdConfirmButtonProgress, setOrderIdConfirmButtonProgress] = useState(0)
   const [orderIdConfirmIsAnimatingToComplete, setOrderIdConfirmIsAnimatingToComplete] = useState(false)
   const orderIdConfirmButtonRef = useRef(null)
@@ -663,6 +666,8 @@ export default function DeliveryHome() {
   const orderDeliveredSwipeStartX = useRef(0)
   const orderDeliveredSwipeStartY = useRef(0)
   const orderDeliveredIsSwiping = useRef(false)
+  const orderDeliveredHoldTimerRef = useRef(null)
+  const orderDeliveredHoldTriggeredRef = useRef(false)
   const [earningsGuaranteeIsPlaying, setEarningsGuaranteeIsPlaying] = useState(true)
   const [earningsGuaranteeAudioTime, setEarningsGuaranteeAudioTime] = useState("00:00")
   const earningsGuaranteeAudioRef = useRef(null)
@@ -675,6 +680,7 @@ export default function DeliveryHome() {
   const acceptButtonSwipeStartY = useRef(0)
   const acceptButtonIsSwiping = useRef(false)
   const autoShowTimerRef = useRef(null)
+  const lastPersistedActiveOrderRef = useRef("")
 
   useEffect(() => {
     if (!showDeliveryOtpModal) return
@@ -684,6 +690,19 @@ export default function DeliveryHome() {
     return () => clearTimeout(focusTimer)
   }, [showDeliveryOtpModal])
 
+  useEffect(() => {
+    return () => {
+      if (reachedDropHoldTimerRef.current) {
+        clearTimeout(reachedDropHoldTimerRef.current)
+        reachedDropHoldTimerRef.current = null
+      }
+      if (orderDeliveredHoldTimerRef.current) {
+        clearTimeout(orderDeliveredHoldTimerRef.current)
+        orderDeliveredHoldTimerRef.current = null
+      }
+    }
+  }, [])
+
   const {
     bookedGigs,
     currentGig,
@@ -691,6 +710,40 @@ export default function DeliveryHome() {
     goOffline,
     getSelectedDropLocation
   } = useGigStore()
+
+  const getDeliveryFlowStage = useCallback(() => {
+    if (showPaymentPage) return 'payment'
+    if (showCustomerReviewPopup) return 'review'
+    if (showOrderDeliveredAnimation) return 'order_delivered'
+    if (showReachedDropPopup) return 'reached_drop'
+    if (showOrderIdConfirmationPopup) return 'order_id_confirmation'
+    if (showreachedPickupPopup) return 'reached_pickup'
+
+    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+    const phase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    if (
+      orderStatus === 'out_for_delivery' ||
+      phase === 'en_route_to_delivery' ||
+      phase === 'picked_up' ||
+      phase === 'en_route_to_drop' ||
+      phase === 'at_delivery'
+    ) {
+      return 'en_route_to_drop'
+    }
+
+    return 'en_route_to_pickup'
+  }, [
+    selectedRestaurant?.deliveryPhase,
+    selectedRestaurant?.deliveryState?.currentPhase,
+    selectedRestaurant?.orderStatus,
+    selectedRestaurant?.status,
+    showCustomerReviewPopup,
+    showOrderDeliveredAnimation,
+    showOrderIdConfirmationPopup,
+    showPaymentPage,
+    showReachedDropPopup,
+    showreachedPickupPopup
+  ])
 
   // Use same localStorage key as FeedNavbar for online status
   const LS_KEY = "app:isOnline"
@@ -2820,9 +2873,10 @@ export default function DeliveryHome() {
                   // Route will be recalculated on restore using Directions API
                   routeCoordinates: routeCoordinates, // Save coordinates for fallback polyline
                   acceptedAt: new Date().toISOString(),
-                  hasDirectionsAPI: !!directionsResultForMap // Flag to indicate we should recalculate with Directions API
+                  hasDirectionsAPI: !!directionsResultForMap, // Flag to indicate we should recalculate with Directions API
+                  uiStage: 'en_route_to_pickup'
                 };
-                localStorage.setItem('deliveryActiveOrder', JSON.stringify(activeOrderData));
+                localStorage.setItem(DELIVERY_ACTIVE_ORDER_KEY, JSON.stringify(activeOrderData));
                 console.log('💾 Saved active order to localStorage for refresh handling');
               } catch (storageError) {
                 console.error('❌ Error saving active order to localStorage:', storageError);
@@ -3236,15 +3290,119 @@ export default function DeliveryHome() {
     setreachedPickupIsAnimatingToComplete(false)
   }
 
+  const HOLD_TO_CONFIRM_MS = 3000
+
+  const clearReachedDropHoldTimer = useCallback(() => {
+    if (reachedDropHoldTimerRef.current) {
+      clearTimeout(reachedDropHoldTimerRef.current)
+      reachedDropHoldTimerRef.current = null
+    }
+  }, [])
+
+  const clearOrderDeliveredHoldTimer = useCallback(() => {
+    if (orderDeliveredHoldTimerRef.current) {
+      clearTimeout(orderDeliveredHoldTimerRef.current)
+      orderDeliveredHoldTimerRef.current = null
+    }
+  }, [])
+
+  const confirmReachedDropFlow = useCallback(() => {
+    // Animate to completion
+    setReachedDropIsAnimatingToComplete(true)
+    setReachedDropButtonProgress(1)
+
+    // Close reached drop popup first
+    setShowReachedDropPopup(false)
+
+    // Show Order Delivered popup instantly after Reached Drop is confirmed
+    console.log('✅ Showing Order Delivered popup instantly after Reached Drop confirmation')
+    setShowOrderDeliveredAnimation(true)
+
+    // API call in background (async, doesn't block popup)
+    ;(async () => {
+      // Get order ID - prioritize MongoDB _id over orderId string for API call
+      // Backend expects _id (MongoDB ObjectId) in the URL parameter
+      const orderIdForApi = selectedRestaurant?.id ||
+                           newOrder?.orderMongoId ||
+                           newOrder?._id ||
+                           selectedRestaurant?.orderId ||
+                           newOrder?.orderId
+
+      console.log('🔍 Order ID lookup for reached drop:', {
+        selectedRestaurantId: selectedRestaurant?.id,
+        selectedRestaurantOrderId: selectedRestaurant?.orderId,
+        newOrderMongoId: newOrder?.orderMongoId,
+        newOrderId: newOrder?.orderId,
+        finalOrderIdForApi: orderIdForApi
+      })
+
+      if (orderIdForApi) {
+        try {
+          // Call backend API to confirm reached drop (in background, don't block popup)
+          // Use MongoDB _id for API call to avoid ObjectId casting errors
+          console.log('📦 Confirming reached drop for order:', orderIdForApi)
+          const response = await deliveryAPI.confirmReachedDrop(orderIdForApi)
+
+          if (response.data?.success) {
+            console.log('✅ Reached drop confirmed')
+          } else {
+            console.error('❌ Failed to confirm reached drop:', response.data)
+            toast.error(response.data?.message || 'Failed to confirm reached drop. Please try again.')
+          }
+        } catch (error) {
+          const status = error.response?.status
+
+          // Handle 500 errors gracefully (server-side issue, popup already shown)
+          if (status === 500) {
+            console.warn('⚠️ Server error confirming reached drop (500), but popup is shown. Backend will sync status automatically.', {
+              orderIdForApi: orderIdForApi || 'unknown',
+              message: error.response?.data?.message || error.message
+            })
+            return
+          }
+
+          // For other errors, log and show error message
+          console.error('❌ Error confirming reached drop:', error)
+          console.error('❌ Error details:', {
+            message: error.message,
+            response: error.response?.data,
+            status: status,
+            orderIdForApi: orderIdForApi || 'unknown',
+            selectedRestaurant: selectedRestaurant,
+            newOrder: newOrder
+          })
+
+          // Show specific error message based on status code
+          let errorMessage = 'Failed to confirm reached drop. Please try again.'
+          if (status === 404) {
+            errorMessage = 'Order not found. Please refresh and try again.'
+          } else if (error.response?.data?.message) {
+            errorMessage = error.response.data.message
+          }
+
+          toast.error(errorMessage)
+        }
+      }
+    })()
+  }, [newOrder, selectedRestaurant])
+
   // Handle Reached Drop button swipe
   const handleReachedDropTouchStart = (e) => {
     const touch = getTouchPoint(e)
     if (!touch) return
+    clearReachedDropHoldTimer()
     reachedDropSwipeStartX.current = touch.x
     reachedDropSwipeStartY.current = touch.y
     reachedDropIsSwiping.current = false
+    reachedDropHoldTriggeredRef.current = false
     setReachedDropIsAnimatingToComplete(false)
     setReachedDropButtonProgress(0)
+
+    reachedDropHoldTimerRef.current = setTimeout(() => {
+      reachedDropHoldTriggeredRef.current = true
+      reachedDropIsSwiping.current = true
+      confirmReachedDropFlow()
+    }, HOLD_TO_CONFIRM_MS)
   }
 
   const handleReachedDropTouchMove = (e) => {
@@ -3252,6 +3410,10 @@ export default function DeliveryHome() {
     if (!touch) return
     const deltaX = touch.x - reachedDropSwipeStartX.current
     const deltaY = touch.y - reachedDropSwipeStartY.current
+
+    if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+      clearReachedDropHoldTimer()
+    }
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -3271,6 +3433,16 @@ export default function DeliveryHome() {
   }
 
   const handleReachedDropTouchEnd = (e) => {
+    clearReachedDropHoldTimer()
+
+    if (reachedDropHoldTriggeredRef.current) {
+      reachedDropSwipeStartX.current = 0
+      reachedDropSwipeStartY.current = 0
+      reachedDropIsSwiping.current = false
+      reachedDropHoldTriggeredRef.current = false
+      return
+    }
+
     if (!reachedDropIsSwiping.current) {
       setReachedDropButtonProgress(0)
       return
@@ -3285,87 +3457,7 @@ export default function DeliveryHome() {
     const threshold = maxSwipe * 0.7 // 70% of max swipe
 
     if (deltaX > threshold) {
-      // Animate to completion
-      setReachedDropIsAnimatingToComplete(true)
-      setReachedDropButtonProgress(1)
-
-      // Close popup, confirm reached drop, and show order delivered animation instantly (no delay)
-      // Close reached drop popup first
-      setShowReachedDropPopup(false)
-      
-      // Show Order Delivered popup instantly after Reached Drop is confirmed
-      console.log('✅ Showing Order Delivered popup instantly after Reached Drop confirmation')
-      setShowOrderDeliveredAnimation(true)
-      
-      // API call in background (async, doesn't block popup)
-      ;(async () => {
-        // Get order ID - prioritize MongoDB _id over orderId string for API call
-        // Backend expects _id (MongoDB ObjectId) in the URL parameter
-        // Use _id (MongoDB ObjectId) if available, otherwise fallback to orderId string
-        const orderIdForApi = selectedRestaurant?.id || 
-                             newOrder?.orderMongoId || 
-                             newOrder?._id ||
-                             selectedRestaurant?.orderId || 
-                             newOrder?.orderId
-        
-        console.log('🔍 Order ID lookup for reached drop:', {
-          selectedRestaurantId: selectedRestaurant?.id,
-          selectedRestaurantOrderId: selectedRestaurant?.orderId,
-          newOrderMongoId: newOrder?.orderMongoId,
-          newOrderId: newOrder?.orderId,
-          finalOrderIdForApi: orderIdForApi
-        })
-        
-        if (orderIdForApi) {
-          try {
-            // Call backend API to confirm reached drop (in background, don't block popup)
-            // Use MongoDB _id for API call to avoid ObjectId casting errors
-            console.log('📦 Confirming reached drop for order:', orderIdForApi)
-            const response = await deliveryAPI.confirmReachedDrop(orderIdForApi)
-            
-            if (response.data?.success) {
-              console.log('✅ Reached drop confirmed')
-            } else {
-              console.error('❌ Failed to confirm reached drop:', response.data)
-              toast.error(response.data?.message || 'Failed to confirm reached drop. Please try again.')
-            }
-          } catch (error) {
-            const status = error.response?.status
-            
-            // Handle 500 errors gracefully (server-side issue, popup already shown)
-            if (status === 500) {
-              // For 500 errors, just log warning - popup is already shown, backend will sync later
-              console.warn('⚠️ Server error confirming reached drop (500), but popup is shown. Backend will sync status automatically.', {
-                orderIdForApi: orderIdForApi || 'unknown',
-                message: error.response?.data?.message || error.message
-              })
-              // Don't show error toast or log as error - it's a server issue, not user action
-              return
-            }
-            
-            // For other errors, log and show error message
-            console.error('❌ Error confirming reached drop:', error)
-            console.error('❌ Error details:', {
-              message: error.message,
-              response: error.response?.data,
-              status: status,
-              orderIdForApi: orderIdForApi || 'unknown',
-              selectedRestaurant: selectedRestaurant,
-              newOrder: newOrder
-            })
-            
-            // Show specific error message based on status code
-            let errorMessage = 'Failed to confirm reached drop. Please try again.'
-            if (status === 404) {
-              errorMessage = 'Order not found. Please refresh and try again.'
-            } else if (error.response?.data?.message) {
-              errorMessage = error.response.data.message
-            }
-            
-            toast.error(errorMessage)
-          }
-        }
-      })()
+      confirmReachedDropFlow()
     } else {
       // Reset smoothly
       setReachedDropButtonProgress(0)
@@ -3374,12 +3466,15 @@ export default function DeliveryHome() {
     reachedDropSwipeStartX.current = 0
     reachedDropSwipeStartY.current = 0
     reachedDropIsSwiping.current = false
+    reachedDropHoldTriggeredRef.current = false
   }
 
   const handleReachedDropTouchCancel = () => {
+    clearReachedDropHoldTimer()
     reachedDropSwipeStartX.current = 0
     reachedDropSwipeStartY.current = 0
     reachedDropIsSwiping.current = false
+    reachedDropHoldTriggeredRef.current = false
     setReachedDropButtonProgress(0)
     setReachedDropIsAnimatingToComplete(false)
   }
@@ -4084,14 +4179,67 @@ export default function DeliveryHome() {
     }
   }, [requestDeliveryOtpFromModal, selectedRestaurant])
 
+  const confirmOrderDeliveredFlow = useCallback(async () => {
+    const orderIdForApi = selectedRestaurant?.id ||
+      newOrder?.orderMongoId ||
+      newOrder?._id ||
+      selectedRestaurant?.orderId ||
+      newOrder?.orderId
+
+    if (!orderIdForApi) {
+      toast.error('Order details not found for OTP verification.')
+      setOrderDeliveredButtonProgress(0)
+      setOrderDeliveredIsAnimatingToComplete(false)
+      return
+    }
+
+    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+    if (!otpVerified) {
+      setOrderDeliveredButtonProgress(0)
+      setOrderDeliveredIsAnimatingToComplete(false)
+      return
+    }
+
+    // Animate to completion
+    setOrderDeliveredIsAnimatingToComplete(true)
+    setOrderDeliveredButtonProgress(1)
+
+    // Close popup after animation and show customer review (delivery will be completed when review is submitted)
+    setTimeout(() => {
+      setShowOrderDeliveredAnimation(false)
+
+      // CRITICAL: Clear all pickup/delivery related popups
+      setShowReachedDropPopup(false)
+      setShowreachedPickupPopup(false)
+      setShowOrderIdConfirmationPopup(false)
+
+      // Show customer review popup instantly
+      setShowCustomerReviewPopup(true)
+
+      // Reset after animation
+      setTimeout(() => {
+        setOrderDeliveredButtonProgress(0)
+        setOrderDeliveredIsAnimatingToComplete(false)
+      }, 500)
+    }, 200)
+  }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
+
   const handleOrderDeliveredTouchStart = (e) => {
     const touch = getTouchPoint(e)
     if (!touch) return
+    clearOrderDeliveredHoldTimer()
     orderDeliveredSwipeStartX.current = touch.x
     orderDeliveredSwipeStartY.current = touch.y
     orderDeliveredIsSwiping.current = false
+    orderDeliveredHoldTriggeredRef.current = false
     setOrderDeliveredIsAnimatingToComplete(false)
     setOrderDeliveredButtonProgress(0)
+
+    orderDeliveredHoldTimerRef.current = setTimeout(() => {
+      orderDeliveredHoldTriggeredRef.current = true
+      orderDeliveredIsSwiping.current = true
+      confirmOrderDeliveredFlow()
+    }, HOLD_TO_CONFIRM_MS)
   }
 
   const handleOrderDeliveredTouchMove = (e) => {
@@ -4099,6 +4247,10 @@ export default function DeliveryHome() {
     if (!touch) return
     const deltaX = touch.x - orderDeliveredSwipeStartX.current
     const deltaY = touch.y - orderDeliveredSwipeStartY.current
+
+    if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
+      clearOrderDeliveredHoldTimer()
+    }
 
     // Only handle horizontal swipes (swipe right)
     if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
@@ -4118,6 +4270,16 @@ export default function DeliveryHome() {
   }
 
   const handleOrderDeliveredTouchEnd = async (e) => {
+    clearOrderDeliveredHoldTimer()
+
+    if (orderDeliveredHoldTriggeredRef.current) {
+      orderDeliveredSwipeStartX.current = 0
+      orderDeliveredSwipeStartY.current = 0
+      orderDeliveredIsSwiping.current = false
+      orderDeliveredHoldTriggeredRef.current = false
+      return
+    }
+
     if (!orderDeliveredIsSwiping.current) {
       setOrderDeliveredButtonProgress(0)
       return
@@ -4132,52 +4294,7 @@ export default function DeliveryHome() {
     const threshold = maxSwipe * 0.7 // 70% of max swipe
 
     if (deltaX > threshold) {
-      const orderIdForApi = selectedRestaurant?.id ||
-        newOrder?.orderMongoId ||
-        newOrder?._id ||
-        selectedRestaurant?.orderId ||
-        newOrder?.orderId
-
-      if (!orderIdForApi) {
-        toast.error('Order details not found for OTP verification.')
-        setOrderDeliveredButtonProgress(0)
-        orderDeliveredSwipeStartX.current = 0
-        orderDeliveredSwipeStartY.current = 0
-        orderDeliveredIsSwiping.current = false
-        return
-      }
-
-      const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-      if (!otpVerified) {
-        setOrderDeliveredButtonProgress(0)
-        orderDeliveredSwipeStartX.current = 0
-        orderDeliveredSwipeStartY.current = 0
-        orderDeliveredIsSwiping.current = false
-        return
-      }
-
-      // Animate to completion
-      setOrderDeliveredIsAnimatingToComplete(true)
-      setOrderDeliveredButtonProgress(1)
-
-      // Close popup after animation and show customer review (delivery will be completed when review is submitted)
-      setTimeout(() => {
-        setShowOrderDeliveredAnimation(false)
-        
-        // CRITICAL: Clear all pickup/delivery related popups
-        setShowReachedDropPopup(false)
-        setShowreachedPickupPopup(false)
-        setShowOrderIdConfirmationPopup(false)
-        
-        // Show customer review popup instantly
-        setShowCustomerReviewPopup(true)
-        
-        // Reset after animation
-        setTimeout(() => {
-          setOrderDeliveredButtonProgress(0)
-          setOrderDeliveredIsAnimatingToComplete(false)
-        }, 500)
-      }, 200)
+      await confirmOrderDeliveredFlow()
     } else {
       // Reset smoothly
       setOrderDeliveredButtonProgress(0)
@@ -4186,12 +4303,15 @@ export default function DeliveryHome() {
     orderDeliveredSwipeStartX.current = 0
     orderDeliveredSwipeStartY.current = 0
     orderDeliveredIsSwiping.current = false
+    orderDeliveredHoldTriggeredRef.current = false
   }
 
   const handleOrderDeliveredTouchCancel = () => {
+    clearOrderDeliveredHoldTimer()
     orderDeliveredSwipeStartX.current = 0
     orderDeliveredSwipeStartY.current = 0
     orderDeliveredIsSwiping.current = false
+    orderDeliveredHoldTriggeredRef.current = false
     setOrderDeliveredButtonProgress(0)
     setOrderDeliveredIsAnimatingToComplete(false)
   }
@@ -4404,7 +4524,7 @@ export default function DeliveryHome() {
       
       // Check if order is already in localStorage (accepted order)
       try {
-        const activeOrderData = localStorage.getItem('deliveryActiveOrder');
+        const activeOrderData = localStorage.getItem(DELIVERY_ACTIVE_ORDER_KEY);
         if (activeOrderData) {
           const activeOrder = JSON.parse(activeOrderData);
           const activeOrderId = activeOrder.orderId || activeOrder.restaurantInfo?.id || activeOrder.restaurantInfo?.orderId;
@@ -6553,7 +6673,7 @@ export default function DeliveryHome() {
   useEffect(() => {
     const restoreActiveOrder = async () => {
       try {
-        const savedOrder = localStorage.getItem('deliveryActiveOrder');
+        const savedOrder = localStorage.getItem(DELIVERY_ACTIVE_ORDER_KEY);
         if (!savedOrder) {
           console.log('📦 No active order found in localStorage');
           return;
@@ -6567,7 +6687,7 @@ export default function DeliveryHome() {
         
         if (!orderId) {
           console.log('⚠️ No order ID found in saved data, removing from localStorage');
-          localStorage.removeItem('deliveryActiveOrder');
+          localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
           setSelectedRestaurant(null);
           return;
         }
@@ -6579,7 +6699,7 @@ export default function DeliveryHome() {
           
           if (!orderResponse.data?.success || !orderResponse.data?.data) {
             console.log('⚠️ Order not found in database, removing from localStorage');
-            localStorage.removeItem('deliveryActiveOrder');
+            localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
             setSelectedRestaurant(null);
             return;
           }
@@ -6589,7 +6709,7 @@ export default function DeliveryHome() {
           // Check if order is cancelled or deleted
           if (order.status === 'cancelled' || order.status === 'delivered') {
             console.log(`⚠️ Order is ${order.status}, removing from localStorage`);
-            localStorage.removeItem('deliveryActiveOrder');
+            localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
             setSelectedRestaurant(null);
             return;
           }
@@ -6602,7 +6722,7 @@ export default function DeliveryHome() {
           console.log('⚠️ Error verifying order or order not found:', verifyError.response?.status || verifyError.message);
           if (verifyError.response?.status === 404 || verifyError.response?.status === 403) {
             console.log('⚠️ Order not found or not assigned, removing from localStorage');
-            localStorage.removeItem('deliveryActiveOrder');
+            localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
             setSelectedRestaurant(null);
             return;
           }
@@ -6615,7 +6735,7 @@ export default function DeliveryHome() {
         const hoursSinceAccepted = (Date.now() - acceptedAt.getTime()) / (1000 * 60 * 60);
         if (hoursSinceAccepted > 24) {
           console.log('⚠️ Active order is too old, removing from localStorage');
-          localStorage.removeItem('deliveryActiveOrder');
+          localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
           setSelectedRestaurant(null);
           return;
         }
@@ -6624,6 +6744,25 @@ export default function DeliveryHome() {
         if (activeOrderData.restaurantInfo) {
           setSelectedRestaurant(activeOrderData.restaurantInfo);
           console.log('✅ Restored selectedRestaurant from localStorage');
+        }
+
+        const restoredStage = activeOrderData.uiStage
+        if (restoredStage) {
+          setTimeout(() => {
+            if (restoredStage === 'reached_pickup') {
+              setShowreachedPickupPopup(true)
+            } else if (restoredStage === 'order_id_confirmation') {
+              setShowOrderIdConfirmationPopup(true)
+            } else if (restoredStage === 'reached_drop' || restoredStage === 'en_route_to_drop') {
+              setShowReachedDropPopup(true)
+            } else if (restoredStage === 'order_delivered') {
+              setShowOrderDeliveredAnimation(true)
+            } else if (restoredStage === 'review') {
+              setShowCustomerReviewPopup(true)
+            } else if (restoredStage === 'payment') {
+              setShowPaymentPage(true)
+            }
+          }, 250)
         }
 
         // Wait for map to be ready
@@ -6685,7 +6824,7 @@ export default function DeliveryHome() {
       } catch (error) {
         console.error('❌ Error restoring active order:', error);
         // Clear localStorage and state if there's an error
-        localStorage.removeItem('deliveryActiveOrder');
+        localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
         setSelectedRestaurant(null);
         setShowReachedDropPopup(false);
         setShowOrderDeliveredAnimation(false);
@@ -6697,6 +6836,52 @@ export default function DeliveryHome() {
     restoreActiveOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []) // Run only on mount - calculateRouteWithDirectionsAPI is stable
+
+  // Keep active order progress synced to localStorage so app restarts don't reset flow.
+  useEffect(() => {
+    if (!selectedRestaurant) return
+
+    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const isTerminalOrder = orderStatus === 'delivered' || orderStatus === 'cancelled' || deliveryPhase === 'completed' || deliveryPhase === 'delivered'
+
+    if (isTerminalOrder) {
+      localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY)
+      return
+    }
+
+    const orderId = selectedRestaurant?.id || selectedRestaurant?.orderId
+    if (!orderId) return
+
+    let existing = null
+    try {
+      const raw = localStorage.getItem(DELIVERY_ACTIVE_ORDER_KEY)
+      existing = raw ? JSON.parse(raw) : null
+    } catch {
+      existing = null
+    }
+
+    const payload = {
+      orderId,
+      restaurantInfo: selectedRestaurant,
+      routeCoordinates: routePolyline && routePolyline.length > 0 ? routePolyline : (existing?.routeCoordinates || []),
+      acceptedAt: existing?.acceptedAt || new Date().toISOString(),
+      hasDirectionsAPI: Boolean(directionsResponse || existing?.hasDirectionsAPI),
+      uiStage: getDeliveryFlowStage(),
+      lastUpdatedAt: new Date().toISOString()
+    }
+
+    const serialized = JSON.stringify(payload)
+    if (lastPersistedActiveOrderRef.current === serialized) return
+    lastPersistedActiveOrderRef.current = serialized
+    localStorage.setItem(DELIVERY_ACTIVE_ORDER_KEY, serialized)
+  }, [
+    DELIVERY_ACTIVE_ORDER_KEY,
+    directionsResponse,
+    getDeliveryFlowStage,
+    routePolyline,
+    selectedRestaurant
+  ])
 
   // Ensure polyline is displayed when map becomes ready and there's an active route
   useEffect(() => {
@@ -6796,7 +6981,7 @@ export default function DeliveryHome() {
   // Utility function to clear order data when order is deleted or cancelled
   const clearOrderData = useCallback(() => {
     console.log('🧹 Clearing order data...');
-    localStorage.removeItem('deliveryActiveOrder');
+    localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
     setSelectedRestaurant(null);
     setShowReachedDropPopup(false);
     setShowOrderDeliveredAnimation(false);
@@ -7379,7 +7564,7 @@ export default function DeliveryHome() {
       if (!showPaymentPage && !showCustomerReviewPopup && !showOrderDeliveredAnimation && selectedRestaurant) {
         console.log('✅ Order is delivered and payment completed, clearing selectedRestaurant')
         setSelectedRestaurant(null)
-        localStorage.removeItem('deliveryActiveOrder')
+        localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY)
         localStorage.removeItem('activeOrder')
         if (typeof clearNewOrder === 'function') {
           clearNewOrder()
@@ -11012,7 +11197,7 @@ export default function DeliveryHome() {
                   setSelectedRestaurant(null)
                   
                   // CRITICAL: Clear active order from localStorage to prevent it from showing again
-                  localStorage.removeItem('deliveryActiveOrder')
+                  localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY)
                   localStorage.removeItem('activeOrder')
                   
                   // Clear newOrder from notifications hook (if available)
