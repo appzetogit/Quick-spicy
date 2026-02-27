@@ -1,5 +1,6 @@
 import axios from 'axios';
 import winston from 'winston';
+import { getEnvVar } from '../../../shared/utils/envService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -11,8 +12,15 @@ const logger = winston.createLogger({
   ]
 });
 
-const ENABLE_GOOGLE_GEOCODING = process.env.ENABLE_GOOGLE_GEOCODING === 'true';
-const ENABLE_GOOGLE_PLACES = process.env.ENABLE_GOOGLE_PLACES === 'true';
+async function isGoogleGeocodingEnabled() {
+  const value = await getEnvVar('ENABLE_GOOGLE_GEOCODING', 'false');
+  return String(value).toLowerCase() === 'true';
+}
+
+async function isGooglePlacesEnabled() {
+  const value = await getEnvVar('ENABLE_GOOGLE_PLACES', 'false');
+  return String(value).toLowerCase() === 'true';
+}
 
 /**
  * Reverse geocode coordinates to address using OLA Maps API
@@ -194,12 +202,13 @@ export const reverseGeocode = async (req, res) => {
           try {
               let fallbackResponse = null;
               let googleApiKey = null;
-              if (ENABLE_GOOGLE_GEOCODING) {
+              const enableGoogleGeocoding = await isGoogleGeocodingEnabled();
+              if (enableGoogleGeocoding) {
                 const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
                 googleApiKey = await getGoogleMapsApiKey();
               }
               
-              if (ENABLE_GOOGLE_GEOCODING && googleApiKey) {
+              if (enableGoogleGeocoding && googleApiKey) {
                 try {
                   fallbackResponse = await axios.get(
                     `https://maps.googleapis.com/maps/api/geocode/json`,
@@ -255,7 +264,8 @@ export const reverseGeocode = async (req, res) => {
                     }
                     
                     // If still no area, try Google Places Nearby Search for more specific location
-                    if (!area && ENABLE_GOOGLE_PLACES && googleApiKey) {
+                    const enableGooglePlaces = await isGooglePlacesEnabled();
+                    if (!area && enableGooglePlaces && googleApiKey) {
                       try {
                         const placesResponse = await axios.get(
                           `https://maps.googleapis.com/maps/api/place/nearbysearch/json`,
@@ -689,7 +699,8 @@ export const getNearbyLocations = async (req, res) => {
 
     const apiKey = process.env.OLA_MAPS_API_KEY;
     let googleApiKey = null;
-    if (ENABLE_GOOGLE_PLACES) {
+    const enableGooglePlaces = await isGooglePlacesEnabled();
+    if (enableGooglePlaces) {
       const { getGoogleMapsApiKey } = await import('../../../shared/utils/envService.js');
       googleApiKey = await getGoogleMapsApiKey();
     }
@@ -697,7 +708,7 @@ export const getNearbyLocations = async (req, res) => {
     let nearbyPlaces = [];
 
     // Optional Google Places API path (disabled by default).
-    if (ENABLE_GOOGLE_PLACES && googleApiKey) {
+    if (enableGooglePlaces && googleApiKey) {
       try {
         const response = await axios.get(
           'https://maps.googleapis.com/maps/api/place/nearbysearch/json',

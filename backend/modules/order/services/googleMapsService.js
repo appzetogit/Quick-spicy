@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { getGoogleMapsApiKey } from '../../../shared/utils/envService.js';
+import { getEnvVar, getGoogleMapsApiKey } from '../../../shared/utils/envService.js';
 
 /**
  * Google Maps Distance Matrix API Service
@@ -9,7 +9,11 @@ class GoogleMapsService {
   constructor() {
     this.apiKey = null; // Will be loaded from database when needed
     this.baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
-    this.distanceMatrixEnabled = process.env.ENABLE_GOOGLE_DISTANCE_MATRIX === 'true';
+  }
+
+  async isDistanceMatrixEnabled() {
+    const value = await getEnvVar('ENABLE_GOOGLE_DISTANCE_MATRIX', 'false');
+    return String(value).toLowerCase() === 'true';
   }
 
   /**
@@ -34,7 +38,8 @@ class GoogleMapsService {
    * @returns {Promise<Object>} - { distance (km), duration (minutes), trafficLevel }
    */
   async getTravelTime(origin, destination, mode = 'driving', trafficModel = 'best_guess') {
-    if (!this.distanceMatrixEnabled) {
+    const enabled = await this.isDistanceMatrixEnabled();
+    if (!enabled) {
       return this.calculateHaversineDistance(origin, destination);
     }
 

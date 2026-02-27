@@ -9,7 +9,7 @@
  */
 
 import axios from 'axios';
-import { getGoogleMapsApiKey } from '../../../shared/utils/envService.js';
+import { getEnvVar, getGoogleMapsApiKey } from '../../../shared/utils/envService.js';
 
 // Location history for smoothing
 const locationHistory = new Map(); // riderId -> [locations]
@@ -29,7 +29,10 @@ const SNAP_TO_ROAD_THROTTLE_MS = 10000; // Only call snapToRoads every 10 second
 const SNAP_TO_ROAD_CACHE_DISTANCE_M = 50; // Cache snap results within 50 meters
 const DIRECTIONS_CACHE_TTL_MS = 300000; // Cache directions for 5 minutes
 const SNAP_TO_ROAD_ENABLED = false; // DISABLE by default - very expensive! Use only when needed
-const GOOGLE_DIRECTIONS_ENABLED = process.env.ENABLE_GOOGLE_DIRECTIONS === 'true';
+async function isGoogleDirectionsEnabled() {
+  const value = await getEnvVar('ENABLE_GOOGLE_DIRECTIONS', 'false');
+  return String(value).toLowerCase() === 'true';
+}
 
 /**
  * Calculate distance between two points (Haversine formula) - helper for cache
@@ -190,7 +193,8 @@ export async function snapToRoad(points, riderId = null) {
  */
 export async function generateRoutePolyline(start, waypoint, end) {
   try {
-    if (!GOOGLE_DIRECTIONS_ENABLED) {
+    const googleDirectionsEnabled = await isGoogleDirectionsEnabled();
+    if (!googleDirectionsEnabled) {
       const points = waypoint ? [start, waypoint, end] : [start, end];
       let totalDistance = 0;
       for (let i = 1; i < points.length; i++) {

@@ -69,6 +69,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const [currentAddress, setCurrentAddress] = useState("")
   const [GOOGLE_MAPS_API_KEY, setGOOGLE_MAPS_API_KEY] = useState(null)
   const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING === "true"
+  const ENABLE_GOOGLE_PLACES = import.meta.env.VITE_ENABLE_GOOGLE_PLACES === "true"
   const getAddressId = (address) => address?.id || address?._id || null
 
   // Load Google Maps API key from backend
@@ -1580,36 +1581,38 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                 }
               }
 
-              // Step 2: Use Places API for even more detailed information
-              try {
-                const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${roundedLat},${roundedLng}&radius=50&key=${apiKey}&language=en`
-                const nearbyResponse = await fetch(nearbyUrl).then(res => res.json())
+              // Step 2: Use Places API for even more detailed information (optional, costed API)
+              if (ENABLE_GOOGLE_PLACES) {
+                try {
+                  const nearbyUrl = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${roundedLat},${roundedLng}&radius=50&key=${apiKey}&language=en`
+                  const nearbyResponse = await fetch(nearbyUrl).then(res => res.json())
 
-                if (nearbyResponse.status === "OK" && nearbyResponse.results && nearbyResponse.results.length > 0) {
-                  const placeId = nearbyResponse.results[0].place_id
-                  const placeName = nearbyResponse.results[0].name
+                  if (nearbyResponse.status === "OK" && nearbyResponse.results && nearbyResponse.results.length > 0) {
+                    const placeId = nearbyResponse.results[0].place_id
+                    const placeName = nearbyResponse.results[0].name
 
-                  // Use place name if available (more accurate)
-                  if (placeName && !pointOfInterest) {
-                    pointOfInterest = placeName
-                  }
+                    // Use place name if available (more accurate)
+                    if (placeName && !pointOfInterest) {
+                      pointOfInterest = placeName
+                    }
 
-                  // Get place details for complete address
-                  if (placeId) {
-                    const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,address_components&key=${apiKey}&language=en`
-                    const detailsResponse = await fetch(detailsUrl).then(res => res.json())
+                    // Get place details for complete address
+                    if (placeId) {
+                      const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=formatted_address,address_components&key=${apiKey}&language=en`
+                      const detailsResponse = await fetch(detailsUrl).then(res => res.json())
 
-                    if (detailsResponse.status === "OK" && detailsResponse.result) {
-                      // Use Places API formatted address if it's more complete
-                      const placesAddress = detailsResponse.result.formatted_address || ""
-                      if (placesAddress && placesAddress.split(',').length > formattedAddress.split(',').length) {
-                        formattedAddress = placesAddress
+                      if (detailsResponse.status === "OK" && detailsResponse.result) {
+                        // Use Places API formatted address if it's more complete
+                        const placesAddress = detailsResponse.result.formatted_address || ""
+                        if (placesAddress && placesAddress.split(',').length > formattedAddress.split(',').length) {
+                          formattedAddress = placesAddress
+                        }
                       }
                     }
                   }
+                } catch (placesError) {
+                  console.warn("⚠️ Places API error (non-critical):", placesError.message)
                 }
-              } catch (placesError) {
-                console.warn("⚠️ Places API error (non-critical):", placesError.message)
               }
 
               console.log("✅✅✅ Google Maps - Complete Address Details:", {

@@ -29,6 +29,7 @@ export function useLocation() {
   const DB_UPDATE_MIN_DISTANCE_METERS = 30
   const DB_UPDATE_MIN_INTERVAL_MS = 90 * 1000
   const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING === "true"
+  const ENABLE_GOOGLE_PLACES = import.meta.env.VITE_ENABLE_GOOGLE_PLACES === "true"
 
   const getDistanceMeters = (lat1, lng1, lat2, lng2) => {
     if (
@@ -550,7 +551,7 @@ export function useLocation() {
       let placeOpeningHours = null;
       let placePhotos = [];
 
-      if (includePlaceDetails) {
+      if (includePlaceDetails && ENABLE_GOOGLE_PLACES) {
         try {
           const apiKey = GOOGLE_MAPS_API_KEY
 
@@ -673,6 +674,10 @@ export function useLocation() {
           console.warn("⚠️ Google Places API error (non-critical):", placesError.message);
           // Continue with geocoding results even if Places API fails
         }
+      }
+
+      if (includePlaceDetails && !ENABLE_GOOGLE_PLACES) {
+        console.log("Google Places detail fetch disabled by VITE_ENABLE_GOOGLE_PLACES=false")
       }
 
       // ZOMATO-STYLE: Extract exact building/cafe name (Mama Loca Cafe, Princess Center)

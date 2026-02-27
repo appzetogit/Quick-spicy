@@ -3,6 +3,155 @@
  * Uses Dijkstra's algorithm for route calculation
  * Falls back to OSRM API for real-world routing
  */
+import { getFirebaseRealtimeDbSafe } from '../../../config/firebaseRealtime.js';
+
+const ROUTE_CACHE_NODE = 'route_cache';
+const ROUTE_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function toFiniteNumber(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function formatCoordPart(value) {
+  // Keep compact stable key format similar to existing data:
+  // 22.7118 -> "22_7118", 75.9000 -> "75_9"
+  const fixed = Number(value).toFixed(4);
+  const trimmed = fixed
+    .replace(/\.?0+$/, '')
+    .replace('-', 'm');
+  return trimmed.replace('.', '_');
+}
+
+function buildRouteCacheKey(startLat, startLng, endLat, endLng) {
+  return [
+    formatCoordPart(startLat),
+    formatCoordPart(startLng),
+    formatCoordPart(endLat),
+    formatCoordPart(endLng)
+  ].join('_');
+}
+
+function decodePolyline(encoded) {
+  const points = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLat = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lat += deltaLat;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    const deltaLng = (result & 1) ? ~(result >> 1) : (result >> 1);
+    lng += deltaLng;
+
+    points.push([lat * 1e-5, lng * 1e-5]);
+  }
+
+  return points;
+}
+
+function encodePolyline(coordinates = []) {
+  let lastLat = 0;
+  let lastLng = 0;
+  let result = '';
+
+  const encodeSigned = (num) => {
+    let sgnNum = num < 0 ? ~(num << 1) : (num << 1);
+    let encoded = '';
+    while (sgnNum >= 0x20) {
+      encoded += String.fromCharCode((0x20 | (sgnNum & 0x1f)) + 63);
+      sgnNum >>= 5;
+    }
+    encoded += String.fromCharCode(sgnNum + 63);
+    return encoded;
+  };
+
+  for (const point of coordinates) {
+    const lat = Math.round(Number(point[0]) * 1e5);
+    const lng = Math.round(Number(point[1]) * 1e5);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const dLat = lat - lastLat;
+    const dLng = lng - lastLng;
+    lastLat = lat;
+    lastLng = lng;
+    result += encodeSigned(dLat) + encodeSigned(dLng);
+  }
+
+  return result;
+}
+
+async function getCachedRouteFromFirebase(startLat, startLng, endLat, endLng) {
+  try {
+    const db = await getFirebaseRealtimeDbSafe();
+    if (!db) return null;
+
+    const key = buildRouteCacheKey(startLat, startLng, endLat, endLng);
+    const snap = await db.ref(`${ROUTE_CACHE_NODE}/${key}`).once('value');
+    if (!snap.exists()) return null;
+
+    const value = snap.val() || {};
+    const now = Date.now();
+    const expiresAt = toFiniteNumber(value.expires_at) || 0;
+    const distance = toFiniteNumber(value.distance);
+    const duration = toFiniteNumber(value.duration);
+    const polyline = typeof value.polyline === 'string' ? value.polyline : '';
+
+    if (!expiresAt || expiresAt < now || !polyline || distance === null || duration === null) {
+      return null;
+    }
+
+    const coordinates = decodePolyline(polyline);
+    if (!Array.isArray(coordinates) || coordinates.length === 0) return null;
+
+    return {
+      success: true,
+      coordinates,
+      distance,
+      duration,
+      method: 'firebase_cache'
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function setCachedRouteInFirebase(startLat, startLng, endLat, endLng, routeData) {
+  try {
+    const db = await getFirebaseRealtimeDbSafe();
+    if (!db) return;
+
+    const key = buildRouteCacheKey(startLat, startLng, endLat, endLng);
+    const now = Date.now();
+    const polyline = encodePolyline(routeData?.coordinates || []);
+    if (!polyline) return;
+
+    await db.ref(`${ROUTE_CACHE_NODE}/${key}`).set({
+      cached_at: now,
+      distance: Number(routeData.distance),
+      duration: Number(routeData.duration),
+      expires_at: now + ROUTE_CACHE_TTL_MS,
+      polyline
+    });
+  } catch {
+    // Non-blocking cache write
+  }
+}
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -215,11 +364,24 @@ export async function calculateRouteDijkstra(startLat, startLng, endLat, endLng,
  */
 export async function calculateRoute(startLat, startLng, endLat, endLng, options = {}) {
   const { useDijkstra = false, waypoints = [] } = options;
-  
+
+  // 1) Try Firebase RTDB cache first to avoid external API calls.
+  const cached = await getCachedRouteFromFirebase(startLat, startLng, endLat, endLng);
+  if (cached) return cached;
+
+  // 2) Compute route via local algorithm/OSRM.
+  let route;
   if (useDijkstra && waypoints.length > 0) {
-    return await calculateRouteDijkstra(startLat, startLng, endLat, endLng, waypoints);
+    route = await calculateRouteDijkstra(startLat, startLng, endLat, endLng, waypoints);
   } else {
-    return await calculateRouteOSRM(startLat, startLng, endLat, endLng);
+    route = await calculateRouteOSRM(startLat, startLng, endLat, endLng);
   }
+
+  // 3) Persist into Firebase route_cache for next requests.
+  if (route?.success) {
+    await setCachedRouteInFirebase(startLat, startLng, endLat, endLng, route);
+  }
+
+  return route;
 }
 
