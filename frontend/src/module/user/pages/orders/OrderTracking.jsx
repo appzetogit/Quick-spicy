@@ -986,7 +986,7 @@ export default function OrderTracking() {
           >
             <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">Delivery OTP</p>
             <p className="text-2xl font-extrabold text-blue-900 mt-1 tracking-widest">{customerDeliveryOtp}</p>
-            <p className="text-xs text-blue-700 mt-1">Share this OTP with your delivery partner at drop-off.</p>
+            <p className="text-xs text-blue-700 mt-1">Share this 4-digit OTP with your delivery partner at drop-off.</p>
           </motion.div>
         )}
 

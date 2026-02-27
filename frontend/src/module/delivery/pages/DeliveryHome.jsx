@@ -299,6 +299,7 @@ function animateMarkerSmoothly(marker, newPosition, duration = 1500, animationRe
 }
 
 export default function DeliveryHome() {
+  const DELIVERY_DROP_OTP_LENGTH = 4
   const DELIVERY_ACTIVE_ORDER_KEY = 'deliveryActiveOrder'
   const companyName = useCompanyName()
   const navigate = useNavigate()
@@ -650,7 +651,7 @@ export default function DeliveryHome() {
   const [orderDeliveredButtonProgress, setOrderDeliveredButtonProgress] = useState(0)
   const [orderDeliveredIsAnimatingToComplete, setOrderDeliveredIsAnimatingToComplete] = useState(false)
   const [showDeliveryOtpModal, setShowDeliveryOtpModal] = useState(false)
-  const [deliveryOtpDigits, setDeliveryOtpDigits] = useState(["", "", "", "", "", ""])
+  const [deliveryOtpDigits, setDeliveryOtpDigits] = useState(() => Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
   const [deliveryOtpError, setDeliveryOtpError] = useState("")
   const [isVerifyingDeliveryOtp, setIsVerifyingDeliveryOtp] = useState(false)
   const deliveryOtpResolveRef = useRef(null)
@@ -4072,11 +4073,11 @@ export default function DeliveryHome() {
   const requestDeliveryOtpFromModal = useCallback(() => {
     return new Promise((resolve) => {
       deliveryOtpResolveRef.current = resolve
-      setDeliveryOtpDigits(["", "", "", "", "", ""])
+      setDeliveryOtpDigits(Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
       setDeliveryOtpError("")
       setShowDeliveryOtpModal(true)
     })
-  }, [])
+  }, [DELIVERY_DROP_OTP_LENGTH])
 
   const closeDeliveryOtpModal = useCallback((otpValue = null) => {
     if (deliveryOtpResolveRef.current) {
@@ -4084,9 +4085,9 @@ export default function DeliveryHome() {
       deliveryOtpResolveRef.current = null
     }
     setShowDeliveryOtpModal(false)
-    setDeliveryOtpDigits(["", "", "", "", "", ""])
+    setDeliveryOtpDigits(Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
     setDeliveryOtpError("")
-  }, [])
+  }, [DELIVERY_DROP_OTP_LENGTH])
 
   const handleDeliveryOtpDigitChange = (index, value) => {
     const digit = String(value || "").replace(/\D/g, "").slice(-1)
@@ -4095,7 +4096,7 @@ export default function DeliveryHome() {
     setDeliveryOtpDigits(next)
     setDeliveryOtpError("")
 
-    if (digit && index < 5) {
+    if (digit && index < DELIVERY_DROP_OTP_LENGTH - 1) {
       deliveryOtpInputRefs.current[index + 1]?.focus()
     }
   }
@@ -4111,24 +4112,24 @@ export default function DeliveryHome() {
 
   const handleDeliveryOtpPaste = (event) => {
     event.preventDefault()
-    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, DELIVERY_DROP_OTP_LENGTH)
     if (!pasted) return
 
-    const next = ["", "", "", "", "", ""]
+    const next = Array(DELIVERY_DROP_OTP_LENGTH).fill("")
     pasted.split("").forEach((digit, index) => {
       next[index] = digit
     })
     setDeliveryOtpDigits(next)
     setDeliveryOtpError("")
 
-    const focusIndex = Math.min(pasted.length, 5)
+    const focusIndex = Math.min(pasted.length, DELIVERY_DROP_OTP_LENGTH - 1)
     deliveryOtpInputRefs.current[focusIndex]?.focus()
   }
 
   const submitDeliveryOtpModal = () => {
     const otpValue = deliveryOtpDigits.join("").trim()
-    if (otpValue.length !== 6) {
-      setDeliveryOtpError("Please enter a valid 6-digit OTP")
+    if (otpValue.length !== DELIVERY_DROP_OTP_LENGTH) {
+      setDeliveryOtpError(`Please enter a valid ${DELIVERY_DROP_OTP_LENGTH}-digit OTP`)
       return
     }
     closeDeliveryOtpModal(otpValue)
@@ -10783,7 +10784,7 @@ export default function DeliveryHome() {
               <Lock className="w-7 h-7 text-emerald-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900">Verify Delivery OTP</h3>
-            <p className="text-sm text-gray-600 mt-1">Ask customer for the 6-digit OTP to complete delivery</p>
+            <p className="text-sm text-gray-600 mt-1">Ask customer for the 4-digit OTP to complete delivery</p>
           </div>
 
           <div className="flex items-center justify-center gap-2 mb-4" onPaste={handleDeliveryOtpPaste}>
