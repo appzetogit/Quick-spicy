@@ -2294,9 +2294,14 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       });
     } catch (commissionError) {
       console.error('⚠️ Error calculating commission using rules:', commissionError.message);
-      // Fallback: Use delivery fee as earnings if commission calculation fails
-      totalEarning = order.pricing?.deliveryFee || 0;
-      console.warn(`⚠️ Using fallback earnings (delivery fee): ₹${totalEarning.toFixed(2)}`);
+      // Fallback: keep delivery earnings on commission-rule logic, not user-facing delivery fee
+      const fallbackRule = await DeliveryBoyCommission.findOne({ status: true }).sort({ minDistance: 1 }).lean();
+      const fallbackMinDistance = Number(fallbackRule?.minDistance) || 0;
+      const fallbackBasePayout = Number(fallbackRule?.basePayout) || 10;
+      const fallbackCommissionPerKm = Number(fallbackRule?.commissionPerKm) || 5;
+      const extraDistance = Math.max(0, deliveryDistance - fallbackMinDistance);
+      totalEarning = fallbackBasePayout + (extraDistance * fallbackCommissionPerKm);
+      console.warn(`⚠️ Using fallback earnings (commission rule fallback): ₹${totalEarning.toFixed(2)}`);
     }
 
     // Add earning to delivery boy's wallet

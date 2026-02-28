@@ -169,7 +169,7 @@ export default function Cart() {
   const [loadingCoupons, setLoadingCoupons] = useState(false)
   const [userOrderCount, setUserOrderCount] = useState(0)
 
-  // Fee settings from database (used as fallback if pricing not available)
+  // Fee settings from database (used for platform fee and GST fallback only)
   const [feeSettings, setFeeSettings] = useState({
     deliveryFee: 25,
     deliveryFeeRanges: [],
@@ -715,7 +715,7 @@ export default function Cart() {
     }
   }, [])
 
-  // Use backend pricing if available, otherwise fallback to database settings
+  // Use backend pricing if available, otherwise fallback to database fee settings
   const subtotal = pricing?.subtotal || cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
   const fallbackDeliveryFee = (() => {
     if (appliedCoupon?.freeDelivery) {
@@ -734,9 +734,10 @@ export default function Cart() {
         const inRange = isLastRange
           ? subtotal >= min && subtotal <= max
           : subtotal >= min && subtotal < max
+
         if (inRange) return fee
       }
-      // Ranges are configured; if no range matched, treat as free delivery.
+
       return 0
     }
 

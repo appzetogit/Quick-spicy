@@ -262,15 +262,9 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       deliveryDistance = calculateDistance(restaurantLat, restaurantLng, customerLat, customerLng);
     }
 
-    // Calculate estimated earnings; use order's delivery fee as fallback when 0 or distance missing
-    const deliveryFeeFromOrder = order.pricing?.deliveryFee ?? 0;
+    // Calculate estimated earnings using delivery boy commission rules only
     let estimatedEarnings = await calculateEstimatedEarnings(deliveryDistance || 0);
-    const earnedValue = typeof estimatedEarnings === 'object' ? (estimatedEarnings.totalEarning ?? 0) : (Number(estimatedEarnings) || 0);
-    if (earnedValue <= 0 && deliveryFeeFromOrder > 0) {
-      estimatedEarnings = typeof estimatedEarnings === 'object'
-        ? { ...estimatedEarnings, totalEarning: deliveryFeeFromOrder }
-        : deliveryFeeFromOrder;
-    }
+    const deliveryFeeFromOrder = order.pricing?.deliveryFee ?? 0;
 
     let paymentRecord = null;
     try {
@@ -577,20 +571,12 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         deliveryDistance
       });
       
-      // Use deliveryFee as fallback if earnings is 0 or invalid
-      if (earnedValue <= 0 && deliveryFeeFromOrder > 0) {
-        console.log(`⚠️ Earnings is 0, using deliveryFee as fallback: ₹${deliveryFeeFromOrder}`);
-        estimatedEarnings = typeof estimatedEarnings === 'object'
-          ? { ...estimatedEarnings, totalEarning: deliveryFeeFromOrder }
-          : deliveryFeeFromOrder;
-      }
-      
       console.log(`✅ Final estimated earnings for order ${orderWithUser.orderId}: ₹${typeof estimatedEarnings === 'object' ? estimatedEarnings.totalEarning : estimatedEarnings} (distance: ${deliveryDistance.toFixed(2)} km)`);
     } catch (earningsError) {
       console.error('❌ Error calculating estimated earnings in notification:', earningsError);
       console.error('❌ Error stack:', earningsError.stack);
-      // Fallback to deliveryFee or default
-      estimatedEarnings = deliveryFeeFromOrder > 0 ? deliveryFeeFromOrder : {
+      // Fallback to default commission-like structure if commission lookup fails
+      estimatedEarnings = {
         basePayout: 10,
         distance: deliveryDistance,
         commissionPerKm: 5,

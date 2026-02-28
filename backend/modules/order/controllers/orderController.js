@@ -177,13 +177,6 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    if (!pricing || !pricing.total) {
-      return res.status(400).json({
-        success: false,
-        message: 'Order total is required'
-      });
-    }
-
     // Validate and assign restaurant - order goes to the restaurant whose food was ordered
     if (!restaurantId || restaurantId === 'unknown') {
       return res.status(400).json({
@@ -397,9 +390,20 @@ export const createOrder = async (req, res) => {
     const generatedDropOtp = generateDropDeliveryOtp();
     const dropOtpExpiresAt = new Date(Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
 
-    // Ensure couponCode is included in pricing
-    if (!pricing.couponCode && pricing.appliedCoupon?.code) {
-      pricing.couponCode = pricing.appliedCoupon.code;
+    const couponCode = pricing?.couponCode || pricing?.appliedCoupon?.code || null;
+    const authoritativePricing = await calculateOrderPricing({
+      items,
+      restaurantId: assignedRestaurantId,
+      deliveryAddress: address,
+      couponCode,
+      deliveryFleet: deliveryFleet || 'standard'
+    });
+
+    if (!authoritativePricing || !authoritativePricing.total) {
+      return res.status(400).json({
+        success: false,
+        message: 'Unable to calculate order pricing'
+      });
     }
 
     // Create order in database with pending status
@@ -411,8 +415,8 @@ export const createOrder = async (req, res) => {
       items,
       address,
       pricing: {
-        ...pricing,
-        couponCode: pricing.couponCode || null
+        ...authoritativePricing,
+        couponCode
       },
       deliveryFleet: deliveryFleet || 'standard',
       note: note || '',
@@ -551,14 +555,14 @@ export const createOrder = async (req, res) => {
         const wallet = await UserWallet.findOrCreateByUserId(userId);
         
         // Check if sufficient balance
-        if (pricing.total > wallet.balance) {
+        if (order.pricing.total > wallet.balance) {
           return res.status(400).json({
             success: false,
             message: 'Insufficient wallet balance',
             data: {
-              required: pricing.total,
+              required: order.pricing.total,
               available: wallet.balance,
-              shortfall: pricing.total - wallet.balance
+              shortfall: order.pricing.total - wallet.balance
             }
           });
         }
@@ -576,7 +580,7 @@ export const createOrder = async (req, res) => {
         } else {
           // Deduct money from wallet
           const transaction = wallet.addTransaction({
-            amount: pricing.total,
+            amount: order.pricing.total,
             type: 'deduction',
             status: 'Completed',
             description: `Order payment - Order #${order.orderId}`,
@@ -595,7 +599,7 @@ export const createOrder = async (req, res) => {
           logger.info('✅ Wallet payment deducted for order:', {
             orderId: order.orderId,
             userId: userId,
-            amount: pricing.total,
+            amount: order.pricing.total,
             transactionId: transaction._id,
             newBalance: wallet.balance
           });
@@ -607,7 +611,7 @@ export const createOrder = async (req, res) => {
             paymentId: `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             orderId: order._id,
             userId,
-            amount: pricing.total,
+            amount: order.pricing.total,
             currency: 'INR',
             method: 'wallet',
             status: 'completed',
@@ -656,13 +660,13 @@ export const createOrder = async (req, res) => {
               id: order._id.toString(),
               orderId: order.orderId,
               status: order.status,
-              total: pricing.total,
+              total: order.pricing.total,
               deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
             },
             razorpay: null,
             wallet: {
               balance: wallet.balance,
-              deducted: pricing.total
+              deducted: order.pricing.total
             }
           }
         });
@@ -740,7 +744,7 @@ export const createOrder = async (req, res) => {
             id: order._id.toString(),
             orderId: order.orderId,
             status: order.status,
-            total: pricing.total,
+            total: order.pricing.total,
             deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
           },
           razorpay: null
@@ -757,7 +761,7 @@ export const createOrder = async (req, res) => {
     if (normalizedPaymentMethod === 'razorpay' || !normalizedPaymentMethod) {
       try {
         razorpayOrder = await createRazorpayOrder({
-          amount: Math.round(pricing.total * 100), // Convert to paise
+          amount: Math.round(order.pricing.total * 100), // Convert to paise
           currency: 'INR',
           receipt: order.orderId,
           notes: {
@@ -780,7 +784,7 @@ export const createOrder = async (req, res) => {
     logger.info(`Order created: ${order.orderId}`, {
       orderId: order.orderId,
       userId,
-      amount: pricing.total,
+      amount: order.pricing.total,
       razorpayOrderId: razorpayOrder?.id
     });
 
@@ -803,7 +807,7 @@ export const createOrder = async (req, res) => {
           id: order._id.toString(),
           orderId: order.orderId,
           status: order.status,
-          total: pricing.total,
+          total: order.pricing.total,
           deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
         },
         razorpay: razorpayOrder ? {
