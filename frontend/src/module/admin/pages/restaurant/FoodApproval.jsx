@@ -89,14 +89,22 @@ export default function FoodApproval() {
       request.category?.toLowerCase().includes(query) ||
       request.restaurantName?.toLowerCase().includes(query) ||
       request.restaurantId?.toLowerCase().includes(query) ||
-      request.sectionName?.toLowerCase().includes(query)
+      request.sectionName?.toLowerCase().includes(query) ||
+      request.subsectionName?.toLowerCase().includes(query) ||
+      request.approvalStatus?.toLowerCase().includes(query) ||
+      request.entityType?.toLowerCase().includes(query)
     )
   }, [foodRequests, searchQuery])
 
   const totalRequests = filteredRequests.length
+  const pendingActionableCount = useMemo(
+    () => filteredRequests.filter((request) => request.isActionable).length,
+    [filteredRequests]
+  )
 
   // Handle approve food item
   const handleApprove = async (request) => {
+    if (!request?.isActionable) return
     try {
       setProcessing(true)
       await adminAPI.approveFoodItem(request._id || request.id)
@@ -114,6 +122,10 @@ export default function FoodApproval() {
 
   // Handle reject food item
   const handleReject = async () => {
+    if (!selectedRequest?.isActionable) {
+      setShowRejectModal(false)
+      return
+    }
     if (!rejectReason.trim()) {
       toast.error('Please provide a rejection reason')
       return
@@ -153,6 +165,7 @@ export default function FoodApproval() {
 
   // Open reject modal
   const handleRejectClick = (request) => {
+    if (!request?.isActionable) return
     setSelectedRequest(request)
     setShowRejectModal(true)
   }
@@ -175,9 +188,9 @@ export default function FoodApproval() {
           {/* Section Header */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-base font-semibold text-gray-900">Pending Food Approvals</h2>
+              <h2 className="text-base font-semibold text-gray-900">Food And Category Records</h2>
               <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-600">
-                {totalRequests}
+                {pendingActionableCount} pending / {totalRequests} total
               </span>
             </div>
           </div>
@@ -190,7 +203,7 @@ export default function FoodApproval() {
               </span>
               <input
                 type="text"
-                placeholder="Ex: search by food name, restaurant name or ID"
+                placeholder="Search by food, category, restaurant, section or status"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-md border border-gray-300 bg-white py-1.5 pl-9 pr-3 text-sm focus:outline-none focus:border-[#006fbd] focus:ring-1 focus:ring-[#006fbd]"
@@ -222,7 +235,13 @@ export default function FoodApproval() {
                         Food Name
                       </th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Section
+                      </th>
+                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Status
                       </th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Price
@@ -238,8 +257,8 @@ export default function FoodApproval() {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {filteredRequests.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="px-3 py-8 text-center text-sm text-gray-500">
-                          {loading ? "Loading..." : "No pending food approval requests found."}
+                        <td colSpan="10" className="px-3 py-8 text-center text-sm text-gray-500">
+                          {loading ? "Loading..." : "No food or category records found."}
                         </td>
                       </tr>
                     ) : (
@@ -260,11 +279,27 @@ export default function FoodApproval() {
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 font-semibold">
                             {request.itemName || '-'}
                           </td>
+                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 capitalize">
+                            {request.entityType || request.type || 'food'}
+                          </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
-                            {request.sectionName || '-'}
+                            {request.subsectionName ? `${request.sectionName || '-'} / ${request.subsectionName}` : (request.sectionName || '-')}
+                          </td>
+                          <td className="px-3 py-3 whitespace-nowrap text-sm">
+                            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${
+                              request.isActionable
+                                ? 'bg-amber-100 text-amber-700'
+                                : String(request.approvalStatus || '').toLowerCase() === 'approved'
+                                  ? 'bg-green-100 text-green-700'
+                                  : String(request.entityType || request.type) === 'category'
+                                    ? 'bg-slate-100 text-slate-700'
+                                    : 'bg-gray-100 text-gray-700'
+                            }`}>
+                              {request.approvalStatus || (request.isActionable ? 'pending' : 'active')}
+                            </span>
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 font-semibold">
-                            ₹{request.price || '0.00'}
+                            {request.price !== null && request.price !== undefined ? `Rs ${request.price}` : '-'}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
                             {request.requestedAt ? new Date(request.requestedAt).toLocaleDateString() : '-'}
@@ -283,7 +318,7 @@ export default function FoodApproval() {
                               </button>
                               <button
                                 onClick={() => handleApprove(request)}
-                                disabled={processing}
+                                disabled={processing || !request.isActionable}
                                 className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Approve"
                               >
@@ -291,7 +326,7 @@ export default function FoodApproval() {
                               </button>
                               <button
                                 onClick={() => handleRejectClick(request)}
-                                disabled={processing}
+                                disabled={processing || !request.isActionable}
                                 className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-red-600 text-white hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Reject"
                               >
@@ -315,10 +350,10 @@ export default function FoodApproval() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0 bg-white">
           <DialogHeader className="p-6 pb-4 border-b border-gray-200">
             <DialogTitle className="text-xl font-semibold text-gray-900">
-              Food Item Details
+              {selectedRequest?.entityType === 'category' ? 'Category Details' : 'Food Item Details'}
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500 mt-1">
-              Review the food item details before approval.
+              Review the submitted details.
             </DialogDescription>
           </DialogHeader>
           {selectedRequest && (
@@ -333,8 +368,12 @@ export default function FoodApproval() {
               {/* Food Item Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Food Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">{selectedRequest?.entityType === 'category' ? 'Category Name' : 'Food Name'}</label>
                   <p className="text-sm text-gray-900">{selectedRequest.itemName || '-'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <p className="text-sm text-gray-900 capitalize">{selectedRequest.entityType || selectedRequest.type || '-'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
@@ -346,11 +385,15 @@ export default function FoodApproval() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
-                  <p className="text-sm text-gray-900 font-semibold">₹{selectedRequest.price || '0.00'}</p>
+                  <p className="text-sm text-gray-900 font-semibold">{selectedRequest.price !== null && selectedRequest.price !== undefined ? `Rs ${selectedRequest.price}` : '-'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Food Type</label>
                   <p className="text-sm text-gray-900">{selectedRequest.foodType || '-'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <p className="text-sm text-gray-900 capitalize">{selectedRequest.approvalStatus || (selectedRequest.isActionable ? 'pending' : 'active')}</p>
                 </div>
                 {selectedRequest.description && (
                   <div className="col-span-2">
@@ -427,21 +470,25 @@ export default function FoodApproval() {
             >
               Close
             </button>
-            <button
-              type="button"
-              onClick={() => handleRejectClick(selectedRequest)}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
-            >
-              Reject
-            </button>
-            <button
-              type="button"
-              onClick={() => handleApprove(selectedRequest)}
-              disabled={processing}
-              className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {processing ? "Processing..." : "Approve"}
-            </button>
+            {selectedRequest?.isActionable && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => handleRejectClick(selectedRequest)}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 transition-colors"
+                >
+                  Reject
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleApprove(selectedRequest)}
+                  disabled={processing}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {processing ? "Processing..." : "Approve"}
+                </button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

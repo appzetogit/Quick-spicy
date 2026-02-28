@@ -2,6 +2,7 @@ import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import Menu from '../../restaurant/models/Menu.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
+import RestaurantCategory from '../../restaurant/models/RestaurantCategory.js';
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -23,27 +24,114 @@ export const getPendingFoodApprovals = asyncHandler(async (req, res) => {
     const menus = await Menu.find({ isActive: true })
       .populate('restaurant', 'name restaurantId')
       .lean();
+    const restaurantCategories = await RestaurantCategory.find({})
+      .populate('restaurant', 'name restaurantId')
+      .lean();
 
     const pendingRequests = [];
+    const seenCategoryKeys = new Set();
 
-    // Iterate through all menus and extract pending items
+    const pushCategoryRequest = ({
+      restaurant,
+      categoryName,
+      categoryId,
+      requestedAt,
+      source = 'menu',
+      description = '',
+      isActive = true,
+      itemCount = 0,
+    }) => {
+      const normalizedCategory = String(categoryName || '').trim();
+      if (!restaurant || !normalizedCategory) return;
+
+      const dedupeKey = `${String(restaurant._id)}::${normalizedCategory.toLowerCase()}`;
+      if (seenCategoryKeys.has(dedupeKey)) return;
+      seenCategoryKeys.add(dedupeKey);
+
+      pendingRequests.push({
+        _id: categoryId || dedupeKey,
+        id: categoryId || dedupeKey,
+        entityType: 'category',
+        type: 'category',
+        itemName: normalizedCategory,
+        category: normalizedCategory,
+        restaurantId: restaurant.restaurantId,
+        restaurantName: restaurant.name,
+        restaurantMongoId: restaurant._id,
+        sectionName: normalizedCategory,
+        sectionId: categoryId || '',
+        price: null,
+        foodType: '-',
+        description,
+        image: '',
+        images: [],
+        requestedAt: requestedAt || new Date(0),
+        approvalStatus: isActive ? 'active' : 'inactive',
+        isActionable: false,
+        source,
+        itemCount,
+      });
+    };
+
+    // Iterate through all menus and extract categories/items/add-ons
     for (const menu of menus) {
       if (!menu.restaurant) continue;
 
-      // Check items in sections
       for (const section of menu.sections || []) {
+        pushCategoryRequest({
+          restaurant: menu.restaurant,
+          categoryName: section.name,
+          categoryId: section.id,
+          requestedAt: menu.createdAt,
+          source: 'menu-section',
+          description: `Menu section from ${menu.restaurant.name}`,
+          isActive: section.isEnabled !== false,
+          itemCount: (section.items || []).length + (section.subsections || []).reduce((sum, subsection) => sum + ((subsection.items || []).length), 0),
+        });
+
         for (const item of section.items || []) {
-          if (item.approvalStatus === 'pending') {
+          pendingRequests.push({
+            _id: item.id,
+            id: item.id,
+            entityType: 'food',
+            type: 'food',
+            itemName: item.name,
+            category: item.category || section.name || '',
+            restaurantId: menu.restaurant.restaurantId,
+            restaurantName: menu.restaurant.name,
+            restaurantMongoId: menu.restaurant._id,
+            sectionName: section.name,
+            sectionId: section.id,
+            price: item.price,
+            foodType: item.foodType,
+            description: item.description,
+            image: item.image || (item.images && item.images[0]) || '',
+            images: Array.isArray(item.images) && item.images.length > 0
+              ? item.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+              : [],
+            requestedAt: item.requestedAt || menu.createdAt,
+            approvalStatus: item.approvalStatus || 'pending',
+            isActionable: item.approvalStatus === 'pending' || !item.approvalStatus,
+            item: item
+          });
+        }
+
+        for (const subsection of section.subsections || []) {
+          for (const item of subsection.items || []) {
             pendingRequests.push({
               _id: item.id,
               id: item.id,
+              entityType: 'food',
+              type: 'food',
               itemName: item.name,
-              category: item.category || '',
+              category: item.category || section.name || '',
               restaurantId: menu.restaurant.restaurantId,
               restaurantName: menu.restaurant.name,
               restaurantMongoId: menu.restaurant._id,
               sectionName: section.name,
               sectionId: section.id,
+              subsectionName: subsection.name,
+              subsectionId: subsection.id,
               price: item.price,
               foodType: item.foodType,
               description: item.description,
@@ -52,73 +140,60 @@ export const getPendingFoodApprovals = asyncHandler(async (req, res) => {
                 ? item.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
                 : [],
               requestedAt: item.requestedAt || menu.createdAt,
-              item: item // Full item data
+              approvalStatus: item.approvalStatus || 'pending',
+              isActionable: item.approvalStatus === 'pending' || !item.approvalStatus,
+              item: item
             });
           }
         }
-
-        // Check items in subsections
-        for (const subsection of section.subsections || []) {
-          for (const item of subsection.items || []) {
-            if (item.approvalStatus === 'pending') {
-              pendingRequests.push({
-                _id: item.id,
-                id: item.id,
-                itemName: item.name,
-                category: item.category || '',
-                restaurantId: menu.restaurant.restaurantId,
-                restaurantName: menu.restaurant.name,
-                restaurantMongoId: menu.restaurant._id,
-                sectionName: section.name,
-                sectionId: section.id,
-                subsectionName: subsection.name,
-                subsectionId: subsection.id,
-                price: item.price,
-                foodType: item.foodType,
-                description: item.description,
-                image: item.image || (item.images && item.images[0]) || '',
-                images: Array.isArray(item.images) && item.images.length > 0
-                  ? item.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
-                  : [],
-                requestedAt: item.requestedAt || menu.createdAt,
-                item: item // Full item data
-              });
-            }
-          }
-        }
       }
 
-      // Check add-ons
       for (const addon of menu.addons || []) {
-        if (addon.approvalStatus === 'pending') {
-          pendingRequests.push({
-            _id: addon.id,
-            id: addon.id,
-            itemName: addon.name,
-            category: 'Add-on',
-            type: 'addon', // Mark as addon
-            restaurantId: menu.restaurant.restaurantId,
-            restaurantName: menu.restaurant.name,
-            restaurantMongoId: menu.restaurant._id,
-            price: addon.price,
-            description: addon.description,
-            image: addon.image || (addon.images && addon.images[0]) || '',
-            images: Array.isArray(addon.images) && addon.images.length > 0
-              ? addon.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
-              : [],
-            requestedAt: addon.requestedAt || menu.createdAt,
-            item: addon // Full addon data
-          });
-        }
+        pendingRequests.push({
+          _id: addon.id,
+          id: addon.id,
+          entityType: 'addon',
+          type: 'addon',
+          itemName: addon.name,
+          category: 'Add-on',
+          restaurantId: menu.restaurant.restaurantId,
+          restaurantName: menu.restaurant.name,
+          restaurantMongoId: menu.restaurant._id,
+          price: addon.price,
+          description: addon.description,
+          image: addon.image || (addon.images && addon.images[0]) || '',
+          images: Array.isArray(addon.images) && addon.images.length > 0
+            ? addon.images.filter(img => img && typeof img === 'string' && img.trim() !== '')
+            : [],
+          requestedAt: addon.requestedAt || menu.createdAt,
+          approvalStatus: addon.approvalStatus || 'pending',
+          isActionable: addon.approvalStatus === 'pending' || !addon.approvalStatus,
+          item: addon
+        });
       }
+    }
+
+    // Include restaurant categories created outside menu sections
+    for (const category of restaurantCategories) {
+      if (!category.restaurant) continue;
+      pushCategoryRequest({
+        restaurant: category.restaurant,
+        categoryName: category.name,
+        categoryId: category._id?.toString(),
+        requestedAt: category.createdAt,
+        source: 'restaurant-category',
+        description: category.description || '',
+        isActive: category.isActive !== false,
+        itemCount: category.itemCount || 0,
+      });
     }
 
     // Sort by requested date (newest first)
     pendingRequests.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
 
-    logger.info(`Fetched ${pendingRequests.length} pending food approval requests`);
+    logger.info(`Fetched ${pendingRequests.length} food approval records`);
 
-    return successResponse(res, 200, 'Pending food approvals retrieved successfully', {
+    return successResponse(res, 200, 'Food approvals retrieved successfully', {
       requests: pendingRequests,
       total: pendingRequests.length
     });
@@ -690,4 +765,3 @@ export const rejectFoodItem = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to reject food item');
   }
 });
-
