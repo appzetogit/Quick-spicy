@@ -1336,7 +1336,7 @@ export default function Home() {
 
       {/* Top Hero Shell: header/search + banner in one container */}
       <div
-        className="relative w-full overflow-hidden h-[clamp(240px,42vw,520px)] mb-3 md:-mt-40"
+        className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/7] lg:aspect-[16/6] min-h-[290px] sm:min-h-[340px] lg:min-h-[400px] max-h-[620px] mb-3 md:-mt-40"
         onTouchStart={heroBannerImages.length > 0 ? handleTouchStart : undefined}
         onTouchMove={heroBannerImages.length > 0 ? handleTouchMove : undefined}
         onTouchEnd={heroBannerImages.length > 0 ? handleTouchEnd : undefined}
@@ -1367,7 +1367,7 @@ export default function Home() {
                 <img
                   src={image}
                   alt={`Hero Banner ${index + 1}`}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-fill object-center"
                   loading="eager"
                   fetchPriority={index === 0 ? "high" : "auto"}
                   draggable={false}
@@ -1382,8 +1382,6 @@ export default function Home() {
         ) : (
           <div className="absolute inset-0 z-0 bg-gray-100" />
         )}
-
-        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/55 via-black/20 to-transparent z-10 pointer-events-none" />
 
         <div className="relative z-30 w-full md:hidden">
           <motion.div
