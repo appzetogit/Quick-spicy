@@ -347,17 +347,40 @@ export default function RestaurantDetails() {
             })
           }
 
+          // Resolve display category/cuisine with broad API compatibility
+          const categoryFromArray = (list) => {
+            if (!Array.isArray(list) || list.length === 0) return null
+            const firstEntry = list[0]
+            if (typeof firstEntry === "string") return firstEntry
+            if (firstEntry && typeof firstEntry === "object") {
+              return firstEntry.name || firstEntry.label || firstEntry.title || null
+            }
+            return null
+          }
+
+          const resolvedTopCategory =
+            actualRestaurant?.topCategory ||
+            apiRestaurant?.topCategory ||
+            categoryFromArray(actualRestaurant?.topCategories) ||
+            categoryFromArray(apiRestaurant?.topCategories) ||
+            categoryFromArray(actualRestaurant?.cuisines) ||
+            categoryFromArray(apiRestaurant?.cuisines) ||
+            categoryFromArray(actualRestaurant?.categories) ||
+            categoryFromArray(apiRestaurant?.categories) ||
+            actualRestaurant?.cuisine ||
+            apiRestaurant?.cuisine ||
+            actualRestaurant?.category ||
+            apiRestaurant?.category ||
+            "Multi-cuisine"
+
           // Transform API data to match expected format with comprehensive fallbacks
           // Handle both dining restaurant and regular restaurant data structures
           const transformedRestaurant = {
             id: actualRestaurant?.restaurantId || actualRestaurant?._id || actualRestaurant?.id || apiRestaurant?.restaurantId || apiRestaurant?._id || null,
             mongoId: actualRestaurant?._id || apiRestaurant?._id || null,
             name: actualRestaurant?.name || apiRestaurant?.name || apiRestaurant?.restaurantName || "Unknown Restaurant",
-            cuisine: (actualRestaurant?.cuisines && Array.isArray(actualRestaurant.cuisines) && actualRestaurant.cuisines.length > 0)
-              ? actualRestaurant.cuisines[0]
-              : (apiRestaurant?.cuisines && Array.isArray(apiRestaurant.cuisines) && apiRestaurant.cuisines.length > 0)
-                ? apiRestaurant.cuisines[0]
-                : (actualRestaurant?.cuisine || apiRestaurant?.cuisine || actualRestaurant?.category || apiRestaurant?.category || "Multi-cuisine"),
+            cuisine: resolvedTopCategory,
+            topCategory: resolvedTopCategory,
             rating: actualRestaurant?.rating ?? apiRestaurant?.rating ?? actualRestaurant?.averageRating ?? apiRestaurant?.averageRating ?? 4.5,
             reviews: actualRestaurant?.totalRatings ?? apiRestaurant?.totalRatings ?? actualRestaurant?.reviewCount ?? apiRestaurant?.reviewCount ?? actualRestaurant?.reviews?.length ?? apiRestaurant?.reviews?.length ?? 0,
             deliveryTime: actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || "25-30 mins",
@@ -1496,6 +1519,12 @@ export default function RestaurantDetails() {
               </Badge>
               <span className="text-xs text-gray-500">By {(restaurant.reviews || 0).toLocaleString()}+</span>
             </div>
+          </div>
+
+          {/* Top Category */} 
+          <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <Utensils className="h-4 w-4" />
+            <span>{restaurant?.topCategory || restaurant?.cuisine || "Multi-cuisine"}</span>
           </div>
 
           {/* Location */}
