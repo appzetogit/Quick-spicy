@@ -177,6 +177,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 
 export default function Home() {
   const HERO_BANNER_AUTO_SLIDE_MS = 3500
+  const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const query = searchParams.get("q") || ""
@@ -207,6 +208,19 @@ export default function Home() {
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
+
+  const normalizeImageUrl = useCallback((imageUrl) => {
+    if (typeof imageUrl !== "string") return ""
+    const trimmed = imageUrl.trim()
+    if (!trimmed) return ""
+    if (/^(https?:)?\/\//i.test(trimmed) || /^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
+      return trimmed
+    }
+    if (trimmed.startsWith("/")) {
+      return `${BACKEND_ORIGIN}${trimmed}`
+    }
+    return `${BACKEND_ORIGIN}/${trimmed.replace(/^\.?\/*/, "")}`
+  }, [BACKEND_ORIGIN])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -321,10 +335,11 @@ export default function Home() {
           const normalizedBanners = banners
             .map((banner) => {
               if (typeof banner === 'string') {
-                return { imageUrl: banner, linkedRestaurants: [] }
+                return { imageUrl: normalizeImageUrl(banner), linkedRestaurants: [] }
               }
               return {
                 ...banner,
+                imageUrl: normalizeImageUrl(banner?.imageUrl),
                 linkedRestaurants: Array.isArray(banner?.linkedRestaurants) ? banner.linkedRestaurants : []
               }
             })
@@ -350,7 +365,7 @@ export default function Home() {
     }
 
     fetchHeroBanners()
-  }, [])
+  }, [normalizeImageUrl])
 
   // Fetch real categories from backend API
   useEffect(() => {
@@ -362,7 +377,7 @@ export default function Home() {
           const adminCategories = response.data.data.categories.map(cat => ({
             id: cat.id,
             name: cat.name,
-            image: cat.image || foodImages[0], // Fallback to default image if not provided
+            image: normalizeImageUrl(cat.image) || foodImages[0], // Fallback to default image if not provided
             slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-'),
             label: cat.name // For compatibility with existing code
           }))
@@ -379,7 +394,7 @@ export default function Home() {
     }
 
     fetchRealCategories()
-  }, [])
+  }, [normalizeImageUrl])
 
   // Fetch landing page config (categories, explore more, settings)
   useEffect(() => {
@@ -887,12 +902,16 @@ export default function Home() {
 
           // Get cover images (separate from menu images) for carousel
           const coverImages = restaurant.coverImages && restaurant.coverImages.length > 0
-            ? restaurant.coverImages.map(img => img.url || img)
+            ? restaurant.coverImages
+              .map((img) => normalizeImageUrl(img?.url || img))
+              .filter(Boolean)
             : []
 
           // Fallback to menuImages only if coverImages don't exist (for backward compatibility)
           const fallbackImages = restaurant.menuImages && restaurant.menuImages.length > 0
-            ? restaurant.menuImages.map(img => img.url)
+            ? restaurant.menuImages
+              .map((img) => normalizeImageUrl(img?.url || img))
+              .filter(Boolean)
             : []
 
           // Use cover images first, then fallback to menu images, then profile image
@@ -901,7 +920,7 @@ export default function Home() {
             : (fallbackImages.length > 0
               ? fallbackImages
               : (restaurant.profileImage?.url
-                ? [restaurant.profileImage.url]
+                ? [normalizeImageUrl(restaurant.profileImage.url)]
                 : ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"]))
 
           // Keep single image for backward compatibility
@@ -990,7 +1009,7 @@ export default function Home() {
       setLoadingRestaurants(false)
       console.log('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [zoneId])
+  }, [normalizeImageUrl, zoneId])
 
   // Fetch restaurants when appliedFilters change
   useEffect(() => {

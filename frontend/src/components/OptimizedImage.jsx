@@ -40,12 +40,24 @@ const OptimizedImage = React.memo(({
     return /^https?:\/\//.test(imageSrc)
   }
 
+  const appendImageParams = (imageSrc, params) => {
+    try {
+      const url = new URL(imageSrc)
+      Object.entries(params).forEach(([key, value]) => {
+        url.searchParams.set(key, String(value))
+      })
+      return url.toString()
+    } catch {
+      return imageSrc
+    }
+  }
+
   // Generate responsive srcset
   const srcSet = useMemo(() => {
     if (!supportsOptimization(src)) return undefined
     const sizesArr = [400, 600, 800, 1200, 1600]
     return sizesArr
-      .map(size => `${src}?w=${size}&q=80 ${size}w`)
+      .map(size => `${appendImageParams(src, { w: size, q: 80 })} ${size}w`)
       .join(', ')
   }, [src])
 
@@ -54,7 +66,7 @@ const OptimizedImage = React.memo(({
     if (!supportsOptimization(src)) return undefined
     const sizesArr = [400, 600, 800, 1200, 1600]
     return sizesArr
-      .map(size => `${src}?w=${size}&q=80&format=webp ${size}w`)
+      .map(size => `${appendImageParams(src, { w: size, q: 80, format: 'webp' })} ${size}w`)
       .join(', ')
   }, [src])
 
@@ -98,7 +110,6 @@ const OptimizedImage = React.memo(({
       link.as = 'image'
       link.href = src
       link.fetchPriority = 'high'
-      link.crossOrigin = 'anonymous'
       document.head.appendChild(link)
 
       return () => {
@@ -179,7 +190,6 @@ const OptimizedImage = React.memo(({
             loading={priority ? 'eager' : 'lazy'}
             decoding="async"
             fetchPriority={priority ? 'high' : 'auto'}
-            crossOrigin="anonymous"
             onLoad={handleLoad}
             onError={handleError}
             {...props}
