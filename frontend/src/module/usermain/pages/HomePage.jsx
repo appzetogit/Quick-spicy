@@ -29,12 +29,23 @@ export default function HomePage() {
   const { location, loading: locationLoading } = useLocation()
   const [currentSlide, setCurrentSlide] = useState(0)
   const [currentPlaceholderIndex, setCurrentPlaceholderIndex] = useState(0)
+  const [restaurantImageStatus, setRestaurantImageStatus] = useState({})
   const [wishlist, setWishlist] = useState(() => {
     // Load wishlist from localStorage
     const saved = localStorage.getItem('wishlist')
     return saved ? JSON.parse(saved) : []
   })
   const [toast, setToast] = useState({ show: false, message: '' })
+
+  const updateRestaurantImageStatus = (restaurantId, status) => {
+    setRestaurantImageStatus((prev) => ({
+      ...prev,
+      [restaurantId]: {
+        ...prev[restaurantId],
+        ...status,
+      },
+    }))
+  }
 
   // Function to extract location parts for display
   // Main location: First 2 parts only (e.g., "Mama Loca, G-2")
@@ -745,12 +756,23 @@ export default function HomePage() {
             >
               {/* Food Image - Large */}
               <div className="relative w-full h-40 rounded-t-xl overflow-hidden">
+                {(!restaurantImageStatus[restaurant.id]?.loaded || restaurantImageStatus[restaurant.id]?.failed) && (
+                  <div className="absolute inset-0 z-0 overflow-hidden bg-gray-200">
+                    <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+                  </div>
+                )}
                 <img 
                   src={restaurant.foodImage} 
                   alt={restaurant.name}
-                  className="w-full h-full object-cover"
+                  className={`w-full h-full object-cover transition-opacity duration-300 ${
+                    restaurantImageStatus[restaurant.id]?.loaded && !restaurantImageStatus[restaurant.id]?.failed ? "opacity-100" : "opacity-0"
+                  }`}
+                  onLoad={() => {
+                    updateRestaurantImageStatus(restaurant.id, { loaded: true, failed: false })
+                  }}
                   onError={(e) => {
-                    e.target.src = `https://images.unsplash.com/photo-1512058564366-18510be2db19?w=400&h=300&fit=crop`
+                    e.target.style.display = "none"
+                    updateRestaurantImageStatus(restaurant.id, { loaded: false, failed: true })
                   }}
                 />
                 {/* Heart Icon - Top Right */}
