@@ -62,6 +62,21 @@ const placeholders = [
 // Restaurant Image Carousel Component
 const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) => {
   const FALLBACK_RESTAURANT_IMAGE = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"
+  const webviewSessionKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+
+  const withCacheBuster = useCallback((url) => {
+    if (typeof url !== "string" || !url) return ""
+    if (/^data:/i.test(url) || /^blob:/i.test(url)) return url
+    try {
+      const parsed = new URL(url, window.location.origin)
+      parsed.searchParams.set("_wv", webviewSessionKeyRef.current)
+      return parsed.toString()
+    } catch {
+      const joiner = url.includes("?") ? "&" : "?"
+      return `${url}${joiner}_wv=${webviewSessionKeyRef.current}`
+    }
+  }, [])
+
   const images = useMemo(() => {
     const sourceImages = Array.isArray(restaurant.images) && restaurant.images.length > 0
       ? restaurant.images
@@ -72,8 +87,9 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       .map((img) => img.trim())
       .filter(Boolean)
 
-    return validImages.length > 0 ? validImages : [FALLBACK_RESTAURANT_IMAGE]
-  }, [restaurant.images, restaurant.image])
+    const baseImages = validImages.length > 0 ? validImages : [FALLBACK_RESTAURANT_IMAGE]
+    return baseImages.map((img) => withCacheBuster(img))
+  }, [restaurant.images, restaurant.image, withCacheBuster])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loadedBySrc, setLoadedBySrc] = useState({})
   const [failedBySrc, setFailedBySrc] = useState({})
@@ -82,11 +98,12 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
   const isSwiping = useRef(false)
 
   const safeIndex = images.length > 0 ? (currentIndex % images.length + images.length) % images.length : 0
-  const primarySrc = images[safeIndex] || FALLBACK_RESTAURANT_IMAGE
+  const fallbackSrc = withCacheBuster(FALLBACK_RESTAURANT_IMAGE)
+  const primarySrc = images[safeIndex] || fallbackSrc
   const isPrimaryFailed = Boolean(failedBySrc[primarySrc])
-  const displaySrc = isPrimaryFailed ? FALLBACK_RESTAURANT_IMAGE : primarySrc
+  const displaySrc = isPrimaryFailed ? fallbackSrc : primarySrc
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
-  const isImageUnavailable = displaySrc === FALLBACK_RESTAURANT_IMAGE && Boolean(failedBySrc[FALLBACK_RESTAURANT_IMAGE])
+  const isImageUnavailable = displaySrc === fallbackSrc && Boolean(failedBySrc[fallbackSrc])
 
   // WebView safeguard: if image neither loads nor errors, force fallback after timeout.
   useEffect(() => {
@@ -166,11 +183,11 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
             setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
           }}
           onError={() => {
-            if (displaySrc !== FALLBACK_RESTAURANT_IMAGE) {
+            if (displaySrc !== fallbackSrc) {
               setFailedBySrc((prev) => ({ ...prev, [primarySrc]: true }))
               return
             }
-            setFailedBySrc((prev) => ({ ...prev, [FALLBACK_RESTAURANT_IMAGE]: true }))
+            setFailedBySrc((prev) => ({ ...prev, [fallbackSrc]: true }))
           }}
         />
       </div>
