@@ -81,7 +81,8 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
   const touchEndX = useRef(0)
   const isSwiping = useRef(false)
 
-  const primarySrc = images[currentIndex] || FALLBACK_RESTAURANT_IMAGE
+  const safeIndex = images.length > 0 ? (currentIndex % images.length + images.length) % images.length : 0
+  const primarySrc = images[safeIndex] || FALLBACK_RESTAURANT_IMAGE
   const displaySrc = failedBySrc[primarySrc] ? FALLBACK_RESTAURANT_IMAGE : primarySrc
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
   const isImageUnavailable = displaySrc === FALLBACK_RESTAURANT_IMAGE && Boolean(failedBySrc[FALLBACK_RESTAURANT_IMAGE])
@@ -141,10 +142,10 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-110">
         <img
           src={displaySrc}
-          alt={`${restaurant.name} - Image ${currentIndex + 1}`}
+          alt={`${restaurant.name} - Image ${safeIndex + 1}`}
           className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
-          loading={priority && currentIndex === 0 ? "eager" : "lazy"}
-          fetchPriority={priority && currentIndex === 0 ? "high" : "auto"}
+          loading="lazy"
+          fetchPriority="auto"
           decoding="async"
           onLoad={() => {
             setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
@@ -237,13 +238,27 @@ export default function Home() {
     if (typeof imageUrl !== "string") return ""
     const trimmed = imageUrl.trim()
     if (!trimmed) return ""
-    if (/^(https?:)?\/\//i.test(trimmed) || /^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
+    if (/^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
       return trimmed
     }
-    if (trimmed.startsWith("/")) {
-      return `${BACKEND_ORIGIN}${trimmed}`
+    // WebView can fail on unescaped spaces/special chars; keep URLs safely encoded.
+    if (/^(https?:)?\/\//i.test(trimmed)) {
+      try {
+        return encodeURI(trimmed)
+      } catch {
+        return trimmed
+      }
     }
-    return `${BACKEND_ORIGIN}/${trimmed.replace(/^\.?\/*/, "")}`
+
+    const absolutePath = trimmed.startsWith("/")
+      ? `${BACKEND_ORIGIN}${trimmed}`
+      : `${BACKEND_ORIGIN}/${trimmed.replace(/^\.?\/*/, "")}`
+
+    try {
+      return encodeURI(absolutePath)
+    } catch {
+      return absolutePath
+    }
   }, [BACKEND_ORIGIN])
 
   useEffect(() => {
