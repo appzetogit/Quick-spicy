@@ -1192,6 +1192,14 @@ export const adminAPI = {
     );
   },
 
+  // Update restaurant menu by ID (admin)
+  updateRestaurantMenuById: (id, payload = {}) => {
+    return apiClient.put(
+      API_ENDPOINTS.ADMIN.RESTAURANT_MENU_BY_ID.replace(":id", id),
+      payload,
+    );
+  },
+
   // Get restaurant analytics
   getRestaurantAnalytics: (restaurantId) => {
     return apiClient.get(
