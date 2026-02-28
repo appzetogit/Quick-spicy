@@ -25,6 +25,15 @@ import { useNavigate } from "react-router-dom"
 import { restaurantAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 
+const getUploadErrorMessage = (error, fileName = "image") => {
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    "Please try again."
+  return `Failed to upload ${fileName}: ${message}`
+}
+
 export default function HubMenu() {
   const navigate = useNavigate()
   const [loadingMenu, setLoadingMenu] = useState(true)
@@ -500,16 +509,23 @@ export default function HubMenu() {
         for (let i = 0; i < filesToUpload.length; i++) {
           const file = filesToUpload[i]
           try {
-            const uploadResponse = await uploadAPI.uploadMedia(file, {
-              folder: 'appzeto/restaurant/addons'
-            })
+            let uploadResponse
+            try {
+              uploadResponse = await uploadAPI.uploadMedia(file, {
+                folder: 'appzeto/restaurant/addons'
+              })
+            } catch (folderUploadError) {
+              // Fallback: retry without folder in case provider/account rejects custom folder.
+              console.warn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
+              uploadResponse = await uploadAPI.uploadMedia(file)
+            }
             const imageUrl = uploadResponse?.data?.data?.url || uploadResponse?.data?.url
             if (imageUrl) {
               uploadedImageUrls.push(imageUrl)
             }
           } catch (uploadError) {
             console.error(`Error uploading image ${i + 1}:`, uploadError)
-            toast.error(`Failed to upload ${file.name}. Please try again.`)
+            toast.error(getUploadErrorMessage(uploadError, file.name))
             setUploadingAddonImages(false)
             return
           }

@@ -19,6 +19,7 @@ import {
   updateUserStatus,
   getRestaurants,
   getRestaurantMenuByIdAdmin,
+  updateRestaurantMenuByIdAdmin,
   createRestaurant,
   updateRestaurant,
   updateRestaurantLocation,
@@ -292,6 +293,7 @@ router.get("/customer-wallet-report", getCustomerWalletReport);
 // Restaurant Management
 router.get("/restaurants", getRestaurants);
 router.get("/restaurants/:id/menu", getRestaurantMenuByIdAdmin);
+router.put("/restaurants/:id/menu", updateRestaurantMenuByIdAdmin);
 router.post("/restaurants", createRestaurant);
 router.put("/restaurants/:id", updateRestaurant);
 router.get("/restaurants/requests", getRestaurantJoinRequests);

@@ -1295,6 +1295,240 @@ export const updateRestaurantStatus = asyncHandler(async (req, res) => {
   }
 });
 
+const normalizeSingleItemImagesForAdmin = (item = {}) => {
+  const validArrayImages = Array.isArray(item.images)
+    ? item.images
+        .filter((img) => img && typeof img === "string" && img.trim() !== "")
+        .map((img) => img.trim())
+    : [];
+  const fallbackSingleImage =
+    item.image && typeof item.image === "string" && item.image.trim() !== ""
+      ? item.image.trim()
+      : "";
+
+  const firstImage = (validArrayImages[0] || fallbackSingleImage || "").trim();
+  return {
+    image: firstImage,
+    images: firstImage ? [firstImage] : [],
+    photoCount: firstImage ? 1 : 0,
+  };
+};
+
+/**
+ * Update Restaurant Menu (Admin)
+ * PUT /api/admin/restaurants/:id/menu
+ */
+export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { sections } = req.body || {};
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse(res, 400, "Invalid restaurant ID");
+    }
+
+    if (!Array.isArray(sections)) {
+      return errorResponse(res, 400, "sections must be an array");
+    }
+
+    const restaurant = await Restaurant.findById(id).select("_id name").lean();
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    const existingMenu = await Menu.findOne({ restaurant: id });
+
+    const normalizedSections = sections.map((section, sectionIndex) => {
+      const existingSection = existingMenu?.sections?.find(
+        (s) => String(s.id) === String(section?.id),
+      );
+
+      return {
+        id: section?.id || `section-${sectionIndex}`,
+        name: section?.name || "Unnamed Section",
+        items: Array.isArray(section?.items)
+          ? section.items.map((item) => {
+              const existingItem = existingSection?.items?.find(
+                (i) => String(i.id) === String(item?.id),
+              );
+              const normalizedMedia = normalizeSingleItemImagesForAdmin(item);
+              return {
+                id: String(item?.id || `${Date.now()}-${Math.random()}`),
+                name: item?.name || "Unnamed Item",
+                nameArabic: item?.nameArabic || "",
+                image: normalizedMedia.image,
+                category: item?.category || section?.name || "Varieties",
+                rating: item?.rating ?? 0,
+                reviews: item?.reviews ?? 0,
+                price: Number(item?.price) || 0,
+                stock: item?.stock ?? "Unlimited",
+                discount: item?.discount ?? null,
+                originalPrice: item?.originalPrice ?? null,
+                foodType: item?.foodType === "Veg" ? "Veg" : "Non-Veg",
+                availabilityTimeStart: item?.availabilityTimeStart || "12:01 AM",
+                availabilityTimeEnd: item?.availabilityTimeEnd || "11:57 PM",
+                description: item?.description || "",
+                discountType: item?.discountType === "Fixed" ? "Fixed" : "Percent",
+                discountAmount: Number(item?.discountAmount) || 0,
+                isAvailable: item?.isAvailable !== false,
+                isRecommended: item?.isRecommended === true,
+                variations: Array.isArray(item?.variations)
+                  ? item.variations.map((variation) => ({
+                      id: String(
+                        variation?.id || `${Date.now()}-${Math.random()}`,
+                      ),
+                      name: variation?.name || "",
+                      price: Number(variation?.price) || 0,
+                      stock: variation?.stock ?? "Unlimited",
+                    }))
+                  : [],
+                tags: Array.isArray(item?.tags) ? item.tags : [],
+                nutrition: Array.isArray(item?.nutrition) ? item.nutrition : [],
+                allergies: Array.isArray(item?.allergies) ? item.allergies : [],
+                photoCount: normalizedMedia.photoCount,
+                subCategory: item?.subCategory || "",
+                servesInfo: item?.servesInfo || "",
+                itemSize: item?.itemSize || "",
+                itemSizeQuantity: item?.itemSizeQuantity || "",
+                itemSizeUnit: item?.itemSizeUnit || "piece",
+                gst: Number(item?.gst) || 0,
+                images: normalizedMedia.images,
+                preparationTime: item?.preparationTime || "",
+                // Preserve current approval state when admin edits existing item
+                approvalStatus:
+                  existingItem?.approvalStatus || item?.approvalStatus || "pending",
+                rejectionReason: existingItem?.rejectionReason || "",
+                requestedAt: existingItem?.requestedAt || item?.requestedAt || new Date(),
+                approvedAt: existingItem?.approvedAt || item?.approvedAt || undefined,
+                approvedBy: existingItem?.approvedBy || item?.approvedBy || undefined,
+                rejectedAt: existingItem?.rejectedAt || item?.rejectedAt || undefined,
+              };
+            })
+          : [],
+        subsections: Array.isArray(section?.subsections)
+          ? section.subsections.map((subsection) => {
+              const existingSubsection = existingSection?.subsections?.find(
+                (s) => String(s.id) === String(subsection?.id),
+              );
+
+              return {
+                id: subsection?.id || `subsection-${Date.now()}-${Math.random()}`,
+                name: subsection?.name || "Unnamed Subsection",
+                items: Array.isArray(subsection?.items)
+                  ? subsection.items.map((item) => {
+                      const existingItem = existingSubsection?.items?.find(
+                        (i) => String(i.id) === String(item?.id),
+                      );
+                      const normalizedMedia = normalizeSingleItemImagesForAdmin(item);
+                      return {
+                        id: String(item?.id || `${Date.now()}-${Math.random()}`),
+                        name: item?.name || "Unnamed Item",
+                        nameArabic: item?.nameArabic || "",
+                        image: normalizedMedia.image,
+                        category: item?.category || section?.name || "Varieties",
+                        rating: item?.rating ?? 0,
+                        reviews: item?.reviews ?? 0,
+                        price: Number(item?.price) || 0,
+                        stock: item?.stock ?? "Unlimited",
+                        discount: item?.discount ?? null,
+                        originalPrice: item?.originalPrice ?? null,
+                        foodType: item?.foodType === "Veg" ? "Veg" : "Non-Veg",
+                        availabilityTimeStart:
+                          item?.availabilityTimeStart || "12:01 AM",
+                        availabilityTimeEnd: item?.availabilityTimeEnd || "11:57 PM",
+                        description: item?.description || "",
+                        discountType:
+                          item?.discountType === "Fixed" ? "Fixed" : "Percent",
+                        discountAmount: Number(item?.discountAmount) || 0,
+                        isAvailable: item?.isAvailable !== false,
+                        isRecommended: item?.isRecommended === true,
+                        variations: Array.isArray(item?.variations)
+                          ? item.variations.map((variation) => ({
+                              id: String(
+                                variation?.id || `${Date.now()}-${Math.random()}`,
+                              ),
+                              name: variation?.name || "",
+                              price: Number(variation?.price) || 0,
+                              stock: variation?.stock ?? "Unlimited",
+                            }))
+                          : [],
+                        tags: Array.isArray(item?.tags) ? item.tags : [],
+                        nutrition: Array.isArray(item?.nutrition)
+                          ? item.nutrition
+                          : [],
+                        allergies: Array.isArray(item?.allergies)
+                          ? item.allergies
+                          : [],
+                        photoCount: normalizedMedia.photoCount,
+                        subCategory: item?.subCategory || "",
+                        servesInfo: item?.servesInfo || "",
+                        itemSize: item?.itemSize || "",
+                        itemSizeQuantity: item?.itemSizeQuantity || "",
+                        itemSizeUnit: item?.itemSizeUnit || "piece",
+                        gst: Number(item?.gst) || 0,
+                        images: normalizedMedia.images,
+                        preparationTime: item?.preparationTime || "",
+                        approvalStatus:
+                          existingItem?.approvalStatus ||
+                          item?.approvalStatus ||
+                          "pending",
+                        rejectionReason: existingItem?.rejectionReason || "",
+                        requestedAt:
+                          existingItem?.requestedAt || item?.requestedAt || new Date(),
+                        approvedAt:
+                          existingItem?.approvedAt || item?.approvedAt || undefined,
+                        approvedBy:
+                          existingItem?.approvedBy || item?.approvedBy || undefined,
+                        rejectedAt:
+                          existingItem?.rejectedAt || item?.rejectedAt || undefined,
+                      };
+                    })
+                  : [],
+              };
+            })
+          : [],
+        isEnabled: section?.isEnabled !== false,
+        order: Number.isFinite(section?.order) ? section.order : sectionIndex,
+      };
+    });
+
+    let menu = existingMenu;
+    if (!menu) {
+      menu = new Menu({
+        restaurant: id,
+        sections: normalizedSections,
+        isActive: true,
+      });
+    } else {
+      menu.set("sections", normalizedSections);
+      menu.markModified("sections");
+    }
+
+    await menu.save();
+
+    logger.info("Admin updated restaurant menu", {
+      restaurantId: id,
+      updatedBy: req.user?._id,
+      sectionCount: normalizedSections.length,
+    });
+
+    return successResponse(res, 200, "Restaurant menu updated successfully", {
+      menu: {
+        restaurant: id,
+        sections: menu.sections || [],
+        addons: menu.addons || [],
+        isActive: menu.isActive,
+      },
+    });
+  } catch (error) {
+    logger.error(`Error updating restaurant menu: ${error.message}`, {
+      error: error.stack,
+      restaurantId: req.params?.id,
+    });
+    return errorResponse(res, 500, "Failed to update restaurant menu");
+  }
+});
+
 /**
  * Update Restaurant Details (Admin)
  * PUT /api/admin/restaurants/:id

@@ -21,6 +21,15 @@ import api from "@/lib/api"
 import { restaurantAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 
+const getUploadErrorMessage = (error, fileName = "image") => {
+  const message =
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.message ||
+    "Please try again."
+  return `Failed to upload ${fileName}: ${message}`
+}
+
 export default function ItemDetailsPage() {
   const navigate = useNavigate()
   const { id } = useParams()
@@ -546,9 +555,16 @@ export default function ItemDetailsPage() {
           const file = filesToUpload[i]
           try {
             console.log(`Uploading image ${i + 1}/${filesToUpload.length}:`, file.name)
-            const uploadResponse = await uploadAPI.uploadMedia(file, {
-              folder: 'appzeto/restaurant/menu-items'
-            })
+            let uploadResponse
+            try {
+              uploadResponse = await uploadAPI.uploadMedia(file, {
+                folder: 'appzeto/restaurant/menu-items'
+              })
+            } catch (folderUploadError) {
+              // Fallback: retry without folder in case provider/account rejects custom folder.
+              console.warn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
+              uploadResponse = await uploadAPI.uploadMedia(file)
+            }
             const imageUrl = uploadResponse?.data?.data?.url || uploadResponse?.data?.url
             if (imageUrl) {
               uploadedImageUrls.push(imageUrl)
@@ -559,7 +575,7 @@ export default function ItemDetailsPage() {
             }
           } catch (uploadError) {
             console.error(`Error uploading image ${i + 1} (${file.name}):`, uploadError)
-            toast.error(`Failed to upload ${file.name}. Please try again.`)
+            toast.error(getUploadErrorMessage(uploadError, file.name))
             setUploadingImages(false)
             return
           }
