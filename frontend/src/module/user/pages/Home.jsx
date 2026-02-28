@@ -59,21 +59,35 @@ const placeholders = [
   "Search \"dosa\""
 ]
 
+const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+
 // Restaurant Image Carousel Component
-const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) => {
-  const FALLBACK_RESTAURANT_IMAGE = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"
-  const webviewSessionKeyRef = useRef(`${Date.now()}-${Math.random().toString(36).slice(2, 8)}`)
+const RestaurantImageCarousel = React.memo(({ restaurant }) => {
+  const webviewSessionKeyRef = useRef(WEBVIEW_SESSION_CACHE_BUSTER)
 
   const withCacheBuster = useCallback((url) => {
     if (typeof url !== "string" || !url) return ""
     if (/^data:/i.test(url) || /^blob:/i.test(url)) return url
+
+    // Do not mutate signed URLs (legacy S3/Cloudfront/Firebase links can break if query changes).
+    const hasSignedParams =
+      /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(url)
+    if (hasSignedParams) return url
+
     try {
       const parsed = new URL(url, window.location.origin)
-      parsed.searchParams.set("_wv", webviewSessionKeyRef.current)
+
+      // Apply cache-buster only to app/backend-hosted URLs to avoid third-party CDN signature issues.
+      const currentHost = typeof window !== "undefined" ? window.location.hostname : ""
+      const isLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname)
+      const isSameHost = currentHost && parsed.hostname === currentHost
+
+      if (isLocalHost || isSameHost) {
+        parsed.searchParams.set("_wv", webviewSessionKeyRef.current)
+      }
       return parsed.toString()
     } catch {
-      const joiner = url.includes("?") ? "&" : "?"
-      return `${url}${joiner}_wv=${webviewSessionKeyRef.current}`
+      return url
     }
   }, [])
 
@@ -87,8 +101,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       .map((img) => img.trim())
       .filter(Boolean)
 
-    const baseImages = validImages.length > 0 ? validImages : [FALLBACK_RESTAURANT_IMAGE]
-    return baseImages.map((img) => withCacheBuster(img))
+    return validImages.map((img) => withCacheBuster(img))
   }, [restaurant.images, restaurant.image, withCacheBuster])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loadedBySrc, setLoadedBySrc] = useState({})
@@ -98,22 +111,26 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
   const isSwiping = useRef(false)
 
   const safeIndex = images.length > 0 ? (currentIndex % images.length + images.length) % images.length : 0
-  const fallbackSrc = withCacheBuster(FALLBACK_RESTAURANT_IMAGE)
-  const primarySrc = images[safeIndex] || fallbackSrc
+  const primarySrc = images[safeIndex] || ""
   const isPrimaryFailed = Boolean(failedBySrc[primarySrc])
-  const displaySrc = isPrimaryFailed ? fallbackSrc : primarySrc
+  const displaySrc = isPrimaryFailed ? "" : primarySrc
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
-  const isImageUnavailable = displaySrc === fallbackSrc && Boolean(failedBySrc[fallbackSrc])
+  const isImageUnavailable = images.length === 0 || images.every((img) => failedBySrc[img])
 
   // WebView safeguard: if image neither loads nor errors, force fallback after timeout.
   useEffect(() => {
-    if (isImageLoaded || isImageUnavailable || isPrimaryFailed) return undefined
+    if (!primarySrc || isImageLoaded || isImageUnavailable || isPrimaryFailed) return undefined
 
     const timeoutId = setTimeout(() => {
       setFailedBySrc((prev) => {
         if (prev[primarySrc]) return prev
         return { ...prev, [primarySrc]: true }
       })
+
+      // Try next DB image first before showing static fallback.
+      if (images.length > 1) {
+        setCurrentIndex((prev) => (prev + 1) % images.length)
+      }
     }, 12000)
 
     return () => clearTimeout(timeoutId)
@@ -172,24 +189,25 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       )}
 
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-110">
-        <img
-          src={displaySrc}
-          alt={`${restaurant.name} - Image ${safeIndex + 1}`}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
-          loading="lazy"
-          fetchPriority="auto"
-          decoding="async"
-          onLoad={() => {
-            setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
-          }}
-          onError={() => {
-            if (displaySrc !== fallbackSrc) {
+        {displaySrc && (
+          <img
+            src={displaySrc}
+            alt={`${restaurant.name} - Image ${safeIndex + 1}`}
+            className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
+            loading="lazy"
+            fetchPriority="auto"
+            decoding="async"
+            onLoad={() => {
+              setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
+            }}
+            onError={() => {
               setFailedBySrc((prev) => ({ ...prev, [primarySrc]: true }))
-              return
-            }
-            setFailedBySrc((prev) => ({ ...prev, [fallbackSrc]: true }))
-          }}
-        />
+              if (images.length > 1) {
+                setCurrentIndex((prev) => (prev + 1) % images.length)
+              }
+            }}
+          />
+        )}
       </div>
 
       {isImageUnavailable && (
@@ -320,6 +338,43 @@ export default function Home() {
       return absolutePath
     }
   }, [BACKEND_ORIGIN])
+
+  const extractImageFromValue = useCallback((value) => {
+    if (!value) return ""
+
+    if (typeof value === "string") {
+      return normalizeImageUrl(value)
+    }
+
+    if (typeof value === "object") {
+      const candidate =
+        value.url ||
+        value.secure_url ||
+        value.imageUrl ||
+        value.imageURL ||
+        value.image ||
+        value.src ||
+        value.path ||
+        value.location ||
+        ""
+      return typeof candidate === "string" ? normalizeImageUrl(candidate) : ""
+    }
+
+    return ""
+  }, [normalizeImageUrl])
+
+  const extractImages = useCallback((source) => {
+    if (!source) return []
+
+    if (Array.isArray(source)) {
+      return source
+        .map((entry) => extractImageFromValue(entry))
+        .filter(Boolean)
+    }
+
+    const single = extractImageFromValue(source)
+    return single ? [single] : []
+  }, [extractImageFromValue])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -999,35 +1054,34 @@ export default function Home() {
             ? restaurant.cuisines[0]
             : "Multi-cuisine"
 
-          // Get cover images (separate from menu images) for carousel
-          const coverImages = restaurant.coverImages && restaurant.coverImages.length > 0
-            ? restaurant.coverImages
-              .map((img) => normalizeImageUrl(img?.url || img))
-              .filter(Boolean)
-            : []
+          // Legacy-safe image extraction (supports old schema variants).
+          const coverImages = [
+            ...extractImages(restaurant.coverImages),
+            ...extractImages(restaurant.coverImage),
+          ]
 
-          // Fallback to menuImages only if coverImages don't exist (for backward compatibility)
-          const fallbackImages = restaurant.menuImages && restaurant.menuImages.length > 0
-            ? restaurant.menuImages
-              .map((img) => normalizeImageUrl(img?.url || img))
-              .filter(Boolean)
-            : []
+          // Fallback to menu images when cover images are absent.
+          const fallbackImages = extractImages(restaurant.menuImages)
 
-          const profileImageUrl = normalizeImageUrl(
-            restaurant.profileImage?.url ||
-            restaurant.profileImage ||
-            restaurant.image ||
-            restaurant.imageUrl ||
+          // Some early records only have onboarding step2 media.
+          const onboardingMenuImages = extractImages(restaurant.onboarding?.step2?.menuImageUrls)
+
+          const profileImageUrl =
+            extractImageFromValue(restaurant.profileImage) ||
+            extractImageFromValue(restaurant.onboarding?.step2?.profileImageUrl) ||
+            extractImageFromValue(restaurant.image) ||
+            extractImageFromValue(restaurant.imageUrl) ||
             ""
-          )
 
-          // Use cover images first, then fallback to menu images, then profile image.
-          // Keep DB-driven sources only here (no static image injection at transform level).
-          const allImages = coverImages.length > 0
-            ? coverImages
-            : (fallbackImages.length > 0
-              ? fallbackImages
-              : (profileImageUrl ? [profileImageUrl] : []))
+          // Prefer directly updated admin/profile image first, then legacy arrays.
+          const allImages = Array.from(
+            new Set([
+              profileImageUrl,
+              ...coverImages,
+              ...fallbackImages,
+              ...onboardingMenuImages,
+            ].filter(Boolean))
+          )
 
           // Keep single image for backward compatibility
           const image = allImages[0] || profileImageUrl || ""
