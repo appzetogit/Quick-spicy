@@ -606,9 +606,6 @@ Order again from this restaurant in the ${companyName} app.`
                     <div className="flex-1 min-w-0">
                       <h3 className="font-semibold text-gray-800 text-lg leading-tight">{order.restaurant}</h3>
                       <p className="text-xs text-gray-500 mt-0.5">{location}</p>
-                      {order.orderId && (
-                        <p className="text-xs text-gray-400 mt-0.5 font-mono">#{order.orderId}</p>
-                      )}
                       {order.deliveryPartnerName && (
                         <p className="text-xs text-gray-600 mt-1">
                           <span className="font-medium">Delivery:</span> {order.deliveryPartnerName}
@@ -902,9 +899,7 @@ Order again from this restaurant in the ${companyName} app.`
                   <span className="text-xl">✕</span>
                 </button>
               </div>
-              <p className="text-sm text-white/90">
-                {ratingModal.order.restaurant} • Order #{ratingModal.order.id}
-              </p>
+              <p className="text-sm text-white/90">{ratingModal.order.restaurant}</p>
             </div>
 
             <div className="px-6 py-6">

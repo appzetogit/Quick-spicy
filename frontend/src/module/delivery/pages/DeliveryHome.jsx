@@ -43,6 +43,7 @@ import { formatCurrency } from "../../restaurant/utils/currency"
 import { getAllDeliveryOrders } from "../utils/deliveryOrderStatus"
 import { getUnreadDeliveryNotificationCount } from "../utils/deliveryNotifications"
 import { deliveryAPI, restaurantAPI, uploadAPI } from "@/lib/api"
+import { subscribeOrderTracking } from "@/lib/realtimeTracking"
 import { useDeliveryNotifications } from "../hooks/useDeliveryNotifications"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
@@ -658,6 +659,27 @@ export default function DeliveryHome() {
   const [deliveryOtpError, setDeliveryOtpError] = useState("")
   const [isVerifyingDeliveryOtp, setIsVerifyingDeliveryOtp] = useState(false)
   const deliveryOtpResolveRef = useRef(null)
+  const activeOrderTrackingIds = useMemo(() => {
+    const ids = [
+      selectedRestaurant?.orderId,
+      selectedRestaurant?.id,
+      selectedRestaurant?._id,
+      newOrder?.orderId,
+      newOrder?.orderMongoId,
+      newOrder?._id
+    ]
+      .map((value) => (value == null ? "" : String(value).trim()))
+      .filter(Boolean)
+
+    return [...new Set(ids)]
+  }, [
+    selectedRestaurant?.orderId,
+    selectedRestaurant?.id,
+    selectedRestaurant?._id,
+    newOrder?.orderId,
+    newOrder?.orderMongoId,
+    newOrder?._id
+  ])
   const deliveryOtpInputRefs = useRef([])
   const deliveryOtpSingleInputRef = useRef(null)
   const orderDeliveredButtonRef = useRef(null)
@@ -697,6 +719,48 @@ export default function DeliveryHome() {
     }, 120)
     return () => clearTimeout(focusTimer)
   }, [showDeliveryOtpModal])
+
+  useEffect(() => {
+    if (!activeOrderTrackingIds.length) return
+
+    const unsubscribers = activeOrderTrackingIds.map((trackingId) =>
+      subscribeOrderTracking(
+        trackingId,
+        (trackingData) => {
+          const rawRoute = trackingData?.route_coordinates || trackingData?.polyline || null
+
+          if (Array.isArray(rawRoute) && rawRoute.length > 1) {
+            setRoutePolyline(rawRoute)
+          } else if (typeof rawRoute === "string" && rawRoute.trim()) {
+            const decodedRoute = decodePolyline(rawRoute)
+            if (decodedRoute.length > 1) {
+              setRoutePolyline(decodedRoute.map((point) => [point.lat, point.lng]))
+            }
+          }
+
+          const lat = Number(trackingData?.lat ?? trackingData?.boy_lat)
+          const lng = Number(trackingData?.lng ?? trackingData?.boy_lng)
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setRiderLocation((prev) => {
+              if (Array.isArray(prev) && prev[0] === lat && prev[1] === lng) {
+                return prev
+              }
+              return [lat, lng]
+            })
+          }
+        },
+        (error) => {
+          console.warn("Firebase delivery tracking listener error:", error?.message || error)
+        }
+      )
+    )
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") unsubscribe()
+      })
+    }
+  }, [activeOrderTrackingIds])
 
   useEffect(() => {
     return () => {
@@ -1938,8 +2002,8 @@ export default function DeliveryHome() {
               const lastSentTime = window.lastLocationSentTime || 0;
               const timeSinceLastSend = now - lastSentTime;
               
-              // Send location every 5 seconds even if not smoothed
-              if (timeSinceLastSend >= 5000) {
+              // Push first accepted GPS points quickly so Firebase tracking stays responsive.
+              if (timeSinceLastSend >= 1000) {
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   console.log('📤 Sending raw location to backend (not smoothed yet):', { lat, lng })
                   deliveryAPI.updateLocation(lat, lng, true, {
@@ -2059,10 +2123,10 @@ export default function DeliveryHome() {
             // Get last sent location for distance check
             const lastSentLocation = window.lastSentLocation || null;
             
-            // Send location every 5 seconds OR if location changed significantly (>50m)
-            const shouldSend = timeSinceLastSend >= 5000 || 
+            // Send frequent updates so even small rider movement reaches Firebase quickly.
+            const shouldSend = timeSinceLastSend >= 1000 || 
               (lastSentLocation && 
-               calculateDistance(lastSentLocation[0], lastSentLocation[1], smoothedLat, smoothedLng) > 0.05);
+               calculateDistance(lastSentLocation[0], lastSentLocation[1], smoothedLat, smoothedLng) > 0.001);
             
             if (shouldSend) {
               // Final validation before sending to backend
@@ -4182,6 +4246,7 @@ export default function DeliveryHome() {
       return true
     }
 
+    setShowOrderDeliveredAnimation(false)
     const enteredOtp = await requestDeliveryOtpFromModal()
     const normalizedOtp = (enteredOtp || "").trim()
 
@@ -4239,6 +4304,7 @@ export default function DeliveryHome() {
       return
     }
 
+<<<<<<< HEAD
     const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
     if (!otpVerified) {
       setOrderDeliveredButtonProgress(0)
@@ -4247,12 +4313,22 @@ export default function DeliveryHome() {
       return
     }
 
+=======
+>>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
     // Animate to completion
     setOrderDeliveredIsAnimatingToComplete(true)
     setOrderDeliveredButtonProgress(1)
 
-    // Close popup after animation and show customer review (delivery will be completed when review is submitted)
-    setTimeout(() => {
+    // After slider completes, ask for OTP in popup if required, then continue
+    setTimeout(async () => {
+      const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+      if (!otpVerified) {
+        setShowOrderDeliveredAnimation(true)
+        setOrderDeliveredButtonProgress(0)
+        setOrderDeliveredIsAnimatingToComplete(false)
+        return
+      }
+
       setShowOrderDeliveredAnimation(false)
 
       // CRITICAL: Clear all pickup/delivery related popups
@@ -4260,15 +4336,18 @@ export default function DeliveryHome() {
       setShowreachedPickupPopup(false)
       setShowOrderIdConfirmationPopup(false)
 
-      // Show customer review popup instantly
+      // Show customer review popup after successful slide + OTP verification
       setShowCustomerReviewPopup(true)
 
-      // Reset after animation
       setTimeout(() => {
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
+<<<<<<< HEAD
         orderDeliveredFlowInProgressRef.current = false
       }, 500)
+=======
+      }, 150)
+>>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
     }, 200)
   }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
 
@@ -6602,7 +6681,7 @@ export default function DeliveryHome() {
       updateRoutePolyline();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routePolyline?.length, directionsResponse])
+  }, [routePolyline, directionsResponse])
 
   // Handle directionsResponse updates - Show route on main map when directions are calculated
   useEffect(() => {
@@ -8160,13 +8239,9 @@ export default function DeliveryHome() {
       return;
     }
 
-    // Don't show fallback polyline if DirectionsRenderer is active (it handles road-snapped routes)
-    if (directionsRendererRef.current && directionsRendererRef.current.getDirections()) {
-      // DirectionsRenderer is active, hide fallback polyline
-      if (routePolylineRef.current) {
-        routePolylineRef.current.setMap(null);
-      }
-      return;
+    // Keep DirectionsRenderer detached so Firebase/custom polyline remains the visible source of truth.
+    if (directionsRendererRef.current && directionsRendererRef.current.getMap()) {
+      directionsRendererRef.current.setMap(null);
     }
 
     if (!window.google || !window.google.maps || !window.deliveryMapInstance) {
@@ -8189,12 +8264,20 @@ export default function DeliveryHome() {
       }).filter(coord => coord !== null);
 
       if (path.length > 0) {
-        // Don't create main route polyline - only live tracking polyline will be shown
-        // Remove old custom polyline if exists (cleanup)
         if (routePolylineRef.current) {
           routePolylineRef.current.setMap(null);
           routePolylineRef.current = null;
         }
+
+        routePolylineRef.current = new window.google.maps.Polyline({
+          path,
+          geodesic: true,
+          strokeColor: '#2563eb',
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          map,
+          zIndex: 980
+        });
 
         // Fit map bounds to show entire route - but preserve zoom if user has zoomed in
         if (path.length > 1) {
@@ -10859,8 +10942,14 @@ export default function DeliveryHome() {
         onClose={() => closeDeliveryOtpModal(null)}
         showCloseButton={false}
         closeOnBackdropClick={false}
+<<<<<<< HEAD
         maxHeight="78vh"
         showHandle={true}
+=======
+        maxHeight="60vh"
+        showHandle={false}
+        disableSwipeToClose={true}
+>>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
       >
         <div className="px-1 min-h-full flex flex-col">
           <div className="text-center mb-5">
@@ -10925,7 +11014,8 @@ export default function DeliveryHome() {
         showCloseButton={false}
         closeOnBackdropClick={false}
         maxHeight="80vh"
-        showHandle={true}
+        showHandle={false}
+        disableSwipeToClose={true}
         showBackdrop={false}
         backdropBlocksInteraction={false}
       >
@@ -11129,11 +11219,6 @@ export default function DeliveryHome() {
                       review: customerReviewText
                     })
                     
-                    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-                    if (!otpVerified) {
-                      return
-                    }
-
                     // Call completeDelivery API with rating and review
                     const response = await deliveryAPI.completeDelivery(
                       orderIdForApi,

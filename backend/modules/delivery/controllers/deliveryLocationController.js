@@ -51,7 +51,8 @@ function shouldSyncRealtime(deliveryId, lat, lng, phase) {
   const distanceMeters = calculateDistanceKm(previous.lat, previous.lng, lat, lng) * 1000;
   const elapsedMs = now - previous.ts;
   const phaseChanged = previous.phase !== phase;
-  const shouldSync = phaseChanged || distanceMeters >= 10 || elapsedMs >= 4000;
+  const coordinatesChanged = previous.lat !== lat || previous.lng !== lng;
+  const shouldSync = phaseChanged || (coordinatesChanged && distanceMeters >= 0.5) || elapsedMs >= 1000;
 
   if (shouldSync) {
     realtimeSyncStateByDelivery.set(key, { lat, lng, phase, ts: now });
