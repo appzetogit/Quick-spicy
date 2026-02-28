@@ -674,6 +674,8 @@ export default function DeliveryHome() {
   const orderDeliveredHoldTimerRef = useRef(null)
   const orderDeliveredHoldTriggeredRef = useRef(false)
   const orderDeliveredLastProgressRef = useRef(0)
+  const orderDeliveredAutoFlowStartedRef = useRef(false)
+  const orderDeliveredFlowInProgressRef = useRef(false)
   const [earningsGuaranteeIsPlaying, setEarningsGuaranteeIsPlaying] = useState(true)
   const [earningsGuaranteeAudioTime, setEarningsGuaranteeAudioTime] = useState("00:00")
   const earningsGuaranteeAudioRef = useRef(null)
@@ -4218,6 +4220,11 @@ export default function DeliveryHome() {
   }, [requestDeliveryOtpFromModal, selectedRestaurant])
 
   const confirmOrderDeliveredFlow = useCallback(async () => {
+    if (orderDeliveredFlowInProgressRef.current) {
+      return
+    }
+    orderDeliveredFlowInProgressRef.current = true
+
     const orderIdForApi = selectedRestaurant?.id ||
       newOrder?.orderMongoId ||
       newOrder?._id ||
@@ -4228,6 +4235,7 @@ export default function DeliveryHome() {
       toast.error('Order details not found for OTP verification.')
       setOrderDeliveredButtonProgress(0)
       setOrderDeliveredIsAnimatingToComplete(false)
+      orderDeliveredFlowInProgressRef.current = false
       return
     }
 
@@ -4235,6 +4243,7 @@ export default function DeliveryHome() {
     if (!otpVerified) {
       setOrderDeliveredButtonProgress(0)
       setOrderDeliveredIsAnimatingToComplete(false)
+      orderDeliveredFlowInProgressRef.current = false
       return
     }
 
@@ -4258,11 +4267,36 @@ export default function DeliveryHome() {
       setTimeout(() => {
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
+        orderDeliveredFlowInProgressRef.current = false
       }, 500)
     }, 200)
   }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
 
+  useEffect(() => {
+    if (!showOrderDeliveredAnimation) {
+      orderDeliveredAutoFlowStartedRef.current = false
+      return
+    }
+
+    if (showCustomerReviewPopup || showPaymentPage) return
+    if (orderDeliveredAutoFlowStartedRef.current) return
+
+    orderDeliveredAutoFlowStartedRef.current = true
+
+    const timer = setTimeout(() => {
+      confirmOrderDeliveredFlow()
+    }, 120)
+
+    return () => clearTimeout(timer)
+  }, [
+    confirmOrderDeliveredFlow,
+    showCustomerReviewPopup,
+    showOrderDeliveredAnimation,
+    showPaymentPage
+  ])
+
   const handleOrderDeliveredTouchStart = (e) => {
+    if (showDeliveryOtpModal || isVerifyingDeliveryOtp || orderDeliveredFlowInProgressRef.current) return
     const touch = getTouchPoint(e)
     if (!touch) return
     clearOrderDeliveredHoldTimer()
@@ -4282,6 +4316,7 @@ export default function DeliveryHome() {
   }
 
   const handleOrderDeliveredTouchMove = (e) => {
+    if (showDeliveryOtpModal || isVerifyingDeliveryOtp || orderDeliveredFlowInProgressRef.current) return
     const touch = getTouchPoint(e)
     if (!touch) return
     const deltaX = touch.x - orderDeliveredSwipeStartX.current
@@ -4310,6 +4345,7 @@ export default function DeliveryHome() {
   }
 
   const handleOrderDeliveredTouchEnd = async (e) => {
+    if (showDeliveryOtpModal || isVerifyingDeliveryOtp || orderDeliveredFlowInProgressRef.current) return
     clearOrderDeliveredHoldTimer()
 
     if (orderDeliveredHoldTriggeredRef.current) {
@@ -4351,6 +4387,7 @@ export default function DeliveryHome() {
   }
 
   const handleOrderDeliveredTouchCancel = () => {
+    if (showDeliveryOtpModal || isVerifyingDeliveryOtp || orderDeliveredFlowInProgressRef.current) return
     clearOrderDeliveredHoldTimer()
     orderDeliveredLastProgressRef.current = 0
     orderDeliveredSwipeStartX.current = 0
@@ -10822,10 +10859,10 @@ export default function DeliveryHome() {
         onClose={() => closeDeliveryOtpModal(null)}
         showCloseButton={false}
         closeOnBackdropClick={false}
-        maxHeight="60vh"
+        maxHeight="78vh"
         showHandle={true}
       >
-        <div className="px-1 pb-1">
+        <div className="px-1 min-h-full flex flex-col">
           <div className="text-center mb-5">
             <div className="w-14 h-14 mx-auto mb-3 rounded-2xl bg-emerald-100 flex items-center justify-center">
               <Lock className="w-7 h-7 text-emerald-600" />
@@ -10845,6 +10882,7 @@ export default function DeliveryHome() {
               value={deliveryOtpValue}
               onChange={handleDeliveryOtpSingleChange}
               onPaste={handleDeliveryOtpSinglePaste}
+              onFocus={(e) => e.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" })}
               placeholder="0000"
               className="w-full h-14 rounded-xl border border-gray-300 text-center text-2xl font-bold text-gray-900 tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
               aria-label="Delivery OTP"
@@ -10855,7 +10893,8 @@ export default function DeliveryHome() {
             <p className="text-center text-sm text-red-500 mb-4">{deliveryOtpError}</p>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="mt-auto sticky bottom-0 bg-white pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
               onClick={() => closeDeliveryOtpModal(null)}
@@ -10871,6 +10910,7 @@ export default function DeliveryHome() {
             >
               Verify OTP
             </button>
+            </div>
           </div>
         </div>
       </BottomPopup>
