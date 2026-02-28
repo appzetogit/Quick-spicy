@@ -391,19 +391,11 @@ export default function Home() {
     }
   }, [BACKEND_ORIGIN])
 
-  const optimizeRestaurantImageUrl = useCallback((url) => {
-    if (typeof url !== "string" || !url) return ""
-    if (!/res\.cloudinary\.com/i.test(url)) return url
-    if (!/\/image\/upload\//i.test(url)) return url
-    if (/\/image\/upload\/(?:f_|q_|w_|h_|c_|dpr_|g_)/i.test(url)) return url
-    return url.replace("/image/upload/", "/image/upload/f_auto,q_auto,w_1280/")
-  }, [])
-
   const extractImageFromValue = useCallback((value) => {
     if (!value) return ""
 
     if (typeof value === "string") {
-      return optimizeRestaurantImageUrl(normalizeImageUrl(value))
+      return normalizeImageUrl(value)
     }
 
     if (typeof value === "object") {
@@ -420,25 +412,43 @@ export default function Home() {
         value.href ||
         ""
       return typeof candidate === "string"
-        ? optimizeRestaurantImageUrl(normalizeImageUrl(candidate))
+        ? normalizeImageUrl(candidate)
         : ""
     }
 
     return ""
-  }, [normalizeImageUrl, optimizeRestaurantImageUrl])
+  }, [normalizeImageUrl])
+
+  const buildRestaurantImageCandidates = useCallback((value) => {
+    const normalized = extractImageFromValue(value)
+    if (!normalized) return []
+
+    // Mobile WebView safety: try deterministic JPEG first, then auto, then original.
+    if (/res\.cloudinary\.com/i.test(normalized) && /\/image\/upload\//i.test(normalized)) {
+      const hasTransform = /\/image\/upload\/(?:f_|q_|w_|h_|c_|dpr_|g_)/i.test(normalized)
+      if (!hasTransform) {
+        return Array.from(new Set([
+          normalized.replace("/image/upload/", "/image/upload/f_jpg,q_auto,w_1080/"),
+          normalized.replace("/image/upload/", "/image/upload/f_auto,q_auto,w_1080/"),
+          normalized,
+        ]))
+      }
+    }
+
+    return [normalized]
+  }, [extractImageFromValue])
 
   const extractImages = useCallback((source) => {
     if (!source) return []
 
     if (Array.isArray(source)) {
       return source
-        .map((entry) => extractImageFromValue(entry))
+        .flatMap((entry) => buildRestaurantImageCandidates(entry))
         .filter(Boolean)
     }
 
-    const single = extractImageFromValue(source)
-    return single ? [single] : []
-  }, [extractImageFromValue])
+    return buildRestaurantImageCandidates(source)
+  }, [buildRestaurantImageCandidates])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -1132,19 +1142,19 @@ export default function Home() {
           // Some early records only have onboarding step2 media.
           const onboardingMenuImages = extractImages(restaurant.onboarding?.step2?.menuImageUrls)
 
-          const profileImageUrl =
-            extractImageFromValue(restaurant.profileImage) ||
-            extractImageFromValue(restaurant.onboarding?.step2?.profileImageUrl) ||
-            extractImageFromValue(restaurant.image) ||
-            extractImageFromValue(restaurant.imageUrl) ||
-            ""
+          const profileImageCandidates = [
+            ...buildRestaurantImageCandidates(restaurant.profileImage),
+            ...buildRestaurantImageCandidates(restaurant.onboarding?.step2?.profileImageUrl),
+            ...buildRestaurantImageCandidates(restaurant.image),
+            ...buildRestaurantImageCandidates(restaurant.imageUrl),
+          ]
+          const profileImageUrl = profileImageCandidates[0] || ""
 
           // Prefer directly updated admin/profile image first, then legacy arrays.
           // This keeps banner stable across location/offline state changes.
           const allImages = Array.from(
             new Set([
-              profileImageUrl,
-              extractImageFromValue(restaurant.onboarding?.step2?.profileImageUrl),
+              ...profileImageCandidates,
               ...coverImages,
               ...fallbackImages,
               ...onboardingMenuImages,
@@ -1237,7 +1247,7 @@ export default function Home() {
       setLoadingRestaurants(false)
       console.log('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [normalizeImageUrl, zoneId, extractImageFromValue, extractImages])
+  }, [normalizeImageUrl, zoneId, extractImages, buildRestaurantImageCandidates])
 
   // Fetch restaurants when appliedFilters change
   useEffect(() => {
