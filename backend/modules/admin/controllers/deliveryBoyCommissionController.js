@@ -151,6 +151,11 @@ export const createCommissionRule = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'Base payout must be 0 or greater');
     }
 
+    const existingRuleCount = await DeliveryBoyCommission.countDocuments({});
+    if (existingRuleCount > 0) {
+      return errorResponse(res, 400, 'Only one delivery boy commission rule is allowed. Please edit the existing rule.');
+    }
+
     // Check for overlapping ranges
     const existingRules = await DeliveryBoyCommission.find({ status: true });
     const newMinDist = parseFloat(minDistance);
@@ -432,6 +437,11 @@ export const deleteCommissionRule = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Commission rule not found');
     }
 
+    const totalRules = await DeliveryBoyCommission.countDocuments({});
+    if (totalRules <= 1) {
+      return errorResponse(res, 400, 'Cannot delete the only commission rule. The system supports exactly one rule.');
+    }
+
     await DeliveryBoyCommission.findByIdAndDelete(id);
 
     return successResponse(res, 200, 'Commission rule deleted successfully');
@@ -460,7 +470,13 @@ export const toggleCommissionRuleStatus = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Commission rule not found');
     }
 
-    commission.status = status !== undefined ? status : !commission.status;
+    const nextStatus = status !== undefined ? status : !commission.status;
+    const totalRules = await DeliveryBoyCommission.countDocuments({});
+    if (totalRules === 1 && nextStatus === false) {
+      return errorResponse(res, 400, 'The only commission rule cannot be disabled. Please edit it instead.');
+    }
+
+    commission.status = nextStatus;
     commission.updatedBy = adminId;
     await commission.save();
 
@@ -496,4 +512,3 @@ export const calculateCommission = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, error.message || 'Failed to calculate commission');
   }
 });
-

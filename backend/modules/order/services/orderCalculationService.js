@@ -61,123 +61,84 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
     return null;
   };
 
-  // Get fee settings from database
-  const feeSettings = await getFeeSettings();
+  const buildCommissionBreakdown = (commissionResult, distanceKm, source) => {
+    const minDistance = Number(
+      commissionResult?.rule?.minDistance ??
+      commissionResult?.breakdown?.minDistance ??
+      0
+    );
+    const basePayout = Number(commissionResult?.breakdown?.basePayout || 0);
+    const commissionPerKm = Number(commissionResult?.breakdown?.commissionPerKm || 0);
+    const distanceCharge = Number(commissionResult?.breakdown?.distanceCommission || 0);
+    const totalFee = Number(commissionResult?.commission || 0);
 
-  // Distance-based delivery charge (preferred when coordinates + commission rule are available)
-  try {
-    const restaurantCoords = getCoordinates(restaurant?.location);
-    const customerCoords = getCoordinates(deliveryAddress?.location);
-    if (restaurantCoords && customerCoords) {
-      const distanceKm = calculateDistance(restaurantCoords, customerCoords);
-      if (Number.isFinite(distanceKm) && distanceKm >= 0) {
-        const commissionResult = await DeliveryBoyCommission.calculateCommission(distanceKm);
-        const minDistance = Number(
-          commissionResult?.rule?.minDistance ??
-          commissionResult?.breakdown?.minDistance ??
-          0
-        );
-        const basePayout = Number(commissionResult?.breakdown?.basePayout || 0);
-        const commissionPerKm = Number(commissionResult?.breakdown?.commissionPerKm || 0);
-        const distanceCharge = Number(commissionResult?.breakdown?.distanceCommission || 0);
-        const totalFee = Number(commissionResult?.commission || 0);
-
-        if (Number.isFinite(totalFee) && totalFee >= 0) {
-          return {
-            fee: round2(totalFee),
-            breakdown: {
-              source: 'distance',
-              distanceKm: round2(distanceKm),
-              minDistanceKm: round2(minDistance),
-              basePayout: round2(basePayout),
-              commissionPerKm: round2(commissionPerKm),
-              extraDistanceKm: round2(Math.max(0, distanceKm - minDistance)),
-              distanceCharge: round2(distanceCharge),
-              total: round2(totalFee)
-            }
-          };
-        }
+    return {
+      fee: round2(totalFee),
+      breakdown: {
+        source,
+        distanceKm: round2(distanceKm),
+        minDistanceKm: round2(minDistance),
+        basePayout: round2(basePayout),
+        commissionPerKm: round2(commissionPerKm),
+        extraDistanceKm: round2(Math.max(0, distanceKm - minDistance)),
+        distanceCharge: round2(distanceCharge),
+        total: round2(totalFee)
       }
-    }
-  } catch (error) {
-    // Fallback to existing fee-settings logic if distance-based calculation is not available.
-    console.warn('Distance-based delivery fee calculation fallback:', error.message);
-  }
+    };
+  };
 
-  // 1) If delivery fee ranges are configured, they are the source of truth.
-  // This avoids unintended FREE delivery from threshold defaults.
-  if (feeSettings.deliveryFeeRanges && Array.isArray(feeSettings.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0) {
-    // Sort ranges by min value to ensure proper checking
-    const sortedRanges = [...feeSettings.deliveryFeeRanges].sort((a, b) => a.min - b.min);
-    
-    // Find matching range (orderValue >= min && orderValue < max)
-    // For the last range, we check orderValue >= min && orderValue <= max
-    for (let i = 0; i < sortedRanges.length; i++) {
-      const range = sortedRanges[i];
-      const isLastRange = i === sortedRanges.length - 1;
-      
-      if (isLastRange) {
-        // Last range: include max value
-        if (orderValue >= range.min && orderValue <= range.max) {
-          return {
-            fee: Number(range.fee),
-            breakdown: {
-              source: 'range',
-              min: Number(range.min),
-              max: Number(range.max),
-              total: Number(range.fee)
-            }
-          };
-        }
-      } else {
-        // Other ranges: exclude max value (handled by next range)
-        if (orderValue >= range.min && orderValue < range.max) {
-          return {
-            fee: Number(range.fee),
-            breakdown: {
-              source: 'range',
-              min: Number(range.min),
-              max: Number(range.max),
-              total: Number(range.fee)
-            }
-          };
-        }
+  const calculateFromCommissionRule = async (distanceKm, source) => {
+    const normalizedDistance = Number.isFinite(Number(distanceKm)) && Number(distanceKm) >= 0
+      ? Number(distanceKm)
+      : 0;
+
+    try {
+      const commissionResult = await DeliveryBoyCommission.calculateCommission(normalizedDistance);
+      const totalFee = Number(commissionResult?.commission || 0);
+      if (!Number.isFinite(totalFee) || totalFee < 0) {
+        throw new Error('Invalid commission result');
       }
-    }
+      return buildCommissionBreakdown(commissionResult, normalizedDistance, source);
+    } catch (error) {
+      const fallbackRule =
+        await DeliveryBoyCommission.findOne({ status: true }).sort({ minDistance: 1 }).lean() ||
+        await DeliveryBoyCommission.findOne({}).sort({ minDistance: 1 }).lean();
 
-    // If ranges exist but none matched, treat as free delivery.
-    return { fee: 0, breakdown: { source: 'range', total: 0 } };
-  }
+      if (!fallbackRule) {
+        throw new Error('No delivery boy commission rule configured');
+      }
 
-  // 2) No ranges configured, use threshold-based free delivery logic.
-  if (restaurant?.freeDeliveryAbove && orderValue >= restaurant.freeDeliveryAbove) {
-    return { fee: 0, breakdown: { source: 'threshold', total: 0 } };
-  }
+      const minDistance = Number(fallbackRule.minDistance) || 0;
+      const basePayout = Number(fallbackRule.basePayout) || 0;
+      const commissionPerKm = Number(fallbackRule.commissionPerKm) || 0;
+      const extraDistanceKm = Math.max(0, normalizedDistance - minDistance);
+      const distanceCharge = extraDistanceKm * commissionPerKm;
+      const totalFee = basePayout + distanceCharge;
 
-  const freeDeliveryThreshold = feeSettings.freeDeliveryThreshold || 149;
-  if (orderValue >= freeDeliveryThreshold) {
-    return { fee: 0, breakdown: { source: 'threshold', total: 0 } };
-  }
-
-  // 3) Base delivery fee fallback.
-  const baseDeliveryFee = feeSettings.deliveryFee || 25;
-  
-  // TODO: Add distance-based calculation when address coordinates are available
-  // if (deliveryAddress?.location?.coordinates && restaurant?.location?.coordinates) {
-  //   const distance = calculateDistance(
-  //     restaurant.location.coordinates,
-  //     deliveryAddress.location.coordinates
-  //   );
-  //   deliveryFee = baseFee + (distance * perKmFee);
-  // }
-  
-  return {
-    fee: Number(baseDeliveryFee),
-    breakdown: {
-      source: 'base',
-      total: Number(baseDeliveryFee)
+      return {
+        fee: round2(totalFee),
+        breakdown: {
+          source,
+          distanceKm: round2(normalizedDistance),
+          minDistanceKm: round2(minDistance),
+          basePayout: round2(basePayout),
+          commissionPerKm: round2(commissionPerKm),
+          extraDistanceKm: round2(extraDistanceKm),
+          distanceCharge: round2(distanceCharge),
+          total: round2(totalFee)
+        }
+      };
     }
   };
+
+  const restaurantCoords = getCoordinates(restaurant?.location);
+  const customerCoords = getCoordinates(deliveryAddress?.location);
+  if (restaurantCoords && customerCoords) {
+    const distanceKm = calculateDistance(restaurantCoords, customerCoords);
+    return calculateFromCommissionRule(distanceKm, 'distance');
+  }
+
+  return calculateFromCommissionRule(0, 'commission');
 };
 
 /**

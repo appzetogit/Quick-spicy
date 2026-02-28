@@ -25,8 +25,7 @@ export default function DeliveryBoyCommission() {
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
     name: true,
-    minDistance: true,
-    maxDistance: true,
+    distanceSlab: true,
     commissionPerKm: true,
     basePayout: true,
     status: true,
@@ -41,10 +40,18 @@ export default function DeliveryBoyCommission() {
     const query = searchQuery.toLowerCase().trim()
     return commissions.filter(commission =>
       commission.name.toLowerCase().includes(query) ||
-      commission.minDistance.toString().includes(query) ||
-      (commission.maxDistance !== null && commission.maxDistance.toString().includes(query))
+      `0-${commission.minDistance} km`.toLowerCase().includes(query) ||
+      (commission.maxDistance !== null && `${commission.minDistance}-${commission.maxDistance} km`.toLowerCase().includes(query))
     )
   }, [commissions, searchQuery])
+
+  const getDistanceSlabLabel = (commission) => {
+    if (commission.maxDistance === null || commission.maxDistance === undefined) {
+      return `0-${commission.minDistance} km`
+    }
+
+    return `${commission.minDistance}-${commission.maxDistance} km`
+  }
 
   // Calculate total commission for a given distance
   const calculateTotalCommission = (commission, distance) => {
@@ -76,7 +83,7 @@ export default function DeliveryBoyCommission() {
   const fetchCommissionRules = async () => {
     try {
       setLoading(true)
-      const response = await adminAPI.getCommissionRules({ status: true })
+      const response = await adminAPI.getCommissionRules()
       
       // Handle different response structures
       let commissionsData = null
@@ -146,6 +153,10 @@ export default function DeliveryBoyCommission() {
   }
 
   const handleAdd = () => {
+    if (commissions.length > 0) {
+      toast.error('Only one commission rule is allowed. Please edit the existing rule.')
+      return
+    }
     setSelectedCommission(null)
     setFormData({ name: "", minDistance: "", commissionPerKm: "", basePayout: "" })
     setFormErrors({})
@@ -359,8 +370,7 @@ export default function DeliveryBoyCommission() {
     setVisibleColumns({
       si: true,
       name: true,
-      minDistance: true,
-      maxDistance: true,
+      distanceSlab: true,
       commissionPerKm: true,
       basePayout: true,
       totalCommission: true,
@@ -372,8 +382,7 @@ export default function DeliveryBoyCommission() {
   const columnsConfig = {
     si: "Serial Number",
     name: "Name",
-    minDistance: "Min Distance",
-    maxDistance: "Max Distance",
+    distanceSlab: "Distance Slab (km)",
     commissionPerKm: "Commission/Km",
     basePayout: "Base Payout",
     status: "Status",
@@ -403,9 +412,10 @@ export default function DeliveryBoyCommission() {
           <div className="flex items-center gap-2">
               <button
                 onClick={handleAdd}
-                className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all shadow-sm"
+                disabled={commissions.length > 0}
+                className="px-4 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Add Rule
+                {commissions.length > 0 ? "Single Rule Only" : "Add Rule"}
               </button>
               <button 
                 onClick={() => setIsSettingsOpen(true)}
@@ -454,11 +464,8 @@ export default function DeliveryBoyCommission() {
                   {visibleColumns.name && (
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Name</th>
                   )}
-                  {visibleColumns.minDistance && (
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Min Distance (km)</th>
-                  )}
-                  {visibleColumns.maxDistance && (
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Max Distance (km)</th>
+                  {visibleColumns.distanceSlab && (
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Distance Slab (km)</th>
                   )}
                   {visibleColumns.commissionPerKm && (
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Amount Per/Km (₹)</th>
@@ -503,20 +510,12 @@ export default function DeliveryBoyCommission() {
                           <span className="text-sm font-medium text-slate-900">{commission.name}</span>
                         </td>
                       )}
-                      {visibleColumns.minDistance && (
+                      {visibleColumns.distanceSlab && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{commission.minDistance} km</span>
-                        </td>
-                      )}
-                      {visibleColumns.maxDistance && (
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">
-                            {commission.maxDistance === null ? (
-                              <span className="text-slate-500 italic">Unlimited</span>
-                            ) : (
-                              `${commission.maxDistance} km`
-                            )}
-                          </span>
+                          <div className="flex flex-col">
+                            <span className="text-sm font-medium text-slate-900">{getDistanceSlabLabel(commission)}</span>
+                            <span className="text-xs text-slate-500">Base payout slab</span>
+                          </div>
                         </td>
                       )}
                       {visibleColumns.commissionPerKm && (
