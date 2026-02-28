@@ -334,11 +334,19 @@ export default function Home() {
     }
     const appProtocol = typeof window !== "undefined" ? window.location?.protocol : ""
     const appHost = typeof window !== "undefined" ? window.location?.hostname : ""
+    let normalizedInput = trimmed
+      .replace(/\\/g, "/")
+      .replace(/^(https?):\/(?!\/)/i, "$1://")
+      .replace(/^(https?:\/\/)(https?:\/\/)/i, "$1")
+
+    if (/^\/\//.test(normalizedInput)) {
+      normalizedInput = `${appProtocol || "https:"}${normalizedInput}`
+    }
 
     // WebView can fail on unescaped spaces/special chars; keep URLs safely encoded.
-    if (/^(https?:)?\/\//i.test(trimmed)) {
+    if (/^(https?:)?\/\//i.test(normalizedInput)) {
       try {
-        const parsed = new URL(trimmed, window.location.origin)
+        const parsed = new URL(normalizedInput, window.location.origin)
 
         // In mobile production, localhost/127.0.0.1 inside image URLs is unreachable.
         // Use BACKEND_ORIGIN (API server) for image host, not frontend host—uploads are served by the backend.
@@ -370,13 +378,13 @@ export default function Home() {
         const hasSignedParams = /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(finalUrl)
         return hasSignedParams ? finalUrl : encodeURI(finalUrl)
       } catch {
-        return trimmed
+        return normalizedInput
       }
     }
 
-    const absolutePath = trimmed.startsWith("/")
-      ? `${BACKEND_ORIGIN}${trimmed}`
-      : `${BACKEND_ORIGIN}/${trimmed.replace(/^\.?\/*/, "")}`
+    const absolutePath = normalizedInput.startsWith("/")
+      ? `${BACKEND_ORIGIN}${normalizedInput}`
+      : `${BACKEND_ORIGIN}/${normalizedInput.replace(/^\.?\/*/, "")}`
 
     try {
       const parsed = new URL(absolutePath, window.location.origin)

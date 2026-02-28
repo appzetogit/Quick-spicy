@@ -4304,17 +4304,6 @@ export default function DeliveryHome() {
       return
     }
 
-<<<<<<< HEAD
-    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-    if (!otpVerified) {
-      setOrderDeliveredButtonProgress(0)
-      setOrderDeliveredIsAnimatingToComplete(false)
-      orderDeliveredFlowInProgressRef.current = false
-      return
-    }
-
-=======
->>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
     // Animate to completion
     setOrderDeliveredIsAnimatingToComplete(true)
     setOrderDeliveredButtonProgress(1)
@@ -4326,6 +4315,7 @@ export default function DeliveryHome() {
         setShowOrderDeliveredAnimation(true)
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
+        orderDeliveredFlowInProgressRef.current = false
         return
       }
 
@@ -4342,12 +4332,8 @@ export default function DeliveryHome() {
       setTimeout(() => {
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
-<<<<<<< HEAD
         orderDeliveredFlowInProgressRef.current = false
       }, 500)
-=======
-      }, 150)
->>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
     }, 200)
   }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
 
@@ -10942,14 +10928,9 @@ export default function DeliveryHome() {
         onClose={() => closeDeliveryOtpModal(null)}
         showCloseButton={false}
         closeOnBackdropClick={false}
-<<<<<<< HEAD
         maxHeight="78vh"
-        showHandle={true}
-=======
-        maxHeight="60vh"
         showHandle={false}
         disableSwipeToClose={true}
->>>>>>> 1b7e9dc8176ef2e4b05d2a80ad689833947d2127
       >
         <div className="px-1 min-h-full flex flex-col">
           <div className="text-center mb-5">

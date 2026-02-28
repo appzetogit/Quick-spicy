@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { foodImages } from "@/constants/images"
 import api from "@/lib/api"
 import { restaurantAPI, adminAPI } from "@/lib/api"
+import { API_BASE_URL } from "@/lib/api/config"
 import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
@@ -54,6 +55,82 @@ export default function CategoryPage() {
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
+  const BACKEND_ORIGIN = useMemo(() => API_BASE_URL.replace(/\/api\/?$/, ""), [])
+
+  const normalizeImageUrl = (value) => {
+    if (!value) return ""
+
+    const raw =
+      typeof value === "string"
+        ? value
+        : typeof value === "object"
+          ? (value.url || value.secure_url || value.imageUrl || value.image || value.src || value.path || "")
+          : ""
+
+    if (typeof raw !== "string") return ""
+    const trimmed = raw.trim()
+    if (!trimmed) return ""
+    if (/^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) return trimmed
+
+    const appProtocol = typeof window !== "undefined" ? window.location?.protocol : ""
+    const appHost = typeof window !== "undefined" ? window.location?.hostname : ""
+    let normalized = trimmed
+      .replace(/\\/g, "/")
+      .replace(/^(https?):\/(?!\/)/i, "$1://")
+      .replace(/^(https?:\/\/)(https?:\/\/)/i, "$1")
+
+    if (/^\/\//.test(normalized)) {
+      normalized = `${appProtocol || "https:"}${normalized}`
+    }
+
+    const hasSignedParams = (url) =>
+      /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(url)
+
+    if (/^https?:\/\//i.test(normalized)) {
+      try {
+        const parsed = new URL(normalized, window.location.origin)
+        if (
+          appHost &&
+          appHost !== "localhost" &&
+          appHost !== "127.0.0.1" &&
+          /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname)
+        ) {
+          try {
+            const backendUrl = new URL(BACKEND_ORIGIN)
+            parsed.protocol = backendUrl.protocol
+            parsed.hostname = backendUrl.hostname
+            parsed.port = backendUrl.port
+          } catch {
+            parsed.protocol = window.location.protocol
+            parsed.hostname = window.location.hostname
+            if (window.location.port) parsed.port = window.location.port
+          }
+        }
+        if (appProtocol === "https:" && parsed.protocol === "http:") {
+          parsed.protocol = "https:"
+        }
+        const finalUrl = parsed.toString()
+        return hasSignedParams(finalUrl) ? finalUrl : encodeURI(finalUrl)
+      } catch {
+        return normalized
+      }
+    }
+
+    const absolutePath = normalized.startsWith("/")
+      ? `${BACKEND_ORIGIN}${normalized}`
+      : `${BACKEND_ORIGIN}/${normalized.replace(/^\.?\/*/, "")}`
+
+    try {
+      const parsed = new URL(absolutePath, window.location.origin)
+      if (appProtocol === "https:" && parsed.protocol === "http:") {
+        parsed.protocol = "https:"
+      }
+      const finalUrl = parsed.toString()
+      return hasSignedParams(finalUrl) ? finalUrl : encodeURI(finalUrl)
+    } catch {
+      return absolutePath
+    }
+  }
 
   // Fetch categories from admin API
   useEffect(() => {
@@ -171,7 +248,7 @@ export default function CategoryPage() {
               : originalPrice
 
             // Get dish image (prioritize item image, then section image)
-            const dishImage = item.image?.url || item.image || section.image?.url || section.image || null
+            const dishImage = normalizeImageUrl(item.image?.url || item.image || section.image?.url || section.image)
 
             matchingDishes.push({
               name: item.name,
@@ -254,18 +331,18 @@ export default function CategoryPage() {
                 : null
 
               const coverImages = restaurant.coverImages && restaurant.coverImages.length > 0
-                ? restaurant.coverImages.map(img => img.url || img).filter(Boolean)
+                ? restaurant.coverImages.map(img => normalizeImageUrl(img.url || img)).filter(Boolean)
                 : []
 
               const fallbackImages = restaurant.menuImages && restaurant.menuImages.length > 0
-                ? restaurant.menuImages.map(img => img.url || img).filter(Boolean)
+                ? restaurant.menuImages.map(img => normalizeImageUrl(img.url || img)).filter(Boolean)
                 : []
 
               const allImages = coverImages.length > 0
                 ? coverImages
                 : (fallbackImages.length > 0
                   ? fallbackImages
-                  : (restaurant.profileImage?.url ? [restaurant.profileImage.url] : []))
+                  : (restaurant.profileImage?.url ? [normalizeImageUrl(restaurant.profileImage.url)] : []))
 
               const image = allImages[0] || null
               const restaurantId = restaurant.restaurantId || restaurant._id
