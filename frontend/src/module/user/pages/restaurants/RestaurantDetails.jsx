@@ -1660,7 +1660,7 @@ export default function RestaurantDetails() {
                       </button>
                     </div>
                   )}
-                  {sectionIndex > 0 && (
+                  {!isRecommended && (
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">

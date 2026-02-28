@@ -188,14 +188,15 @@ export const getPendingFoodApprovals = asyncHandler(async (req, res) => {
       });
     }
 
-    // Sort by requested date (newest first)
-    pendingRequests.sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
+    const actionablePendingRequests = pendingRequests
+      .filter((request) => request.isActionable)
+      .sort((a, b) => new Date(b.requestedAt) - new Date(a.requestedAt));
 
-    logger.info(`Fetched ${pendingRequests.length} food approval records`);
+    logger.info(`Fetched ${actionablePendingRequests.length} pending food approval records`);
 
-    return successResponse(res, 200, 'Food approvals retrieved successfully', {
-      requests: pendingRequests,
-      total: pendingRequests.length
+    return successResponse(res, 200, 'Pending food approvals retrieved successfully', {
+      requests: actionablePendingRequests,
+      total: actionablePendingRequests.length
     });
   } catch (error) {
     logger.error(`Error fetching pending food approvals: ${error.message}`, { error: error.stack });
