@@ -114,7 +114,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
         if (prev[primarySrc]) return prev
         return { ...prev, [primarySrc]: true }
       })
-    }, 4500)
+    }, 12000)
 
     return () => clearTimeout(timeoutId)
   }, [primarySrc, isPrimaryFailed, isImageLoaded, isImageUnavailable])
@@ -273,10 +273,34 @@ export default function Home() {
     if (/^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
       return trimmed
     }
+    const appProtocol = typeof window !== "undefined" ? window.location?.protocol : ""
+    const appHost = typeof window !== "undefined" ? window.location?.hostname : ""
+
     // WebView can fail on unescaped spaces/special chars; keep URLs safely encoded.
     if (/^(https?:)?\/\//i.test(trimmed)) {
       try {
-        return encodeURI(trimmed)
+        const parsed = new URL(trimmed, window.location.origin)
+
+        // In mobile production, localhost/127.0.0.1 inside image URLs is unreachable.
+        if (
+          appHost &&
+          appHost !== "localhost" &&
+          appHost !== "127.0.0.1" &&
+          /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname)
+        ) {
+          parsed.protocol = window.location.protocol
+          parsed.hostname = window.location.hostname
+          if (window.location.port) {
+            parsed.port = window.location.port
+          }
+        }
+
+        // Prevent mixed-content image blocking in HTTPS WebView.
+        if (appProtocol === "https:" && parsed.protocol === "http:") {
+          parsed.protocol = "https:"
+        }
+
+        return encodeURI(parsed.toString())
       } catch {
         return trimmed
       }
@@ -287,7 +311,11 @@ export default function Home() {
       : `${BACKEND_ORIGIN}/${trimmed.replace(/^\.?\/*/, "")}`
 
     try {
-      return encodeURI(absolutePath)
+      const parsed = new URL(absolutePath, window.location.origin)
+      if (appProtocol === "https:" && parsed.protocol === "http:") {
+        parsed.protocol = "https:"
+      }
+      return encodeURI(parsed.toString())
     } catch {
       return absolutePath
     }
@@ -985,17 +1013,24 @@ export default function Home() {
               .filter(Boolean)
             : []
 
-          // Use cover images first, then fallback to menu images, then profile image
+          const profileImageUrl = normalizeImageUrl(
+            restaurant.profileImage?.url ||
+            restaurant.profileImage ||
+            restaurant.image ||
+            restaurant.imageUrl ||
+            ""
+          )
+
+          // Use cover images first, then fallback to menu images, then profile image.
+          // Keep DB-driven sources only here (no static image injection at transform level).
           const allImages = coverImages.length > 0
             ? coverImages
             : (fallbackImages.length > 0
               ? fallbackImages
-              : (restaurant.profileImage?.url
-                ? [normalizeImageUrl(restaurant.profileImage.url)]
-                : ["https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"]))
+              : (profileImageUrl ? [profileImageUrl] : []))
 
           // Keep single image for backward compatibility
-          const image = allImages[0]
+          const image = allImages[0] || profileImageUrl || ""
           const offerText = restaurant.offer || null
 
           return {

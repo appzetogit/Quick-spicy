@@ -4,9 +4,39 @@
  */
 
 // Get API base URL from environment variable or use default
-// IMPORTANT: Backend runs on port 5000, frontend on port 5173
-let rawApiBaseUrl =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+// IMPORTANT: Backend runs on port 5000, frontend on port 5173 (dev only)
+const isDevMode = import.meta.env.DEV;
+const runtimeOrigin =
+  typeof window !== "undefined" && window.location?.origin
+    ? window.location.origin
+    : "";
+
+let rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+
+if (!rawApiBaseUrl) {
+  rawApiBaseUrl = isDevMode
+    ? "http://localhost:5000/api"
+    : `${runtimeOrigin}/api`;
+}
+
+// In production/mobile WebView, localhost is unreachable from the device.
+if (
+  !isDevMode &&
+  typeof rawApiBaseUrl === "string" &&
+  /https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(rawApiBaseUrl)
+) {
+  rawApiBaseUrl = `${runtimeOrigin}/api`;
+}
+
+// Avoid mixed-content blocking in WebView: prefer https API when app runs on https.
+if (
+  typeof window !== "undefined" &&
+  window.location?.protocol === "https:" &&
+  typeof rawApiBaseUrl === "string" &&
+  rawApiBaseUrl.startsWith("http://")
+) {
+  rawApiBaseUrl = rawApiBaseUrl.replace(/^http:\/\//i, "https://");
+}
 
 // Normalize URL - fix common issues like double slashes, missing protocols
 if (rawApiBaseUrl && typeof rawApiBaseUrl === "string") {
@@ -85,7 +115,7 @@ try {
   try {
     new URL(fixedUrl);
     console.warn("⚠️ Consider using fixed URL:", fixedUrl);
-  } catch (e) {
+  } catch {
     // Still invalid, keep original
   }
 }
