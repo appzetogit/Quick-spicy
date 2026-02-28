@@ -1936,8 +1936,8 @@ export default function DeliveryHome() {
               const lastSentTime = window.lastLocationSentTime || 0;
               const timeSinceLastSend = now - lastSentTime;
               
-              // Send location every 5 seconds even if not smoothed
-              if (timeSinceLastSend >= 5000) {
+              // Push first accepted GPS points quickly so Firebase tracking stays responsive.
+              if (timeSinceLastSend >= 1000) {
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   console.log('📤 Sending raw location to backend (not smoothed yet):', { lat, lng })
                   deliveryAPI.updateLocation(lat, lng, true, {
@@ -2057,10 +2057,10 @@ export default function DeliveryHome() {
             // Get last sent location for distance check
             const lastSentLocation = window.lastSentLocation || null;
             
-            // Send location every 5 seconds OR if location changed significantly (>50m)
-            const shouldSend = timeSinceLastSend >= 5000 || 
+            // Send frequent updates so even small rider movement reaches Firebase quickly.
+            const shouldSend = timeSinceLastSend >= 1000 || 
               (lastSentLocation && 
-               calculateDistance(lastSentLocation[0], lastSentLocation[1], smoothedLat, smoothedLng) > 0.05);
+               calculateDistance(lastSentLocation[0], lastSentLocation[1], smoothedLat, smoothedLng) > 0.001);
             
             if (shouldSend) {
               // Final validation before sending to backend

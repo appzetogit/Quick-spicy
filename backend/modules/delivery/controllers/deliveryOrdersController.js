@@ -98,6 +98,16 @@ async function syncOrderPhaseToRealtime(order = {}, deliveryId, status) {
     const boyLng = Array.isArray(deliveryCoords) ? Number(deliveryCoords[0]) : null;
 
     const { restaurant, customer } = extractOrderCoords(order);
+    const currentPhase = String(order?.deliveryState?.currentPhase || status || '').toLowerCase();
+    const selectedRoute =
+      currentPhase === 'en_route_to_delivery' ||
+      currentPhase === 'out_for_delivery' ||
+      currentPhase === 'at_delivery'
+        ? order?.deliveryState?.routeToDelivery
+        : order?.deliveryState?.routeToPickup;
+    const routeCoordinates = Array.isArray(selectedRoute?.coordinates) && selectedRoute.coordinates.length > 1
+      ? selectedRoute.coordinates
+      : null;
 
     return await upsertActiveOrderTracking({
       orderId: orderTrackingId,
@@ -105,8 +115,11 @@ async function syncOrderPhaseToRealtime(order = {}, deliveryId, status) {
       boyLat,
       boyLng,
       status: status || 'in_progress',
+      routeCoordinates,
       restaurant,
-      customer
+      customer,
+      distance: Number.isFinite(Number(selectedRoute?.distance)) ? Number(selectedRoute.distance) : null,
+      duration: Number.isFinite(Number(selectedRoute?.duration)) ? Number(selectedRoute.duration) : null
     });
   } catch (realtimeError) {
     logger.warn(`Failed to sync order phase to Firebase RTDB: ${realtimeError.message}`);
@@ -1111,7 +1124,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         boyLat: deliveryLat,
         boyLng: deliveryLng,
         status: 'accepted',
-        routeCoordinates: null,
+        routeCoordinates: Array.isArray(routeData.coordinates) ? routeData.coordinates : null,
         restaurant: restaurantCoords,
         customer: customerCoords,
         distance: routeData.distance,

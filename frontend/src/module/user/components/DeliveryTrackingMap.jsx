@@ -343,6 +343,58 @@ const DeliveryTrackingMap = ({
     }
   }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, preserveViewportState, restoreViewportState]);
 
+  const normalizeRoutePoints = useCallback((rawRoute) => {
+    if (!Array.isArray(rawRoute) || rawRoute.length < 2) return [];
+
+    return rawRoute
+      .map((point) => {
+        const lat = Number(point?.lat ?? point?.[0]);
+        const lng = Number(point?.lng ?? point?.[1]);
+        return { lat, lng };
+      })
+      .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+  }, []);
+
+  const renderFirebaseRoute = useCallback((rawRoute) => {
+    const normalizedPoints = normalizeRoutePoints(rawRoute);
+    if (normalizedPoints.length < 2) return false;
+
+    routePolylinePointsRef.current = normalizedPoints;
+
+    if (!isMapLoaded || !mapInstance.current || !window.google?.maps) {
+      return true;
+    }
+
+    if (animationControllerRef.current) {
+      animationControllerRef.current.updatePolyline(normalizedPoints);
+    } else if (bikeMarkerRef.current) {
+      animationControllerRef.current = new RouteBasedAnimationController(
+        bikeMarkerRef.current,
+        normalizedPoints
+      );
+    }
+
+    if (routePolylineRef.current) {
+      routePolylineRef.current.setMap(null);
+    }
+
+    routePolylineRef.current = new window.google.maps.Polyline({
+      path: normalizedPoints,
+      geodesic: true,
+      strokeColor: routeColor,
+      strokeOpacity: 0.8,
+      strokeWeight: 4,
+      map: mapInstance.current,
+      zIndex: 1
+    });
+
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setDirections({ routes: [] });
+    }
+
+    return true;
+  }, [isMapLoaded, normalizeRoutePoints, routeColor]);
+
   const getStoredRoutePoints = useCallback(() => {
     const routeCoordinates = isOrderPickedUp
       ? order?.deliveryState?.routeToDelivery?.coordinates
@@ -377,6 +429,12 @@ const DeliveryTrackingMap = ({
     order?.polyline,
     deliveryBoyData?.polyline
   ]);
+
+  useEffect(() => {
+    if (!isMapLoaded) return;
+    if (!routePolylinePointsRef.current || routePolylinePointsRef.current.length < 2) return;
+    renderFirebaseRoute(routePolylinePointsRef.current);
+  }, [isMapLoaded, renderFirebaseRoute, routeColor]);
 
   useEffect(() => {
     if (ENABLE_GOOGLE_DIRECTIONS) return;
@@ -775,26 +833,11 @@ const DeliveryTrackingMap = ({
               : null);
 
           if (Array.isArray(rawPolyline) && rawPolyline.length > 1) {
-            const normalizedPoints = rawPolyline
-              .map((point) => ({
-                lat: Number(point?.lat ?? point?.[0]),
-                lng: Number(point?.lng ?? point?.[1]),
-              }))
-              .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
-
-            if (normalizedPoints.length > 1) {
-              routePolylinePointsRef.current = normalizedPoints;
-              if (animationControllerRef.current) {
-                animationControllerRef.current.updatePolyline(normalizedPoints);
-              }
-            }
+            renderFirebaseRoute(rawPolyline);
           } else if (typeof rawPolyline === 'string' && rawPolyline.trim()) {
             const decoded = decodePolyline(rawPolyline);
             if (decoded.length > 1) {
-              routePolylinePointsRef.current = decoded;
-              if (animationControllerRef.current) {
-                animationControllerRef.current.updatePolyline(decoded);
-              }
+              renderFirebaseRoute(decoded);
             }
           }
         },
@@ -809,7 +852,7 @@ const DeliveryTrackingMap = ({
         if (typeof unsub === 'function') unsub();
       });
     };
-  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly]);
+  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly, renderFirebaseRoute]);
 
   // Initialize Socket.io connection (fallback)
   useEffect(() => {
@@ -1343,6 +1386,12 @@ const DeliveryTrackingMap = ({
       return;
     }
 
+    if (routePolylinePointsRef.current && routePolylinePointsRef.current.length > 1) {
+      lastRouteUpdateRef.current = now;
+      renderFirebaseRoute(routePolylinePointsRef.current);
+      return;
+    }
+
     const route = getRouteToShow();
     if (route.start && route.end) {
       lastRouteUpdateRef.current = now;
@@ -1391,7 +1440,7 @@ const DeliveryTrackingMap = ({
         }
       }
     }
-  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, getRouteToShow, drawRoute, hasDeliveryPartner, routeColor]);
+  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, getRouteToShow, drawRoute, hasDeliveryPartner, routeColor, renderFirebaseRoute]);
 
   // Update bike when REAL location changes (from socket)
   useEffect(() => {
