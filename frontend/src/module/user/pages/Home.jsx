@@ -61,27 +61,30 @@ const placeholders = [
 
 // Restaurant Image Carousel Component
 const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) => {
-  const images = useMemo(() => restaurant.images || [restaurant.image], [restaurant])
+  const FALLBACK_RESTAURANT_IMAGE = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"
+  const images = useMemo(() => {
+    const sourceImages = Array.isArray(restaurant.images) && restaurant.images.length > 0
+      ? restaurant.images
+      : [restaurant.image]
+
+    const validImages = sourceImages
+      .filter((img) => typeof img === "string")
+      .map((img) => img.trim())
+      .filter(Boolean)
+
+    return validImages.length > 0 ? validImages : [FALLBACK_RESTAURANT_IMAGE]
+  }, [restaurant.images, restaurant.image])
   const [currentIndex, setCurrentIndex] = useState(0)
+  const [loadedBySrc, setLoadedBySrc] = useState({})
+  const [failedBySrc, setFailedBySrc] = useState({})
   const touchStartX = useRef(0)
   const touchEndX = useRef(0)
   const isSwiping = useRef(false)
 
-  if (!images || images.length === 0) {
-    return (
-      <div className="relative h-48 sm:h-56 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 bg-gray-200">
-        <OptimizedImage
-          src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop"
-          alt={restaurant.name}
-          className="w-full h-full"
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          objectFit="cover"
-          placeholder="blur"
-          priority={priority}
-        />
-      </div>
-    )
-  }
+  const primarySrc = images[currentIndex] || FALLBACK_RESTAURANT_IMAGE
+  const displaySrc = failedBySrc[primarySrc] ? FALLBACK_RESTAURANT_IMAGE : primarySrc
+  const isImageLoaded = Boolean(loadedBySrc[displaySrc])
+  const isImageUnavailable = displaySrc === FALLBACK_RESTAURANT_IMAGE && Boolean(failedBySrc[FALLBACK_RESTAURANT_IMAGE])
 
   // Handle touch events for swipe
   const handleTouchStart = (e) => {
@@ -129,17 +132,38 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {!isImageLoaded && (
+        <div className="absolute inset-0 z-[1] overflow-hidden bg-gray-200">
+          <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
+        </div>
+      )}
+
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-110">
-        <OptimizedImage
-          src={images[currentIndex]}
+        <img
+          src={displaySrc}
           alt={`${restaurant.name} - Image ${currentIndex + 1}`}
-          className="w-full h-full"
-          priority={priority && currentIndex === 0}
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          objectFit="cover"
-          placeholder="blur"
+          className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
+          loading={priority && currentIndex === 0 ? "eager" : "lazy"}
+          fetchPriority={priority && currentIndex === 0 ? "high" : "auto"}
+          decoding="async"
+          onLoad={() => {
+            setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
+          }}
+          onError={() => {
+            if (displaySrc !== FALLBACK_RESTAURANT_IMAGE) {
+              setFailedBySrc((prev) => ({ ...prev, [primarySrc]: true }))
+              return
+            }
+            setFailedBySrc((prev) => ({ ...prev, [FALLBACK_RESTAURANT_IMAGE]: true }))
+          }}
         />
       </div>
+
+      {isImageUnavailable && (
+        <div className="absolute inset-0 z-[2] flex items-center justify-center bg-gray-100">
+          <span className="text-xs text-gray-500">Image unavailable</span>
+        </div>
+      )}
 
       {/* Image Indicators - only show if more than 1 image */}
       {images.length > 1 && (
