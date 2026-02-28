@@ -65,6 +65,7 @@ export default function BottomPopup({
 
   // Handle touch start for swipe detection
   const handleTouchStart = (e) => {
+    if (disableSwipeToClose) return
     const target = e.target
     const isHandle = handleRef.current?.contains(target)
 
@@ -91,6 +92,7 @@ export default function BottomPopup({
 
   // Handle touch move for swipe
   const handleTouchMove = (e) => {
+    if (disableSwipeToClose) return
     if (!isSwiping.current || !isOpen) return
 
     const currentY = e.touches[0].clientY
@@ -107,6 +109,11 @@ export default function BottomPopup({
 
   // Handle touch end - determine if should close
   const handleTouchEnd = (e) => {
+    if (disableSwipeToClose) {
+      isSwiping.current = false
+      setIsDragging(false)
+      return
+    }
     if (!isSwiping.current) {
       isSwiping.current = false
       setIsDragging(false)
@@ -285,7 +292,7 @@ export default function BottomPopup({
             className="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl z-[110] overflow-hidden flex flex-col"
             style={{
               maxHeight: isCollapsed ? "120px" : maxHeight,
-              touchAction: 'none'
+              touchAction: disableSwipeToClose ? 'auto' : 'none'
             }}
           >
             {/* Top Drag Handle Bar - Always visible for dragging */}
@@ -368,4 +375,3 @@ export default function BottomPopup({
     </AnimatePresence>
   )
 }
-

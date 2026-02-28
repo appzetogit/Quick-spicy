@@ -43,6 +43,7 @@ import { formatCurrency } from "../../restaurant/utils/currency"
 import { getAllDeliveryOrders } from "../utils/deliveryOrderStatus"
 import { getUnreadDeliveryNotificationCount } from "../utils/deliveryNotifications"
 import { deliveryAPI, restaurantAPI, uploadAPI } from "@/lib/api"
+import { subscribeOrderTracking } from "@/lib/realtimeTracking"
 import { useDeliveryNotifications } from "../hooks/useDeliveryNotifications"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
@@ -658,6 +659,27 @@ export default function DeliveryHome() {
   const [deliveryOtpError, setDeliveryOtpError] = useState("")
   const [isVerifyingDeliveryOtp, setIsVerifyingDeliveryOtp] = useState(false)
   const deliveryOtpResolveRef = useRef(null)
+  const activeOrderTrackingIds = useMemo(() => {
+    const ids = [
+      selectedRestaurant?.orderId,
+      selectedRestaurant?.id,
+      selectedRestaurant?._id,
+      newOrder?.orderId,
+      newOrder?.orderMongoId,
+      newOrder?._id
+    ]
+      .map((value) => (value == null ? "" : String(value).trim()))
+      .filter(Boolean)
+
+    return [...new Set(ids)]
+  }, [
+    selectedRestaurant?.orderId,
+    selectedRestaurant?.id,
+    selectedRestaurant?._id,
+    newOrder?.orderId,
+    newOrder?.orderMongoId,
+    newOrder?._id
+  ])
   const deliveryOtpInputRefs = useRef([])
   const deliveryOtpSingleInputRef = useRef(null)
   const orderDeliveredButtonRef = useRef(null)
@@ -695,6 +717,48 @@ export default function DeliveryHome() {
     }, 120)
     return () => clearTimeout(focusTimer)
   }, [showDeliveryOtpModal])
+
+  useEffect(() => {
+    if (!activeOrderTrackingIds.length) return
+
+    const unsubscribers = activeOrderTrackingIds.map((trackingId) =>
+      subscribeOrderTracking(
+        trackingId,
+        (trackingData) => {
+          const rawRoute = trackingData?.route_coordinates || trackingData?.polyline || null
+
+          if (Array.isArray(rawRoute) && rawRoute.length > 1) {
+            setRoutePolyline(rawRoute)
+          } else if (typeof rawRoute === "string" && rawRoute.trim()) {
+            const decodedRoute = decodePolyline(rawRoute)
+            if (decodedRoute.length > 1) {
+              setRoutePolyline(decodedRoute.map((point) => [point.lat, point.lng]))
+            }
+          }
+
+          const lat = Number(trackingData?.lat ?? trackingData?.boy_lat)
+          const lng = Number(trackingData?.lng ?? trackingData?.boy_lng)
+          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+            setRiderLocation((prev) => {
+              if (Array.isArray(prev) && prev[0] === lat && prev[1] === lng) {
+                return prev
+              }
+              return [lat, lng]
+            })
+          }
+        },
+        (error) => {
+          console.warn("Firebase delivery tracking listener error:", error?.message || error)
+        }
+      )
+    )
+
+    return () => {
+      unsubscribers.forEach((unsubscribe) => {
+        if (typeof unsubscribe === "function") unsubscribe()
+      })
+    }
+  }, [activeOrderTrackingIds])
 
   useEffect(() => {
     return () => {
@@ -4180,6 +4244,7 @@ export default function DeliveryHome() {
       return true
     }
 
+    setShowOrderDeliveredAnimation(false)
     const enteredOtp = await requestDeliveryOtpFromModal()
     const normalizedOtp = (enteredOtp || "").trim()
 
@@ -4239,6 +4304,7 @@ export default function DeliveryHome() {
     setTimeout(async () => {
       const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
       if (!otpVerified) {
+        setShowOrderDeliveredAnimation(true)
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
         return
@@ -6564,7 +6630,7 @@ export default function DeliveryHome() {
       updateRoutePolyline();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routePolyline?.length, directionsResponse])
+  }, [routePolyline, directionsResponse])
 
   // Handle directionsResponse updates - Show route on main map when directions are calculated
   useEffect(() => {
@@ -8122,13 +8188,9 @@ export default function DeliveryHome() {
       return;
     }
 
-    // Don't show fallback polyline if DirectionsRenderer is active (it handles road-snapped routes)
-    if (directionsRendererRef.current && directionsRendererRef.current.getDirections()) {
-      // DirectionsRenderer is active, hide fallback polyline
-      if (routePolylineRef.current) {
-        routePolylineRef.current.setMap(null);
-      }
-      return;
+    // Keep DirectionsRenderer detached so Firebase/custom polyline remains the visible source of truth.
+    if (directionsRendererRef.current && directionsRendererRef.current.getMap()) {
+      directionsRendererRef.current.setMap(null);
     }
 
     if (!window.google || !window.google.maps || !window.deliveryMapInstance) {
@@ -8151,12 +8213,20 @@ export default function DeliveryHome() {
       }).filter(coord => coord !== null);
 
       if (path.length > 0) {
-        // Don't create main route polyline - only live tracking polyline will be shown
-        // Remove old custom polyline if exists (cleanup)
         if (routePolylineRef.current) {
           routePolylineRef.current.setMap(null);
           routePolylineRef.current = null;
         }
+
+        routePolylineRef.current = new window.google.maps.Polyline({
+          path,
+          geodesic: true,
+          strokeColor: '#2563eb',
+          strokeOpacity: 0.9,
+          strokeWeight: 5,
+          map,
+          zIndex: 980
+        });
 
         // Fit map bounds to show entire route - but preserve zoom if user has zoomed in
         if (path.length > 1) {
@@ -10822,7 +10892,8 @@ export default function DeliveryHome() {
         showCloseButton={false}
         closeOnBackdropClick={false}
         maxHeight="60vh"
-        showHandle={true}
+        showHandle={false}
+        disableSwipeToClose={true}
       >
         <div className="px-1 pb-1">
           <div className="text-center mb-5">
@@ -10884,7 +10955,8 @@ export default function DeliveryHome() {
         showCloseButton={false}
         closeOnBackdropClick={false}
         maxHeight="80vh"
-        showHandle={true}
+        showHandle={false}
+        disableSwipeToClose={true}
         showBackdrop={false}
         backdropBlocksInteraction={false}
       >

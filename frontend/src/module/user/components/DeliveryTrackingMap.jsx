@@ -437,7 +437,6 @@ const DeliveryTrackingMap = ({
   }, [isMapLoaded, renderFirebaseRoute, routeColor]);
 
   useEffect(() => {
-    if (ENABLE_GOOGLE_DIRECTIONS) return;
     if (!isMapLoaded || !mapInstance.current || !window.google?.maps) return;
 
     const storedPoints = getStoredRoutePoints();
@@ -465,7 +464,7 @@ const DeliveryTrackingMap = ({
       map: mapInstance.current,
       zIndex: 1
     });
-  }, [ENABLE_GOOGLE_DIRECTIONS, getStoredRoutePoints, isMapLoaded, routeColor]);
+  }, [getStoredRoutePoints, isMapLoaded, routeColor]);
 
   // Check if delivery partner is assigned (memoized to avoid dependency issues)
   // MUST be defined BEFORE any useEffect that uses it
