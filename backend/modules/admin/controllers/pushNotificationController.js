@@ -133,6 +133,17 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, "Title and description are required");
   }
 
+  if (normalizedImageUrl) {
+    try {
+      const parsedUrl = new URL(normalizedImageUrl);
+      if (parsedUrl.protocol !== "https:") {
+        return errorResponse(res, 400, "Notification image URL must be a valid HTTPS URL");
+      }
+    } catch (_error) {
+      return errorResponse(res, 400, "Notification image URL is invalid");
+    }
+  }
+
   await firebaseAuthService.init();
   if (!firebaseAuthService.isEnabled()) {
     return errorResponse(
@@ -158,7 +169,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     notification: {
       title: normalizedTitle,
       body: normalizedDescription,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl, image: normalizedImageUrl } : {}),
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
     },
     data: {
       type: "admin_push_notification",
@@ -166,7 +177,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
       platform: normalizedPlatform,
       zone: normalizedZone,
       link: targetLink,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl, image: normalizedImageUrl } : {}),
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
       sentAt: new Date().toISOString(),
     },
     webpush: {
@@ -182,7 +193,6 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
           android: {
             notification: {
               imageUrl: normalizedImageUrl,
-              image: normalizedImageUrl,
             },
           },
           apns: {
@@ -198,6 +208,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   let sentCount = 0;
   let failedCount = 0;
   const failedTokens = [];
+  const failureCodeCounts = {};
 
   for (const tokenBatch of batches) {
     // sendEachForMulticast gives per-token status and works with Firebase Admin SDK v12.
@@ -211,21 +222,32 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
 
     batchResponse.responses.forEach((item, index) => {
       if (!item.success) {
+        const errorCode = item.error?.code || "unknown";
+        failureCodeCounts[errorCode] = (failureCodeCounts[errorCode] || 0) + 1;
         failedTokens.push({
           token: tokenBatch[index],
+          code: errorCode,
           error: item.error?.message || "Unknown FCM error",
         });
       }
     });
   }
 
-  return successResponse(res, 200, "Push notification processed", {
+  const responseMessage =
+    sentCount > 0
+      ? "Push notification sent"
+      : failedCount > 0
+        ? "Push notification failed for all tokens"
+        : "Push notification processed";
+
+  return successResponse(res, 200, responseMessage, {
     target: normalizedTarget,
     platform: normalizedPlatform,
     zone: normalizedZone,
     totalTokens: allTokens.length,
     sentCount,
     failedCount,
+    failureCodeCounts,
     sampleFailures: failedTokens.slice(0, 20),
   });
 });

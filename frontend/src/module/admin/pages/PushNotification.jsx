@@ -76,9 +76,9 @@ export default function PushNotification() {
           ""
       }
 
-      const isHttpImageUrl = !normalizedImageUrl || /^https?:\/\//i.test(normalizedImageUrl)
-      if (!isHttpImageUrl) {
-        toast.error("Notification image URL must start with http:// or https://")
+      const isHttpsImageUrl = !normalizedImageUrl || /^https:\/\//i.test(normalizedImageUrl)
+      if (!isHttpsImageUrl) {
+        toast.error("Notification image URL must start with https://")
         setIsSending(false)
         return
       }
@@ -100,6 +100,12 @@ export default function PushNotification() {
 
       if (sentCount > 0) {
         toast.success(`Notification sent to ${sentCount} device(s)${failedCount ? `, failed: ${failedCount}` : ""}`)
+      } else if (failedCount > 0) {
+        const firstFailure =
+          data?.sampleFailures?.[0]?.error ||
+          response?.data?.message ||
+          "Push notification failed for all tokens"
+        toast.error(firstFailure)
       } else {
         toast.info(response?.data?.message || "No eligible FCM tokens found")
       }
@@ -285,7 +291,7 @@ export default function PushNotification() {
                 type="text"
                 value={formData.imageUrl}
                 onChange={(e) => handleInputChange("imageUrl", e.target.value)}
-                placeholder="https://example.com/banner.jpg"
+                placeholder="https://example.com/banner.jpg (HTTPS only)"
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
