@@ -112,7 +112,8 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, back
   }, [restaurant.images, restaurant.image, withCacheBuster])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loadedBySrc, setLoadedBySrc] = useState({})
-  const [failedBySrc, setFailedBySrc] = useState({})
+  const [, setAttemptedSrcs] = useState({})
+  const [isImageUnavailable, setIsImageUnavailable] = useState(false)
   const [showShimmer, setShowShimmer] = useState(true)
   const touchStartX = useRef(0)
   const touchEndX = useRef(0)
@@ -120,10 +121,17 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, back
 
   const safeIndex = images.length > 0 ? (currentIndex % images.length + images.length) % images.length : 0
   const primarySrc = images[safeIndex] || ""
-  const isPrimaryFailed = Boolean(failedBySrc[primarySrc])
-  const displaySrc = isPrimaryFailed ? "" : primarySrc
+  const displaySrc = primarySrc
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
-  const isImageUnavailable = images.length === 0 || images.every((img) => failedBySrc[img])
+
+  // Reset transient image state when restaurant or source list changes.
+  useEffect(() => {
+    setCurrentIndex(0)
+    setLoadedBySrc({})
+    setAttemptedSrcs({})
+    setIsImageUnavailable(images.length === 0)
+    setShowShimmer(images.length > 0)
+  }, [restaurant?.id, restaurant?.slug, restaurant?.updatedAt, images])
 
   // WebView can serve from cache without firing onLoad; handle already-complete images.
   useEffect(() => {
@@ -141,7 +149,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, back
         setLoadedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
         setShowShimmer(false)
       } else {
-        setFailedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
+        setAttemptedSrcs((prev) => ({ ...prev, [displaySrc]: true }))
       }
     }
     return () => clearTimeout(shimmerTimeout)
@@ -214,9 +222,20 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, back
               setShowShimmer(false)
             }}
             onError={() => {
-              setFailedBySrc((prev) => ({ ...prev, [primarySrc]: true }))
-              if (images.length > 1) {
-                setCurrentIndex((prev) => (prev + 1) % images.length)
+              setAttemptedSrcs((prev) => {
+                const next = { ...prev, [primarySrc]: true }
+                const attemptedCount = Object.keys(next).length
+
+                if (attemptedCount >= images.length) {
+                  setIsImageUnavailable(true)
+                } else if (images.length > 1) {
+                  setCurrentIndex((prevIndex) => (prevIndex + 1) % images.length)
+                }
+
+                return next
+              })
+              if (images.length === 1) {
+                setIsImageUnavailable(true)
               }
             }}
           />
