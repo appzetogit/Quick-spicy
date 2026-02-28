@@ -83,9 +83,24 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 
   const safeIndex = images.length > 0 ? (currentIndex % images.length + images.length) % images.length : 0
   const primarySrc = images[safeIndex] || FALLBACK_RESTAURANT_IMAGE
-  const displaySrc = failedBySrc[primarySrc] ? FALLBACK_RESTAURANT_IMAGE : primarySrc
+  const isPrimaryFailed = Boolean(failedBySrc[primarySrc])
+  const displaySrc = isPrimaryFailed ? FALLBACK_RESTAURANT_IMAGE : primarySrc
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
   const isImageUnavailable = displaySrc === FALLBACK_RESTAURANT_IMAGE && Boolean(failedBySrc[FALLBACK_RESTAURANT_IMAGE])
+
+  // WebView safeguard: if image neither loads nor errors, force fallback after timeout.
+  useEffect(() => {
+    if (isImageLoaded || isImageUnavailable || isPrimaryFailed) return undefined
+
+    const timeoutId = setTimeout(() => {
+      setFailedBySrc((prev) => {
+        if (prev[primarySrc]) return prev
+        return { ...prev, [primarySrc]: true }
+      })
+    }, 4500)
+
+    return () => clearTimeout(timeoutId)
+  }, [primarySrc, isPrimaryFailed, isImageLoaded, isImageUnavailable])
 
   // Handle touch events for swipe
   const handleTouchStart = (e) => {
