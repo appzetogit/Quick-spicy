@@ -107,6 +107,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
   const [currentIndex, setCurrentIndex] = useState(0)
   const [loadedBySrc, setLoadedBySrc] = useState({})
   const [failedBySrc, setFailedBySrc] = useState({})
+  const [showShimmer, setShowShimmer] = useState(true)
   const touchStartX = useRef(0)
   const touchEndX = useRef(0)
   const isSwiping = useRef(false)
@@ -124,13 +125,20 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
     const imgEl = imageElementRef.current
     if (!imgEl) return
 
+    setShowShimmer(true)
+    const shimmerTimeout = setTimeout(() => {
+      setShowShimmer(false)
+    }, 2500)
+
     if (imgEl.complete) {
       if (imgEl.naturalWidth > 0) {
         setLoadedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
+        setShowShimmer(false)
       } else {
         setFailedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
       }
     }
+    return () => clearTimeout(shimmerTimeout)
   }, [displaySrc])
 
   // Handle touch events for swipe
@@ -179,7 +187,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {!isImageLoaded && (
+      {showShimmer && !isImageUnavailable && Boolean(displaySrc) && (
         <div className="absolute inset-0 z-[1] overflow-hidden bg-gray-200">
           <div className="h-full w-full animate-pulse bg-gradient-to-r from-gray-200 via-gray-100 to-gray-200" />
         </div>
@@ -191,12 +199,13 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
             ref={imageElementRef}
             src={displaySrc}
             alt={`${restaurant.name} - Image ${safeIndex + 1}`}
-            className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
+            className="w-full h-full object-cover"
             loading={priority ? "eager" : "lazy"}
             fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             onLoad={() => {
               setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
+              setShowShimmer(false)
             }}
             onError={() => {
               setFailedBySrc((prev) => ({ ...prev, [primarySrc]: true }))
