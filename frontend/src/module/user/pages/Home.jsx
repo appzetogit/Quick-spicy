@@ -62,7 +62,7 @@ const placeholders = [
 const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 // Restaurant Image Carousel Component
-const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) => {
+const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, backendOrigin = "" }) => {
   const webviewSessionKeyRef = useRef(WEBVIEW_SESSION_CACHE_BUSTER)
   const imageElementRef = useRef(null)
 
@@ -70,13 +70,19 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
     if (typeof url !== "string" || !url) return ""
     if (/^data:/i.test(url) || /^blob:/i.test(url)) return url
 
+    // Resolve relative URLs (e.g. /uploads/...) so they load on mobile when backend is different from frontend.
+    const isRelative = !/^(https?:|\/\/|data:|blob:)/i.test(url.trim())
+    const resolvedUrl = (backendOrigin && isRelative)
+      ? `${backendOrigin.replace(/\/$/, "")}${url.startsWith("/") ? url : `/${url}`}`
+      : url
+
     // Do not mutate signed URLs (legacy S3/Cloudfront/Firebase links can break if query changes).
     const hasSignedParams =
-      /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(url)
-    if (hasSignedParams) return url
+      /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(resolvedUrl)
+    if (hasSignedParams) return resolvedUrl
 
     try {
-      const parsed = new URL(url, window.location.origin)
+      const parsed = new URL(resolvedUrl, window.location.origin)
 
       // Apply cache-buster only to app/backend-hosted URLs to avoid third-party CDN signature issues.
       const currentHost = typeof window !== "undefined" ? window.location.hostname : ""
@@ -88,9 +94,9 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
       }
       return parsed.toString()
     } catch {
-      return url
+      return resolvedUrl
     }
-  }, [])
+  }, [backendOrigin])
 
   const images = useMemo(() => {
     const sourceImages = Array.isArray(restaurant.images) && restaurant.images.length > 0
@@ -307,16 +313,22 @@ export default function Home() {
         const parsed = new URL(trimmed, window.location.origin)
 
         // In mobile production, localhost/127.0.0.1 inside image URLs is unreachable.
+        // Use BACKEND_ORIGIN (API server) for image host, not frontend host—uploads are served by the backend.
         if (
           appHost &&
           appHost !== "localhost" &&
           appHost !== "127.0.0.1" &&
           /^(localhost|127\.0\.0\.1)$/i.test(parsed.hostname)
         ) {
-          parsed.protocol = window.location.protocol
-          parsed.hostname = window.location.hostname
-          if (window.location.port) {
-            parsed.port = window.location.port
+          try {
+            const backendUrl = new URL(BACKEND_ORIGIN)
+            parsed.protocol = backendUrl.protocol
+            parsed.hostname = backendUrl.hostname
+            parsed.port = backendUrl.port
+          } catch {
+            parsed.protocol = window.location.protocol
+            parsed.hostname = window.location.hostname
+            if (window.location.port) parsed.port = window.location.port
           }
         }
 
@@ -325,7 +337,10 @@ export default function Home() {
           parsed.protocol = "https:"
         }
 
-        return encodeURI(parsed.toString())
+        const finalUrl = parsed.toString()
+        // Do not encode signed URLs (S3/Cloudfront/Cloudinary); encoding query params can break signatures.
+        const hasSignedParams = /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(finalUrl)
+        return hasSignedParams ? finalUrl : encodeURI(finalUrl)
       } catch {
         return trimmed
       }
@@ -340,7 +355,9 @@ export default function Home() {
       if (appProtocol === "https:" && parsed.protocol === "http:") {
         parsed.protocol = "https:"
       }
-      return encodeURI(parsed.toString())
+      const finalUrl = parsed.toString()
+      const hasSignedParams = /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(finalUrl)
+      return hasSignedParams ? finalUrl : encodeURI(finalUrl)
     } catch {
       return absolutePath
     }
@@ -363,6 +380,8 @@ export default function Home() {
         value.src ||
         value.path ||
         value.location ||
+        value.link ||
+        value.href ||
         ""
       return typeof candidate === "string" ? normalizeImageUrl(candidate) : ""
     }
@@ -2134,6 +2153,7 @@ export default function Home() {
                             <RestaurantImageCarousel
                               restaurant={restaurant}
                               priority={index < 3}
+                              backendOrigin={BACKEND_ORIGIN}
                             />
 
                             {/* Featured Dish Badge - Top Left */}
