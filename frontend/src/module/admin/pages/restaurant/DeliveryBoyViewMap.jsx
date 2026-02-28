@@ -4,6 +4,7 @@ import { MapPin, ArrowLeft, Search, Bike } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
+import { subscribeAllDeliveryLocations } from "@/lib/realtimeTracking"
 import bikeLogo from "../../../../assets/bikelogo.png"
 
 export default function DeliveryBoyViewMap() {
@@ -19,6 +20,7 @@ export default function DeliveryBoyViewMap() {
   const [mapLoading, setMapLoading] = useState(true)
   const [zones, setZones] = useState([])
   const [deliveryBoys, setDeliveryBoys] = useState([])
+  const deliveryMetaByIdRef = useRef(new Map())
   const [loading, setLoading] = useState(true)
   const [locationSearch, setLocationSearch] = useState("")
   const autocompleteInputRef = useRef(null)
@@ -26,15 +28,57 @@ export default function DeliveryBoyViewMap() {
 
   useEffect(() => {
     fetchZones()
-    fetchOnlineDeliveryBoys()
+    fetchDeliveryPartnerDirectory()
     loadGoogleMaps()
-    
-    // Refresh delivery boys location every 10 seconds
-    const interval = setInterval(() => {
-      fetchOnlineDeliveryBoys()
-    }, 10000)
-    
-    return () => clearInterval(interval)
+
+    const unsubscribeRealtime = subscribeAllDeliveryLocations(
+      (deliveryNode) => {
+        const nextDeliveryBoys = Object.entries(deliveryNode || {})
+          .map(([deliveryId, payload]) => {
+            const location = payload?.location || {}
+            const lat = Number(location?.lat)
+            const lng = Number(location?.lng)
+            const isOnline =
+              location?.isOnline === true ||
+              location?.status === "online" ||
+              location?.status === "busy"
+
+            if (!isOnline || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+              return null
+            }
+
+            const meta = deliveryMetaByIdRef.current.get(String(deliveryId)) || {}
+
+            return {
+              _id: String(deliveryId),
+              name: meta.name || meta.fullName || "Delivery Partner",
+              phone: meta.phone || "N/A",
+              availability: {
+                isOnline: true,
+                currentLocation: {
+                  type: "Point",
+                  coordinates: [lng, lat],
+                  heading: Number(location?.heading) || 0,
+                  speed: Number(location?.speed) || 0,
+                  lastUpdate: Number(location?.timestamp || location?.last_updated) || Date.now()
+                },
+                lastLocationUpdate: Number(location?.timestamp || location?.last_updated) || Date.now()
+              }
+            }
+          })
+          .filter(Boolean)
+
+        setDeliveryBoys(nextDeliveryBoys)
+        setLoading(false)
+      },
+      (error) => {
+        console.error("Firebase delivery listener failed:", error)
+      }
+    )
+
+    return () => {
+      if (typeof unsubscribeRealtime === "function") unsubscribeRealtime()
+    }
   }, [])
 
   // Initialize Places Autocomplete when map is loaded
@@ -89,101 +133,39 @@ export default function DeliveryBoyViewMap() {
     }
   }
 
-  const fetchOnlineDeliveryBoys = async () => {
+  const fetchDeliveryPartnerDirectory = async () => {
     try {
-      // Fetch delivery partners - we need availability data included
-      const response = await adminAPI.getDeliveryPartners({ 
+      const response = await adminAPI.getDeliveryPartners({
         limit: 1000,
-        status: 'approved',
+        status: "approved",
         isActive: true,
-        includeAvailability: true // Request availability data
+        includeAvailability: false
       })
-      
-      console.log("📦 Delivery Partners API Response:", response.data)
-      
+
       if (response.data?.success && response.data.data?.deliveryPartners) {
-        // Filter only online delivery boys with valid location
-        // Check both formatted data and fullData, and also top-level availability
-        const onlineBoys = response.data.data.deliveryPartners.filter(boy => {
-          // Try multiple sources for availability data
-          const availability = boy.availability || boy.fullData?.availability || (boy.fullData && boy.fullData.availability)
-          
-          if (!availability) {
-            console.log("⚠️ No availability data for:", boy.name || boy.fullData?.name)
-            return false
-          }
-          
-          const isOnline = availability.isOnline === true
-          
-          // Check for location in different possible formats
-          const currentLocation = availability.currentLocation
-          const coordinates = currentLocation?.coordinates
-          
-          const hasLocation = coordinates && 
-                            Array.isArray(coordinates) &&
-                            coordinates.length >= 2 &&
-                            coordinates[0] !== 0 && 
-                            coordinates[1] !== 0
-          
-          if (isOnline && hasLocation) {
-            console.log("✅ Found online delivery boy:", {
-              name: boy.name || boy.fullData?.name,
-              isOnline,
-              coordinates,
-              hasLocation: true
-            })
-          } else {
-            console.log("⚠️ Delivery boy filtered out:", {
-              name: boy.name || boy.fullData?.name,
-              isOnline,
-              hasLocation: !!hasLocation,
-              coordinates: coordinates ? `[${coordinates[0]}, ${coordinates[1]}]` : 'none'
-            })
-          }
-          
-          return isOnline && hasLocation
+        const nextMap = new Map()
+        response.data.data.deliveryPartners.forEach((boy) => {
+          const boyId =
+            boy?._id ||
+            boy?.id ||
+            boy?.deliveryId ||
+            boy?.fullData?._id ||
+            boy?.fullData?.id
+
+          if (!boyId) return
+
+          nextMap.set(String(boyId), {
+            name: boy?.name || boy?.fullData?.name || "Delivery Partner",
+            fullName: boy?.fullName || boy?.fullData?.fullName || "",
+            phone: boy?.phone || boy?.fullData?.phone || "N/A"
+          })
         })
-        
-        // Remove duplicates based on delivery boy ID
-        const uniqueBoysMap = new Map()
-        onlineBoys.forEach(boy => {
-          // Get unique ID from multiple possible sources
-          const boyId = boy._id || boy.id || boy.deliveryId || boy.fullData?._id || boy.fullData?.id || boy.fullData?.deliveryId
-          
-          if (boyId) {
-            const idString = boyId.toString()
-            // Only keep the first occurrence (or the one with better data)
-            if (!uniqueBoysMap.has(idString)) {
-              uniqueBoysMap.set(idString, boy)
-            } else {
-              // If duplicate found, keep the one with more complete data
-              const existing = uniqueBoysMap.get(idString)
-              const existingHasFullData = existing.fullData || existing.availability
-              const newHasFullData = boy.fullData || boy.availability
-              
-              // Prefer the one with more complete data
-              if (newHasFullData && !existingHasFullData) {
-                uniqueBoysMap.set(idString, boy)
-              }
-            }
-          } else {
-            console.warn("⚠️ Delivery boy without ID:", boy.name || boy.fullData?.name)
-          }
-        })
-        
-        const uniqueBoys = Array.from(uniqueBoysMap.values())
-        console.log(`🚴 Found ${onlineBoys.length} online delivery boys, ${uniqueBoys.length} unique after deduplication`)
-        setDeliveryBoys(uniqueBoys)
-      } else {
-        console.warn("⚠️ No delivery partners in response:", response.data)
-        setDeliveryBoys([])
+        deliveryMetaByIdRef.current = nextMap
       }
     } catch (error) {
-      console.error("❌ Error fetching delivery boys:", error)
-      setDeliveryBoys([])
+      console.error("Error fetching delivery partner directory:", error)
     }
   }
-
   const loadGoogleMaps = async () => {
     try {
       const apiKey = await getGoogleMapsApiKey()
@@ -655,4 +637,5 @@ export default function DeliveryBoyViewMap() {
     </div>
   )
 }
+
 

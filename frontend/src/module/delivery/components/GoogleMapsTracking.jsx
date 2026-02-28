@@ -272,17 +272,18 @@ export default function GoogleMapsTracking({
       return
     }
 
-    // Optimization: Throttle route calculation (min 5 seconds between calls)
-    // unless origin has moved significantly (> 50m)
+    // Optimization: Keep Directions API usage low.
+    // Recalculate only occasionally or when rider deviates significantly.
     const now = Date.now()
     const lastCalc = lastRouteCalcRef.current
     const timeDiff = now - lastCalc.time
-    if (timeDiff < 5000) {
+    const MIN_RECALC_INTERVAL_MS = 60000
+    if (timeDiff < MIN_RECALC_INTERVAL_MS) {
       // Check if origin moved significantly
       const latDiff = Math.abs(origin.lat - lastCalc.origin.lat)
       const lngDiff = Math.abs(origin.lng - lastCalc.origin.lng)
-      // Rough approximation: 0.0005 degrees is ~50m
-      if (latDiff < 0.0005 && lngDiff < 0.0005) {
+      // Rough approximation: 0.0025 degrees is ~250m
+      if (latDiff < 0.0025 && lngDiff < 0.0025) {
         return // Skip calculation
       }
     }

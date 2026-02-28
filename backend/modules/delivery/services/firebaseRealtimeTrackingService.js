@@ -3,6 +3,9 @@ import { getFirebaseRealtimeDbSafe } from '../../../config/firebaseRealtime.js';
 const DELIVERY_BOYS_NODE = 'delivery_boys';
 const ACTIVE_ORDERS_NODE = 'active_orders';
 const ORDER_TRACKING_HISTORY_NODE = 'order_tracking_history';
+const DELIVERY_NODE = 'delivery';
+const RESTAURANT_NODE = 'restaurant';
+const ORDERS_NODE = 'orders';
 const DEFAULT_ACTIVE_ORDER_STALE_MINUTES = 180; // 3 hours
 const DEFAULT_DELIVERY_STALE_MINUTES = 20; // 20 minutes
 const MALFORMED_ORDER_GRACE_MINUTES = 30;
@@ -144,6 +147,18 @@ function isSameJson(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+function buildDeliveryLocationNode(deliveryId) {
+  return `${DELIVERY_NODE}/${sanitizeFirebaseKey(deliveryId)}/location`;
+}
+
+function buildRestaurantLocationNode(restaurantId) {
+  return `${RESTAURANT_NODE}/${sanitizeFirebaseKey(restaurantId)}/location`;
+}
+
+function buildOrderTrackingNode(orderId) {
+  return `${ORDERS_NODE}/${sanitizeFirebaseKey(orderId)}/tracking`;
+}
+
 export async function syncDeliveryPartnerPresence({
   deliveryId,
   lat,
@@ -168,7 +183,18 @@ export async function syncDeliveryPartnerPresence({
     const deliveryRef = db.ref(`${DELIVERY_BOYS_NODE}/${safeDeliveryId}`);
     const existing = await deliveryRef.once('value');
     const normalized = normalizeDeliveryBoyRecord(payload, existing.val() || {});
-    await deliveryRef.set(normalized);
+    await Promise.allSettled([
+      deliveryRef.set(normalized),
+      db.ref(buildDeliveryLocationNode(safeDeliveryId)).set({
+        lat: normalized.lat,
+        lng: normalized.lng,
+        status: normalized.status,
+        isOnline: normalized.isOnline,
+        activeOrderId: normalized.activeOrderId,
+        last_updated: normalized.last_updated,
+        timestamp: Date.now()
+      })
+    ]);
     return true;
   } catch (error) {
     console.warn(`WARN: Failed to sync delivery partner presence to Firebase: ${error.message}`);
@@ -220,7 +246,43 @@ export async function upsertActiveOrderTracking({
     const orderRef = db.ref(`${ACTIVE_ORDERS_NODE}/${safeOrderId}`);
     const existing = await orderRef.once('value');
     const normalized = normalizeActiveOrderRecord(payload, existing.val() || {});
-    await orderRef.set(normalized);
+    const orderTrackingPayload = {
+      orderId: safeOrderId,
+      deliveryId: normalized.boy_id || null,
+      lat: normalized.boy_lat,
+      lng: normalized.boy_lng,
+      heading: toNumberOrNull(normalized.heading) || 0,
+      speed: toNumberOrNull(normalized.speed) || 0,
+      status: normalized.status || 'assigned',
+      timestamp: toNumberOrNull(normalized.timestamp) || Date.now(),
+      last_updated: normalized.last_updated || Date.now(),
+      progress: toNumberOrNull(normalized.progress),
+      polyline: normalized.polyline || null,
+      distance_to_customer_km: toNumberOrNull(normalized.distance_to_customer_km),
+      distance_to_customer_m: toNumberOrNull(normalized.distance_to_customer_m),
+      route_coordinates: Array.isArray(normalized.route_coordinates)
+        ? normalized.route_coordinates
+        : []
+    };
+
+    const writeTasks = [
+      orderRef.set(normalized),
+      db.ref(buildOrderTrackingNode(safeOrderId)).set(orderTrackingPayload)
+    ];
+
+    const restaurantId = restaurant?.id || restaurant?._id || restaurant?.restaurantId || null;
+    if (restaurantId) {
+      writeTasks.push(
+        db.ref(buildRestaurantLocationNode(restaurantId)).set({
+          restaurantId: String(restaurantId),
+          lat: toNumberOrNull(restaurant?.lat),
+          lng: toNumberOrNull(restaurant?.lng),
+          updated_at: Date.now()
+        })
+      );
+    }
+
+    await Promise.allSettled(writeTasks);
     knownActiveOrderKeys.add(safeOrderId);
     return true;
   } catch (error) {
@@ -259,7 +321,23 @@ export async function updateActiveOrderLocation(orderId, locationPayload, option
       last_updated: Date.now()
     }, existingRecord);
 
-    await orderRef.set(normalized);
+    await Promise.allSettled([
+      orderRef.set(normalized),
+      db.ref(buildOrderTrackingNode(safeOrderId)).update({
+        orderId: safeOrderId,
+        deliveryId: normalized.boy_id || null,
+        lat: normalized.boy_lat,
+        lng: normalized.boy_lng,
+        heading: toNumberOrNull(normalized.heading) || 0,
+        speed: toNumberOrNull(normalized.speed) || 0,
+        status: normalized.status || 'assigned',
+        timestamp: toNumberOrNull(normalized.timestamp) || Date.now(),
+        progress: toNumberOrNull(normalized.progress),
+        distance_to_customer_km: toNumberOrNull(normalized.distance_to_customer_km),
+        distance_to_customer_m: toNumberOrNull(normalized.distance_to_customer_m),
+        last_updated: Date.now()
+      })
+    ]);
     return true;
   } catch (error) {
     console.warn(`WARN: Failed to update active order location in Firebase: ${error.message}`);
@@ -342,6 +420,7 @@ export async function removeActiveOrderTracking(orderId) {
       });
     }
     await activeRef.remove();
+    await db.ref(buildOrderTrackingNode(safeOrderId)).remove();
     knownActiveOrderKeys.delete(safeOrderId);
     return true;
   } catch (error) {

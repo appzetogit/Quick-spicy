@@ -4,6 +4,7 @@ import { API_BASE_URL } from '@/lib/api/config';
 import bikeLogo from '@/assets/bikelogo.png';
 import { RouteBasedAnimationController } from '@/module/user/utils/routeBasedAnimation';
 import { decodePolyline, extractPolylineFromDirections, findNearestPointOnPolyline } from '@/module/delivery/utils/liveTrackingPolyline';
+import { subscribeOrderTracking } from '@/lib/realtimeTracking';
 import './DeliveryTrackingMap.css';
 
 // Helper function to calculate Haversine distance
@@ -173,10 +174,10 @@ const DeliveryTrackingMap = ({
     const roundCoord = (coord) => Math.round(coord * 10000) / 10000;
     const cacheKey = `${roundCoord(startLat)},${roundCoord(startLng)}|${roundCoord(endLat)},${roundCoord(endLng)}`;
 
-    // Check cache first (cache valid for 5 minutes)
+    // Check cache first (cache valid for 15 minutes)
     const cached = directionsCacheRef.current.get(cacheKey);
     const now = Date.now();
-      if (cached && (now - cached.timestamp) < 300000) { // 5 minutes cache
+      if (cached && (now - cached.timestamp) < 900000) { // 15 minutes cache
       console.log('✅ Using cached route');
       // Use cached result
       if (cached.result && cached.result.routes && cached.result.routes[0]) {
@@ -233,14 +234,14 @@ const DeliveryTrackingMap = ({
       return;
     }
 
-    // Throttle: Don't make API call if same route was requested within last 2 seconds
+    // Throttle: Don't make API call unless enough time passed or route drift is meaningful.
     const lastRequest = lastRouteRequestRef.current;
     if (lastRequest.start && lastRequest.end &&
-      Math.abs(lastRequest.start.lat - startLat) < 0.0001 &&
-      Math.abs(lastRequest.start.lng - startLng) < 0.0001 &&
+      Math.abs(lastRequest.start.lat - startLat) < 0.0015 &&
+      Math.abs(lastRequest.start.lng - startLng) < 0.0015 &&
       Math.abs(lastRequest.end.lat - endLat) < 0.0001 &&
       Math.abs(lastRequest.end.lng - endLng) < 0.0001 &&
-      (now - lastRequest.timestamp) < 2000) {
+      (now - lastRequest.timestamp) < 60000) {
       console.log('⏭️ Skipping duplicate route request (throttled)');
       return;
     }
@@ -737,6 +738,80 @@ const DeliveryTrackingMap = ({
   }, [isMapLoaded, bikeLogo]);
 
   // Initialize Socket.io connection
+  useEffect(() => {
+    if (!trackingIds.length) return;
+
+    const unsubs = trackingIds.map((trackingId) =>
+      subscribeOrderTracking(
+        trackingId,
+        (trackingData) => {
+          const lat = Number(trackingData?.lat ?? trackingData?.boy_lat);
+          const lng = Number(trackingData?.lng ?? trackingData?.boy_lng);
+          if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+          const heading = Number(
+            trackingData?.heading ??
+              trackingData?.bearing ??
+              0,
+          );
+
+          const location = {
+            lat,
+            lng,
+            heading: Number.isFinite(heading) ? heading : 0,
+          };
+
+          setCurrentLocation(location);
+          setDeliveryBoyLocation(location);
+
+          if (isMapLoaded && mapInstance.current) {
+            moveBikeSmoothly(location.lat, location.lng, location.heading);
+          }
+
+          const rawPolyline =
+            trackingData?.polyline ||
+            (Array.isArray(trackingData?.route_coordinates) && trackingData.route_coordinates.length > 0
+              ? trackingData.route_coordinates
+              : null);
+
+          if (Array.isArray(rawPolyline) && rawPolyline.length > 1) {
+            const normalizedPoints = rawPolyline
+              .map((point) => ({
+                lat: Number(point?.lat ?? point?.[0]),
+                lng: Number(point?.lng ?? point?.[1]),
+              }))
+              .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
+
+            if (normalizedPoints.length > 1) {
+              routePolylinePointsRef.current = normalizedPoints;
+              if (animationControllerRef.current) {
+                animationControllerRef.current.updatePolyline(normalizedPoints);
+              }
+            }
+          } else if (typeof rawPolyline === 'string' && rawPolyline.trim()) {
+            const decoded = decodePolyline(rawPolyline);
+            if (decoded.length > 1) {
+              routePolylinePointsRef.current = decoded;
+              if (animationControllerRef.current) {
+                animationControllerRef.current.updatePolyline(decoded);
+              }
+            }
+          }
+        },
+        (error) => {
+          console.warn('Firebase order tracking listener error:', error?.message || error);
+        },
+      ),
+    );
+
+    return () => {
+      unsubs.forEach((unsub) => {
+        if (typeof unsub === 'function') unsub();
+      });
+    };
+  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly]);
+
+  // Initialize Socket.io connection (fallback)
   useEffect(() => {
     if (!trackingIds.length) return;
 

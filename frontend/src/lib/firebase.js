@@ -1,5 +1,6 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
 
 // Firebase configuration - fallback to hardcoded values if env vars are not available
 const firebaseConfig = {
@@ -33,6 +34,7 @@ if (missingFields.length > 0) {
 let app;
 let firebaseAuth;
 let googleProvider;
+let firebaseRealtimeDb;
 
 // Function to ensure Firebase is initialized
 function ensureFirebaseInitialized() {
@@ -71,6 +73,10 @@ function ensureFirebaseInitialized() {
       // Note: Don't set custom client_id - Firebase uses its own OAuth client
       console.log('Google Auth Provider initialized');
     }
+
+    if (!firebaseRealtimeDb) {
+      firebaseRealtimeDb = getDatabase(app);
+    }
   } catch (error) {
     console.error('Firebase initialization error:', error);
     console.error('Firebase config used:', firebaseConfig);
@@ -82,6 +88,6 @@ function ensureFirebaseInitialized() {
 ensureFirebaseInitialized();
 
 export const firebaseApp = app;
-export { firebaseAuth, googleProvider, ensureFirebaseInitialized };
+export { firebaseAuth, googleProvider, firebaseRealtimeDb, ensureFirebaseInitialized };
 
 
