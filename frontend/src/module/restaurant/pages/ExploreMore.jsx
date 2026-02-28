@@ -383,20 +383,50 @@ export default function ExploreMore() {
   const formatAddress = (location) => {
     if (!location) return ""
 
+    if (location.formattedAddress && location.formattedAddress.trim() !== "" && location.formattedAddress !== "Select location") {
+      return location.formattedAddress.trim()
+    }
+
+    if (location.address && location.address.trim() !== "") {
+      return location.address.trim()
+    }
+
     const parts = []
 
-    // Add area if available
+    if (location.addressLine1) {
+      parts.push(location.addressLine1.trim())
+    } else if (location.street) {
+      parts.push(location.street.trim())
+    }
+
+    if (location.addressLine2) {
+      parts.push(location.addressLine2.trim())
+    }
+
     if (location.area) {
       parts.push(location.area.trim())
     }
 
-    // Add city if available and not already in area
+    if (location.landmark) {
+      parts.push(location.landmark.trim())
+    }
+
     if (location.city) {
       const city = location.city.trim()
-      // Only add city if it's not already included in area
-      if (!location.area || !location.area.includes(city)) {
+      if (!parts.some((part) => part.includes(city))) {
         parts.push(city)
       }
+    }
+
+    if (location.state) {
+      const state = location.state.trim()
+      if (!parts.some((part) => part.includes(state))) {
+        parts.push(state)
+      }
+    }
+
+    if (location.zipCode || location.pincode || location.postalCode) {
+      parts.push((location.zipCode || location.pincode || location.postalCode).trim())
     }
 
     return parts.join(", ") || ""

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react"
+import { createContext, useContext, useState, useEffect, useMemo } from "react"
 
 const OrdersContext = createContext(null)
 
@@ -34,7 +34,7 @@ export function OrdersProvider({ children }) {
         delivered: { status: false, timestamp: null }
       }
     }
-    setOrders([newOrder, ...orders])
+    setOrders((prevOrders) => [newOrder, ...prevOrders])
     return newOrder.id
   }
 
@@ -43,11 +43,11 @@ export function OrdersProvider({ children }) {
   }
 
   const getAllOrders = () => {
-    return orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    return [...orders].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
   }
 
   const updateOrderStatus = (orderId, status) => {
-    setOrders(orders.map(order => {
+    setOrders((prevOrders) => prevOrders.map(order => {
       if (order.id === orderId) {
         const updatedTracking = { ...order.tracking }
         if (status === "preparing") {
@@ -67,13 +67,13 @@ export function OrdersProvider({ children }) {
     }))
   }
 
-  const value = {
+  const value = useMemo(() => ({
     orders,
     createOrder,
     getOrderById,
     getAllOrders,
     updateOrderStatus
-  }
+  }), [orders])
 
   return <OrdersContext.Provider value={value}>{children}</OrdersContext.Provider>
 }
@@ -85,4 +85,3 @@ export function useOrders() {
   }
   return context
 }
-

@@ -642,7 +642,7 @@ export default function Cart() {
     }
 
     calculatePricing()
-  }, [cart, defaultAddress, appliedCoupon, couponCode, deliveryFleet, restaurantId])
+  }, [cart, defaultAddress, appliedCoupon, couponCode, deliveryFleet, restaurantId, feeSettings])
 
   // Fetch wallet balance
   useEffect(() => {
@@ -715,9 +715,38 @@ export default function Cart() {
     }
   }, [])
 
-  // Use backend pricing if available, otherwise fallback to database settings
+  // Use backend pricing if available, otherwise fallback to database fee settings
   const subtotal = pricing?.subtotal || cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
-  const fallbackDeliveryFee = appliedCoupon?.freeDelivery ? 0 : 0
+  const fallbackDeliveryFee = (() => {
+    if (appliedCoupon?.freeDelivery) {
+      return 0
+    }
+
+    const ranges = Array.isArray(feeSettings.deliveryFeeRanges) ? [...feeSettings.deliveryFeeRanges] : []
+    if (ranges.length > 0) {
+      const sortedRanges = ranges.sort((a, b) => Number(a.min) - Number(b.min))
+      for (let i = 0; i < sortedRanges.length; i += 1) {
+        const range = sortedRanges[i]
+        const min = Number(range.min)
+        const max = Number(range.max)
+        const fee = Number(range.fee)
+        const isLastRange = i === sortedRanges.length - 1
+        const inRange = isLastRange
+          ? subtotal >= min && subtotal <= max
+          : subtotal >= min && subtotal < max
+
+        if (inRange) return fee
+      }
+
+      return 0
+    }
+
+    if (subtotal >= feeSettings.freeDeliveryThreshold) {
+      return 0
+    }
+
+    return Number(feeSettings.deliveryFee || 0)
+  })()
   const deliveryFee = pricing?.deliveryFee ?? fallbackDeliveryFee
   const deliveryFeeBreakdown = pricing?.deliveryFeeBreakdown || null
   const hasDistanceDeliveryBreakdown =

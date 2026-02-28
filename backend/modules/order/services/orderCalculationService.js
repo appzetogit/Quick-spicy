@@ -1,7 +1,6 @@
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Offer from '../../restaurant/models/Offer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
-import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import mongoose from 'mongoose';
 
 /**
@@ -42,103 +41,78 @@ const getFeeSettings = async () => {
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
   const round2 = (value) => Math.round(Number(value || 0) * 100) / 100;
-  const getCoordinates = (location) => {
-    if (!location || typeof location !== 'object') return null;
-    if (
-      Array.isArray(location.coordinates) &&
-      location.coordinates.length >= 2 &&
-      Number.isFinite(Number(location.coordinates[0])) &&
-      Number.isFinite(Number(location.coordinates[1]))
-    ) {
-      return [Number(location.coordinates[0]), Number(location.coordinates[1])];
-    }
-    if (
-      Number.isFinite(Number(location.longitude)) &&
-      Number.isFinite(Number(location.latitude))
-    ) {
-      return [Number(location.longitude), Number(location.latitude)];
-    }
-    return null;
-  };
+  const feeSettings = await getFeeSettings();
 
-  const buildCommissionBreakdown = (commissionResult, distanceKm, source) => {
-    const minDistance = Number(
-      commissionResult?.rule?.minDistance ??
-      commissionResult?.breakdown?.minDistance ??
-      0
-    );
-    const basePayout = Number(commissionResult?.breakdown?.basePayout || 0);
-    const commissionPerKm = Number(commissionResult?.breakdown?.commissionPerKm || 0);
-    const distanceCharge = Number(commissionResult?.breakdown?.distanceCommission || 0);
-    const totalFee = Number(commissionResult?.commission || 0);
+  if (feeSettings.deliveryFeeRanges && Array.isArray(feeSettings.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0) {
+    const sortedRanges = [...feeSettings.deliveryFeeRanges].sort((a, b) => a.min - b.min);
+
+    for (let i = 0; i < sortedRanges.length; i++) {
+      const range = sortedRanges[i];
+      const isLastRange = i === sortedRanges.length - 1;
+
+      if (isLastRange) {
+        if (orderValue >= range.min && orderValue <= range.max) {
+          return {
+            fee: round2(range.fee),
+            breakdown: {
+              source: 'range',
+              min: Number(range.min),
+              max: Number(range.max),
+              total: round2(range.fee)
+            }
+          };
+        }
+      } else if (orderValue >= range.min && orderValue < range.max) {
+        return {
+          fee: round2(range.fee),
+          breakdown: {
+            source: 'range',
+            min: Number(range.min),
+            max: Number(range.max),
+            total: round2(range.fee)
+          }
+        };
+      }
+    }
 
     return {
-      fee: round2(totalFee),
+      fee: 0,
       breakdown: {
-        source,
-        distanceKm: round2(distanceKm),
-        minDistanceKm: round2(minDistance),
-        basePayout: round2(basePayout),
-        commissionPerKm: round2(commissionPerKm),
-        extraDistanceKm: round2(Math.max(0, distanceKm - minDistance)),
-        distanceCharge: round2(distanceCharge),
-        total: round2(totalFee)
+        source: 'range',
+        total: 0
       }
     };
-  };
-
-  const calculateFromCommissionRule = async (distanceKm, source) => {
-    const normalizedDistance = Number.isFinite(Number(distanceKm)) && Number(distanceKm) >= 0
-      ? Number(distanceKm)
-      : 0;
-
-    try {
-      const commissionResult = await DeliveryBoyCommission.calculateCommission(normalizedDistance);
-      const totalFee = Number(commissionResult?.commission || 0);
-      if (!Number.isFinite(totalFee) || totalFee < 0) {
-        throw new Error('Invalid commission result');
-      }
-      return buildCommissionBreakdown(commissionResult, normalizedDistance, source);
-    } catch (error) {
-      const fallbackRule =
-        await DeliveryBoyCommission.findOne({ status: true }).sort({ minDistance: 1 }).lean() ||
-        await DeliveryBoyCommission.findOne({}).sort({ minDistance: 1 }).lean();
-
-      if (!fallbackRule) {
-        throw new Error('No delivery boy commission rule configured');
-      }
-
-      const minDistance = Number(fallbackRule.minDistance) || 0;
-      const basePayout = Number(fallbackRule.basePayout) || 0;
-      const commissionPerKm = Number(fallbackRule.commissionPerKm) || 0;
-      const extraDistanceKm = Math.max(0, normalizedDistance - minDistance);
-      const distanceCharge = extraDistanceKm * commissionPerKm;
-      const totalFee = basePayout + distanceCharge;
-
-      return {
-        fee: round2(totalFee),
-        breakdown: {
-          source,
-          distanceKm: round2(normalizedDistance),
-          minDistanceKm: round2(minDistance),
-          basePayout: round2(basePayout),
-          commissionPerKm: round2(commissionPerKm),
-          extraDistanceKm: round2(extraDistanceKm),
-          distanceCharge: round2(distanceCharge),
-          total: round2(totalFee)
-        }
-      };
-    }
-  };
-
-  const restaurantCoords = getCoordinates(restaurant?.location);
-  const customerCoords = getCoordinates(deliveryAddress?.location);
-  if (restaurantCoords && customerCoords) {
-    const distanceKm = calculateDistance(restaurantCoords, customerCoords);
-    return calculateFromCommissionRule(distanceKm, 'distance');
   }
 
-  return calculateFromCommissionRule(0, 'commission');
+  if (restaurant?.freeDeliveryAbove && orderValue >= restaurant.freeDeliveryAbove) {
+    return {
+      fee: 0,
+      breakdown: {
+        source: 'threshold',
+        total: 0
+      }
+    };
+  }
+
+  const freeDeliveryThreshold = feeSettings.freeDeliveryThreshold || 149;
+  if (orderValue >= freeDeliveryThreshold) {
+    return {
+      fee: 0,
+      breakdown: {
+        source: 'threshold',
+        total: 0
+      }
+    };
+  }
+
+  const baseDeliveryFee = feeSettings.deliveryFee || 25;
+  return {
+    fee: round2(baseDeliveryFee),
+    breakdown: {
+      source: 'base',
+      total: round2(baseDeliveryFee)
+    }
+  };
 };
 
 /**
