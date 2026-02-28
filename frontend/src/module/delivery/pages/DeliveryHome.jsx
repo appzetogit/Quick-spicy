@@ -637,6 +637,7 @@ export default function DeliveryHome() {
   const reachedDropIsSwiping = useRef(false)
   const reachedDropHoldTimerRef = useRef(null)
   const reachedDropHoldTriggeredRef = useRef(false)
+  const reachedDropLastProgressRef = useRef(0)
   const [orderIdConfirmButtonProgress, setOrderIdConfirmButtonProgress] = useState(0)
   const [orderIdConfirmIsAnimatingToComplete, setOrderIdConfirmIsAnimatingToComplete] = useState(false)
   const orderIdConfirmButtonRef = useRef(null)
@@ -653,10 +654,12 @@ export default function DeliveryHome() {
   const [orderDeliveredIsAnimatingToComplete, setOrderDeliveredIsAnimatingToComplete] = useState(false)
   const [showDeliveryOtpModal, setShowDeliveryOtpModal] = useState(false)
   const [deliveryOtpDigits, setDeliveryOtpDigits] = useState(() => Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
+  const [deliveryOtpValue, setDeliveryOtpValue] = useState("")
   const [deliveryOtpError, setDeliveryOtpError] = useState("")
   const [isVerifyingDeliveryOtp, setIsVerifyingDeliveryOtp] = useState(false)
   const deliveryOtpResolveRef = useRef(null)
   const deliveryOtpInputRefs = useRef([])
+  const deliveryOtpSingleInputRef = useRef(null)
   const orderDeliveredButtonRef = useRef(null)
   // Trip distance and time from Google Maps API
   const [tripDistance, setTripDistance] = useState(null) // in meters
@@ -670,6 +673,7 @@ export default function DeliveryHome() {
   const orderDeliveredIsSwiping = useRef(false)
   const orderDeliveredHoldTimerRef = useRef(null)
   const orderDeliveredHoldTriggeredRef = useRef(false)
+  const orderDeliveredLastProgressRef = useRef(0)
   const [earningsGuaranteeIsPlaying, setEarningsGuaranteeIsPlaying] = useState(true)
   const [earningsGuaranteeAudioTime, setEarningsGuaranteeAudioTime] = useState("00:00")
   const earningsGuaranteeAudioRef = useRef(null)
@@ -687,7 +691,7 @@ export default function DeliveryHome() {
   useEffect(() => {
     if (!showDeliveryOtpModal) return
     const focusTimer = setTimeout(() => {
-      deliveryOtpInputRefs.current[0]?.focus()
+      deliveryOtpSingleInputRef.current?.focus()
     }, 120)
     return () => clearTimeout(focusTimer)
   }, [showDeliveryOtpModal])
@@ -3397,6 +3401,7 @@ export default function DeliveryHome() {
     reachedDropSwipeStartY.current = touch.y
     reachedDropIsSwiping.current = false
     reachedDropHoldTriggeredRef.current = false
+    reachedDropLastProgressRef.current = 0
     setReachedDropIsAnimatingToComplete(false)
     setReachedDropButtonProgress(0)
 
@@ -3430,6 +3435,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      reachedDropLastProgressRef.current = progress
       setReachedDropButtonProgress(progress)
     }
   }
@@ -3456,15 +3462,20 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // 50% of max swipe — half slide completes and goes to next step
 
-    if (deltaX > threshold) {
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = reachedDropLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || lastProgress >= 0.5 || progressFromDelta >= 0.5
+
+    if (shouldConfirm) {
       confirmReachedDropFlow()
     } else {
       // Reset smoothly
       setReachedDropButtonProgress(0)
     }
 
+    reachedDropLastProgressRef.current = 0
     reachedDropSwipeStartX.current = 0
     reachedDropSwipeStartY.current = 0
     reachedDropIsSwiping.current = false
@@ -3473,6 +3484,7 @@ export default function DeliveryHome() {
 
   const handleReachedDropTouchCancel = () => {
     clearReachedDropHoldTimer()
+    reachedDropLastProgressRef.current = 0
     reachedDropSwipeStartX.current = 0
     reachedDropSwipeStartY.current = 0
     reachedDropIsSwiping.current = false
@@ -4075,6 +4087,7 @@ export default function DeliveryHome() {
     return new Promise((resolve) => {
       deliveryOtpResolveRef.current = resolve
       setDeliveryOtpDigits(Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
+      setDeliveryOtpValue("")
       setDeliveryOtpError("")
       setShowDeliveryOtpModal(true)
     })
@@ -4087,6 +4100,7 @@ export default function DeliveryHome() {
     }
     setShowDeliveryOtpModal(false)
     setDeliveryOtpDigits(Array(DELIVERY_DROP_OTP_LENGTH).fill(""))
+    setDeliveryOtpValue("")
     setDeliveryOtpError("")
   }, [DELIVERY_DROP_OTP_LENGTH])
 
@@ -4128,12 +4142,34 @@ export default function DeliveryHome() {
   }
 
   const submitDeliveryOtpModal = () => {
-    const otpValue = deliveryOtpDigits.join("").trim()
+    const otpValue = (deliveryOtpValue || deliveryOtpDigits.join("")).trim()
     if (otpValue.length !== DELIVERY_DROP_OTP_LENGTH) {
       setDeliveryOtpError(`Please enter a valid ${DELIVERY_DROP_OTP_LENGTH}-digit OTP`)
       return
     }
     closeDeliveryOtpModal(otpValue)
+  }
+
+  const handleDeliveryOtpSingleChange = (e) => {
+    const raw = e.target.value.replace(/\D/g, "").slice(0, DELIVERY_DROP_OTP_LENGTH)
+    setDeliveryOtpValue(raw)
+    setDeliveryOtpError("")
+    if (raw.length === DELIVERY_DROP_OTP_LENGTH) {
+      closeDeliveryOtpModal(raw)
+    }
+  }
+
+  const handleDeliveryOtpSinglePaste = (e) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, DELIVERY_DROP_OTP_LENGTH)
+    if (!pasted) return
+    setDeliveryOtpValue(pasted)
+    setDeliveryOtpError("")
+    if (pasted.length === DELIVERY_DROP_OTP_LENGTH) {
+      closeDeliveryOtpModal(pasted)
+    } else {
+      deliveryOtpSingleInputRef.current?.focus()
+    }
   }
 
   const verifyDropOtpForCurrentOrder = useCallback(async (orderIdForApi) => {
@@ -4234,6 +4270,7 @@ export default function DeliveryHome() {
     orderDeliveredSwipeStartY.current = touch.y
     orderDeliveredIsSwiping.current = false
     orderDeliveredHoldTriggeredRef.current = false
+    orderDeliveredLastProgressRef.current = 0
     setOrderDeliveredIsAnimatingToComplete(false)
     setOrderDeliveredButtonProgress(0)
 
@@ -4267,6 +4304,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      orderDeliveredLastProgressRef.current = progress
       setOrderDeliveredButtonProgress(progress)
     }
   }
@@ -4293,15 +4331,19 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // 50% — half slide completes and goes to next step
 
-    if (deltaX > threshold) {
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = orderDeliveredLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || lastProgress >= 0.5 || progressFromDelta >= 0.5
+
+    if (shouldConfirm) {
       await confirmOrderDeliveredFlow()
     } else {
-      // Reset smoothly
       setOrderDeliveredButtonProgress(0)
     }
 
+    orderDeliveredLastProgressRef.current = 0
     orderDeliveredSwipeStartX.current = 0
     orderDeliveredSwipeStartY.current = 0
     orderDeliveredIsSwiping.current = false
@@ -4310,6 +4352,7 @@ export default function DeliveryHome() {
 
   const handleOrderDeliveredTouchCancel = () => {
     clearOrderDeliveredHoldTimer()
+    orderDeliveredLastProgressRef.current = 0
     orderDeliveredSwipeStartX.current = 0
     orderDeliveredSwipeStartY.current = 0
     orderDeliveredIsSwiping.current = false
@@ -10788,25 +10831,24 @@ export default function DeliveryHome() {
               <Lock className="w-7 h-7 text-emerald-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900">Verify Delivery OTP</h3>
-            <p className="text-sm text-gray-600 mt-1">Ask customer for the 4-digit OTP to complete delivery</p>
+            <p className="text-sm text-gray-600 mt-1">Enter the 4-digit OTP from customer (or paste it)</p>
           </div>
 
-          <div className="flex items-center justify-center gap-2 mb-4" onPaste={handleDeliveryOtpPaste}>
-            {deliveryOtpDigits.map((digit, index) => (
-              <input
-                key={`delivery-otp-${index}`}
-                ref={(el) => {
-                  deliveryOtpInputRefs.current[index] = el
-                }}
-                type="tel"
-                inputMode="numeric"
-                maxLength={1}
-                value={digit}
-                onChange={(event) => handleDeliveryOtpDigitChange(index, event.target.value)}
-                onKeyDown={(event) => handleDeliveryOtpKeyDown(index, event)}
-                className="w-11 h-12 rounded-xl border border-gray-300 text-center text-lg font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-              />
-            ))}
+          <div className="mb-4">
+            <input
+              ref={deliveryOtpSingleInputRef}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
+              maxLength={DELIVERY_DROP_OTP_LENGTH}
+              value={deliveryOtpValue}
+              onChange={handleDeliveryOtpSingleChange}
+              onPaste={handleDeliveryOtpSinglePaste}
+              placeholder="0000"
+              className="w-full h-14 rounded-xl border border-gray-300 text-center text-2xl font-bold text-gray-900 tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              aria-label="Delivery OTP"
+            />
           </div>
 
           {deliveryOtpError && (
@@ -10817,14 +10859,15 @@ export default function DeliveryHome() {
             <button
               type="button"
               onClick={() => closeDeliveryOtpModal(null)}
-              className="h-11 rounded-xl border border-gray-300 text-gray-700 font-semibold"
+              className="h-12 rounded-xl border border-gray-300 text-gray-700 font-semibold"
             >
               Cancel
             </button>
             <button
               type="button"
               onClick={submitDeliveryOtpModal}
-              className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+              disabled={deliveryOtpValue.length !== DELIVERY_DROP_OTP_LENGTH}
+              className="h-12 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold"
             >
               Verify OTP
             </button>
