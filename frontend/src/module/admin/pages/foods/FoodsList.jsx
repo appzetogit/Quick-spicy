@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 
 export default function FoodsList() {
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedRestaurant, setSelectedRestaurant] = useState("all")
   const [foods, setFoods] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
@@ -172,13 +173,35 @@ export default function FoodsList() {
       result = result.filter(food =>
         food.name.toLowerCase().includes(query) ||
         food.id.toString().includes(query) ||
-        food.restaurantName?.toLowerCase().includes(query)
+        food.restaurantName?.toLowerCase().includes(query) ||
+        food.sectionName?.toLowerCase().includes(query) ||
+        food.subsectionName?.toLowerCase().includes(query)
       )
+    }
+
+    if (selectedRestaurant !== "all") {
+      result = result.filter((food) => String(food.restaurantId) === selectedRestaurant)
     }
 
     result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
     return result
-  }, [foods, searchQuery])
+  }, [foods, searchQuery, selectedRestaurant])
+
+  const restaurantOptions = useMemo(() => {
+    const uniqueRestaurants = new Map()
+
+    foods.forEach((food) => {
+      if (!food.restaurantId) return
+      if (!uniqueRestaurants.has(String(food.restaurantId))) {
+        uniqueRestaurants.set(String(food.restaurantId), {
+          id: String(food.restaurantId),
+          name: food.restaurantName || "Unknown Restaurant",
+        })
+      }
+    })
+
+    return Array.from(uniqueRestaurants.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [foods])
 
   const handleDelete = async (id) => {
     const food = foods.find(f => f.id === id)
@@ -314,6 +337,18 @@ export default function FoodsList() {
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
+            <select
+              value={selectedRestaurant}
+              onChange={(e) => setSelectedRestaurant(e.target.value)}
+              className="px-4 py-2.5 min-w-[220px] text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+            >
+              <option value="all">All Restaurants</option>
+              {restaurantOptions.map((restaurant) => (
+                <option key={restaurant.id} value={restaurant.id}>
+                  {restaurant.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -333,6 +368,12 @@ export default function FoodsList() {
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   Title
                 </th>
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  Restaurant
+                </th>
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  Category
+                </th>
                 <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   Action
                 </th>
@@ -341,7 +382,7 @@ export default function FoodsList() {
             <tbody className="bg-white divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center">
+                  <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                       <p className="text-sm text-slate-500">Loading foods from restaurants...</p>
@@ -350,10 +391,10 @@ export default function FoodsList() {
                 </tr>
               ) : filteredFoods.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-20 text-center">
+                  <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-                      <p className="text-sm text-slate-500">No food items match your search</p>
+                      <p className="text-sm text-slate-500">No food items match your search or restaurant filter</p>
                     </div>
                   </td>
                 </tr>
@@ -381,11 +422,18 @@ export default function FoodsList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-slate-900">{food.name}</span>
-                        <span className="text-xs text-slate-500">ID #{formatFoodId(food.id)}</span>
-                        {food.restaurantName && (
-                          <span className="text-xs text-slate-400 mt-0.5">
-                            {food.restaurantName}
-                          </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-800">{food.restaurantName || "-"}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium text-slate-800">{food.sectionName || "-"}</span>
+                        {food.subsectionName && (
+                          <span className="text-xs text-slate-500">{food.subsectionName}</span>
                         )}
                       </div>
                     </td>

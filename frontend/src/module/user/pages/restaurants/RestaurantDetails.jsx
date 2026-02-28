@@ -347,6 +347,7 @@ export default function RestaurantDetails() {
             })
           }
 
+<<<<<<< HEAD
           // Resolve display category/cuisine with broad API compatibility
           const categoryFromArray = (list) => {
             if (!Array.isArray(list) || list.length === 0) return null
@@ -372,6 +373,20 @@ export default function RestaurantDetails() {
             actualRestaurant?.category ||
             apiRestaurant?.category ||
             "Multi-cuisine"
+=======
+          const onboardingStep2 = actualRestaurant?.onboarding?.step2 || apiRestaurant?.onboarding?.step2 || {}
+          const onboardingStep4 = actualRestaurant?.onboarding?.step4 || apiRestaurant?.onboarding?.step4 || {}
+          const normalizedProfileImage = actualRestaurant?.profileImage || apiRestaurant?.profileImage || onboardingStep2?.profileImageUrl || null
+          const normalizedMenuImages =
+            Array.isArray(actualRestaurant?.menuImages) && actualRestaurant.menuImages.length > 0
+              ? actualRestaurant.menuImages
+              : Array.isArray(apiRestaurant?.menuImages) && apiRestaurant.menuImages.length > 0
+                ? apiRestaurant.menuImages
+                : Array.isArray(onboardingStep2?.menuImageUrls)
+                  ? onboardingStep2.menuImageUrls
+                  : []
+          const normalizedRestaurantOffers = actualRestaurant?.restaurantOffers || apiRestaurant?.restaurantOffers || {}
+>>>>>>> e82678e8554ae9ac21d27165f8300d97c6f3fa0b
 
           // Transform API data to match expected format with comprehensive fallbacks
           // Handle both dining restaurant and regular restaurant data structures
@@ -387,54 +402,49 @@ export default function RestaurantDetails() {
             distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "1.2 km",
             location: formattedAddress,
             locationObject: locationObj, // Store full location object for reference
-            image: actualRestaurant?.profileImage?.url
-              || apiRestaurant?.profileImage?.url
-              || actualRestaurant?.profileImage
-              || apiRestaurant?.profileImage
-              || (Array.isArray(actualRestaurant?.menuImages) && actualRestaurant.menuImages.length > 0
-                ? (actualRestaurant.menuImages[0]?.url || actualRestaurant.menuImages[0])
-                : null)
-              || (Array.isArray(apiRestaurant?.menuImages) && apiRestaurant.menuImages.length > 0
-                ? (apiRestaurant.menuImages[0]?.url || apiRestaurant.menuImages[0])
+            image: normalizedProfileImage?.url
+              || normalizedProfileImage
+              || (normalizedMenuImages.length > 0
+                ? (normalizedMenuImages[0]?.url || normalizedMenuImages[0])
                 : null)
               || actualRestaurant?.image
               || apiRestaurant?.image
               || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop",
-            priceRange: apiRestaurant?.priceRange || "$$",
-            offers: Array.isArray(apiRestaurant?.offers) ? apiRestaurant.offers : [], // Will be populated from menu/offers API later
-            offerText: apiRestaurant?.offer || "FLAT 50% OFF",
-            offerCount: apiRestaurant?.offerCount ?? 0,
+            priceRange: actualRestaurant?.priceRange || apiRestaurant?.priceRange || onboardingStep4?.priceRange || "$$",
+            offers: Array.isArray(actualRestaurant?.offers) ? actualRestaurant.offers : (Array.isArray(apiRestaurant?.offers) ? apiRestaurant.offers : []), // Will be populated from menu/offers API later
+            offerText: actualRestaurant?.offer || apiRestaurant?.offer || onboardingStep4?.offer || "FLAT 50% OFF",
+            offerCount: actualRestaurant?.offerCount ?? apiRestaurant?.offerCount ?? 0,
             restaurantOffers: {
               goldOffer: {
-                title: apiRestaurant?.restaurantOffers?.goldOffer?.title || "Gold exclusive offer",
+                title: normalizedRestaurantOffers?.goldOffer?.title || "Gold exclusive offer",
                 description: apiRestaurant?.restaurantOffers?.goldOffer?.description || "Free delivery above ₹99",
-                unlockText: apiRestaurant?.restaurantOffers?.goldOffer?.unlockText || "join Gold to unlock",
+                unlockText: normalizedRestaurantOffers?.goldOffer?.unlockText || "join Gold to unlock",
                 buttonText: apiRestaurant?.restaurantOffers?.goldOffer?.buttonText || "Add Gold - ₹1",
               },
-              coupons: Array.isArray(apiRestaurant?.restaurantOffers?.coupons)
-                ? apiRestaurant.restaurantOffers.coupons
+              coupons: Array.isArray(normalizedRestaurantOffers?.coupons)
+                ? normalizedRestaurantOffers.coupons
                 : [],
             },
-            outlets: Array.isArray(apiRestaurant?.outlets) ? apiRestaurant.outlets : [],
-            categories: Array.isArray(apiRestaurant?.categories) ? apiRestaurant.categories : [],
-            menu: Array.isArray(apiRestaurant?.menu) ? apiRestaurant.menu : [],
-            slug: apiRestaurant?.slug || apiRestaurant?.name?.toLowerCase().replace(/\s+/g, '-') || slug || "unknown",
-            restaurantId: apiRestaurant?.restaurantId || apiRestaurant?._id || apiRestaurant?.id || null,
+            outlets: Array.isArray(actualRestaurant?.outlets) ? actualRestaurant.outlets : (Array.isArray(apiRestaurant?.outlets) ? apiRestaurant.outlets : []),
+            categories: Array.isArray(actualRestaurant?.categories) ? actualRestaurant.categories : (Array.isArray(apiRestaurant?.categories) ? apiRestaurant.categories : []),
+            menu: Array.isArray(actualRestaurant?.menu) ? actualRestaurant.menu : (Array.isArray(apiRestaurant?.menu) ? apiRestaurant.menu : []),
+            slug: actualRestaurant?.slug || apiRestaurant?.slug || actualRestaurant?.name?.toLowerCase().replace(/\s+/g, '-') || apiRestaurant?.name?.toLowerCase().replace(/\s+/g, '-') || slug || "unknown",
+            restaurantId: actualRestaurant?.restaurantId || actualRestaurant?._id || actualRestaurant?.id || apiRestaurant?.restaurantId || apiRestaurant?._id || apiRestaurant?.id || null,
             // Add other fields with defaults
-            featuredDish: apiRestaurant?.featuredDish || "Special Dish",
-            featuredPrice: apiRestaurant?.featuredPrice ?? 249,
+            featuredDish: actualRestaurant?.featuredDish || apiRestaurant?.featuredDish || onboardingStep4?.featuredDish || "Special Dish",
+            featuredPrice: actualRestaurant?.featuredPrice ?? apiRestaurant?.featuredPrice ?? onboardingStep4?.featuredPrice ?? 249,
             // Additional safety fields
             openDays: Array.isArray(actualRestaurant?.openDays)
               ? actualRestaurant.openDays
-              : (Array.isArray(apiRestaurant?.openDays) ? apiRestaurant.openDays : []),
-            deliveryTimings: actualRestaurant?.deliveryTimings || apiRestaurant?.deliveryTimings || {
+              : (Array.isArray(apiRestaurant?.openDays) ? apiRestaurant.openDays : (Array.isArray(onboardingStep2?.openDays) ? onboardingStep2.openDays : [])),
+            deliveryTimings: actualRestaurant?.deliveryTimings || apiRestaurant?.deliveryTimings || onboardingStep2?.deliveryTimings || {
               openingTime: "09:00",
               closingTime: "22:00",
             },
             outletTimings: actualRestaurant?.outletTimings || apiRestaurant?.outletTimings || null,
-            cuisines: Array.isArray(apiRestaurant?.cuisines) ? apiRestaurant.cuisines : [],
-            profileImage: apiRestaurant?.profileImage || null,
-            menuImages: Array.isArray(apiRestaurant?.menuImages) ? apiRestaurant.menuImages : [],
+            cuisines: Array.isArray(actualRestaurant?.cuisines) ? actualRestaurant.cuisines : (Array.isArray(apiRestaurant?.cuisines) ? apiRestaurant.cuisines : (Array.isArray(onboardingStep2?.cuisines) ? onboardingStep2.cuisines : [])),
+            profileImage: normalizedProfileImage,
+            menuImages: normalizedMenuImages,
             // Menu sections for display (will be populated from menu API)
             menuSections: [],
             // Onboarding data including FSSAI license
@@ -1681,7 +1691,7 @@ export default function RestaurantDetails() {
                       </button>
                     </div>
                   )}
-                  {sectionIndex > 0 && (
+                  {!isRecommended && (
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <h2 className="text-lg font-bold text-gray-900 dark:text-white">
