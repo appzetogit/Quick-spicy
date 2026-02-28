@@ -391,11 +391,19 @@ export default function Home() {
     }
   }, [BACKEND_ORIGIN])
 
+  const optimizeRestaurantImageUrl = useCallback((url) => {
+    if (typeof url !== "string" || !url) return ""
+    if (!/res\.cloudinary\.com/i.test(url)) return url
+    if (!/\/image\/upload\//i.test(url)) return url
+    if (/\/image\/upload\/(?:f_|q_|w_|h_|c_|dpr_|g_)/i.test(url)) return url
+    return url.replace("/image/upload/", "/image/upload/f_auto,q_auto,w_1280/")
+  }, [])
+
   const extractImageFromValue = useCallback((value) => {
     if (!value) return ""
 
     if (typeof value === "string") {
-      return normalizeImageUrl(value)
+      return optimizeRestaurantImageUrl(normalizeImageUrl(value))
     }
 
     if (typeof value === "object") {
@@ -411,11 +419,13 @@ export default function Home() {
         value.link ||
         value.href ||
         ""
-      return typeof candidate === "string" ? normalizeImageUrl(candidate) : ""
+      return typeof candidate === "string"
+        ? optimizeRestaurantImageUrl(normalizeImageUrl(candidate))
+        : ""
     }
 
     return ""
-  }, [normalizeImageUrl])
+  }, [normalizeImageUrl, optimizeRestaurantImageUrl])
 
   const extractImages = useCallback((source) => {
     if (!source) return []
