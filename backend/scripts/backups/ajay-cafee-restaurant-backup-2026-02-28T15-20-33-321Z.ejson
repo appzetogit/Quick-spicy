@@ -1,0 +1,224 @@
+{
+  "_id": {
+    "$oid": "6996e2ddfe5ac75a7956ad13"
+  },
+  "phone": "917610416911",
+  "phoneVerified": true,
+  "signupMethod": "phone",
+  "ownerName": "Ajay panchal",
+  "ownerEmail": "ajay@gmail.com",
+  "ownerPhone": "917610416911",
+  "name": "Ajay cafee",
+  "cuisines": [
+    "Chinese",
+    "South Indian",
+    "North Indian"
+  ],
+  "openDays": [
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+    "Tue",
+    "Mon"
+  ],
+  "rating": 0,
+  "totalRatings": 0,
+  "isActive": true,
+  "isAcceptingOrders": true,
+  "estimatedDeliveryTime": "25-30 mins",
+  "distance": "1.2 km",
+  "priceRange": "$$",
+  "featuredDish": "Butter Chicken Special",
+  "featuredPrice": 249,
+  "offer": "Flat ₹50 OFF above ₹199",
+  "onboarding": {
+    "step2": {
+      "menuImageUrls": [
+        {
+          "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496802/appzeto/restaurant/menu/tqb3uxhbaxwxa8iauzpk.png",
+          "publicId": "appzeto/restaurant/menu/tqb3uxhbaxwxa8iauzpk",
+          "_id": {
+            "$oid": "6996e567fe5ac75a7956c6f9"
+          }
+        },
+        {
+          "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496804/appzeto/restaurant/menu/dp77zjd62l9fpdzknctd.png",
+          "publicId": "appzeto/restaurant/menu/dp77zjd62l9fpdzknctd",
+          "_id": {
+            "$oid": "6996e567fe5ac75a7956c6fa"
+          }
+        }
+      ],
+      "profileImageUrl": {
+        "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496806/appzeto/restaurant/profile/kobmhysazn0xdodcguvx.png",
+        "publicId": "appzeto/restaurant/profile/kobmhysazn0xdodcguvx"
+      },
+      "cuisines": [
+        "Chinese",
+        "South Indian",
+        "North Indian"
+      ],
+      "deliveryTimings": {
+        "openingTime": "10:00",
+        "closingTime": "11:22"
+      },
+      "openDays": [
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Tue",
+        "Mon"
+      ]
+    },
+    "step3": {
+      "pan": {
+        "panNumber": "ABCDE1234F",
+        "nameOnPan": "John Doe",
+        "image": {
+          "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771667040/appzeto/restaurant/pan/pzcu3cjpslzfb58kkiix.png",
+          "publicId": "appzeto/restaurant/pan/pzcu3cjpslzfb58kkiix"
+        }
+      },
+      "gst": {
+        "isRegistered": true,
+        "gstNumber": "27ABCDE1234F1Z5",
+        "legalName": "Test Restaurant Private Limited",
+        "address": "123 Main Street, Mumbai, Maharashtra 400001",
+        "image": {
+          "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771667041/appzeto/restaurant/gst/tsrttd270yagmw4jg0i8.png",
+          "publicId": "appzeto/restaurant/gst/tsrttd270yagmw4jg0i8"
+        }
+      },
+      "fssai": {
+        "registrationNumber": "12345678901234",
+        "expiryDate": {
+          "$date": "2027-02-21T00:00:00Z"
+        },
+        "image": {
+          "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771667043/appzeto/restaurant/fssai/kaxiqubij1z6jsgom7cg.png",
+          "publicId": "appzeto/restaurant/fssai/kaxiqubij1z6jsgom7cg"
+        }
+      },
+      "bank": {
+        "accountNumber": "1234567890123",
+        "ifscCode": "HDFC0001234",
+        "accountHolderName": "John Doe",
+        "accountType": "savings"
+      }
+    },
+    "completedSteps": 4,
+    "step1": {
+      "restaurantName": "Ajay cafee",
+      "ownerName": "Ajay panchal",
+      "ownerEmail": "ajay@gmail.com",
+      "ownerPhone": "917610416911",
+      "primaryContactNumber": "917610416911",
+      "location": {
+        "latitude": 22.700188,
+        "longitude": 75.889435,
+        "coordinates": [
+          75.889435,
+          22.700188
+        ],
+        "formattedAddress": "726, Azad Nagar, Indore, Madhya Pradesh 452001, India",
+        "address": "726, Azad Nagar, Indore, Madhya Pradesh 452001, India",
+        "addressLine1": "02",
+        "addressLine2": "Effeil tower",
+        "area": "Azad Nagar",
+        "city": "Indore",
+        "state": "Madhya Pradesh",
+        "landmark": "near bhawarkua",
+        "zipCode": "",
+        "pincode": "",
+        "postalCode": "",
+        "street": "",
+        "_id": {
+          "$oid": "6996e479fe5ac75a7956be56"
+        }
+      }
+    },
+    "step4": {
+      "estimatedDeliveryTime": "25-30 mins",
+      "featuredDish": "Butter Chicken Special",
+      "featuredPrice": 249,
+      "offer": "Flat ₹50 OFF above ₹199"
+    }
+  },
+  "approvedAt": {
+    "$date": "2026-02-21T09:44:18.468Z"
+  },
+  "approvedBy": {
+    "$oid": "699050cf742557d24d943fcb"
+  },
+  "rejectedAt": null,
+  "rejectedBy": null,
+  "diningSettings": {
+    "isEnabled": true,
+    "maxGuests": 6,
+    "diningType": "family-dining"
+  },
+  "businessModel": "Commission Base",
+  "menuImages": [
+    {
+      "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496802/appzeto/restaurant/menu/tqb3uxhbaxwxa8iauzpk.png",
+      "publicId": "appzeto/restaurant/menu/tqb3uxhbaxwxa8iauzpk",
+      "_id": {
+        "$oid": "6996e567fe5ac75a7956c6ff"
+      }
+    },
+    {
+      "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496804/appzeto/restaurant/menu/dp77zjd62l9fpdzknctd.png",
+      "publicId": "appzeto/restaurant/menu/dp77zjd62l9fpdzknctd",
+      "_id": {
+        "$oid": "6996e567fe5ac75a7956c700"
+      }
+    }
+  ],
+  "createdAt": {
+    "$date": "2026-02-19T10:15:57.518Z"
+  },
+  "updatedAt": {
+    "$date": "2026-02-27T12:04:40.810Z"
+  },
+  "restaurantId": "REST-1771496157519-3820",
+  "slug": "ajay-cafee",
+  "__v": 0,
+  "location": {
+    "latitude": 22.700188,
+    "longitude": 75.889435,
+    "coordinates": [
+      75.889435,
+      22.700188
+    ],
+    "formattedAddress": "726, Azad Nagar, Indore, Madhya Pradesh 452001, India",
+    "address": "726, Azad Nagar, Indore, Madhya Pradesh 452001, India",
+    "addressLine1": "02",
+    "addressLine2": "Effeil tower",
+    "area": "Azad Nagar",
+    "city": "Indore",
+    "state": "Madhya Pradesh",
+    "landmark": "near bhawarkua",
+    "zipCode": "",
+    "pincode": "",
+    "postalCode": "",
+    "street": "",
+    "_id": {
+      "$oid": "6996e479fe5ac75a7956be56"
+    }
+  },
+  "primaryContactNumber": "917610416911",
+  "deliveryTimings": {
+    "openingTime": "10:00",
+    "closingTime": "11:22",
+    "_id": {
+      "$oid": "6996e567fe5ac75a7956c6fe"
+    }
+  },
+  "profileImage": {
+    "url": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771496806/appzeto/restaurant/profile/kobmhysazn0xdodcguvx.png",
+    "publicId": "appzeto/restaurant/profile/kobmhysazn0xdodcguvx"
+  },
+  "fcmtokenmobile": "ct3R7JIfSsqyfoJbdHRIb4:APA91bHmYB2PhMlNmLHOJkAl6bYRbJpknoWa4ScIayqjG2JxOlFOvH70NV-nQYkeNqNzdCkT8ZIwFTBm5IW3COvPdiFoHquxs68Ur8kwF8x6R2HS3g36nBg"
+}

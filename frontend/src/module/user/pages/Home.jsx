@@ -258,6 +258,15 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 })
 
 export default function Home() {
+  const LEGACY_MOBILE_IMAGE_SLUGS = useMemo(
+    () => new Set([
+      "quick-spicy-sector-18",
+      "ajay-cafee",
+      "annapurna-family-garden-restaurant",
+    ]),
+    []
+  )
+
   const HERO_BANNER_AUTO_SLIDE_MS = 3500
   const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, '')
   const navigate = useNavigate()
@@ -382,6 +391,18 @@ export default function Home() {
     const single = extractImageFromValue(source)
     return single ? [single] : []
   }, [extractImageFromValue])
+
+  const appendImageVersion = useCallback((url, versionToken) => {
+    if (!url || !versionToken) return url
+    try {
+      const parsed = new URL(url, window.location.origin)
+      parsed.searchParams.set("_imgv", String(versionToken))
+      return parsed.toString()
+    } catch {
+      const joiner = url.includes("?") ? "&" : "?"
+      return `${url}${joiner}_imgv=${encodeURIComponent(String(versionToken))}`
+    }
+  }, [])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -1063,6 +1084,11 @@ export default function Home() {
             ? restaurant.cuisines[0]
             : "Multi-cuisine"
 
+          const derivedSlug =
+            restaurant.slug ||
+            restaurant.name?.toLowerCase()?.replace(/\s+/g, "-") ||
+            ""
+
           // Legacy-safe image extraction (supports old schema variants).
           const coverImages = [
             ...extractImages(restaurant.coverImages),
@@ -1083,7 +1109,7 @@ export default function Home() {
             ""
 
           // Prefer directly updated admin/profile image first, then legacy arrays.
-          const allImages = Array.from(
+          let allImages = Array.from(
             new Set([
               profileImageUrl,
               ...coverImages,
@@ -1091,6 +1117,13 @@ export default function Home() {
               ...onboardingMenuImages,
             ].filter(Boolean))
           )
+
+          // Targeted cache-busting for legacy restaurants that fail only on mobile WebView.
+          // Uses updatedAt so admin image updates propagate without random URL churn.
+          if (LEGACY_MOBILE_IMAGE_SLUGS.has(derivedSlug)) {
+            const versionToken = restaurant.updatedAt || restaurant.createdAt || Date.now()
+            allImages = allImages.map((imgUrl) => appendImageVersion(imgUrl, versionToken))
+          }
 
           // Keep single image for backward compatibility
           const image = allImages[0] || profileImageUrl || ""
@@ -1178,7 +1211,7 @@ export default function Home() {
       setLoadingRestaurants(false)
       console.log('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [normalizeImageUrl, zoneId])
+  }, [normalizeImageUrl, zoneId, extractImageFromValue, extractImages, appendImageVersion, LEGACY_MOBILE_IMAGE_SLUGS])
 
   // Fetch restaurants when appliedFilters change
   useEffect(() => {
