@@ -4231,19 +4231,19 @@ export default function DeliveryHome() {
       return
     }
 
-    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-    if (!otpVerified) {
-      setOrderDeliveredButtonProgress(0)
-      setOrderDeliveredIsAnimatingToComplete(false)
-      return
-    }
-
     // Animate to completion
     setOrderDeliveredIsAnimatingToComplete(true)
     setOrderDeliveredButtonProgress(1)
 
-    // Close popup after animation and show customer review (delivery will be completed when review is submitted)
-    setTimeout(() => {
+    // After slider completes, ask for OTP in popup if required, then continue
+    setTimeout(async () => {
+      const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+      if (!otpVerified) {
+        setOrderDeliveredButtonProgress(0)
+        setOrderDeliveredIsAnimatingToComplete(false)
+        return
+      }
+
       setShowOrderDeliveredAnimation(false)
 
       // CRITICAL: Clear all pickup/delivery related popups
@@ -4251,14 +4251,13 @@ export default function DeliveryHome() {
       setShowreachedPickupPopup(false)
       setShowOrderIdConfirmationPopup(false)
 
-      // Show customer review popup instantly
+      // Show customer review popup after successful slide + OTP verification
       setShowCustomerReviewPopup(true)
 
-      // Reset after animation
       setTimeout(() => {
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
-      }, 500)
+      }, 150)
     }, 200)
   }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
 
@@ -11089,11 +11088,6 @@ export default function DeliveryHome() {
                       review: customerReviewText
                     })
                     
-                    const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-                    if (!otpVerified) {
-                      return
-                    }
-
                     // Call completeDelivery API with rating and review
                     const response = await deliveryAPI.completeDelivery(
                       orderIdForApi,
