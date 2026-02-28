@@ -1,6 +1,7 @@
 import Admin from "../models/Admin.js";
 import Order from "../../order/models/Order.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
+import OutletTimings from "../../restaurant/models/OutletTimings.js";
 import Menu from "../../restaurant/models/Menu.js";
 import Offer from "../../restaurant/models/Offer.js";
 import AdminCommission from "../models/AdminCommission.js";
@@ -1548,6 +1549,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 
     const payload = req.body || {};
     let cloudinaryInitialized = false;
+    let shouldSyncOutletTimings = false;
 
     const ensureCloudinary = async () => {
       if (!cloudinaryInitialized) {
@@ -1724,6 +1726,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         ...(openingTime !== undefined ? { openingTime } : {}),
         ...(closingTime !== undefined ? { closingTime } : {}),
       };
+      shouldSyncOutletTimings = true;
     }
 
     if (payload.openDays !== undefined) {
@@ -1736,6 +1739,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       restaurant.openDays = openDays;
       ensureOnboarding();
       restaurant.onboarding.step2.openDays = openDays;
+      shouldSyncOutletTimings = true;
     }
 
     // Display fields
@@ -1836,6 +1840,92 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
     }
 
     await restaurant.save();
+
+    // Keep source-of-truth OutletTimings in sync with admin-side opening/closing/openDays edits.
+    if (shouldSyncOutletTimings) {
+      const dayOrder = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+      ];
+
+      const dayAlias = {
+        mon: "Monday",
+        monday: "Monday",
+        tue: "Tuesday",
+        tues: "Tuesday",
+        tuesday: "Tuesday",
+        wed: "Wednesday",
+        weds: "Wednesday",
+        wednesday: "Wednesday",
+        thu: "Thursday",
+        thur: "Thursday",
+        thurs: "Thursday",
+        thursday: "Thursday",
+        fri: "Friday",
+        friday: "Friday",
+        sat: "Saturday",
+        saturday: "Saturday",
+        sun: "Sunday",
+        sunday: "Sunday",
+      };
+
+      const normalizeDay = (day) => {
+        const key = String(day || "").trim().toLowerCase();
+        return dayAlias[key] || null;
+      };
+
+      const normalizedOpenDays = new Set(
+        (Array.isArray(restaurant.openDays) ? restaurant.openDays : [])
+          .map(normalizeDay)
+          .filter(Boolean),
+      );
+
+      const finalOpeningTime =
+        restaurant.deliveryTimings?.openingTime || "09:00 AM";
+      const finalClosingTime =
+        restaurant.deliveryTimings?.closingTime || "10:00 PM";
+
+      const existingOutletTimings = await OutletTimings.findOne({
+        restaurantId: restaurant._id,
+      });
+
+      const existingByDay = new Map(
+        (existingOutletTimings?.timings || []).map((item) => [item.day, item]),
+      );
+
+      const nextTimings = dayOrder.map((day) => {
+        const existingDay = existingByDay.get(day);
+        const isOpen =
+          normalizedOpenDays.size > 0
+            ? normalizedOpenDays.has(day)
+            : existingDay?.isOpen ?? true;
+
+        return {
+          day,
+          isOpen,
+          openingTime: finalOpeningTime,
+          closingTime: finalClosingTime,
+        };
+      });
+
+      await OutletTimings.findOneAndUpdate(
+        { restaurantId: restaurant._id },
+        {
+          $set: {
+            restaurantId: restaurant._id,
+            outletType: existingOutletTimings?.outletType || "Appzeto delivery",
+            timings: nextTimings,
+            isActive: true,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+    }
 
     logger.info(`Restaurant details updated: ${id}`, {
       updatedBy: req.user._id,
