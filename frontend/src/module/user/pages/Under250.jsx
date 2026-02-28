@@ -390,17 +390,17 @@ export default function Under250() {
 
     <div className={`relative min-h-screen bg-white dark:bg-[#0a0a0a] ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
       {/* Mobile Navbar - Sticky & Hidden on Desktop */}
-      <div className="sticky top-0 z-40 w-full bg-white dark:bg-[#0a0a0a] shadow-sm md:hidden">
+      <div className="absolute top-0 left-0 right-0 z-40 w-full md:hidden">
         <div className="relative z-50 pt-2 sm:pt-3 pb-2">
           <PageNavbar textColor="black" zIndex={20} showProfile={true} />
         </div>
       </div>
 
       {/* Banner Section */}
-      <div className="relative w-full overflow-hidden min-h-[30vh] sm:min-h-[39vh] lg:min-h-[50vh] mt-2 md:mt-4">
+      <div className="relative w-full overflow-hidden h-[clamp(240px,42vw,520px)] md:-mt-40">
         {/* Banner Image */}
         {bannerImage && (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 mx-3 sm:mx-4 lg:mx-8 rounded-xl sm:rounded-2xl overflow-hidden">
+          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 overflow-hidden">
             <OptimizedImage
               src={bannerImage}
               alt="Under 250 Banner"
@@ -412,7 +412,7 @@ export default function Under250() {
           </div>
         )}
         {!bannerImage && !loadingBanner && (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 mx-3 sm:mx-4 lg:mx-8 rounded-xl sm:rounded-2xl overflow-hidden" />
+          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 bg-gradient-to-br from-orange-50 to-amber-50 dark:from-orange-950 dark:to-amber-950 overflow-hidden" />
         )}
       </div>
 

@@ -176,6 +176,7 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) =>
 })
 
 export default function Home() {
+  const HERO_BANNER_AUTO_SLIDE_MS = 3500
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const query = searchParams.get("q") || ""
@@ -315,15 +316,34 @@ export default function Home() {
         const response = await api.get('/hero-banners/public')
         if (response.data.success && response.data.data.banners) {
           const banners = response.data.data.banners
-          setHeroBannersData(banners)
-          // Extract image URLs for display
-          setHeroBannerImages(banners.map(b => b.imageUrl || b))
+
+          // Normalize and filter invalid banner records to prevent blank slides.
+          const normalizedBanners = banners
+            .map((banner) => {
+              if (typeof banner === 'string') {
+                return { imageUrl: banner, linkedRestaurants: [] }
+              }
+              return {
+                ...banner,
+                linkedRestaurants: Array.isArray(banner?.linkedRestaurants) ? banner.linkedRestaurants : []
+              }
+            })
+            .filter((banner) => typeof banner?.imageUrl === 'string' && banner.imageUrl.trim().length > 0)
+
+          setHeroBannersData(normalizedBanners)
+          setHeroBannerImages(normalizedBanners.map((banner) => banner.imageUrl))
+          setCurrentBannerIndex(0)
+        } else {
+          setHeroBannersData([])
+          setHeroBannerImages([])
+          setCurrentBannerIndex(0)
         }
       } catch (error) {
         console.error('Error fetching hero banners:', error)
         // Fallback to empty array if API fails
         setHeroBannerImages([])
         setHeroBannersData([])
+        setCurrentBannerIndex(0)
       } finally {
         setLoadingBanners(false)
       }
@@ -398,22 +418,47 @@ export default function Home() {
     fetchLandingConfig()
   }, [])
 
-  // Auto-cycle hero banner images
+  // Keep index within current banner bounds after admin updates/reloads.
   useEffect(() => {
-    if (heroBannerImages.length === 0) return
+    setCurrentBannerIndex((prev) => {
+      if (heroBannerImages.length === 0) return 0
+      return Math.min(prev, heroBannerImages.length - 1)
+    })
+  }, [heroBannerImages.length])
+
+  // Preload hero images to avoid white blink during slide transition.
+  useEffect(() => {
+    heroBannerImages.forEach((src) => {
+      if (!src) return
+      const img = new window.Image()
+      img.src = src
+    })
+  }, [heroBannerImages])
+
+  const startHeroBannerAutoSlide = useCallback(() => {
+    if (autoSlideIntervalRef.current) {
+      clearInterval(autoSlideIntervalRef.current)
+    }
+
+    if (heroBannerImages.length <= 1) return
 
     autoSlideIntervalRef.current = setInterval(() => {
       if (!isSwiping.current) {
         setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
       }
-    }, 10000) // Change every 10 seconds
+    }, HERO_BANNER_AUTO_SLIDE_MS)
+  }, [heroBannerImages.length, HERO_BANNER_AUTO_SLIDE_MS])
+
+  // Auto-cycle hero banner images
+  useEffect(() => {
+    startHeroBannerAutoSlide()
 
     return () => {
       if (autoSlideIntervalRef.current) {
         clearInterval(autoSlideIntervalRef.current)
       }
     }
-  }, [heroBannerImages.length])
+  }, [startHeroBannerAutoSlide])
 
   // Lenis smooth scrolling initialization
   useEffect(() => {
@@ -438,17 +483,8 @@ export default function Home() {
 
   // Helper function to reset auto-slide timer
   const resetAutoSlide = useCallback(() => {
-    if (autoSlideIntervalRef.current) {
-      clearInterval(autoSlideIntervalRef.current)
-    }
-    if (heroBannerImages.length > 0) {
-      autoSlideIntervalRef.current = setInterval(() => {
-        if (!isSwiping.current) {
-          setCurrentBannerIndex((prev) => (prev + 1) % heroBannerImages.length)
-        }
-      }, 10000)
-    }
-  }, [heroBannerImages.length])
+    startHeroBannerAutoSlide()
+  }, [startHeroBannerAutoSlide])
 
   // Swipe handlers for hero banner carousel
   const handleTouchStart = (e) => {
@@ -1298,209 +1334,202 @@ export default function Home() {
         `}</style>
       </div>
 
-      {/* Unified Navbar & Header Section */}
-      <div className="sticky top-0 w-full bg-white dark:bg-[#0a0a0a] z-40 shadow-sm">
-
-        {/* Navbar */}
-        <motion.div
-          className="relative z-50 pt-2 sm:pt-3 lg:pt-4 md:hidden"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: "easeOut" }}
-        >
-          <PageNavbar textColor="black" zIndex={50} />
-        </motion.div>
-
-        {!hasLiveLocation && (
-          <div className="px-3 sm:px-6 lg:px-8 pb-2 md:hidden">
-            <button
-              type="button"
-              onClick={handleLocationClick}
-              className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
-            >
-              <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
-                  Saved Address
-                </p>
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {savedAddressText || "No saved address. Tap to add one."}
-                </p>
-              </div>
-            </button>
-          </div>
-        )}
-
-        {/* Search Bar and VEG MODE Container - Sticky */}
-        <motion.div
-          className="w-full bg-white dark:bg-[#0a0a0a] py-3 sm:py-4 md:hidden"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
-        >
-          <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4 lg:gap-6">
-            {/* Enhanced Search Bar */}
-            <motion.div
-              className="flex-1 relative"
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
-                <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                  <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
-                  <div className="flex-1 relative">
-                    <div className="relative w-full">
-                      <Input
-                        value={heroSearch}
-                        onChange={(e) => setHeroSearch(e.target.value)}
-                        onFocus={handleSearchFocus}
-                        onClick={handleSearchFocus}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && heroSearch.trim()) {
-                            navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
-                            closeSearch()
-                            setHeroSearch("")
-                          }
-                        }}
-                        aria-label="Search restaurants and food"
-                        className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                      />
-                      {/* Animated placeholder */}
-                      {!heroSearch && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
-                          <AnimatePresence mode="wait">
-                            <motion.span
-                              key={placeholderIndex}
-                              initial={{ y: 16, opacity: 0 }}
-                              animate={{ y: 0, opacity: 1 }}
-                              exit={{ y: -16, opacity: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
-                            >
-                              {placeholders[placeholderIndex]}
-                            </motion.span>
-                          </AnimatePresence>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                </div>
-              </div>
-            </motion.div>
-
-            {/* VEG MODE Toggle */}
-            <motion.div
-              ref={vegModeToggleRef}
-              className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="flex flex-col items-center">
-                <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
-                <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
-              </div>
-              <Switch
-                checked={vegMode}
-                onCheckedChange={handleVegModeChange}
-                aria-label="Toggle Veg Mode"
-                className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
-              />
-            </motion.div>
-          </div>
-        </motion.div>
-      </div>
-
-      {/* Hero Banner Section - Moved Below Search */}
-      <div className="relative w-full overflow-hidden min-h-[200px] h-[30vh] sm:h-[40vh] md:h-[50vh] lg:h-[60vh] mt-2 md:mt-4 mb-6">
+      {/* Top Hero Shell: header/search + banner in one container */}
+      <div
+        className="relative w-full overflow-hidden h-[clamp(240px,42vw,520px)] mb-3 md:-mt-40"
+        onTouchStart={heroBannerImages.length > 0 ? handleTouchStart : undefined}
+        onTouchMove={heroBannerImages.length > 0 ? handleTouchMove : undefined}
+        onTouchEnd={heroBannerImages.length > 0 ? handleTouchEnd : undefined}
+        onMouseDown={heroBannerImages.length > 0 ? handleMouseDown : undefined}
+        onMouseMove={heroBannerImages.length > 0 ? handleMouseMove : undefined}
+        onMouseUp={heroBannerImages.length > 0 ? handleMouseUp : undefined}
+        onMouseLeave={heroBannerImages.length > 0 ? handleMouseUp : undefined}
+      >
         {loadingBanners ? (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center mx-3 sm:mx-4 lg:mx-8 rounded-xl sm:rounded-2xl">
+          <div className="absolute inset-0 z-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
             <div className="text-gray-500 text-center">
               <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
               <p className="text-sm">Loading banners...</p>
             </div>
           </div>
         ) : heroBannerImages.length > 0 ? (
-          <div
-            className="absolute top-0 left-0 right-0 bottom-0 z-0 cursor-grab active:cursor-grabbing overflow-hidden rounded-xl sm:rounded-2xl mx-3 sm:mx-4 lg:mx-8"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
+          <div className="absolute inset-0 z-0 bg-gray-100">
+            {heroBannerImages.map((image, index) => (
+              <div
+                key={`${index}-${image}`}
+                className="absolute inset-0 transition-opacity duration-700 ease-in-out"
+                style={{
+                  opacity: currentBannerIndex === index ? 1 : 0,
+                  zIndex: currentBannerIndex === index ? 2 : 1,
+                  pointerEvents: 'none'
+                }}
+              >
+                <img
+                  src={image}
+                  alt={`Hero Banner ${index + 1}`}
+                  className="h-full w-full object-cover"
+                  loading="eager"
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  draggable={false}
+                  onError={(e) => {
+                    e.currentTarget.style.background = '#e5e7eb'
+                    e.currentTarget.style.objectFit = 'contain'
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="absolute inset-0 z-0 bg-gray-100" />
+        )}
+
+        <div className="absolute inset-x-0 top-0 h-36 bg-gradient-to-b from-black/55 via-black/20 to-transparent z-10 pointer-events-none" />
+
+        <div className="relative z-30 w-full md:hidden">
+          <motion.div
+            className="relative z-50 pt-2 sm:pt-3 lg:pt-4"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
           >
-            <motion.div
-              className="flex h-full"
-              animate={{
-                x: `-${currentBannerIndex * 100}%`
-              }}
-              transition={{
-                duration: 0.6,
-                ease: "easeInOut"
+            <PageNavbar textColor="black" zIndex={50} />
+          </motion.div>
+
+          {!hasLiveLocation && (
+            <div className="px-3 sm:px-6 lg:px-8 pb-2">
+              <button
+                type="button"
+                onClick={handleLocationClick}
+                className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
+              >
+                <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                    Saved Address
+                  </p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                    {savedAddressText || "No saved address. Tap to add one."}
+                  </p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          <motion.div
+            className="w-full py-3 sm:py-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+          >
+            <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4 lg:gap-6">
+              <motion.div
+                className="flex-1 relative"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
+                  <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                    <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
+                    <div className="flex-1 relative">
+                      <div className="relative w-full">
+                        <Input
+                          value={heroSearch}
+                          onChange={(e) => setHeroSearch(e.target.value)}
+                          onFocus={handleSearchFocus}
+                          onClick={handleSearchFocus}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && heroSearch.trim()) {
+                              navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
+                              closeSearch()
+                              setHeroSearch("")
+                            }
+                          }}
+                          aria-label="Search restaurants and food"
+                          className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                        />
+                        {!heroSearch && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
+                            <AnimatePresence mode="wait">
+                              <motion.span
+                                key={placeholderIndex}
+                                initial={{ y: 16, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -16, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
+                              >
+                                {placeholders[placeholderIndex]}
+                              </motion.span>
+                            </AnimatePresence>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                ref={vegModeToggleRef}
+                className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
+                  <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
+                </div>
+                <Switch
+                  checked={vegMode}
+                  onCheckedChange={handleVegModeChange}
+                  aria-label="Toggle Veg Mode"
+                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
+                />
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
+
+        {heroBannerImages.length > 0 && (
+          <>
+            <button
+              type="button"
+              className="absolute inset-0 z-20 h-full w-full border-0 p-0 bg-transparent text-left"
+              onClick={() => {
+                const bannerData = heroBannersData[currentBannerIndex]
+                const linkedRestaurants = bannerData?.linkedRestaurants || []
+                if (linkedRestaurants.length > 0) {
+                  const firstRestaurant = linkedRestaurants[0]
+                  const restaurantSlug = firstRestaurant.slug || firstRestaurant.restaurantId || firstRestaurant._id
+                  navigate(`/restaurants/${restaurantSlug}`)
+                }
               }}
               style={{
-                width: `${heroBannerImages.length * 100}%`
+                cursor: (heroBannersData[currentBannerIndex]?.linkedRestaurants || []).length > 0 ? 'pointer' : 'default'
               }}
-            >
-              {heroBannerImages.map((image, index) => {
-                const bannerData = heroBannersData[index]
-                const linkedRestaurants = bannerData?.linkedRestaurants || []
-                const hasLinkedRestaurants = linkedRestaurants.length > 0
+              aria-label={`Open hero banner ${currentBannerIndex + 1}`}
+            />
 
-                return (
-                  <div
-                    key={index}
-                    className="h-full flex-shrink-0 relative"
-                    style={{ width: `${100 / heroBannerImages.length}%`, cursor: hasLinkedRestaurants ? 'pointer' : 'default' }}
-                    onClick={() => {
-                      if (hasLinkedRestaurants) {
-                        const firstRestaurant = linkedRestaurants[0]
-                        const restaurantSlug = firstRestaurant.slug || firstRestaurant.restaurantId || firstRestaurant._id
-                        navigate(`/restaurants/${restaurantSlug}`)
-                      }
-                    }}
-                  >
-                    <OptimizedImage
-                      src={image}
-                      alt={`Hero Banner ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      priority={index === 0}
-                      sizes="100vw"
-                      objectFit="cover"
-                      placeholder="blur"
-                    />
-                    {/* Gradient overlay for text readability if needed */}
-                    <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
-                  </div>
-                )
-              })}
-            </motion.div>
-
-            {/* Banner Dots Indicators */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-2 z-30">
               {heroBannerImages.map((_, index) => (
                 <button
                   key={index}
                   onClick={(e) => {
-                    e.stopPropagation();
-                    setCurrentBannerIndex(index);
+                    e.stopPropagation()
+                    setCurrentBannerIndex(index)
                   }}
                   className={`w-2 h-2 rounded-full transition-all duration-300 ${currentBannerIndex === index
                     ? 'bg-white w-6'
-                    : 'bg-white/50 hover:bg-white/80'
+                    : 'bg-white/60 hover:bg-white/90'
                     }`}
                   aria-label={`Go to slide ${index + 1}`}
                 />
               ))}
             </div>
-          </div>
-        ) : (
-          <div className="absolute top-0 left-0 right-0 bottom-0 z-0 bg-gray-100 mx-3 sm:mx-4 lg:mx-8 rounded-xl sm:rounded-2xl" />
+          </>
         )}
       </div>
 
