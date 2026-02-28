@@ -347,7 +347,6 @@ export default function RestaurantDetails() {
             })
           }
 
-<<<<<<< HEAD
           // Resolve display category/cuisine with broad API compatibility
           const categoryFromArray = (list) => {
             if (!Array.isArray(list) || list.length === 0) return null
@@ -373,7 +372,7 @@ export default function RestaurantDetails() {
             actualRestaurant?.category ||
             apiRestaurant?.category ||
             "Multi-cuisine"
-=======
+
           const onboardingStep2 = actualRestaurant?.onboarding?.step2 || apiRestaurant?.onboarding?.step2 || {}
           const onboardingStep4 = actualRestaurant?.onboarding?.step4 || apiRestaurant?.onboarding?.step4 || {}
           const normalizedProfileImage = actualRestaurant?.profileImage || apiRestaurant?.profileImage || onboardingStep2?.profileImageUrl || null
@@ -386,7 +385,6 @@ export default function RestaurantDetails() {
                   ? onboardingStep2.menuImageUrls
                   : []
           const normalizedRestaurantOffers = actualRestaurant?.restaurantOffers || apiRestaurant?.restaurantOffers || {}
->>>>>>> e82678e8554ae9ac21d27165f8300d97c6f3fa0b
 
           // Transform API data to match expected format with comprehensive fallbacks
           // Handle both dining restaurant and regular restaurant data structures
