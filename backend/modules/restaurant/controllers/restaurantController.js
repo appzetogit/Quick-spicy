@@ -8,6 +8,63 @@ import { initializeCloudinary } from '../../../config/cloudinary.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 
+const toImageObject = (value) => {
+  if (!value) return null;
+
+  if (typeof value === 'string') {
+    const url = value.trim();
+    return url ? { url } : null;
+  }
+
+  if (typeof value === 'object') {
+    const candidate = value.url || value.secure_url || value.imageUrl || value.src || '';
+    const url = typeof candidate === 'string' ? candidate.trim() : '';
+    if (!url) return null;
+    return {
+      url,
+      ...(value.publicId ? { publicId: value.publicId } : {}),
+    };
+  }
+
+  return null;
+};
+
+const toImageArray = (value) => {
+  if (!Array.isArray(value)) return [];
+  return value.map(toImageObject).filter(Boolean);
+};
+
+const normalizeRestaurantImageFields = (restaurantLike) => {
+  if (!restaurantLike) return restaurantLike;
+
+  const profileImage =
+    toImageObject(restaurantLike.profileImage) ||
+    toImageObject(restaurantLike.onboarding?.step2?.profileImageUrl);
+
+  const topLevelMenuImages = toImageArray(restaurantLike.menuImages);
+  const onboardingMenuImages = toImageArray(
+    restaurantLike.onboarding?.step2?.menuImageUrls,
+  );
+  const menuImages =
+    topLevelMenuImages.length > 0 ? topLevelMenuImages : onboardingMenuImages;
+
+  const onboarding = {
+    ...(restaurantLike.onboarding || {}),
+    step2: {
+      ...(restaurantLike.onboarding?.step2 || {}),
+      profileImageUrl: profileImage || null,
+      menuImageUrls: menuImages,
+    },
+  };
+
+  return {
+    ...restaurantLike,
+    profileImage: profileImage || null,
+    menuImages,
+    onboarding,
+  };
+};
+
 /**
  * Check if a point is within a zone polygon using ray casting algorithm
  * @param {number} lat - Latitude
@@ -238,6 +295,7 @@ export const getRestaurants = async (req, res) => {
 
     // Add explicit delivery metadata so frontend doesn't guess
     restaurants = restaurants.map((restaurant) => {
+      const normalizedRestaurant = normalizeRestaurantImageFields(restaurant);
       const hasRestaurantFee = restaurant.deliveryFee !== undefined && restaurant.deliveryFee !== null;
       const resolvedDeliveryFee = hasRestaurantFee
         ? Number(restaurant.deliveryFee)
@@ -248,7 +306,7 @@ export const getRestaurants = async (req, res) => {
         : (restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured);
 
       return {
-        ...restaurant,
+        ...normalizedRestaurant,
         deliveryFee: noDeliveryFeeConfigured ? null : resolvedDeliveryFee,
         freeDelivery: isFreeDelivery
       };
@@ -310,13 +368,14 @@ export const getRestaurantById = async (req, res) => {
     
     queryConditions.$or = orConditions;
     
-    const restaurant = await Restaurant.findOne(queryConditions)
+    const restaurantDoc = await Restaurant.findOne(queryConditions)
       .select('-owner -createdAt -updatedAt')
       .lean();
 
-    if (!restaurant) {
+    if (!restaurantDoc) {
       return errorResponse(res, 404, 'Restaurant not found');
     }
+    const restaurant = normalizeRestaurantImageFields(restaurantDoc);
 
     return successResponse(res, 200, 'Restaurant retrieved successfully', {
       restaurant,
@@ -332,12 +391,13 @@ export const getRestaurantByOwner = async (req, res) => {
   try {
     const restaurantId = req.restaurant._id;
     
-    const restaurant = await Restaurant.findById(restaurantId)
+    const restaurantDoc = await Restaurant.findById(restaurantId)
       .lean();
 
-    if (!restaurant) {
+    if (!restaurantDoc) {
       return errorResponse(res, 404, 'Restaurant not found');
     }
+    const restaurant = normalizeRestaurantImageFields(restaurantDoc);
 
     return successResponse(res, 200, 'Restaurant retrieved successfully', {
       restaurant,
@@ -492,15 +552,8 @@ export const updateRestaurantProfile = asyncHandler(async (req, res) => {
 
     const updateData = {};
 
-    // Update profile image if provided
-    if (profileImage) {
-      updateData.profileImage = profileImage;
-    }
-
-    // Update menu images if provided
-    if (menuImages !== undefined) {
-      updateData.menuImages = menuImages;
-    }
+    const shouldUpdateProfileImage = profileImage !== undefined;
+    const shouldUpdateMenuImages = menuImages !== undefined;
 
     // Update name if provided
     if (name) {
@@ -562,6 +615,23 @@ export const updateRestaurantProfile = asyncHandler(async (req, res) => {
 
     // Update restaurant
     Object.assign(restaurant, updateData);
+
+    if (shouldUpdateProfileImage) {
+      const normalizedProfileImage = toImageObject(profileImage);
+      restaurant.profileImage = normalizedProfileImage || null;
+      if (!restaurant.onboarding) restaurant.onboarding = {};
+      if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+      restaurant.onboarding.step2.profileImageUrl = normalizedProfileImage || null;
+    }
+
+    if (shouldUpdateMenuImages) {
+      const normalizedMenuImages = toImageArray(menuImages);
+      restaurant.menuImages = normalizedMenuImages;
+      if (!restaurant.onboarding) restaurant.onboarding = {};
+      if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+      restaurant.onboarding.step2.menuImageUrls = normalizedMenuImages;
+    }
+
     await restaurant.save();
 
     return successResponse(res, 200, 'Restaurant profile updated successfully', {
@@ -620,6 +690,12 @@ export const uploadProfileImage = asyncHandler(async (req, res) => {
     restaurant.profileImage = {
       url: result.secure_url,
       publicId: result.public_id
+    };
+    if (!restaurant.onboarding) restaurant.onboarding = {};
+    if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+    restaurant.onboarding.step2.profileImageUrl = {
+      url: result.secure_url,
+      publicId: result.public_id,
     };
     await restaurant.save();
 
@@ -706,6 +782,10 @@ export const uploadMenuImage = asyncHandler(async (req, res) => {
       // Add as first image if array is empty
       restaurant.menuImages.push(newMenuImage);
     }
+
+    if (!restaurant.onboarding) restaurant.onboarding = {};
+    if (!restaurant.onboarding.step2) restaurant.onboarding.step2 = {};
+    restaurant.onboarding.step2.menuImageUrls = restaurant.menuImages;
     
     await restaurant.save();
 
