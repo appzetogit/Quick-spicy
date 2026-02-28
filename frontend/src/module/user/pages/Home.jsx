@@ -62,8 +62,9 @@ const placeholders = [
 const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 
 // Restaurant Image Carousel Component
-const RestaurantImageCarousel = React.memo(({ restaurant }) => {
+const RestaurantImageCarousel = React.memo(({ restaurant, priority = false }) => {
   const webviewSessionKeyRef = useRef(WEBVIEW_SESSION_CACHE_BUSTER)
+  const imageElementRef = useRef(null)
 
   const withCacheBuster = useCallback((url) => {
     if (typeof url !== "string" || !url) return ""
@@ -117,24 +118,20 @@ const RestaurantImageCarousel = React.memo(({ restaurant }) => {
   const isImageLoaded = Boolean(loadedBySrc[displaySrc])
   const isImageUnavailable = images.length === 0 || images.every((img) => failedBySrc[img])
 
-  // WebView safeguard: if image neither loads nor errors, force fallback after timeout.
+  // WebView can serve from cache without firing onLoad; handle already-complete images.
   useEffect(() => {
-    if (!primarySrc || isImageLoaded || isImageUnavailable || isPrimaryFailed) return undefined
+    if (!displaySrc) return
+    const imgEl = imageElementRef.current
+    if (!imgEl) return
 
-    const timeoutId = setTimeout(() => {
-      setFailedBySrc((prev) => {
-        if (prev[primarySrc]) return prev
-        return { ...prev, [primarySrc]: true }
-      })
-
-      // Try next DB image first before showing static fallback.
-      if (images.length > 1) {
-        setCurrentIndex((prev) => (prev + 1) % images.length)
+    if (imgEl.complete) {
+      if (imgEl.naturalWidth > 0) {
+        setLoadedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
+      } else {
+        setFailedBySrc((prev) => (prev[displaySrc] ? prev : { ...prev, [displaySrc]: true }))
       }
-    }, 12000)
-
-    return () => clearTimeout(timeoutId)
-  }, [primarySrc, isPrimaryFailed, isImageLoaded, isImageUnavailable])
+    }
+  }, [displaySrc])
 
   // Handle touch events for swipe
   const handleTouchStart = (e) => {
@@ -191,11 +188,12 @@ const RestaurantImageCarousel = React.memo(({ restaurant }) => {
       <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-110">
         {displaySrc && (
           <img
+            ref={imageElementRef}
             src={displaySrc}
             alt={`${restaurant.name} - Image ${safeIndex + 1}`}
             className={`w-full h-full object-cover transition-opacity duration-300 ${isImageLoaded ? "opacity-100" : "opacity-0"}`}
-            loading="lazy"
-            fetchPriority="auto"
+            loading={priority ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             onLoad={() => {
               setLoadedBySrc((prev) => ({ ...prev, [displaySrc]: true }))
@@ -988,6 +986,8 @@ export default function Home() {
       if (zoneId) {
         params.zoneId = zoneId
       }
+      // Avoid stale API cache in WebView after admin image updates.
+      params._ts = Date.now()
       // Note: We show all restaurants regardless of zone, but apply grayscale styling if user is out of service
 
       console.log('Fetching restaurants with params:', params)
