@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { adminAPI } from "@/lib/api";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Upload, X } from "lucide-react";
 
 const createDefaultItem = () => ({
   id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -38,6 +38,17 @@ const createDefaultSection = (index = 0) => ({
   subsections: [],
 });
 
+const createQuickItemDraft = () => ({
+  name: "",
+  price: "",
+  foodType: "Non-Veg",
+  description: "",
+  image: "",
+  isAvailable: true,
+  discountType: "Percent",
+  discountAmount: "",
+});
+
 const getImagePreviewSrc = (value) => {
   const raw = String(value || "").trim();
   if (!raw) return "";
@@ -56,6 +67,7 @@ export default function RestaurantMenuManager() {
   const [loadingMenu, setLoadingMenu] = useState(false);
   const [saving, setSaving] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
+  const [quickItemDrafts, setQuickItemDrafts] = useState({});
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -132,7 +144,7 @@ export default function RestaurantMenuManager() {
     );
   };
 
-  const addItem = (sectionId) => {
+  const addItem = (sectionId, itemPayload = null) => {
     setSections((prev) =>
       prev.map((section) =>
         String(section.id) === String(sectionId)
@@ -140,7 +152,7 @@ export default function RestaurantMenuManager() {
               ...section,
               items: [
                 ...(section.items || []),
-                {
+                itemPayload || {
                   ...createDefaultItem(),
                   category: section?.name || "",
                 },
@@ -149,6 +161,64 @@ export default function RestaurantMenuManager() {
           : section,
       ),
     );
+  };
+
+  const updateQuickItemDraft = (sectionId, key, value) => {
+    setQuickItemDrafts((prev) => ({
+      ...prev,
+      [sectionId]: {
+        ...createQuickItemDraft(),
+        ...(prev[sectionId] || {}),
+        [key]: value,
+      },
+    }));
+  };
+
+  const addQuickItem = (sectionId, sectionName) => {
+    const draft = {
+      ...createQuickItemDraft(),
+      ...(quickItemDrafts[sectionId] || {}),
+    };
+
+    if (!String(draft.name || "").trim()) {
+      toast.error("Food name is required");
+      return;
+    }
+
+    const price = Number(draft.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error("Price must be greater than 0");
+      return;
+    }
+
+    const quickItem = {
+      ...createDefaultItem(),
+      name: String(draft.name || "").trim(),
+      price,
+      foodType: draft.foodType === "Veg" ? "Veg" : "Non-Veg",
+      description: String(draft.description || "").trim(),
+      image: String(draft.image || "").trim(),
+      isAvailable: draft.isAvailable !== false,
+      discountType: draft.discountType === "Fixed" ? "Fixed" : "Percent",
+      discountAmount: Number(draft.discountAmount) || 0,
+      category: sectionName || "Varieties",
+    };
+
+    addItem(sectionId, quickItem);
+    setQuickItemDrafts((prev) => ({
+      ...prev,
+      [sectionId]: createQuickItemDraft(),
+    }));
+    toast.success("Food added");
+  };
+
+  const handleQuickItemImageUpload = (sectionId, file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      updateQuickItemDraft(sectionId, "image", reader.result || "");
+    };
+    reader.readAsDataURL(file);
   };
 
   const removeItem = (sectionId, itemId) => {
@@ -429,6 +499,144 @@ export default function RestaurantMenuManager() {
                     </div>
 
                     <div className="mt-4 space-y-3">
+                      <div className="bg-white border border-slate-200 rounded-lg p-3">
+                        <h4 className="text-sm font-semibold text-slate-900 mb-3">Quick Add Food</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
+                          <input
+                            type="text"
+                            value={(quickItemDrafts[section.id] || {}).name || ""}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "name", event.target.value)
+                            }
+                            className="md:col-span-3 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            placeholder="Food name *"
+                          />
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={(quickItemDrafts[section.id] || {}).price || ""}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "price", event.target.value)
+                            }
+                            className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            placeholder="Price *"
+                          />
+                          <select
+                            value={(quickItemDrafts[section.id] || {}).foodType || "Non-Veg"}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "foodType", event.target.value)
+                            }
+                            className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                          >
+                            <option value="Veg">Veg</option>
+                            <option value="Non-Veg">Non-Veg</option>
+                          </select>
+                          <input
+                            type="text"
+                            value={(quickItemDrafts[section.id] || {}).image || ""}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "image", event.target.value)
+                            }
+                            className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            placeholder="Image URL"
+                          />
+                          <div className="md:col-span-1">
+                            <label
+                              htmlFor={`quick-food-image-${section.id}`}
+                              className="h-full w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white hover:bg-slate-50 inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Upload className="w-4 h-4" />
+                              <span>Upload</span>
+                            </label>
+                            <input
+                              id={`quick-food-image-${section.id}`}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(event) => {
+                                handleQuickItemImageUpload(
+                                  section.id,
+                                  event.target.files?.[0] || null,
+                                );
+                                event.target.value = "";
+                              }}
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => addQuickItem(section.id, section.name)}
+                            className="md:col-span-2 px-3 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center justify-center gap-1.5"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>Add Food</span>
+                          </button>
+                          <input
+                            type="text"
+                            value={(quickItemDrafts[section.id] || {}).description || ""}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "description", event.target.value)
+                            }
+                            className="md:col-span-6 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            placeholder="Description (optional)"
+                          />
+                          <select
+                            value={(quickItemDrafts[section.id] || {}).discountType || "Percent"}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "discountType", event.target.value)
+                            }
+                            className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                          >
+                            <option value="Percent">Percent</option>
+                            <option value="Fixed">Fixed</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={(quickItemDrafts[section.id] || {}).discountAmount || ""}
+                            onChange={(event) =>
+                              updateQuickItemDraft(section.id, "discountAmount", event.target.value)
+                            }
+                            className="md:col-span-2 px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white"
+                            placeholder="Discount"
+                          />
+                          <label className="md:col-span-2 inline-flex items-center gap-2 px-2 text-sm text-slate-700">
+                            <input
+                              type="checkbox"
+                              checked={(quickItemDrafts[section.id] || {}).isAvailable !== false}
+                              onChange={(event) =>
+                                updateQuickItemDraft(section.id, "isAvailable", event.target.checked)
+                              }
+                            />
+                            Available
+                          </label>
+                          <div className="md:col-span-12">
+                            {getImagePreviewSrc((quickItemDrafts[section.id] || {}).image) ? (
+                              <div className="w-28 h-20 rounded-lg overflow-hidden border border-slate-300 bg-white relative">
+                                <img
+                                  src={getImagePreviewSrc((quickItemDrafts[section.id] || {}).image)}
+                                  alt="Quick food preview"
+                                  className="w-full h-full object-cover"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => updateQuickItemDraft(section.id, "image", "")}
+                                  className="absolute top-1 right-1 p-1 rounded bg-black/60 text-white hover:bg-black/75"
+                                  title="Remove image"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-slate-500">
+                                You can paste an image URL or upload an image file.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
                       {(section.items || []).map((item, itemIndex) => (
                         <div
                           key={item.id || itemIndex}
@@ -816,7 +1024,7 @@ export default function RestaurantMenuManager() {
                       className="mt-3 px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm hover:bg-slate-50 inline-flex items-center gap-1.5"
                     >
                       <Plus className="w-4 h-4" />
-                      <span>Add Item</span>
+                      <span>Add Blank Item (Advanced)</span>
                     </button>
                   </div>
                 ))}

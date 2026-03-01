@@ -13,12 +13,12 @@ const logger = winston.createLogger({
 });
 
 async function isGoogleGeocodingEnabled() {
-  const value = await getEnvVar('ENABLE_GOOGLE_GEOCODING', 'false');
+  const value = await getEnvVar('ENABLE_GOOGLE_GEOCODING', 'true');
   return String(value).toLowerCase() === 'true';
 }
 
 async function isGooglePlacesEnabled() {
-  const value = await getEnvVar('ENABLE_GOOGLE_PLACES', 'false');
+  const value = await getEnvVar('ENABLE_GOOGLE_PLACES', 'true');
   return String(value).toLowerCase() === 'true';
 }
 
@@ -50,6 +50,60 @@ export const reverseGeocode = async (req, res) => {
     const projectId = process.env.OLA_MAPS_PROJECT_ID;
     const clientId = process.env.OLA_MAPS_CLIENT_ID;
     const clientSecret = process.env.OLA_MAPS_CLIENT_SECRET;
+    const enableGoogleGeocoding = await isGoogleGeocodingEnabled();
+    const googleApiKey = enableGoogleGeocoding ? await getEnvVar('VITE_GOOGLE_MAPS_API_KEY', '') : '';
+
+    // Prefer Google Maps geocoding when key exists in Admin System Env.
+    if (googleApiKey) {
+      try {
+        const googleResponse = await axios.get(
+          'https://maps.googleapis.com/maps/api/geocode/json',
+          {
+            params: {
+              latlng: `${latNum},${lngNum}`,
+              key: googleApiKey,
+              language: 'en'
+            },
+            timeout: 8000
+          }
+        );
+
+        if (googleResponse.data?.results?.length) {
+          const first = googleResponse.data.results[0];
+          const addressComponents = first.address_components || [];
+          let city = '';
+          let state = '';
+          let country = '';
+          let area = '';
+
+          addressComponents.forEach((comp) => {
+            const types = comp.types || [];
+            if (types.includes('locality')) city = comp.long_name;
+            if (types.includes('administrative_area_level_1')) state = comp.long_name;
+            if (types.includes('country')) country = comp.long_name;
+            if (types.includes('sublocality') || types.includes('sublocality_level_1') || types.includes('neighborhood')) {
+              area = comp.long_name;
+            }
+          });
+
+          return res.json({
+            success: true,
+            data: {
+              results: [{
+                formatted_address: first.formatted_address,
+                address_components: { city, state, country, area },
+                geometry: first.geometry || { location: { lat: latNum, lng: lngNum } }
+              }]
+            },
+            source: 'google_maps'
+          });
+        }
+      } catch (googleError) {
+        logger.warn('Google Maps reverse geocode failed, trying OLA/other fallbacks', {
+          error: googleError.message
+        });
+      }
+    }
 
     try {
       let response = null;

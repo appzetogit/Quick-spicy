@@ -28,8 +28,10 @@ export function useLocation() {
   const DB_LOCATION_FETCH_TTL_MS = 2 * 60 * 1000
   const DB_UPDATE_MIN_DISTANCE_METERS = 30
   const DB_UPDATE_MIN_INTERVAL_MS = 90 * 1000
-  const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING === "true"
-  const ENABLE_GOOGLE_PLACES = import.meta.env.VITE_ENABLE_GOOGLE_PLACES === "true"
+  // Default to Google enabled unless explicitly set to "false".
+  // This ensures runtime key from Admin System Env is used without requiring extra flags.
+  const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING !== "false"
+  const ENABLE_GOOGLE_PLACES = import.meta.env.VITE_ENABLE_GOOGLE_PLACES !== "false"
 
   const getDistanceMeters = (lat1, lng1, lat2, lng2) => {
     if (
@@ -219,7 +221,7 @@ export function useLocation() {
   const reverseGeocodeWithGoogleMaps = async (latitude, longitude, options = {}) => {
     const includePlaceDetails = options.includePlaceDetails === true
     if (!ENABLE_GOOGLE_GEOCODING) {
-      return reverseGeocodeWithOLAMaps(latitude, longitude)
+      return reverseGeocodeDirect(latitude, longitude)
     }
     try {
       const cachedGeocode = getCachedGeocode(latitude, longitude)

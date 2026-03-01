@@ -145,11 +145,12 @@ const clearOnboardingFromLocalStorage = () => {
 
 // Helper function to convert "HH:mm" string to Date object
 const stringToTime = (timeString) => {
-  if (!timeString || !timeString.includes(":")) {
-    return new Date(2000, 0, 1, 10, 0) // Default to 10:00 AM
+  const normalized = normalizeTimeValue(timeString)
+  if (!normalized || !normalized.includes(":")) {
+    return null
   }
-  const [hours, minutes] = timeString.split(":").map(Number)
-  return new Date(2000, 0, 1, hours || 10, minutes || 0)
+  const [hours, minutes] = normalized.split(":").map(Number)
+  return new Date(2000, 0, 1, hours || 0, minutes || 0)
 }
 
 // Helper function to convert Date object to "HH:mm" string
@@ -206,10 +207,12 @@ function TimeSelector({ label, value, onChange }) {
   const timeValue = stringToTime(value)
 
   const handleTimeChange = (newValue) => {
-    if (newValue) {
-      const timeString = timeToString(newValue)
-      onChange(timeString)
+    if (!newValue) {
+      onChange("")
+      return
     }
+    const timeString = timeToString(newValue)
+    onChange(timeString)
   }
 
   return (
@@ -221,6 +224,7 @@ function TimeSelector({ label, value, onChange }) {
       <MobileTimePicker
         value={timeValue}
         onChange={handleTimeChange}
+        onAccept={handleTimeChange}
         slotProps={{
           textField: {
             variant: "outlined",
@@ -245,6 +249,12 @@ function TimeSelector({ label, value, onChange }) {
                 padding: "8px 12px",
                 fontSize: "12px",
               },
+            },
+            onBlur: (event) => {
+              const normalized = normalizeTimeValue(event?.target?.value)
+              if (normalized) {
+                onChange(normalized)
+              }
             },
           },
         }}
@@ -1521,12 +1531,16 @@ export default function RestaurantOnboarding() {
             <TimeSelector
               label="Opening time"
               value={step2.openingTime || ""}
-              onChange={(val) => setStep2({ ...step2, openingTime: val || "" })}
+              onChange={(val) =>
+                setStep2((prev) => ({ ...prev, openingTime: normalizeTimeValue(val) || "" }))
+              }
             />
             <TimeSelector
               label="Closing time"
               value={step2.closingTime || ""}
-              onChange={(val) => setStep2({ ...step2, closingTime: val || "" })}
+              onChange={(val) =>
+                setStep2((prev) => ({ ...prev, closingTime: normalizeTimeValue(val) || "" }))
+              }
             />
           </div>
         </div>
