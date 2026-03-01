@@ -28,7 +28,8 @@ const DeliveryTrackingMap = ({
   userLiveCoords = null,
   userLocationAccuracy = null,
   deliveryBoyData = null,
-  order = null
+  order = null,
+  onTrackingData = null
 }) => {
   const mapRef = useRef(null);
   const bikeMarkerRef = useRef(null);
@@ -64,6 +65,10 @@ const DeliveryTrackingMap = ({
   const primaryTrackingId = trackingIds[0] || null;
   const trackingIdsKey = trackingIds.join('|');
   const lastRouteColorRef = useRef(null);
+  const emitTrackingData = useCallback((payload) => {
+    if (typeof onTrackingData !== 'function') return;
+    onTrackingData(payload);
+  }, [onTrackingData]);
 
   const isOrderPickedUp = useMemo(() => {
     const currentPhase = order?.deliveryState?.currentPhase;
@@ -78,6 +83,19 @@ const DeliveryTrackingMap = ({
     );
   }, [order?.deliveryState?.currentPhase, order?.deliveryState?.status, order?.status]);
   const routeColor = isOrderPickedUp ? '#2563eb' : '#10b981';
+  const getDistanceToCustomerMeters = useCallback((trackingData, location) => {
+    const meters = Number(trackingData?.distance_to_customer_m);
+    if (Number.isFinite(meters)) return Math.max(0, meters);
+
+    const km = Number(trackingData?.distance_to_customer_km);
+    if (Number.isFinite(km)) return Math.max(0, km * 1000);
+
+    if (customerCoords && Number.isFinite(location?.lat) && Number.isFinite(location?.lng)) {
+      return calculateHaversineDistance(location.lat, location.lng, customerCoords.lat, customerCoords.lng);
+    }
+
+    return null;
+  }, [customerCoords]);
 
   const preserveViewportState = useCallback(() => {
     if (!mapInstance.current || !window.google?.maps) return null;
@@ -111,18 +129,20 @@ const DeliveryTrackingMap = ({
     socketRef.current.emit('request-current-location', primaryTrackingId);
   }, [primaryTrackingId]);
 
-  // Fallback source for rider location from order payload (used when socket update is delayed/missed)
+  // Fallback source for rider location from order payload (from API poll when backend syncs from Firebase/socket)
   useEffect(() => {
-    const lat = order?.deliveryState?.currentLocation?.lat;
-    const lng = order?.deliveryState?.currentLocation?.lng;
-    const heading = order?.deliveryState?.currentLocation?.bearing ?? 0;
+    const loc = order?.deliveryState?.currentLocation;
+    if (!loc) return;
+    const lat = typeof loc.lat === 'number' ? loc.lat : (Array.isArray(loc.coordinates) && loc.coordinates.length >= 2 ? Number(loc.coordinates[1]) : null);
+    const lng = typeof loc.lng === 'number' ? loc.lng : (Array.isArray(loc.coordinates) && loc.coordinates.length >= 2 ? Number(loc.coordinates[0]) : null);
+    const heading = typeof loc.bearing === 'number' ? loc.bearing : (typeof loc.heading === 'number' ? loc.heading : 0);
 
-    if (typeof lat === 'number' && typeof lng === 'number') {
-      const location = { lat, lng, heading };
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      const location = { lat, lng, heading: Number.isFinite(heading) ? heading : 0 };
       setCurrentLocation(location);
       setDeliveryBoyLocation(location);
     }
-  }, [order?.deliveryState?.currentLocation?.lat, order?.deliveryState?.currentLocation?.lng, order?.deliveryState?.currentLocation?.bearing]);
+  }, [order?.deliveryState?.currentLocation]);
 
   // Load Google Maps API key from backend
   useEffect(() => {
@@ -567,8 +587,7 @@ const DeliveryTrackingMap = ({
         let bikeIcon = {
           url: bikeLogo,
           scaledSize: new window.google.maps.Size(50, 50), // Slightly larger for better visibility
-          anchor: new window.google.maps.Point(25, 25),
-          rotation: heading || 0
+          anchor: new window.google.maps.Point(25, 25)
         };
 
         try {
@@ -601,8 +620,10 @@ const DeliveryTrackingMap = ({
             zIndex: window.google.maps.Marker.MAX_ZINDEX + 3, // Above other markers
             title: 'Delivery Partner',
             visible: true,
-            animation: window.google.maps.Animation.DROP // Add drop animation
+            clickable: false
           });
+          // Standard Marker has no getRotation/setRotation; animation uses _rotation fallback
+          bikeMarkerRef.current._rotation = heading || 0;
 
           // Force marker to be visible
           bikeMarkerRef.current.setVisible(true);
@@ -675,6 +696,7 @@ const DeliveryTrackingMap = ({
               visible: true,
               zIndex: window.google.maps.Marker.MAX_ZINDEX + 3
             });
+            bikeMarkerRef.current._rotation = heading || 0;
             console.log('✅ Created fallback marker (orange circle)');
           } catch (fallbackError) {
             console.error('❌ Even fallback marker failed:', fallbackError);
@@ -689,7 +711,6 @@ const DeliveryTrackingMap = ({
 
           if (nearest && nearest.nearestPoint) {
             // Calculate progress on route (0 to 1) based on distance traveled
-            const totalPoints = routePolylinePointsRef.current.length;
 
             // Calculate cumulative distance to nearest point for accurate progress
             let distanceToNearest = 0;
@@ -754,7 +775,8 @@ const DeliveryTrackingMap = ({
                 // Fallback: Move to nearest point on polyline (STAY ON ROAD)
                 const nearestPosition = new window.google.maps.LatLng(nearest.nearestPoint.lat, nearest.nearestPoint.lng);
                 bikeMarkerRef.current.setPosition(nearestPosition);
-                bikeMarkerRef.current.setRotation(heading || 0);
+                if (typeof bikeMarkerRef.current.setRotation === 'function') bikeMarkerRef.current.setRotation(heading || 0);
+                else bikeMarkerRef.current._rotation = heading || 0;
                 console.log('🛣️ Bike snapped to nearest road point:', nearest.nearestPoint);
               }
             }
@@ -802,6 +824,7 @@ const DeliveryTrackingMap = ({
       subscribeOrderTracking(
         trackingId,
         (trackingData) => {
+          // Firebase/backend may use lat/lng or boy_lat/boy_lng
           const lat = Number(trackingData?.lat ?? trackingData?.boy_lat);
           const lng = Number(trackingData?.lng ?? trackingData?.boy_lng);
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
@@ -820,6 +843,17 @@ const DeliveryTrackingMap = ({
 
           setCurrentLocation(location);
           setDeliveryBoyLocation(location);
+          const distanceToCustomerMeters = getDistanceToCustomerMeters(trackingData, location);
+          emitTrackingData({
+            source: 'firebase',
+            lat: location.lat,
+            lng: location.lng,
+            heading: location.heading,
+            distanceToCustomerM: Number.isFinite(distanceToCustomerMeters) ? distanceToCustomerMeters : null,
+            distanceToCustomerKm: Number.isFinite(distanceToCustomerMeters) ? distanceToCustomerMeters / 1000 : null,
+            timestamp: Number(trackingData?.timestamp) || Date.now(),
+            lastUpdated: Number(trackingData?.last_updated) || Date.now()
+          });
 
           if (isMapLoaded && mapInstance.current) {
             moveBikeSmoothly(location.lat, location.lng, location.heading);
@@ -832,11 +866,26 @@ const DeliveryTrackingMap = ({
               : null);
 
           if (Array.isArray(rawPolyline) && rawPolyline.length > 1) {
-            renderFirebaseRoute(rawPolyline);
+            const normalized = normalizeRoutePoints(rawPolyline);
+            if (normalized.length > 1) {
+              const nearest = findNearestPointOnPolyline(normalized, location);
+              if (nearest?.nearestPoint && Number.isInteger(nearest.segmentIndex)) {
+                const reduced = [nearest.nearestPoint, ...normalized.slice(nearest.segmentIndex + 1)];
+                renderFirebaseRoute(reduced.length > 1 ? reduced : normalized);
+              } else {
+                renderFirebaseRoute(normalized);
+              }
+            }
           } else if (typeof rawPolyline === 'string' && rawPolyline.trim()) {
             const decoded = decodePolyline(rawPolyline);
             if (decoded.length > 1) {
-              renderFirebaseRoute(decoded);
+              const nearest = findNearestPointOnPolyline(decoded, location);
+              if (nearest?.nearestPoint && Number.isInteger(nearest.segmentIndex)) {
+                const reduced = [nearest.nearestPoint, ...decoded.slice(nearest.segmentIndex + 1)];
+                renderFirebaseRoute(reduced.length > 1 ? reduced : decoded);
+              } else {
+                renderFirebaseRoute(decoded);
+              }
             }
           }
         },
@@ -851,7 +900,7 @@ const DeliveryTrackingMap = ({
         if (typeof unsub === 'function') unsub();
       });
     };
-  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly, renderFirebaseRoute]);
+  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly, renderFirebaseRoute, normalizeRoutePoints, getDistanceToCustomerMeters, emitTrackingData]);
 
   // Initialize Socket.io connection (fallback)
   useEffect(() => {
@@ -870,6 +919,24 @@ const DeliveryTrackingMap = ({
         const location = { lat: data.lat, lng: data.lng, heading: data.heading || data.bearing || 0 };
         setCurrentLocation(location);
         setDeliveryBoyLocation(location);
+        const distanceM = Number(data?.distanceToCustomerM ?? data?.distance_to_customer_m);
+        const distanceKm = Number(data?.distanceToCustomerKm ?? data?.distance_to_customer_km);
+        const normalizedDistanceM = Number.isFinite(distanceM)
+          ? distanceM
+          : (Number.isFinite(distanceKm)
+            ? distanceKm * 1000
+            : (customerCoords
+              ? calculateHaversineDistance(location.lat, location.lng, customerCoords.lat, customerCoords.lng)
+              : null));
+        emitTrackingData({
+          source: 'socket',
+          lat: location.lat,
+          lng: location.lng,
+          heading: location.heading,
+          distanceToCustomerM: Number.isFinite(normalizedDistanceM) ? normalizedDistanceM : null,
+          distanceToCustomerKm: Number.isFinite(normalizedDistanceM) ? normalizedDistanceM / 1000 : null,
+          timestamp: Number(data?.timestamp) || Date.now()
+        });
 
         if (isMapLoaded && mapInstance.current) {
           if (data.progress !== undefined && animationControllerRef.current && routePolylinePointsRef.current) {
@@ -886,6 +953,24 @@ const DeliveryTrackingMap = ({
         const location = { lat: data.lat, lng: data.lng, heading: data.heading || data.bearing || 0 };
         setCurrentLocation(location);
         setDeliveryBoyLocation(location);
+        const distanceM = Number(data?.distanceToCustomerM ?? data?.distance_to_customer_m);
+        const distanceKm = Number(data?.distanceToCustomerKm ?? data?.distance_to_customer_km);
+        const normalizedDistanceM = Number.isFinite(distanceM)
+          ? distanceM
+          : (Number.isFinite(distanceKm)
+            ? distanceKm * 1000
+            : (customerCoords
+              ? calculateHaversineDistance(location.lat, location.lng, customerCoords.lat, customerCoords.lng)
+              : null));
+        emitTrackingData({
+          source: 'socket',
+          lat: location.lat,
+          lng: location.lng,
+          heading: location.heading,
+          distanceToCustomerM: Number.isFinite(normalizedDistanceM) ? normalizedDistanceM : null,
+          distanceToCustomerKm: Number.isFinite(normalizedDistanceM) ? normalizedDistanceM / 1000 : null,
+          timestamp: Number(data?.timestamp) || Date.now()
+        });
 
         if (isMapLoaded && mapInstance.current) {
           if (data.progress !== undefined && animationControllerRef.current && routePolylinePointsRef.current) {
@@ -968,7 +1053,7 @@ const DeliveryTrackingMap = ({
         socketRef.current.disconnect();
       }
     };
-  }, [backendUrl, moveBikeSmoothly, trackingIdsKey, requestCurrentLocationForTrackingIds]);
+  }, [backendUrl, moveBikeSmoothly, trackingIdsKey, requestCurrentLocationForTrackingIds, customerCoords, emitTrackingData]);
   // Initialize Google Map (only once - prevent re-initialization)
   useEffect(() => {
     if (!mapRef.current || !restaurantCoords || !customerCoords || mapInitializedRef.current) return;
@@ -1198,15 +1283,15 @@ const DeliveryTrackingMap = ({
           });
         }
 
-        // Add customer marker with click/cursor icon (only once)
+        // Add customer marker with a clear location pin icon (only once)
         if (!mapInstance.current._customerMarker) {
-          const customerClickIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+          const customerLocationIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="50" viewBox="0 0 40 50">
               <!-- Pin shape -->
-              <path d="M20 0 C9 0 0 9 0 20 C0 35 20 50 20 50 C20 50 40 35 40 20 C40 9 31 0 20 0 Z" fill="#4285F4" stroke="#ffffff" stroke-width="2"/>
-              <!-- Cursor/Click icon (pointer) -->
-              <path d="M14 8 L14 18 L18 18 L22 22 L22 10 L18 6 Z" fill="white" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M18 18 L18 14 L22 10" fill="none" stroke="white" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M20 0 C9 0 0 9 0 20 C0 35 20 50 20 50 C20 50 40 35 40 20 C40 9 31 0 20 0 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
+              <!-- User/location glyph -->
+              <circle cx="20" cy="15" r="4.2" fill="white"/>
+              <path d="M12.5 26.5c0-4.4 3.3-7 7.5-7s7.5 2.6 7.5 7" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
             </svg>
           `);
 
@@ -1214,12 +1299,13 @@ const DeliveryTrackingMap = ({
             position: { lat: customerCoords.lat, lng: customerCoords.lng },
             map: mapInstance.current,
             icon: {
-              url: customerClickIconUrl,
+              url: customerLocationIconUrl,
               scaledSize: new window.google.maps.Size(40, 50),
               anchor: new window.google.maps.Point(20, 50),
               origin: new window.google.maps.Point(0, 0)
             },
-            zIndex: window.google.maps.Marker.MAX_ZINDEX + 1
+            zIndex: window.google.maps.Marker.MAX_ZINDEX + 1,
+            title: "Your delivery location"
           });
         }
 
@@ -1418,18 +1504,6 @@ const DeliveryTrackingMap = ({
           console.log('✅✅✅ Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng });
           moveBikeSmoothly(deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading || 0);
         }
-        // Priority 2: Use route start ONLY if it's the delivery boy's location (not restaurant)
-        else if (route.start && route.start.lat && route.start.lng) {
-          // Only use route.start if we don't have delivery boy location
-          // But request real location from socket first
-          console.log('⏳ Using route start, but requesting real location from socket...');
-          if (socketRef.current && socketRef.current.connected) {
-            requestCurrentLocationForTrackingIds();
-          }
-          console.log('🚴 Creating bike at route start (temporary):', route.start);
-          moveBikeSmoothly(route.start.lat, route.start.lng, 0);
-        }
-        // DO NOT use restaurant or customer location - wait for real location
         else {
           console.log('⏳⏳⏳ No real location yet - requesting from socket and waiting...');
           if (socketRef.current && socketRef.current.connected) {
@@ -1517,29 +1591,11 @@ const DeliveryTrackingMap = ({
         console.log('✅✅✅ Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng, heading: deliveryBoyHeading });
         moveBikeSmoothly(deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading || 0);
       }
-      // Priority 2: DO NOT show at restaurant - ONLY wait for real location from socket
-      // Bike should ONLY show at real delivery boy location, NEVER at restaurant
-      else if (restaurantLat && restaurantLng) {
-        console.log('⏳⏳⏳ WAITING for REAL location from socket - NOT showing at restaurant');
-        console.log('📡 Requesting current location from backend immediately...');
-        // Request location immediately
+      else {
         if (socketRef.current && socketRef.current.connected) {
           requestCurrentLocationForTrackingIds();
         }
-        // DO NOT show at restaurant - only wait for real location
-        // Real location will come via socket and bike will be created then
-        console.log('✅ Bike will be created when real location is received from socket');
-      }
-      // Priority 3: Use customer location as last resort
-      else if (customerCoords && customerCoords.lat && customerCoords.lng) {
-        console.log('📍 Creating bike at customer location (fallback):', customerCoords);
-        moveBikeSmoothly(customerCoords.lat, customerCoords.lng, 0);
-      } else {
-        console.error('❌ Cannot create bike marker - no coordinates available!', {
-          restaurantCoords,
-          customerCoords,
-          deliveryBoyLocation
-        });
+        console.log('⏳ Waiting for real GPS location from Firebase/socket before showing bike marker');
       }
 
       // Verify marker was created after a short delay
@@ -1593,7 +1649,7 @@ const DeliveryTrackingMap = ({
         bikeMarkerRef.current = null;
       }
     }
-  }, [isMapLoaded, hasDeliveryPartner, deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading, restaurantLat, restaurantLng, moveBikeSmoothly, order]);
+  }, [isMapLoaded, hasDeliveryPartner, deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading, moveBikeSmoothly, order?.deliveryState?.currentPhase, order?.deliveryState?.status, requestCurrentLocationForTrackingIds]);
 
   // Update user's live location marker and circle when location changes
   useEffect(() => {
@@ -1695,7 +1751,7 @@ const DeliveryTrackingMap = ({
   }, []);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+    <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'visible' }}>
       <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );

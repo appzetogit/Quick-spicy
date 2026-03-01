@@ -1,4 +1,4 @@
-import { useParams, Link, useSearchParams, useNavigate } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "react-router-dom"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -7,6 +7,7 @@ import {
   Share2,
   RefreshCw,
   Phone,
+  User,
   ChevronRight,
   MapPin,
   Home as HomeIcon,
@@ -150,7 +151,8 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
   if (!isVisible || !orderId || !order || !restaurantCoords || !customerCoords) {
     return (
       <motion.div
-        className="relative h-64 bg-gradient-to-b from-gray-100 to-gray-200"
+        className="relative min-h-[280px] bg-gradient-to-b from-gray-100 to-gray-200"
+        style={{ height: '280px' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
@@ -158,16 +160,26 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
     );
   }
 
+  // Firebase and backend write tracking under order.orderId (string) or mongoId; subscribe to all so we receive updates
+  const orderTrackingIdsList = [
+    order?.orderId,
+    order?.mongoId,
+    order?._id,
+    orderId,
+    order?.id
+  ].filter(Boolean);
+
   return (
     <motion.div
-      className="relative h-64 w-full"
+      className="relative w-full min-h-[280px] overflow-visible"
+      style={{ height: '280px' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
       <DeliveryTrackingMap
         orderId={orderId}
-        orderTrackingIds={[order?.mongoId, order?._id, order?.orderId, order?.id]}
+        orderTrackingIds={orderTrackingIdsList}
         restaurantCoords={restaurantCoords}
         customerCoords={customerCoords}
         deliveryBoyData={deliveryBoyData}
@@ -177,21 +189,21 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
   );
 }
 
-// Section item component
+// Section item component - icon container uses overflow-visible so icons are not cut
 const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, rightContent }) => (
   <motion.button
     onClick={onClick}
     className="w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left border-b border-dashed border-gray-200 last:border-0"
     whileTap={{ scale: 0.99 }}
   >
-    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-      <Icon className="w-5 h-5 text-gray-600" />
+    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-visible">
+      <Icon className="w-5 h-5 text-gray-600 flex-shrink-0" />
     </div>
     <div className="flex-1 min-w-0">
       <p className="font-medium text-gray-900 truncate">{title}</p>
       {subtitle && <p className="text-sm text-gray-500 truncate">{subtitle}</p>}
     </div>
-    {rightContent || (showArrow && <ChevronRight className="w-5 h-5 text-gray-400" />)}
+    {rightContent || (showArrow && <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />)}
   </motion.button>
 )
 
@@ -216,14 +228,50 @@ const getRestaurantCoordsFromOrder = (apiOrder, fallback = null) => {
   return fallback || null
 }
 
-const transformOrderForTracking = (apiOrder, previousOrder = null, explicitRestaurantCoords = null) => {
+const getRestaurantAddressFromOrder = (apiOrder, previousOrder = null, explicitRestaurantAddress = null) => {
+  if (explicitRestaurantAddress && String(explicitRestaurantAddress).trim()) {
+    return String(explicitRestaurantAddress).trim()
+  }
+
+  const location = apiOrder?.restaurantId?.location || apiOrder?.restaurant?.location || {}
+
+  if (location?.formattedAddress && String(location.formattedAddress).trim()) {
+    return String(location.formattedAddress).trim()
+  }
+  if (location?.address && String(location.address).trim()) {
+    return String(location.address).trim()
+  }
+  if (location?.addressLine1 && String(location.addressLine1).trim()) {
+    return String(location.addressLine1).trim()
+  }
+
+  const parts = [location?.street, location?.area, location?.city, location?.state, location?.zipCode]
+    .map((value) => (value == null ? '' : String(value).trim()))
+    .filter(Boolean)
+
+  if (parts.length > 0) return parts.join(', ')
+
+  return previousOrder?.restaurantAddress || apiOrder?.restaurantAddress || apiOrder?.restaurant?.address || 'Restaurant location'
+}
+
+const transformOrderForTracking = (apiOrder, previousOrder = null, explicitRestaurantCoords = null, explicitRestaurantAddress = null) => {
   const restaurantCoords = explicitRestaurantCoords ?? getRestaurantCoordsFromOrder(apiOrder, previousOrder?.restaurantLocation?.coordinates)
+  const restaurantAddress = getRestaurantAddressFromOrder(apiOrder, previousOrder, explicitRestaurantAddress)
 
   return {
     id: apiOrder?.orderId || apiOrder?._id,
     mongoId: apiOrder?._id || null,
     orderId: apiOrder?.orderId || apiOrder?._id,
     restaurant: apiOrder?.restaurantName || previousOrder?.restaurant || 'Restaurant',
+    restaurantPhone:
+      apiOrder?.restaurantPhone ||
+      apiOrder?.restaurantId?.phone ||
+      apiOrder?.restaurantId?.ownerPhone ||
+      apiOrder?.restaurant?.phone ||
+      apiOrder?.restaurant?.ownerPhone ||
+      previousOrder?.restaurantPhone ||
+      '',
+    restaurantAddress,
     restaurantId: apiOrder?.restaurantId || previousOrder?.restaurantId || null,
     userId: apiOrder?.userId || previousOrder?.userId || null,
     userName: apiOrder?.userName || apiOrder?.userId?.name || apiOrder?.userId?.fullName || previousOrder?.userName || '',
@@ -270,7 +318,6 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
 
 export default function OrderTracking() {
   const { orderId } = useParams()
-  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const confirmed = searchParams.get("confirmed") === "true"
   const { getOrderById } = useOrders()
@@ -324,6 +371,25 @@ export default function OrderTracking() {
     const seconds = totalSeconds % 60
     return `${minutes}:${String(seconds).padStart(2, '0')}`
   }, [editWindowRemainingMs])
+
+  const handleCallRestaurant = () => {
+    const rawPhone =
+      order?.restaurantPhone ||
+      order?.restaurantId?.phone ||
+      order?.restaurantId?.ownerPhone ||
+      order?.restaurantId?.contact?.phone ||
+      order?.restaurant?.phone ||
+      order?.restaurant?.ownerPhone ||
+      ''
+
+    const cleanPhone = String(rawPhone).replace(/[^\d+]/g, '')
+    if (!cleanPhone) {
+      toast.error('Restaurant phone number not available')
+      return
+    }
+
+    window.location.href = `tel:${cleanPhone}`
+  }
 
   const customerDeliveryOtp = useMemo(() => {
     const code = order?.deliveryVerification?.dropOtp?.code
@@ -476,6 +542,7 @@ export default function OrderTracking() {
 
           // Extract restaurant location coordinates with multiple fallbacks
           let restaurantCoords = null;
+          let restaurantAddress = null;
 
           // Priority 1: restaurantId.location.coordinates (GeoJSON format: [lng, lat])
           if (apiOrder.restaurantId?.location?.coordinates &&
@@ -500,6 +567,11 @@ export default function OrderTracking() {
                   restaurantCoords = restaurant.location.coordinates;
                   console.log('✅ Fetched restaurant coordinates from API:', restaurantCoords);
                 }
+                restaurantAddress =
+                  restaurant?.location?.formattedAddress ||
+                  restaurant?.location?.address ||
+                  restaurant?.address ||
+                  null;
               }
             } catch (err) {
               console.error('❌ Error fetching restaurant details:', err);
@@ -515,7 +587,7 @@ export default function OrderTracking() {
           console.log('📍 Customer coordinates:', apiOrder.address?.location?.coordinates);
 
           // Transform API order to match component structure
-          setOrder(transformOrderForTracking(apiOrder, null, restaurantCoords))
+          setOrder(transformOrderForTracking(apiOrder, null, restaurantCoords, restaurantAddress))
 
           // Update orderStatus based on API order status
           if (apiOrder.status === 'cancelled') {
@@ -709,6 +781,7 @@ export default function OrderTracking() {
 
         // Extract restaurant location coordinates with multiple fallbacks
         let restaurantCoords = null;
+        let restaurantAddress = null;
 
         // Priority 1: restaurantId.location.coordinates (GeoJSON format: [lng, lat])
         if (apiOrder.restaurantId?.location?.coordinates &&
@@ -735,13 +808,18 @@ export default function OrderTracking() {
                 restaurantCoords = restaurant.location.coordinates;
                 console.log('✅ Fetched restaurant coordinates from API:', restaurantCoords);
               }
+              restaurantAddress =
+                restaurant?.location?.formattedAddress ||
+                restaurant?.location?.address ||
+                restaurant?.address ||
+                null;
             }
           } catch (err) {
             console.error('❌ Error fetching restaurant details:', err);
           }
         }
 
-        setOrder(transformOrderForTracking(apiOrder, order, restaurantCoords))
+        setOrder(transformOrderForTracking(apiOrder, order, restaurantCoords, restaurantAddress))
 
         // Update order status for UI
         if (apiOrder.status === 'cancelled') {
@@ -1009,11 +1087,11 @@ export default function OrderTracking() {
                 transition={{ delay: 0.3 }}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center overflow-hidden">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center overflow-visible p-1">
                     <img
                       src={circleIcon}
                       alt="Food cooking"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                   <p className="font-semibold text-gray-900">Food is Cooking</p>
@@ -1061,7 +1139,7 @@ export default function OrderTracking() {
           transition={{ delay: 0.7 }}
         >
           <SectionItem
-            icon={Phone}
+            icon={User}
             title={
               order?.userName ||
               order?.userId?.fullName ||
@@ -1136,15 +1214,16 @@ export default function OrderTracking() {
           transition={{ delay: 0.75 }}
         >
           <div className="flex items-center gap-3 p-4 border-b border-dashed border-gray-200">
-            <div className="w-12 h-12 rounded-full bg-orange-100 overflow-hidden flex items-center justify-center">
+            <div className="w-12 h-12 rounded-full bg-orange-100 overflow-visible flex items-center justify-center flex-shrink-0">
               <span className="text-2xl">🍔</span>
             </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900">{order.restaurant}</p>
-              <p className="text-sm text-gray-500">{order.address?.city || 'Local Area'}</p>
+              <p className="text-sm text-gray-500">{order.restaurantAddress || 'Restaurant location'}</p>
             </div>
             <motion.button
               className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center"
+              onClick={handleCallRestaurant}
               whileTap={{ scale: 0.9 }}
             >
               <Phone className="w-5 h-5 text-[#EB590E]" />

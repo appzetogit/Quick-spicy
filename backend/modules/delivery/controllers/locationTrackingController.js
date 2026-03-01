@@ -121,7 +121,7 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         on_route: processedLocation.onRoute,
         timestamp: processedLocation.timestamp,
         status: 'on_the_way'
-      }),
+      }, { ensureExists: false }),
       syncDeliveryPartnerPresence({
         deliveryId: String(deliveryBoyId),
         lat: processedLocation.lat,

@@ -426,7 +426,9 @@ export default function DeliveryHome() {
   const directionsMapInstanceRef = useRef(null) // Directions map instance
   const directionsApiCacheRef = useRef(new Map()) // Cache directions results to reduce API usage
   const directionsApiLastRequestRef = useRef({ key: null, timestamp: 0 }) // Prevent duplicate rapid requests
-  const restaurantMarkerRef = useRef(null) // Restaurant marker on directions map
+  const restaurantMarkerRef = useRef(null) // Restaurant marker on main map
+  const customerMarkerRef = useRef(null) // Customer marker on main map
+  const directionsDestinationMarkerRef = useRef(null) // Destination marker on directions map
   const directionsBikeMarkerRef = useRef(null) // Bike marker on directions map
   const lastRouteRecalculationRef = useRef(null) // Track last route recalculation time (API cost optimization)
   const lastBikePositionRef = useRef(null) // Track last bike position for deviation detection
@@ -4657,6 +4659,16 @@ export default function DeliveryHome() {
     return `${minutes} mins`
   }, [])
 
+  const dialPhoneNumber = useCallback((phoneNumber, missingMessage = 'Phone number not available') => {
+    const cleanPhone = String(phoneNumber || '').replace(/[^\d+]/g, '')
+    if (!cleanPhone) {
+      toast.error(missingMessage)
+      return false
+    }
+    window.location.href = `tel:${cleanPhone}`
+    return true
+  }, [])
+
   // Show new order popup when order is received from Socket.IO
   useEffect(() => {
     if (newOrder) {
@@ -5965,6 +5977,26 @@ export default function DeliveryHome() {
           });
         }
       }
+
+      // Check customer marker
+      if (
+        selectedRestaurant &&
+        selectedRestaurant.customerLat != null &&
+        selectedRestaurant.customerLng != null
+      ) {
+        const customerLocation = {
+          lat: Number(selectedRestaurant.customerLat),
+          lng: Number(selectedRestaurant.customerLng)
+        };
+
+        if (customerMarkerRef.current) {
+          const markerMap = customerMarkerRef.current.getMap();
+          if (markerMap === null || markerMap !== window.deliveryMapInstance) {
+            customerMarkerRef.current.setMap(window.deliveryMapInstance);
+            customerMarkerRef.current.setPosition(customerLocation);
+          }
+        }
+      }
     }, 2000); // Check every 2 seconds
 
     return () => clearInterval(checkInterval);
@@ -5984,8 +6016,8 @@ export default function DeliveryHome() {
       };
       
       // Remove old marker if exists
-      if (restaurantMarkerRef.current) {
-        restaurantMarkerRef.current.setMap(null);
+      if (directionsDestinationMarkerRef.current) {
+        directionsDestinationMarkerRef.current.setMap(null);
       }
       
       // Create new restaurant marker
@@ -6019,6 +6051,65 @@ export default function DeliveryHome() {
       restaurantMarkerRef.current.setTitle(selectedRestaurant.name || 'Restaurant');
     }
   }, [selectedRestaurant?.lat, selectedRestaurant?.lng, selectedRestaurant?.name])
+
+  // Create/update customer marker on main map so delivery destination icon is always visible.
+  useEffect(() => {
+    if (!window.deliveryMapInstance || !selectedRestaurant) return;
+
+    const hasCustomerCoords =
+      selectedRestaurant?.customerLat != null &&
+      selectedRestaurant?.customerLng != null &&
+      Number.isFinite(Number(selectedRestaurant.customerLat)) &&
+      Number.isFinite(Number(selectedRestaurant.customerLng));
+
+    if (!hasCustomerCoords) {
+      if (customerMarkerRef.current) {
+        customerMarkerRef.current.setMap(null);
+        customerMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const customerLocation = {
+      lat: Number(selectedRestaurant.customerLat),
+      lng: Number(selectedRestaurant.customerLng)
+    };
+
+    const customerIcon = {
+      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="11" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+          <circle cx="12" cy="9" r="3" fill="#FFFFFF"/>
+          <path d="M7.5 16.5c0-2 1.8-3.5 4.5-3.5s4.5 1.5 4.5 3.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      `),
+      scaledSize: new window.google.maps.Size(48, 48),
+      anchor: new window.google.maps.Point(24, 48)
+    };
+
+    if (!customerMarkerRef.current) {
+      customerMarkerRef.current = new window.google.maps.Marker({
+        position: customerLocation,
+        map: window.deliveryMapInstance,
+        icon: customerIcon,
+        title: selectedRestaurant.customerName || 'Customer',
+        zIndex: 9
+      });
+    } else {
+      customerMarkerRef.current.setPosition(customerLocation);
+      customerMarkerRef.current.setIcon(customerIcon);
+      customerMarkerRef.current.setTitle(selectedRestaurant.customerName || 'Customer');
+      customerMarkerRef.current.setMap(window.deliveryMapInstance);
+    }
+  }, [selectedRestaurant?.customerLat, selectedRestaurant?.customerLng, selectedRestaurant?.customerName])
+
+  useEffect(() => {
+    if (selectedRestaurant) return;
+    if (customerMarkerRef.current) {
+      customerMarkerRef.current.setMap(null);
+      customerMarkerRef.current = null;
+    }
+  }, [selectedRestaurant])
 
   // Calculate route using Google Maps Directions API (Zomato-style road-based routing)
   // Optimized for TWO_WHEELER mode with DRIVING fallback
@@ -6462,8 +6553,8 @@ export default function DeliveryHome() {
                 </svg>
               `)}`;
           
-          if (!restaurantMarkerRef.current) {
-            restaurantMarkerRef.current = new window.google.maps.Marker({
+          if (!directionsDestinationMarkerRef.current) {
+            directionsDestinationMarkerRef.current = new window.google.maps.Marker({
               position: destinationLocation,
               map: map,
               icon: {
@@ -6475,14 +6566,14 @@ export default function DeliveryHome() {
               animation: window.google.maps.Animation.DROP
             });
           } else {
-            restaurantMarkerRef.current.setPosition(destinationLocation);
-            restaurantMarkerRef.current.setIcon({
+            directionsDestinationMarkerRef.current.setPosition(destinationLocation);
+            directionsDestinationMarkerRef.current.setIcon({
               url: markerIcon,
               scaledSize: new window.google.maps.Size(48, 48),
               anchor: new window.google.maps.Point(24, 48)
             });
-            restaurantMarkerRef.current.setTitle(destinationName);
-            restaurantMarkerRef.current.setMap(map);
+            directionsDestinationMarkerRef.current.setTitle(destinationName);
+            directionsDestinationMarkerRef.current.setMap(map);
           }
 
           // Add custom Bike Marker (Delivery Boy)
@@ -6540,8 +6631,8 @@ export default function DeliveryHome() {
           if (directionsRendererRef.current) {
             directionsRendererRef.current.setMap(null);
           }
-          if (restaurantMarkerRef.current) {
-            restaurantMarkerRef.current.setMap(null);
+          if (directionsDestinationMarkerRef.current) {
+            directionsDestinationMarkerRef.current.setMap(null);
           }
           if (directionsBikeMarkerRef.current) {
             directionsBikeMarkerRef.current.setMap(null);
@@ -10417,12 +10508,12 @@ export default function DeliveryHome() {
                 }
                 
                 if (restaurantPhone) {
-                  // Remove any spaces, dashes, or special characters except + and digits
-                  const cleanPhone = restaurantPhone.replace(/[^\d+]/g, '')
-                  console.log('📞 Calling restaurant:', { original: restaurantPhone, clean: cleanPhone })
-                  window.location.href = `tel:${cleanPhone}`
+                  const dialed = dialPhoneNumber(restaurantPhone, 'Restaurant phone number not available')
+                  if (dialed) {
+                    console.log('📞 Calling restaurant:', { original: restaurantPhone })
+                  }
                 } else {
-                  toast.error('Restaurant phone number not available. Please contact support.')
+                  toast.error('Restaurant phone number not available')
                   console.error('❌ Restaurant phone not found in any path:', { 
                     selectedRestaurant,
                     hasPhone: !!selectedRestaurant?.phone,
@@ -10836,16 +10927,7 @@ export default function DeliveryHome() {
             <button
               onClick={() => {
                 const phone = selectedRestaurant?.customerPhone || selectedRestaurant?.userId?.phone || null
-                if (!phone) {
-                  toast.error("Customer phone number not available")
-                  return
-                }
-                const cleanPhone = String(phone).replace(/[^\d+]/g, "")
-                if (!cleanPhone) {
-                  toast.error("Customer phone number not available")
-                  return
-                }
-                window.location.href = `tel:${cleanPhone}`
+                dialPhoneNumber(phone, "Customer phone number not available")
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >

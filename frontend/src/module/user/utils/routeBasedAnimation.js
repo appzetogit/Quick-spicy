@@ -91,7 +91,13 @@ export function animateMarkerSmoothly(marker, currentPos, targetPos, duration = 
     // Update marker position
     marker.setPosition({ lat: currentLat, lng: currentLng });
     
-    // Calculate and update bearing (rotation)
+    // Calculate and update bearing (rotation). Standard google.maps.Marker has no getRotation/setRotation; use _rotation fallback.
+    const getRotation = () => (typeof marker.getRotation === 'function' ? marker.getRotation() : (marker._rotation ?? 0)) || 0;
+    const setRotation = (deg) => {
+      if (typeof marker.setRotation === 'function') marker.setRotation(deg);
+      else marker._rotation = deg;
+    };
+
     if (progress < 1) {
       const prevPos = progress > 0.1 
         ? { lat: startLat + deltaLat * easeOutCubic(Math.max(0, progress - 0.1)), 
@@ -99,16 +105,16 @@ export function animateMarkerSmoothly(marker, currentPos, targetPos, duration = 
         : currentPos;
       
       const bearing = calculateBearing(prevPos, { lat: currentLat, lng: currentLng });
-      const currentRotation = marker.getRotation() || 0;
+      const currentRotation = getRotation();
       const smoothedBearing = smoothRotation(currentRotation, bearing, 0.4);
-      marker.setRotation(smoothedBearing);
+      setRotation(smoothedBearing);
       
       requestAnimationFrame(animate);
     } else {
       // Animation complete
       marker.setPosition(targetPos);
       const finalBearing = calculateBearing(currentPos, targetPos);
-      marker.setRotation(finalBearing);
+      setRotation(finalBearing);
       
       if (onComplete) onComplete();
     }
@@ -283,7 +289,8 @@ export class RouteBasedAnimationController {
       // First time - set position directly
       this.marker.setPosition(targetPos);
       if (bearing !== undefined) {
-        this.marker.setRotation(bearing);
+        if (typeof this.marker.setRotation === 'function') this.marker.setRotation(bearing);
+        else this.marker._rotation = bearing;
       }
     }
     
