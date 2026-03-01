@@ -1996,9 +1996,8 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
     });
   }
 
-  if (dropOtp?.expiresAt && new Date(dropOtp.expiresAt).getTime() < Date.now()) {
-    return errorResponse(res, 400, 'Drop OTP expired. Please ask customer to contact support.');
-  }
+  // Intentionally allow correct customer OTP even after expiry time.
+  // Business rule: delivery partner should be able to complete with a valid OTP at any time.
 
   if (normalizedOtp !== String(dropOtp.code)) {
     const attempts = (Number(dropOtp.attempts) || 0) + 1;
