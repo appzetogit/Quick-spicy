@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from "react"
-import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown } from "lucide-react"
+import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -33,6 +33,8 @@ export default function FoodsList() {
   const [categoryOptions, setCategoryOptions] = useState([])
   const [selectedImageFile, setSelectedImageFile] = useState(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState("")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   const getItemCreatedMs = (item = {}) => {
     const direct = [item.createdAt, item.addedAt, item.requestedAt, item.updatedAt]
@@ -223,6 +225,26 @@ export default function FoodsList() {
     result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
     return result
   }, [foods, searchQuery, selectedRestaurant])
+
+  const totalPages = useMemo(() => {
+    if (filteredFoods.length === 0) return 1
+    return Math.ceil(filteredFoods.length / pageSize)
+  }, [filteredFoods.length, pageSize])
+
+  const paginatedFoods = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredFoods.slice(start, start + pageSize)
+  }, [filteredFoods, currentPage, pageSize])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, selectedRestaurant, pageSize])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   const restaurantOptions = useMemo(() => {
     return restaurantsForFilter
@@ -604,13 +626,13 @@ export default function FoodsList() {
                   </td>
                 </tr>
               ) : (
-                filteredFoods.map((food, index) => (
+                paginatedFoods.map((food, index) => (
                   <tr
                     key={food.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700">{index + 1}</span>
+                      <span className="text-sm font-medium text-slate-700">{(currentPage - 1) * pageSize + index + 1}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -678,6 +700,57 @@ export default function FoodsList() {
             </tbody>
           </table>
         </div>
+
+        {!loading && filteredFoods.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
+            <div className="text-sm text-slate-600">
+              Showing{" "}
+              <span className="font-semibold text-slate-800">{(currentPage - 1) * pageSize + 1}</span>
+              {" "}to{" "}
+              <span className="font-semibold text-slate-800">
+                {Math.min(currentPage * pageSize, filteredFoods.length)}
+              </span>
+              {" "}of{" "}
+              <span className="font-semibold text-slate-800">{filteredFoods.length}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <select
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+                className="px-2.5 py-1.5 text-sm rounded-md border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400"
+              >
+                <option value={10}>10 / page</option>
+                <option value={20}>20 / page</option>
+                <option value={50}>50 / page</option>
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Prev
+              </button>
+
+              <span className="px-3 py-1.5 text-sm font-medium text-slate-700">
+                {currentPage} / {totalPages}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>

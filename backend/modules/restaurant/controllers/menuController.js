@@ -892,6 +892,8 @@ export const getMenuByRestaurantId = async (req, res) => {
             if (sortedSubsectionItems.length > 0) {
               return {
                 ...subsection,
+                id: subsection.id || `subsection-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: subsection.name || "Subsection",
                 items: sortedSubsectionItems,
               };
             }
@@ -949,6 +951,8 @@ export const getMenuByRestaurantId = async (req, res) => {
               if (availableSubsectionItems.length === 0) return null;
               return {
                 ...subsection,
+                id: subsection.id || `subsection-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                name: subsection.name || "Subsection",
                 items: availableSubsectionItems,
               };
             })
