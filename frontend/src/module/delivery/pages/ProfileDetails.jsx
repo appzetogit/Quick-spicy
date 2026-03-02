@@ -20,7 +20,8 @@ export default function ProfileDetails() {
     accountHolderName: "",
     accountNumber: "",
     ifscCode: "",
-    bankName: ""
+    bankName: "",
+    panNumber: "",
   })
   const [bankDetailsErrors, setBankDetailsErrors] = useState({})
   const [isUpdatingBankDetails, setIsUpdatingBankDetails] = useState(false)
@@ -77,7 +78,8 @@ export default function ProfileDetails() {
             accountHolderName: profileData?.documents?.bankDetails?.accountHolderName || "",
             accountNumber: profileData?.documents?.bankDetails?.accountNumber || "",
             ifscCode: profileData?.documents?.bankDetails?.ifscCode || "",
-            bankName: profileData?.documents?.bankDetails?.bankName || ""
+            bankName: profileData?.documents?.bankDetails?.bankName || "",
+            panNumber: profileData?.documents?.pan?.number || "",
           })
         } else {
           throw new Error("Profile fetch failed")
@@ -393,7 +395,8 @@ export default function ProfileDetails() {
                   accountHolderName: profile?.documents?.bankDetails?.accountHolderName || "",
                   accountNumber: profile?.documents?.bankDetails?.accountNumber || "",
                   ifscCode: profile?.documents?.bankDetails?.ifscCode || "",
-                  bankName: profile?.documents?.bankDetails?.bankName || ""
+                  bankName: profile?.documents?.bankDetails?.bankName || "",
+                  panNumber: profile?.documents?.pan?.number || "",
                 })
                 setBankDetailsErrors({})
               }}
@@ -557,7 +560,8 @@ export default function ProfileDetails() {
               type="text"
               value={bankDetails.accountHolderName}
               onChange={(e) => {
-                setBankDetails(prev => ({ ...prev, accountHolderName: e.target.value }))
+                const value = e.target.value.replace(/[^A-Za-z\s.'-]/g, "")
+                setBankDetails(prev => ({ ...prev, accountHolderName: value }))
                 setBankDetailsErrors(prev => ({ ...prev, accountHolderName: "" }))
               }}
               placeholder="Enter account holder name"
@@ -627,7 +631,8 @@ export default function ProfileDetails() {
               type="text"
               value={bankDetails.bankName}
               onChange={(e) => {
-                setBankDetails(prev => ({ ...prev, bankName: e.target.value }))
+                const value = e.target.value.replace(/[^A-Za-z\s.'-]/g, "")
+                setBankDetails(prev => ({ ...prev, bankName: value }))
                 setBankDetailsErrors(prev => ({ ...prev, bankName: "" }))
               }}
               placeholder="Enter bank name"
@@ -640,26 +645,64 @@ export default function ProfileDetails() {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              PAN Card Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={bankDetails.panNumber}
+              onChange={(e) => {
+                const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "")
+                setBankDetails(prev => ({ ...prev, panNumber: value }))
+                setBankDetailsErrors(prev => ({ ...prev, panNumber: "" }))
+              }}
+              placeholder="ABCDE1234F"
+              maxLength={10}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${
+                bankDetailsErrors.panNumber ? "border-red-500" : "border-gray-300"
+              }`}
+            />
+            {bankDetailsErrors.panNumber && (
+              <p className="text-red-500 text-xs mt-1">{bankDetailsErrors.panNumber}</p>
+            )}
+          </div>
+
           {/* Submit Button */}
           <button
             onClick={async () => {
               // Validate
               const errors = {}
+              const accountHolderName = bankDetails.accountHolderName.trim()
+              const accountNumber = bankDetails.accountNumber.trim()
+              const ifscCode = bankDetails.ifscCode.trim().toUpperCase()
+              const bankName = bankDetails.bankName.trim()
+              const panNumber = bankDetails.panNumber.trim().toUpperCase()
+
               if (!bankDetails.accountHolderName.trim()) {
                 errors.accountHolderName = "Account holder name is required"
+              } else if (!/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/.test(accountHolderName)) {
+                errors.accountHolderName = "Account holder name must contain characters only"
               }
-              if (!bankDetails.accountNumber.trim()) {
+              if (!accountNumber) {
                 errors.accountNumber = "Account number is required"
-              } else if (bankDetails.accountNumber.length < 9 || bankDetails.accountNumber.length > 18) {
+              } else if (!/^\d{9,18}$/.test(accountNumber)) {
                 errors.accountNumber = "Account number must be between 9 and 18 digits"
               }
-              if (!bankDetails.ifscCode.trim()) {
+              if (!ifscCode) {
                 errors.ifscCode = "IFSC code is required"
-              } else if (bankDetails.ifscCode.length !== 11) {
-                errors.ifscCode = "IFSC code must be 11 characters"
+              } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifscCode)) {
+                errors.ifscCode = "Enter a valid IFSC code"
               }
-              if (!bankDetails.bankName.trim()) {
+              if (!bankName) {
                 errors.bankName = "Bank name is required"
+              } else if (!/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/.test(bankName)) {
+                errors.bankName = "Bank name must contain characters only"
+              }
+              if (!panNumber) {
+                errors.panNumber = "PAN card number is required"
+              } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(panNumber)) {
+                errors.panNumber = "Enter a valid PAN number"
               }
 
               if (Object.keys(errors).length > 0) {
@@ -674,11 +717,15 @@ export default function ProfileDetails() {
                   documents: {
                     ...profile?.documents,
                     bankDetails: {
-                      accountHolderName: bankDetails.accountHolderName.trim(),
-                      accountNumber: bankDetails.accountNumber.trim(),
-                      ifscCode: bankDetails.ifscCode.trim(),
-                      bankName: bankDetails.bankName.trim()
-                    }
+                      accountHolderName,
+                      accountNumber,
+                      ifscCode,
+                      bankName
+                    },
+                    pan: {
+                      ...profile?.documents?.pan,
+                      number: panNumber,
+                    },
                   }
                 })
                 toast.success("Bank details updated successfully")
