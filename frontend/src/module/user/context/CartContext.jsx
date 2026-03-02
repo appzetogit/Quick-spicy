@@ -32,13 +32,60 @@ const defaultCartContext = {
 
 const CartContext = createContext(defaultCartContext)
 
+const normalizeCartData = (rawCart) => {
+  if (!Array.isArray(rawCart)) return []
+
+  return rawCart
+    .filter((item) => item && typeof item === "object")
+    .map((item, index) => {
+      const parsedQuantity = Number(item.quantity)
+      const parsedPrice = Number(item.price)
+      const normalizedRestaurantName =
+        typeof item.restaurant === "string"
+          ? item.restaurant
+          : typeof item.restaurant?.name === "string"
+            ? item.restaurant.name
+            : ""
+
+      const normalizedRestaurantId =
+        item.restaurantId ||
+        item.restaurant_id ||
+        item.restaurant?._id ||
+        item.restaurant?.restaurantId ||
+        null
+
+      const normalizedImage =
+        item.image ||
+        item.imageUrl ||
+        item.product?.imageUrl ||
+        item.product?.image ||
+        ""
+
+      return {
+        ...item,
+        id: item.id || item._id || `cart-item-${index}`,
+        name: item.name || item.product?.name || "Item",
+        quantity:
+          Number.isFinite(parsedQuantity) && parsedQuantity > 0
+            ? Math.floor(parsedQuantity)
+            : 1,
+        price: Number.isFinite(parsedPrice) ? parsedPrice : 0,
+        restaurant: normalizedRestaurantName,
+        restaurantId: normalizedRestaurantId,
+        image: normalizedImage,
+        imageUrl: normalizedImage,
+      }
+    })
+}
+
 export function CartProvider({ children }) {
   // Safe init (works with SSR and bad JSON)
   const [cart, setCart] = useState(() => {
     if (typeof window === "undefined") return []
     try {
       const saved = localStorage.getItem("cart")
-      return saved ? JSON.parse(saved) : []
+      const parsed = saved ? JSON.parse(saved) : []
+      return normalizeCartData(parsed)
     } catch {
       return []
     }
@@ -52,16 +99,17 @@ export function CartProvider({ children }) {
   // Persist to localStorage whenever cart changes
   useEffect(() => {
     try {
-      localStorage.setItem("cart", JSON.stringify(cart))
+      localStorage.setItem("cart", JSON.stringify(normalizeCartData(cart)))
     } catch {
       // ignore storage errors (private mode, quota, etc.)
     }
   }, [cart])
 
   const addToCart = (item, sourcePosition = null) => {
-    if (cart.length > 0) {
-      const firstItemRestaurantId = cart[0]?.restaurantId
-      const firstItemRestaurantName = cart[0]?.restaurant
+    const safeCart = normalizeCartData(cart)
+    if (safeCart.length > 0) {
+      const firstItemRestaurantId = safeCart[0]?.restaurantId
+      const firstItemRestaurantName = safeCart[0]?.restaurant
       const newItemRestaurantId = item?.restaurantId
       const newItemRestaurantName = item?.restaurant
       const normalizeName = (name) => (name ? String(name).trim().toLowerCase() : '')
@@ -95,11 +143,12 @@ export function CartProvider({ children }) {
     }
 
     setCart((prev) => {
+      const safePrev = normalizeCartData(prev)
       // CRITICAL: Validate restaurant consistency
       // If cart already has items, ensure new item belongs to the same restaurant
-      if (prev.length > 0) {
-        const firstItemRestaurantId = prev[0]?.restaurantId;
-        const firstItemRestaurantName = prev[0]?.restaurant;
+      if (safePrev.length > 0) {
+        const firstItemRestaurantId = safePrev[0]?.restaurantId;
+        const firstItemRestaurantName = safePrev[0]?.restaurant;
         const newItemRestaurantId = item?.restaurantId;
         const newItemRestaurantName = item?.restaurant;
         
@@ -118,7 +167,7 @@ export function CartProvider({ children }) {
               newItemRestaurantId: newItemRestaurantId,
               newItemRestaurantName: newItemRestaurantName
             });
-            return prev;
+            return safePrev;
           }
           // Names match - allow it (even if IDs differ, it's the same restaurant)
         } else if (firstItemRestaurantId && newItemRestaurantId) {
@@ -130,12 +179,12 @@ export function CartProvider({ children }) {
               newItemRestaurantId: newItemRestaurantId,
               newItemRestaurantName: newItemRestaurantName
             });
-            return prev;
+            return safePrev;
           }
         }
       }
       
-      const existing = prev.find((i) => i.id === item.id)
+      const existing = safePrev.find((i) => i.id === item.id)
       if (existing) {
         // Set last add event for animation when incrementing existing item
         if (sourcePosition) {
@@ -150,7 +199,7 @@ export function CartProvider({ children }) {
           // Clear after animation completes (increased delay)
           setTimeout(() => setLastAddEvent(null), 1500)
         }
-        return prev.map((i) =>
+        return safePrev.map((i) =>
           i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         )
       }
@@ -158,7 +207,7 @@ export function CartProvider({ children }) {
       // Validate item has required restaurant info
       if (!item.restaurantId && !item.restaurant) {
         console.error('❌ Cannot add item: Missing restaurant information!', item);
-        return prev;
+        return safePrev;
       }
       
       const newItem = { ...item, quantity: 1 }
@@ -177,7 +226,7 @@ export function CartProvider({ children }) {
         setTimeout(() => setLastAddEvent(null), 1500)
       }
       
-      return [...prev, newItem]
+      return [...safePrev, newItem]
     })
 
     return { ok: true }
@@ -185,7 +234,8 @@ export function CartProvider({ children }) {
 
   const removeFromCart = (itemId, sourcePosition = null, productInfo = null) => {
     setCart((prev) => {
-      const itemToRemove = prev.find((i) => i.id === itemId)
+      const safePrev = normalizeCartData(prev)
+      const itemToRemove = safePrev.find((i) => i.id === itemId)
       if (itemToRemove && sourcePosition && productInfo) {
         // Set last remove event for animation
         setLastRemoveEvent({
@@ -199,14 +249,15 @@ export function CartProvider({ children }) {
         // Clear after animation completes
         setTimeout(() => setLastRemoveEvent(null), 1500)
       }
-      return prev.filter((i) => i.id !== itemId)
+      return safePrev.filter((i) => i.id !== itemId)
     })
   }
 
   const updateQuantity = (itemId, quantity, sourcePosition = null, productInfo = null) => {
     if (quantity <= 0) {
       setCart((prev) => {
-        const itemToRemove = prev.find((i) => i.id === itemId)
+        const safePrev = normalizeCartData(prev)
+        const itemToRemove = safePrev.find((i) => i.id === itemId)
         if (itemToRemove && sourcePosition && productInfo) {
           // Set last remove event for animation
           setLastRemoveEvent({
@@ -220,14 +271,15 @@ export function CartProvider({ children }) {
           // Clear after animation completes
           setTimeout(() => setLastRemoveEvent(null), 1500)
         }
-        return prev.filter((i) => i.id !== itemId)
+        return safePrev.filter((i) => i.id !== itemId)
       })
       return
     }
     
     // When quantity decreases (but not to 0), also trigger removal animation
     setCart((prev) => {
-      const existingItem = prev.find((i) => i.id === itemId)
+      const safePrev = normalizeCartData(prev)
+      const existingItem = safePrev.find((i) => i.id === itemId)
       if (existingItem && quantity < existingItem.quantity && sourcePosition && productInfo) {
         // Set last remove event for animation when decreasing quantity
         setLastRemoveEvent({
@@ -241,16 +293,16 @@ export function CartProvider({ children }) {
         // Clear after animation completes
         setTimeout(() => setLastRemoveEvent(null), 1500)
       }
-      return prev.map((i) => (i.id === itemId ? { ...i, quantity } : i))
+      return safePrev.map((i) => (i.id === itemId ? { ...i, quantity } : i))
     })
   }
 
   const getCartCount = () =>
-    cart.reduce((total, item) => total + (item.quantity || 0), 0)
+    normalizeCartData(cart).reduce((total, item) => total + (item.quantity || 0), 0)
 
-  const isInCart = (itemId) => cart.some((i) => i.id === itemId)
+  const isInCart = (itemId) => normalizeCartData(cart).some((i) => i.id === itemId)
 
-  const getCartItem = (itemId) => cart.find((i) => i.id === itemId)
+  const getCartItem = (itemId) => normalizeCartData(cart).find((i) => i.id === itemId)
 
   const clearCart = () => setCart([])
 
@@ -258,14 +310,15 @@ export function CartProvider({ children }) {
   // Keeps only items from the specified restaurant
   const cleanCartForRestaurant = (restaurantId, restaurantName) => {
     setCart((prev) => {
-      if (prev.length === 0) return prev;
+      const safePrev = normalizeCartData(prev)
+      if (safePrev.length === 0) return safePrev;
       
       // Normalize restaurant name for comparison
       const normalizeName = (name) => name ? name.trim().toLowerCase() : '';
       const targetRestaurantNameNormalized = normalizeName(restaurantName);
       
       // Filter cart to keep only items from the target restaurant
-      const cleanedCart = prev.filter((item) => {
+      const cleanedCart = safePrev.filter((item) => {
         const itemRestaurantId = item?.restaurantId;
         const itemRestaurantName = item?.restaurant;
         const itemRestaurantNameNormalized = normalizeName(itemRestaurantName);
@@ -284,11 +337,11 @@ export function CartProvider({ children }) {
         return false;
       });
       
-      if (cleanedCart.length !== prev.length) {
+      if (cleanedCart.length !== safePrev.length) {
         console.warn('🧹 Cleaned cart: Removed items from different restaurants', {
-          before: prev.length,
+          before: safePrev.length,
           after: cleanedCart.length,
-          removed: prev.length - cleanedCart.length
+          removed: safePrev.length - cleanedCart.length
         });
       }
       
@@ -299,11 +352,16 @@ export function CartProvider({ children }) {
   // Validate and clean cart on mount/load to prevent multiple restaurant items
   // This runs only once on initial load to clean up any corrupted cart data from localStorage
   useEffect(() => {
-    if (cart.length === 0) return;
+    const safeCart = normalizeCartData(cart)
+    if (safeCart.length !== cart.length) {
+      setCart(safeCart)
+      return
+    }
+    if (safeCart.length === 0) return;
     
     // Get unique restaurant IDs and names
-    const restaurantIds = cart.map(item => item.restaurantId).filter(Boolean);
-    const restaurantNames = cart.map(item => item.restaurant).filter(Boolean);
+    const restaurantIds = safeCart.map(item => item.restaurantId).filter(Boolean);
+    const restaurantNames = safeCart.map(item => item.restaurant).filter(Boolean);
     const uniqueRestaurantIds = [...new Set(restaurantIds)];
     const uniqueRestaurantNames = [...new Set(restaurantNames)];
     
@@ -324,10 +382,11 @@ export function CartProvider({ children }) {
       const firstRestaurantName = uniqueRestaurantNames[0];
       
       setCart((prev) => {
+        const safePrev = normalizeCartData(prev)
         const normalizeName = (name) => name ? name.trim().toLowerCase() : '';
         const firstRestaurantNameNormalized = normalizeName(firstRestaurantName);
         
-        return prev.filter((item) => {
+        return safePrev.filter((item) => {
           const itemRestaurantId = item?.restaurantId;
           const itemRestaurantName = item?.restaurant;
           const itemRestaurantNameNormalized = normalizeName(itemRestaurantName);
@@ -351,7 +410,8 @@ export function CartProvider({ children }) {
 
   // Transform cart to match AddToCartAnimation expected structure
   const cartForAnimation = useMemo(() => {
-    const items = cart.map(item => ({
+    const safeCart = normalizeCartData(cart)
+    const items = safeCart.map(item => ({
       product: {
         id: item.id,
         name: item.name,
@@ -360,8 +420,8 @@ export function CartProvider({ children }) {
       quantity: item.quantity || 1,
     }))
     
-    const itemCount = cart.reduce((total, item) => total + (item.quantity || 0), 0)
-    const total = cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0)
+    const itemCount = safeCart.reduce((total, item) => total + (item.quantity || 0), 0)
+    const total = safeCart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 0), 0)
     
     return {
       items,

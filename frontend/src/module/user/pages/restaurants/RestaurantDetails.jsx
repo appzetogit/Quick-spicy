@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef, Component } from "react"
+﻿import { useState, useEffect, useRef, Component } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { restaurantAPI, diningAPI, orderAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
-import { Loader2 } from "lucide-react"
 import { useLocation } from "../../hooks/useLocation"
 import { useZone } from "../../hooks/useZone"
 import {
@@ -142,34 +141,38 @@ function RestaurantDetailsContent() {
                   console.log('✅ Found restaurant in restaurant API by slug/ID:', apiRestaurant)
                 }
               } catch (directLookupError) {
-                // If direct lookup fails, try searching by name (requires zoneId)
+                // If direct lookup fails, try searching by name.
+                // Fallback without zoneId so missing live location never blocks this page.
                 console.log('⚠️ Direct lookup failed, trying search by name...')
 
-                // Only search if zoneId is available (zoneId is required by backend for search)
-                if (!zoneId) {
-                  console.warn('⚠️ User zone not available, cannot search restaurants. Restaurant may not be found.')
-                  // Don't throw error - let it fall through to show "Restaurant not found" message
-                } else {
-                  // Include zoneId for zone-based filtering
-                  const searchParams = { limit: 100, zoneId: zoneId, _ts: Date.now() }
-                  const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
-                  const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
+                const searchVariants = zoneId
+                  ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
+                  : [{ limit: 100, _ts: Date.now() }]
 
-                  // Try to find by slug match or name match
-                  const restaurantName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                  const matchingRestaurant = restaurants.find(r =>
-                    r.slug === slug ||
-                    r.name?.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
-                    r.name?.toLowerCase() === restaurantName.toLowerCase()
-                  )
+                for (const searchParams of searchVariants) {
+                  try {
+                    const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
+                    const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
 
-                  if (matchingRestaurant) {
-                    // Get full restaurant details by ID
-                    const fullResponse = await restaurantAPI.getRestaurantById(matchingRestaurant._id || matchingRestaurant.restaurantId)
-                    if (fullResponse.data && fullResponse.data.success && fullResponse.data.data) {
-                      apiRestaurant = fullResponse.data.data
-                      console.log('✅ Found restaurant in restaurant API by name search:', apiRestaurant)
+                    // Try to find by slug match or name match
+                    const restaurantName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                    const matchingRestaurant = restaurants.find(r =>
+                      r.slug === slug ||
+                      r.name?.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
+                      r.name?.toLowerCase() === restaurantName.toLowerCase()
+                    )
+
+                    if (matchingRestaurant) {
+                      // Get full restaurant details by ID
+                      const fullResponse = await restaurantAPI.getRestaurantById(matchingRestaurant._id || matchingRestaurant.restaurantId)
+                      if (fullResponse.data && fullResponse.data.success && fullResponse.data.data) {
+                        apiRestaurant = fullResponse.data.data
+                        console.log('✅ Found restaurant in restaurant API by name search:', apiRestaurant)
+                        break
+                      }
                     }
+                  } catch (searchError) {
+                    console.warn('⚠️ Search fallback failed for params:', searchParams, searchError?.message)
                   }
                 }
               }
@@ -484,34 +487,34 @@ function RestaurantDetailsContent() {
           if (!restaurantIdForMenu) {
             console.warn('⚠️ No restaurant ID available, searching for restaurant by name...')
             try {
-              // CRITICAL: Only search if zoneId is available (zoneId is required by backend)
-              if (!zoneId) {
-                console.warn('⚠️ User zone not available, cannot search restaurants. Menu may not load.')
-                // Continue without menu - restaurant details are still available
-                return
+              const searchVariants = zoneId
+                ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
+                : [{ limit: 100, _ts: Date.now() }]
+
+              for (const searchParams of searchVariants) {
+                const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
+                const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
+
+                // Try to find by exact name match
+                const matchingRestaurant = restaurants.find(r =>
+                  r.name?.toLowerCase().trim() === transformedRestaurant.name?.toLowerCase().trim()
+                )
+
+                if (matchingRestaurant) {
+                  restaurantIdForMenu = matchingRestaurant._id || matchingRestaurant.restaurantId || matchingRestaurant.id
+                  console.log('✅ Found matching restaurant by name, ID:', restaurantIdForMenu)
+
+                  // Update the restaurant ID in state
+                  setRestaurant(prev => ({
+                    ...prev,
+                    id: restaurantIdForMenu,
+                    restaurantId: restaurantIdForMenu
+                  }))
+                  break
+                }
               }
 
-              // Include zoneId for zone-based filtering
-              const searchParams = { limit: 100, zoneId: zoneId, _ts: Date.now() }
-              const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
-              const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
-
-              // Try to find by exact name match
-              const matchingRestaurant = restaurants.find(r =>
-                r.name?.toLowerCase().trim() === transformedRestaurant.name?.toLowerCase().trim()
-              )
-
-              if (matchingRestaurant) {
-                restaurantIdForMenu = matchingRestaurant._id || matchingRestaurant.restaurantId || matchingRestaurant.id
-                console.log('✅ Found matching restaurant by name, ID:', restaurantIdForMenu)
-
-                // Update the restaurant ID in state
-                setRestaurant(prev => ({
-                  ...prev,
-                  id: restaurantIdForMenu,
-                  restaurantId: restaurantIdForMenu
-                }))
-              } else {
+              if (!restaurantIdForMenu) {
                 console.warn('⚠️ No matching restaurant found by name')
               }
             } catch (searchError) {
@@ -850,15 +853,8 @@ function RestaurantDetailsContent() {
       fetchedSlugRef.current = null
     }
 
-    // Wait for zone to load before fetching (if zone-based search might be needed)
-    // But don't block if we're fetching by direct ID
-    if (loadingZone) {
-      console.log('⏳ Waiting for zone detection before fetching restaurant...')
-      return
-    }
-
     fetchRestaurant()
-  }, [slug, zoneId, loadingZone, restaurant])
+  }, [slug, zoneId, restaurant])
 
   // Track previous values to prevent unnecessary recalculations
   const prevCoordsRef = useRef({ userLat: null, userLng: null, restaurantLat: null, restaurantLng: null })
@@ -1454,7 +1450,9 @@ function RestaurantDetailsContent() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => {
-        const offersLength = Array.isArray(restaurant?.offers) ? restaurant.offers.length : 1
+        const offersLength = Array.isArray(restaurant?.offers) && restaurant.offers.length > 0
+          ? restaurant.offers.length
+          : 1
         return (prev + 1) % offersLength
       })
     }, 3000)
@@ -1472,12 +1470,27 @@ function RestaurantDetailsContent() {
 
   // Show loading state
   if (loadingRestaurant) {
-  return (
-    <AnimatedPage>
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-8 w-8 text-[#EB590E] animate-spin" />
-            <span className="text-sm text-gray-600">Loading restaurant...</span>
+    return (
+      <AnimatedPage>
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0a] animate-pulse">
+          <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+            <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-800" />
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-24 rounded-full bg-gray-200 dark:bg-gray-800" />
+              <div className="h-10 w-10 rounded-full bg-gray-200 dark:bg-gray-800" />
+            </div>
+          </div>
+
+          <div className="px-4 pt-4 space-y-4">
+            <div className="h-8 w-3/4 rounded-lg bg-gray-200 dark:bg-gray-800" />
+            <div className="h-4 w-1/2 rounded bg-gray-200 dark:bg-gray-800" />
+            <div className="h-28 w-full rounded-2xl bg-gray-200 dark:bg-gray-800" />
+
+            <div className="space-y-3 pt-2">
+              <div className="h-24 w-full rounded-2xl bg-gray-200 dark:bg-gray-800" />
+              <div className="h-24 w-full rounded-2xl bg-gray-200 dark:bg-gray-800" />
+              <div className="h-24 w-full rounded-2xl bg-gray-200 dark:bg-gray-800" />
+            </div>
           </div>
         </div>
       </AnimatedPage>
@@ -3200,10 +3213,10 @@ function RestaurantDetailsContent() {
                                   <Percent className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                   <div className="flex-1 text-left">
                                     <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                      {coupon.title}
+                                      {coupon?.title || "Restaurant coupon"}
                                     </p>
                                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                                      Use code {coupon.code}
+                                      Use code {coupon?.code || "N/A"}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-2">
