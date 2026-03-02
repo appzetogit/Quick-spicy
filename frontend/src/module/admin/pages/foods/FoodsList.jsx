@@ -29,10 +29,7 @@ export default function FoodsList() {
     return 0
   }
 
-  const isListEligibleStatus = (status) => {
-    const normalized = String(status || "").toLowerCase()
-    return normalized === "approved" || normalized === "rejected"
-  }
+  const toArray = (value) => (Array.isArray(value) ? value : [])
 
   // Fetch all foods from all restaurants
   useEffect(() => {
@@ -40,11 +37,28 @@ export default function FoodsList() {
       try {
         setLoading(true)
         
-        // First, fetch all restaurants
-        const restaurantsResponse = await adminAPI.getRestaurants({ limit: 1000 })
-        const restaurants = restaurantsResponse?.data?.data?.restaurants || 
-                          restaurantsResponse?.data?.restaurants || 
-                          []
+        // Fetch both active and inactive restaurants to avoid missing foods
+        const [activeRestaurantsResponse, inactiveRestaurantsResponse] = await Promise.all([
+          adminAPI.getRestaurants({ limit: 1000 }),
+          adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
+        ])
+
+        const activeRestaurants = activeRestaurantsResponse?.data?.data?.restaurants ||
+          activeRestaurantsResponse?.data?.restaurants ||
+          []
+        const inactiveRestaurants = inactiveRestaurantsResponse?.data?.data?.restaurants ||
+          inactiveRestaurantsResponse?.data?.restaurants ||
+          []
+
+        const restaurantsMap = new Map()
+        ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
+          const restaurantId = String(restaurant?._id || restaurant?.id || "")
+          if (!restaurantId) return
+          if (!restaurantsMap.has(restaurantId)) {
+            restaurantsMap.set(restaurantId, restaurant)
+          }
+        })
+        const restaurants = Array.from(restaurantsMap.values())
         
         if (restaurants.length === 0) {
           setFoods([])
@@ -61,12 +75,11 @@ export default function FoodsList() {
             const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
             const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
             
-            if (menu && menu.sections) {
+            if (menu && Array.isArray(menu.sections)) {
               // Extract items from sections and subsections
-              menu.sections.forEach((section) => {
+              toArray(menu.sections).forEach((section) => {
                 // Items directly in section
-                if (section.items && Array.isArray(section.items)) {
-                  section.items.forEach((item) => {
+                toArray(section.items).forEach((item) => {
                     allFoods.push({
                       id: item.id || `${restaurantId}-${section.id}-${item.name}`,
                       _id: item._id,
@@ -83,13 +96,10 @@ export default function FoodsList() {
                       originalItem: item // Keep original item data
                     })
                   })
-                }
                 
                 // Items in subsections
-                if (section.subsections && Array.isArray(section.subsections)) {
-                  section.subsections.forEach((subsection) => {
-                    if (subsection.items && Array.isArray(subsection.items)) {
-                      subsection.items.forEach((item) => {
+                toArray(section.subsections).forEach((subsection) => {
+                    toArray(subsection.items).forEach((item) => {
                         allFoods.push({
                           id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
                           _id: item._id,
@@ -107,9 +117,7 @@ export default function FoodsList() {
                           originalItem: item // Keep original item data
                         })
                       })
-                    }
                   })
-                }
               })
             }
           } catch (error) {
@@ -119,7 +127,7 @@ export default function FoodsList() {
         }
         
         allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
-        setFoods(allFoods.filter((food) => isListEligibleStatus(food.approvalStatus)))
+        setFoods(allFoods)
       } catch (error) {
         console.error("Error fetching foods:", error)
         toast.error("Failed to load foods from restaurants")
