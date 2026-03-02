@@ -532,6 +532,18 @@ export default function Home() {
     }
   }, [vegMode])
 
+  // Home should always start with Veg Mode OFF by default.
+  useEffect(() => {
+    if (vegMode !== false) {
+      setVegModeContext(false)
+    }
+    setPrevVegMode(false)
+    setShowVegModePopup(false)
+    setShowSwitchOffPopup(false)
+    setVegModeOption("all")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Handle vegMode toggle - show popup when turned ON or OFF
   const handleVegModeChange = (newValue) => {
     // Skip if we're handling switch off confirmation

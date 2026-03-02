@@ -80,6 +80,7 @@ function RestaurantDetailsContent() {
   const [showMenuOptionsSheet, setShowMenuOptionsSheet] = useState(false)
   const [expandedAddButtons, setExpandedAddButtons] = useState(new Set())
   const [expandedSections, setExpandedSections] = useState(new Set([0])) // Default: Recommended section is expanded
+  const [loadingMenuItems, setLoadingMenuItems] = useState(true)
   const [filters, setFilters] = useState({
     sortBy: null, // "low-to-high" | "high-to-low"
     vegNonVeg: null, // "veg" | "non-veg"
@@ -538,6 +539,7 @@ function RestaurantDetailsContent() {
             .map((value) => String(value).trim())
             .filter((value, index, arr) => arr.indexOf(value) === index)
 
+          setLoadingMenuItems(true)
           if (normalizedLookupIds.length > 0) {
             let hasPreviousOrderForRestaurant = false
             if (isModuleAuthenticated('user')) {
@@ -738,6 +740,8 @@ function RestaurantDetailsContent() {
               } else {
                 console.error('❌ Error fetching menu:', menuError)
               }
+            } finally {
+              setLoadingMenuItems(false)
             }
 
             try {
@@ -800,6 +804,9 @@ function RestaurantDetailsContent() {
               }
             }
           }
+          else {
+            setLoadingMenuItems(false)
+          }
         } else {
           console.error('❌ No restaurant data found in API response')
           console.error('❌ Response:', response)
@@ -842,6 +849,7 @@ function RestaurantDetailsContent() {
         }
       } finally {
         setLoadingRestaurant(false)
+        setLoadingMenuItems(false)
       }
     }
 
@@ -1439,6 +1447,12 @@ function RestaurantDetailsContent() {
       .filter(({ section }) => sectionHasItemsUnder250(section));
   }
 
+  const toRenderableArray = (value) => {
+    if (Array.isArray(value)) return value
+    if (!value || typeof value !== "object") return []
+    return Object.values(value).filter((entry) => entry && typeof entry === "object")
+  }
+
   // Highlight offers/texts for the blue offer line
   const highlightOffers = [
     "Upto 50% OFF",
@@ -1766,6 +1780,8 @@ function RestaurantDetailsContent() {
                 sectionTitle = section.title.trim()
               }
               const sectionId = `menu-section-${originalIndex}`
+              const sectionItems = toRenderableArray(section?.items)
+              const sectionSubsections = toRenderableArray(section?.subsections)
 
               const isExpanded = expandedSections.has(originalIndex)
 
@@ -1839,16 +1855,22 @@ function RestaurantDetailsContent() {
                   )}
 
                   {/* Direct Items */}
-                  {isExpanded && isRecommended && section.items && section.items.length === 0 && (
+                  {isExpanded && isRecommended && !loadingMenuItems && sectionItems.length === 0 && (
                     <div className="text-center py-8">
                       <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">
                         No dish recommended
                       </p>
                     </div>
                   )}
-                  {isExpanded && section.items && section.items.length > 0 && (
+                  {isExpanded && loadingMenuItems && (
+                    <div className="space-y-3 px-1 py-2 animate-pulse">
+                      <div className="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800" />
+                      <div className="h-24 rounded-2xl bg-gray-100 dark:bg-gray-800" />
+                    </div>
+                  )}
+                  {isExpanded && sectionItems.length > 0 && (
                     <div className="space-y-0">
-                      {sortMenuItems(filterMenuItems(section.items)).map((item) => {
+                      {sortMenuItems(filterMenuItems(sectionItems)).map((item) => {
                         const quantity = quantities[item.id] || 0
                         // Determine veg/non-veg based on foodType
                         const isVeg = item.foodType === "Veg"
@@ -2022,13 +2044,14 @@ function RestaurantDetailsContent() {
                   )}
 
                   {/* Subsections */}
-                  {isExpanded && section.subsections && section.subsections.length > 0 && (
+                  {isExpanded && sectionSubsections.length > 0 && (
                     <div className="space-y-4">
-                      {section.subsections.filter(subsection => {
+                      {sectionSubsections.filter(subsection => {
                         // Filter subsections to only show those with items under ₹250
                         if (!showOnlyUnder250) return true;
-                        if (!subsection.items || subsection.items.length === 0) return false;
-                        return subsection.items.some(item => {
+                        const subsectionItems = toRenderableArray(subsection?.items)
+                        if (subsectionItems.length === 0) return false;
+                        return subsectionItems.some(item => {
                           if (item.isAvailable === false) return false;
                           const finalPrice = getFinalPrice(item);
                           return finalPrice <= 250;
@@ -2036,6 +2059,7 @@ function RestaurantDetailsContent() {
                       }).map((subsection, subIndex) => {
                         const subsectionKey = `${originalIndex}-${subIndex}`
                         const isSubsectionExpanded = expandedSections.has(subsectionKey)
+                        const subsectionItems = toRenderableArray(subsection?.items)
 
                         return (
                           <div key={subIndex} className="space-y-4">
@@ -2067,9 +2091,9 @@ function RestaurantDetailsContent() {
                             </div>
 
                             {/* Subsection Items */}
-                            {isSubsectionExpanded && subsection.items && subsection.items.length > 0 && (
+                            {isSubsectionExpanded && subsectionItems.length > 0 && (
                               <div className="space-y-0">
-                                {sortMenuItems(filterMenuItems(subsection.items)).map((item) => {
+                                {sortMenuItems(filterMenuItems(subsectionItems)).map((item) => {
                                   const quantity = quantities[item.id] || 0
                                   // Determine veg/non-veg based on foodType
                                   const isVeg = item.foodType === "Veg"
