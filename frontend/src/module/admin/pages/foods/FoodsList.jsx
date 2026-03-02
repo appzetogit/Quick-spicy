@@ -9,6 +9,7 @@ export default function FoodsList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRestaurant, setSelectedRestaurant] = useState("all")
   const [foods, setFoods] = useState([])
+  const [restaurantsForFilter, setRestaurantsForFilter] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [selectedFood, setSelectedFood] = useState(null)
@@ -59,6 +60,15 @@ export default function FoodsList() {
           }
         })
         const restaurants = Array.from(restaurantsMap.values())
+        setRestaurantsForFilter(
+          restaurants
+            .map((restaurant) => ({
+              id: String(restaurant?._id || restaurant?.id || ""),
+              name: restaurant?.name || "Unknown Restaurant",
+            }))
+            .filter((restaurant) => restaurant.id)
+            .sort((a, b) => a.name.localeCompare(b.name))
+        )
         
         if (restaurants.length === 0) {
           setFoods([])
@@ -127,11 +137,16 @@ export default function FoodsList() {
         }
         
         allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
-        setFoods(allFoods)
+        setFoods(
+          allFoods.filter(
+            (food) => String(food.approvalStatus || "").toLowerCase() === "approved"
+          )
+        )
       } catch (error) {
         console.error("Error fetching foods:", error)
         toast.error("Failed to load foods from restaurants")
         setFoods([])
+        setRestaurantsForFilter([])
       } finally {
         setLoading(false)
       }
@@ -196,20 +211,8 @@ export default function FoodsList() {
   }, [foods, searchQuery, selectedRestaurant])
 
   const restaurantOptions = useMemo(() => {
-    const uniqueRestaurants = new Map()
-
-    foods.forEach((food) => {
-      if (!food.restaurantId) return
-      if (!uniqueRestaurants.has(String(food.restaurantId))) {
-        uniqueRestaurants.set(String(food.restaurantId), {
-          id: String(food.restaurantId),
-          name: food.restaurantName || "Unknown Restaurant",
-        })
-      }
-    })
-
-    return Array.from(uniqueRestaurants.values()).sort((a, b) => a.name.localeCompare(b.name))
-  }, [foods])
+    return restaurantsForFilter
+  }, [restaurantsForFilter])
 
   const handleDelete = async (id) => {
     const food = foods.find(f => f.id === id)
