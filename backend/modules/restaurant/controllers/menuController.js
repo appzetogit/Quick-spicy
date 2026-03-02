@@ -42,6 +42,167 @@ const getItemAddedAtMs = (item = {}) => {
 const sortNewestFirst = (items = []) =>
   [...items].sort((a, b) => getItemAddedAtMs(b) - getItemAddedAtMs(a));
 
+const normalizeCategoryKey = (value) => String(value || '').trim().toLowerCase();
+
+const buildCategoryItemCountMap = (sections = []) => {
+  const counts = new Map();
+
+  const increment = (categoryName) => {
+    const key = normalizeCategoryKey(categoryName);
+    if (!key) return;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  };
+
+  (Array.isArray(sections) ? sections : []).forEach((section) => {
+    const sectionName = String(section?.name || '').trim();
+
+    (section?.items || []).forEach((item) => {
+      increment(item?.category || sectionName);
+    });
+
+    (section?.subsections || []).forEach((subsection) => {
+      (subsection?.items || []).forEach((item) => {
+        increment(item?.category || sectionName);
+      });
+    });
+  });
+
+  return counts;
+};
+
+const collectMenuCategoryNames = (sections = []) => {
+  const namesByKey = new Map();
+
+  const remember = (rawName) => {
+    const name = String(rawName || '').trim();
+    const key = normalizeCategoryKey(name);
+    if (!key || namesByKey.has(key)) return;
+    namesByKey.set(key, name);
+  };
+
+  (Array.isArray(sections) ? sections : []).forEach((section) => {
+    remember(section?.name);
+
+    (section?.items || []).forEach((item) => {
+      remember(item?.category || section?.name);
+    });
+
+    (section?.subsections || []).forEach((subsection) => {
+      (subsection?.items || []).forEach((item) => {
+        remember(item?.category || section?.name);
+      });
+    });
+  });
+
+  return namesByKey;
+};
+
+const syncRestaurantCategoriesFromMenu = async (restaurantId, sections = []) => {
+  const categoryNamesByKey = collectMenuCategoryNames(sections);
+  const itemCounts = buildCategoryItemCountMap(sections);
+
+  if (categoryNamesByKey.size === 0) {
+    return;
+  }
+
+  const existingCategories = await RestaurantCategory.find({ restaurant: restaurantId });
+  const existingByKey = new Map(
+    existingCategories.map((category) => [normalizeCategoryKey(category.name), category])
+  );
+
+  const categoriesToCreate = [];
+  let nextOrder =
+    existingCategories.reduce((maxOrder, category) => Math.max(maxOrder, Number(category.order) || 0), -1) + 1;
+
+  for (const [key, name] of categoryNamesByKey.entries()) {
+    const existingCategory = existingByKey.get(key);
+    const itemCount = itemCounts.get(key) || 0;
+
+    if (existingCategory) {
+      if (existingCategory.itemCount !== itemCount) {
+        existingCategory.itemCount = itemCount;
+        await existingCategory.save();
+      }
+      continue;
+    }
+
+    categoriesToCreate.push({
+      restaurant: restaurantId,
+      name,
+      description: '',
+      order: nextOrder++,
+      isActive: true,
+      itemCount,
+    });
+  }
+
+  if (categoriesToCreate.length > 0) {
+    try {
+      await RestaurantCategory.insertMany(categoriesToCreate, { ordered: false });
+    } catch (error) {
+      // Ignore duplicate insert races; the unique index already guarantees correctness.
+      if (error?.code !== 11000) {
+        throw error;
+      }
+    }
+  }
+};
+
+const ensureMenuSectionsForActiveCategories = async (menu, restaurantId) => {
+  if (!menu) return menu;
+
+  const activeCategories = await RestaurantCategory.find({
+    restaurant: restaurantId,
+    isActive: true,
+  })
+    .select('name order isActive')
+    .sort({ order: 1, createdAt: 1 })
+    .lean();
+
+  if (!activeCategories.length) {
+    return menu;
+  }
+
+  const existingSectionKeys = new Set(
+    (menu.sections || []).map((section) => normalizeCategoryKey(section?.name))
+  );
+
+  let hasChanges = false;
+
+  activeCategories.forEach((category) => {
+    const categoryName = String(category?.name || '').trim();
+    const categoryKey = normalizeCategoryKey(categoryName);
+    if (!categoryKey || existingSectionKeys.has(categoryKey)) {
+      return;
+    }
+
+    menu.sections.push({
+      id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      name: categoryName,
+      items: [],
+      subsections: [],
+      isEnabled: category.isActive !== false,
+      order: Number.isFinite(category.order) ? category.order : menu.sections.length,
+    });
+    existingSectionKeys.add(categoryKey);
+    hasChanges = true;
+  });
+
+  if (!hasChanges) {
+    return menu;
+  }
+
+  menu.sections.sort((a, b) => {
+    const aOrder = Number.isFinite(a?.order) ? a.order : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(b?.order) ? b.order : Number.MAX_SAFE_INTEGER;
+    return aOrder - bOrder;
+  });
+
+  menu.markModified('sections');
+  await menu.save();
+  return menu;
+};
+
 // Get menu for a restaurant
 export const getMenu = asyncHandler(async (req, res) => {
   // Restaurant is attached by authenticate middleware
@@ -59,6 +220,8 @@ export const getMenu = asyncHandler(async (req, res) => {
     });
     await menu.save();
   }
+
+  menu = await ensureMenuSectionsForActiveCategories(menu, restaurantId);
 
   return successResponse(res, 200, 'Menu retrieved successfully', {
     menu: {
@@ -279,6 +442,7 @@ export const updateMenu = asyncHandler(async (req, res) => {
   console.log('[UPDATE MENU] About to save menu...');
   await menu.save();
   console.log('[UPDATE MENU] Menu saved successfully');
+  await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
   // Debug: Verify what was saved - reload from database
   const savedMenu = await Menu.findOne({ restaurant: restaurantId }).lean();
@@ -350,6 +514,7 @@ export const addSection = asyncHandler(async (req, res) => {
 
   menu.sections.push(newSection);
   await menu.save();
+  await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
   return successResponse(res, 201, 'Section added successfully', {
     section: newSection,
@@ -433,6 +598,7 @@ export const addItemToSection = asyncHandler(async (req, res) => {
 
   section.items.push(newItem);
   await menu.save();
+  await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
   return successResponse(res, 201, 'Item added successfully', {
     item: newItem,
@@ -487,6 +653,7 @@ export const addSubsectionToSection = asyncHandler(async (req, res) => {
 
   section.subsections.push(newSubsection);
   await menu.save();
+  await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
   return successResponse(res, 201, 'Subsection added successfully', {
     subsection: newSubsection,
@@ -570,6 +737,7 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
 
   subsection.items.push(newItem);
   await menu.save();
+  await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
   return successResponse(res, 201, 'Item added to subsection successfully', {
     item: newItem,

@@ -61,6 +61,67 @@ const isStepComplete = (stepData, stepNumber) => {
   return false
 }
 
+const buildOnboardingLikeDataFromRestaurant = (restaurant) => {
+  const onboarding = restaurant?.onboarding || {}
+
+  return {
+    completedSteps: onboarding.completedSteps,
+    step1: onboarding.step1 || {
+      restaurantName: restaurant?.name,
+      ownerName: restaurant?.ownerName,
+      ownerEmail: restaurant?.ownerEmail || restaurant?.email,
+      ownerPhone: restaurant?.ownerPhone || restaurant?.phone,
+      primaryContactNumber: restaurant?.primaryContactNumber,
+      location: restaurant?.location,
+    },
+    step2: onboarding.step2 || {
+      cuisines: restaurant?.cuisines,
+      deliveryTimings: restaurant?.deliveryTimings,
+      openDays: restaurant?.openDays,
+      menuImageUrls: restaurant?.menuImages,
+      profileImageUrl: restaurant?.profileImage,
+    },
+    step3: onboarding.step3 || null,
+  }
+}
+
+export const isRestaurantOnboardingComplete = (restaurant) => {
+  if (!restaurant) return false
+
+  if (restaurant?.isActive === true) {
+    return true
+  }
+
+  const onboardingLikeData = buildOnboardingLikeDataFromRestaurant(restaurant)
+  if (onboardingLikeData.completedSteps === 4) {
+    return true
+  }
+
+  const step1Complete = isStepComplete(onboardingLikeData.step1, 1)
+  const step2Complete = isStepComplete(onboardingLikeData.step2, 2)
+  const step3Complete = isStepComplete(onboardingLikeData.step3, 3)
+
+  if (step1Complete && step2Complete && step3Complete) {
+    return true
+  }
+
+  // Some older or migrated restaurant accounts have complete live profile data
+  // without a reliable onboarding.completedSteps value.
+  const hasOperationalProfile =
+    Boolean(String(restaurant?.name || "").trim()) &&
+    Boolean(String(restaurant?.restaurantId || "").trim()) &&
+    Boolean(String(restaurant?.slug || "").trim()) &&
+    step1Complete &&
+    step2Complete &&
+    (restaurant?.approvedAt || restaurant?.rejectedAt || restaurant?.rejectionReason || restaurant?.isActive === false)
+
+  if (hasOperationalProfile) {
+    return true
+  }
+
+  return false
+}
+
 // Determine which step to show based on completeness
 export const determineStepToShow = (data) => {
   if (!data) return 1
@@ -92,6 +153,16 @@ export const determineStepToShow = (data) => {
 // Check onboarding status from API and return the step to navigate to
 export const checkOnboardingStatus = async () => {
   try {
+    const restaurantResponse = await api.get("/restaurant/auth/me")
+    const restaurant =
+      restaurantResponse?.data?.data?.restaurant ||
+      restaurantResponse?.data?.restaurant ||
+      null
+
+    if (restaurant && isRestaurantOnboardingComplete(restaurant)) {
+      return null
+    }
+
     const res = await api.get("/restaurant/onboarding")
     const data = res?.data?.data?.onboarding
     if (data) {
@@ -115,4 +186,3 @@ export const checkOnboardingStatus = async () => {
     return 1
   }
 }
-
