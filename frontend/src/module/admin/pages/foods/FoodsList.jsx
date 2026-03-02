@@ -35,6 +35,7 @@ export default function FoodsList() {
   const [imagePreviewUrl, setImagePreviewUrl] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const [imageVersion, setImageVersion] = useState(Date.now())
 
   const getItemCreatedMs = (item = {}) => {
     const direct = [item.createdAt, item.addedAt, item.requestedAt, item.updatedAt]
@@ -52,6 +53,10 @@ export default function FoodsList() {
   }
 
   const toArray = (value) => (Array.isArray(value) ? value : [])
+  const withImageVersion = (url) => {
+    if (!url || typeof url !== "string") return "https://via.placeholder.com/40"
+    return `${url}${url.includes("?") ? "&" : "?"}v=${imageVersion}`
+  }
 
   const fetchAllFoods = useCallback(async () => {
     try {
@@ -98,7 +103,7 @@ export default function FoodsList() {
       for (const restaurant of restaurants) {
         try {
           const restaurantId = restaurant._id || restaurant.id
-          const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
+          const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
           const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
 
           if (menu && Array.isArray(menu.sections)) {
@@ -157,6 +162,7 @@ export default function FoodsList() {
           (food) => String(food.approvalStatus || "").toLowerCase() === "approved"
         )
       )
+      setImageVersion(Date.now())
     } catch (error) {
       console.error("Error fetching foods:", error)
       toast.error("Failed to load foods from restaurants")
@@ -282,7 +288,7 @@ export default function FoodsList() {
   }
 
   const loadRestaurantMenu = useCallback(async (restaurantId) => {
-    const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
+    const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
     return menuResponse?.data?.data?.menu || menuResponse?.data?.menu || { sections: [] }
   }, [])
 
@@ -380,15 +386,16 @@ export default function FoodsList() {
 
       const menu = await loadRestaurantMenu(foodForm.restaurantId)
       const menuSections = Array.isArray(menu.sections) ? [...menu.sections] : []
-      const sectionIndex = menuSections.findIndex(
+      const targetSectionIndex = menuSections.findIndex(
         (section) => String(section.name || "").trim().toLowerCase() === foodForm.sectionName.trim().toLowerCase()
       )
 
       const targetSection =
-        sectionIndex >= 0
+        targetSectionIndex >= 0
           ? {
-              ...menuSections[sectionIndex],
-              items: Array.isArray(menuSections[sectionIndex].items) ? [...menuSections[sectionIndex].items] : [],
+              ...menuSections[targetSectionIndex],
+              items: Array.isArray(menuSections[targetSectionIndex].items) ? [...menuSections[targetSectionIndex].items] : [],
+              subsections: Array.isArray(menuSections[targetSectionIndex].subsections) ? [...menuSections[targetSectionIndex].subsections] : [],
             }
           : {
               id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
@@ -417,21 +424,59 @@ export default function FoodsList() {
         approvalStatus: "approved",
       }
 
+      const editingItemId = String(editingFood?.originalItem?.id || editingFood?.id || "")
+
       if (foodFormMode === "edit") {
-        targetSection.items = targetSection.items.map((item) =>
-          String(item.id) === String(editingFood?.originalItem?.id || editingFood?.id) ? nextItem : item
+        let itemReplaced = false
+
+        const removeItemById = (items = []) =>
+          items.filter((item) => {
+            const isTarget = String(item?.id || "") === editingItemId
+            if (isTarget) itemReplaced = true
+            return !isTarget
+          })
+
+        const cleanedSections = menuSections.map((section) => ({
+          ...section,
+          items: removeItemById(Array.isArray(section.items) ? [...section.items] : []),
+          subsections: Array.isArray(section.subsections)
+            ? section.subsections.map((subsection) => ({
+                ...subsection,
+                items: removeItemById(Array.isArray(subsection.items) ? [...subsection.items] : []),
+              }))
+            : [],
+        }))
+
+        if (!itemReplaced) {
+          throw new Error("Could not find the selected food item in menu data.")
+        }
+
+        const finalTargetSectionIndex = cleanedSections.findIndex(
+          (section) => String(section.name || "").trim().toLowerCase() === foodForm.sectionName.trim().toLowerCase()
         )
+
+        if (finalTargetSectionIndex >= 0) {
+          cleanedSections[finalTargetSectionIndex] = {
+            ...cleanedSections[finalTargetSectionIndex],
+            items: [...(cleanedSections[finalTargetSectionIndex].items || []), nextItem],
+          }
+        } else {
+          cleanedSections.push({
+            ...targetSection,
+            items: [nextItem],
+          })
+        }
+
+        await persistRestaurantMenu(foodForm.restaurantId, cleanedSections)
       } else {
         targetSection.items.push(nextItem)
+        if (targetSectionIndex >= 0) {
+          menuSections[targetSectionIndex] = targetSection
+        } else {
+          menuSections.push(targetSection)
+        }
+        await persistRestaurantMenu(foodForm.restaurantId, menuSections)
       }
-
-      if (sectionIndex >= 0) {
-        menuSections[sectionIndex] = targetSection
-      } else {
-        menuSections.push(targetSection)
-      }
-
-      await persistRestaurantMenu(foodForm.restaurantId, menuSections)
       toast.success(foodFormMode === "edit" ? "Food updated successfully" : "Food added successfully")
       setShowFoodFormModal(false)
       setEditingFood(null)
@@ -637,9 +682,11 @@ export default function FoodsList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
                         <img
-                          src={food.image}
+                          src={withImageVersion(food.image)}
                           alt={food.name}
                           className="w-full h-full object-cover"
+                          key={`${food.id}-${imageVersion}`}
+                          loading="lazy"
                           onError={(e) => {
                             e.target.src = "https://via.placeholder.com/40"
                           }}
@@ -762,9 +809,9 @@ export default function FoodsList() {
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-4">
                 <img
-                  src={selectedFood.image}
-                  alt={selectedFood.name}
-                  className="w-20 h-20 rounded-xl object-cover border border-slate-200"
+                          src={withImageVersion(selectedFood.image)}
+                          alt={selectedFood.name}
+                          className="w-20 h-20 rounded-xl object-cover border border-slate-200"
                   onError={(e) => {
                     e.target.src = "https://via.placeholder.com/64"
                   }}

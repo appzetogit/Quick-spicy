@@ -1202,9 +1202,15 @@ export const adminAPI = {
   },
 
   // Get restaurant menu by ID (admin)
-  getRestaurantMenuById: (id) => {
+  getRestaurantMenuById: (id, options = {}) => {
+    const params = { ...(options.params || {}) };
+    if (options.noCache) {
+      params._ts = Date.now();
+    }
+    const config = Object.keys(params).length > 0 ? { params } : {};
     return apiClient.get(
       API_ENDPOINTS.ADMIN.RESTAURANT_MENU_BY_ID.replace(":id", id),
+      config,
     );
   },
 
