@@ -635,7 +635,34 @@ export default function RestaurantDetails() {
               }
               console.log('✅ Menu resolved using lookup ID:', resolvedMenuLookupId)
               if (menuResponse.data && menuResponse.data.success && menuResponse.data.data && menuResponse.data.data.menu) {
-                const menuSections = menuResponse.data.data.menu.sections || []
+                const rawSections = menuResponse.data.data.menu.sections || []
+                const toArray = (value) => {
+                  if (Array.isArray(value)) return value
+                  if (!value || typeof value !== "object") return []
+                  return Object.values(value).filter((entry) => entry && typeof entry === "object")
+                }
+                const normalizeItem = (item = {}) => ({
+                  ...item,
+                  id: String(item.id || item._id || `${Date.now()}-${Math.random()}`),
+                  name: item.name || "Unnamed Item",
+                  foodType: item.foodType || "Non-Veg",
+                  price: Number(item.price || 0),
+                  isAvailable: item.isAvailable !== false,
+                  isRecommended: item.isRecommended === true,
+                  description: typeof item.description === "string" ? item.description : "",
+                })
+                const menuSections = toArray(rawSections).map((section, sectionIndex) => ({
+                  ...section,
+                  id: String(section.id || section._id || `section-${sectionIndex}`),
+                  name: section.name || section.title || "Unnamed Section",
+                  items: toArray(section.items).map(normalizeItem),
+                  subsections: toArray(section.subsections).map((subsection, subsectionIndex) => ({
+                    ...subsection,
+                    id: String(subsection.id || subsection._id || `subsection-${sectionIndex}-${subsectionIndex}`),
+                    name: subsection.name || "Unnamed Subsection",
+                    items: toArray(subsection.items).map(normalizeItem),
+                  })),
+                }))
 
                 // Collect all recommended items from all sections
                 // Only include items that are both recommended (isRecommended === true) AND available (isAvailable !== false)
@@ -694,7 +721,9 @@ export default function RestaurantDetails() {
                 }))
 
                 // Set first 3 sections (Recommended, Starters, Main Course) as expanded by default
-                const defaultExpandedSections = new Set([0, 1, 2]) // Index 0, 1, 2
+                const defaultExpandedSections = new Set(
+                  Array.from({ length: Math.min(3, finalMenuSections.length) }, (_, idx) => idx)
+                )
                 setExpandedSections(defaultExpandedSections)
 
                 console.log('Fetched menu sections with recommended items:', finalMenuSections)
