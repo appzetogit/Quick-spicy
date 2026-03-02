@@ -1,9 +1,20 @@
-import { useState, useMemo, useEffect } from "react"
-import { Search, Trash2, Loader2, Eye } from "lucide-react"
-import { adminAPI, restaurantAPI } from "@/lib/api"
-import apiClient from "@/lib/api"
+import { useState, useMemo, useEffect, useCallback } from "react"
+import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown } from "lucide-react"
+import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+const createFoodForm = () => ({
+  restaurantId: "",
+  sectionName: "",
+  name: "",
+  price: "",
+  description: "",
+  image: "",
+  foodType: "Non-Veg",
+  isAvailable: true,
+  preparationTime: "",
+})
 
 export default function FoodsList() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -14,6 +25,14 @@ export default function FoodsList() {
   const [deleting, setDeleting] = useState(false)
   const [selectedFood, setSelectedFood] = useState(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [showFoodFormModal, setShowFoodFormModal] = useState(false)
+  const [foodFormMode, setFoodFormMode] = useState("add")
+  const [foodForm, setFoodForm] = useState(createFoodForm())
+  const [editingFood, setEditingFood] = useState(null)
+  const [submittingFood, setSubmittingFood] = useState(false)
+  const [categoryOptions, setCategoryOptions] = useState([])
+  const [selectedImageFile, setSelectedImageFile] = useState(null)
+  const [imagePreviewUrl, setImagePreviewUrl] = useState("")
 
   const getItemCreatedMs = (item = {}) => {
     const direct = [item.createdAt, item.addedAt, item.requestedAt, item.updatedAt]
@@ -32,128 +51,123 @@ export default function FoodsList() {
 
   const toArray = (value) => (Array.isArray(value) ? value : [])
 
-  // Fetch all foods from all restaurants
-  useEffect(() => {
-    const fetchAllFoods = async () => {
-      try {
-        setLoading(true)
-        
-        // Fetch both active and inactive restaurants to avoid missing foods
-        const [activeRestaurantsResponse, inactiveRestaurantsResponse] = await Promise.all([
-          adminAPI.getRestaurants({ limit: 1000 }),
-          adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
-        ])
+  const fetchAllFoods = useCallback(async () => {
+    try {
+      setLoading(true)
 
-        const activeRestaurants = activeRestaurantsResponse?.data?.data?.restaurants ||
-          activeRestaurantsResponse?.data?.restaurants ||
-          []
-        const inactiveRestaurants = inactiveRestaurantsResponse?.data?.data?.restaurants ||
-          inactiveRestaurantsResponse?.data?.restaurants ||
-          []
+      const [activeRestaurantsResponse, inactiveRestaurantsResponse] = await Promise.all([
+        adminAPI.getRestaurants({ limit: 1000 }),
+        adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
+      ])
 
-        const restaurantsMap = new Map()
-        ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
-          const restaurantId = String(restaurant?._id || restaurant?.id || "")
-          if (!restaurantId) return
-          if (!restaurantsMap.has(restaurantId)) {
-            restaurantsMap.set(restaurantId, restaurant)
-          }
-        })
-        const restaurants = Array.from(restaurantsMap.values())
-        setRestaurantsForFilter(
-          restaurants
-            .map((restaurant) => ({
-              id: String(restaurant?._id || restaurant?.id || ""),
-              name: restaurant?.name || "Unknown Restaurant",
-            }))
-            .filter((restaurant) => restaurant.id)
-            .sort((a, b) => a.name.localeCompare(b.name))
-        )
-        
-        if (restaurants.length === 0) {
-          setFoods([])
-          setLoading(false)
-          return
+      const activeRestaurants = activeRestaurantsResponse?.data?.data?.restaurants ||
+        activeRestaurantsResponse?.data?.restaurants ||
+        []
+      const inactiveRestaurants = inactiveRestaurantsResponse?.data?.data?.restaurants ||
+        inactiveRestaurantsResponse?.data?.restaurants ||
+        []
+
+      const restaurantsMap = new Map()
+      ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
+        const restaurantId = String(restaurant?._id || restaurant?.id || "")
+        if (!restaurantId) return
+        if (!restaurantsMap.has(restaurantId)) {
+          restaurantsMap.set(restaurantId, restaurant)
         }
+      })
+      const restaurants = Array.from(restaurantsMap.values())
+      setRestaurantsForFilter(
+        restaurants
+          .map((restaurant) => ({
+            id: String(restaurant?._id || restaurant?.id || ""),
+            name: restaurant?.name || "Unknown Restaurant",
+          }))
+          .filter((restaurant) => restaurant.id)
+          .sort((a, b) => a.name.localeCompare(b.name))
+      )
 
-        // Fetch menu for each restaurant and extract all food items
-        const allFoods = []
-        
-        for (const restaurant of restaurants) {
-          try {
-            const restaurantId = restaurant._id || restaurant.id
-            const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
-            const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
-            
-            if (menu && Array.isArray(menu.sections)) {
-              // Extract items from sections and subsections
-              toArray(menu.sections).forEach((section) => {
-                // Items directly in section
-                toArray(section.items).forEach((item) => {
-                    allFoods.push({
-                      id: item.id || `${restaurantId}-${section.id}-${item.name}`,
-                      _id: item._id,
-                      name: item.name || "Unnamed Item",
-                      image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                      priority: "Normal", // Default priority
-                      status: item.isAvailable !== false && item.approvalStatus !== 'rejected',
-                      restaurantId: restaurantId,
-                      restaurantName: restaurant.name || "Unknown Restaurant",
-                      sectionName: section.name || "Unknown Section",
-                      price: item.price || 0,
-                      foodType: item.foodType || "Non-Veg",
-                      approvalStatus: item.approvalStatus || 'pending',
-                      originalItem: item // Keep original item data
-                    })
-                  })
-                
-                // Items in subsections
-                toArray(section.subsections).forEach((subsection) => {
-                    toArray(subsection.items).forEach((item) => {
-                        allFoods.push({
-                          id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
-                          _id: item._id,
-                          name: item.name || "Unnamed Item",
-                          image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                          priority: "Normal", // Default priority
-                          status: item.isAvailable !== false && item.approvalStatus !== 'rejected',
-                          restaurantId: restaurantId,
-                          restaurantName: restaurant.name || "Unknown Restaurant",
-                          sectionName: section.name || "Unknown Section",
-                          subsectionName: subsection.name || "Unknown Subsection",
-                          price: item.price || 0,
-                          foodType: item.foodType || "Non-Veg",
-                          approvalStatus: item.approvalStatus || 'pending',
-                          originalItem: item // Keep original item data
-                        })
-                      })
-                  })
-              })
-            }
-          } catch (error) {
-            // Silently skip restaurants that don't have menus or have errors
-            console.warn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
-          }
-        }
-        
-        allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
-        setFoods(
-          allFoods.filter(
-            (food) => String(food.approvalStatus || "").toLowerCase() === "approved"
-          )
-        )
-      } catch (error) {
-        console.error("Error fetching foods:", error)
-        toast.error("Failed to load foods from restaurants")
+      if (restaurants.length === 0) {
         setFoods([])
-        setRestaurantsForFilter([])
-      } finally {
-        setLoading(false)
+        return
       }
-    }
 
-    fetchAllFoods()
+      const allFoods = []
+
+      for (const restaurant of restaurants) {
+        try {
+          const restaurantId = restaurant._id || restaurant.id
+          const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
+          const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
+
+          if (menu && Array.isArray(menu.sections)) {
+            toArray(menu.sections).forEach((section) => {
+              toArray(section.items).forEach((item) => {
+                allFoods.push({
+                  id: item.id || `${restaurantId}-${section.id}-${item.name}`,
+                  _id: item._id,
+                  name: item.name || "Unnamed Item",
+                  image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
+                  priority: "Normal",
+                  status: item.isAvailable !== false && item.approvalStatus !== "rejected",
+                  restaurantId,
+                  restaurantName: restaurant.name || "Unknown Restaurant",
+                  sectionId: section.id,
+                  sectionName: section.name || "Unknown Section",
+                  price: item.price || 0,
+                  foodType: item.foodType || "Non-Veg",
+                  approvalStatus: item.approvalStatus || "pending",
+                  originalItem: item,
+                })
+              })
+
+              toArray(section.subsections).forEach((subsection) => {
+                toArray(subsection.items).forEach((item) => {
+                  allFoods.push({
+                    id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
+                    _id: item._id,
+                    name: item.name || "Unnamed Item",
+                    image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
+                    priority: "Normal",
+                    status: item.isAvailable !== false && item.approvalStatus !== "rejected",
+                    restaurantId,
+                    restaurantName: restaurant.name || "Unknown Restaurant",
+                    sectionId: section.id,
+                    sectionName: section.name || "Unknown Section",
+                    subsectionId: subsection.id,
+                    subsectionName: subsection.name || "Unknown Subsection",
+                    price: item.price || 0,
+                    foodType: item.foodType || "Non-Veg",
+                    approvalStatus: item.approvalStatus || "pending",
+                    originalItem: item,
+                  })
+                })
+              })
+            })
+          }
+        } catch (error) {
+          console.warn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
+        }
+      }
+
+      allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
+      setFoods(
+        allFoods.filter(
+          (food) => String(food.approvalStatus || "").toLowerCase() === "approved"
+        )
+      )
+    } catch (error) {
+      console.error("Error fetching foods:", error)
+      toast.error("Failed to load foods from restaurants")
+      setFoods([])
+      setRestaurantsForFilter([])
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchAllFoods()
+  }, [fetchAllFoods])
 
   // Format ID to FOOD format (e.g., FOOD519399)
   const formatFoodId = (id) => {
@@ -214,6 +228,203 @@ export default function FoodsList() {
     return restaurantsForFilter
   }, [restaurantsForFilter])
 
+  const openAddFoodModal = () => {
+    setFoodFormMode("add")
+    setEditingFood(null)
+    setFoodForm({
+      ...createFoodForm(),
+      restaurantId: selectedRestaurant !== "all" ? selectedRestaurant : "",
+    })
+    setSelectedImageFile(null)
+    setImagePreviewUrl("")
+    setShowFoodFormModal(true)
+  }
+
+  const openEditFoodModal = (food) => {
+    setFoodFormMode("edit")
+    setEditingFood(food)
+    setFoodForm({
+      restaurantId: String(food.restaurantId || ""),
+      sectionName: String(food.sectionName || ""),
+      name: String(food.originalItem?.name || ""),
+      price: String(food.originalItem?.price ?? ""),
+      description: String(food.originalItem?.description || ""),
+      image: String(food.originalItem?.image || food.originalItem?.images?.[0] || ""),
+      foodType: String(food.originalItem?.foodType || "Non-Veg"),
+      isAvailable: food.originalItem?.isAvailable !== false,
+      preparationTime: String(food.originalItem?.preparationTime || ""),
+    })
+    setSelectedImageFile(null)
+    setImagePreviewUrl(String(food.originalItem?.image || food.originalItem?.images?.[0] || ""))
+    setShowFoodFormModal(true)
+  }
+
+  const loadRestaurantMenu = useCallback(async (restaurantId) => {
+    const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId)
+    return menuResponse?.data?.data?.menu || menuResponse?.data?.menu || { sections: [] }
+  }, [])
+
+  useEffect(() => {
+    if (!showFoodFormModal || !foodForm.restaurantId) {
+      setCategoryOptions([])
+      return
+    }
+
+    let cancelled = false
+
+    const loadCategoryOptions = async () => {
+      try {
+        const menu = await loadRestaurantMenu(foodForm.restaurantId)
+        const menuSections = Array.isArray(menu.sections) ? menu.sections : []
+        const menuOptions = menuSections
+          .map((section) => ({
+            id: section.id || section.name,
+            name: section.name || "Unknown Category",
+          }))
+          .filter((section) => String(section.name || "").trim())
+
+        const fallbackOptions = foods.reduce((acc, food) => {
+          if (String(food.restaurantId) !== String(foodForm.restaurantId)) return acc
+          if (!acc.some((section) => String(section.name) === String(food.sectionName || ""))) {
+            acc.push({
+              id: food.sectionId || food.sectionName,
+              name: food.sectionName || "Unknown Category",
+            })
+          }
+          return acc
+        }, [])
+
+        const mergedOptions = [...menuOptions, ...fallbackOptions].filter(
+          (section, index, array) =>
+            array.findIndex(
+              (candidate) => String(candidate.name || "").trim().toLowerCase() === String(section.name || "").trim().toLowerCase()
+            ) === index
+        )
+
+        if (!cancelled) {
+          setCategoryOptions(mergedOptions)
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setCategoryOptions([])
+        }
+      }
+    }
+
+    loadCategoryOptions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [foodForm.restaurantId, foods, loadRestaurantMenu, showFoodFormModal])
+
+  const persistRestaurantMenu = async (restaurantId, sections) => {
+    await adminAPI.updateRestaurantMenuById(restaurantId, { sections })
+  }
+
+  const handleFoodFormSubmit = async () => {
+    if (!foodForm.restaurantId) {
+      toast.error("Please select a restaurant")
+      return
+    }
+    if (!foodForm.sectionName.trim()) {
+      toast.error("Please select or enter a category")
+      return
+    }
+    if (!foodForm.name.trim()) {
+      toast.error("Food name is required")
+      return
+    }
+
+    const parsedPrice = Number(foodForm.price)
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      toast.error("Price must be greater than 0")
+      return
+    }
+
+    try {
+      setSubmittingFood(true)
+      let imageUrl = foodForm.image.trim()
+
+      if (selectedImageFile) {
+        const uploadResponse = await uploadAPI.uploadMedia(selectedImageFile, {
+          folder: "foods",
+        })
+        imageUrl =
+          uploadResponse?.data?.data?.url ||
+          uploadResponse?.data?.url ||
+          imageUrl
+      }
+
+      const menu = await loadRestaurantMenu(foodForm.restaurantId)
+      const menuSections = Array.isArray(menu.sections) ? [...menu.sections] : []
+      const sectionIndex = menuSections.findIndex(
+        (section) => String(section.name || "").trim().toLowerCase() === foodForm.sectionName.trim().toLowerCase()
+      )
+
+      const targetSection =
+        sectionIndex >= 0
+          ? {
+              ...menuSections[sectionIndex],
+              items: Array.isArray(menuSections[sectionIndex].items) ? [...menuSections[sectionIndex].items] : [],
+            }
+          : {
+              id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+              name: foodForm.sectionName.trim(),
+              isEnabled: true,
+              order: menuSections.length,
+              items: [],
+              subsections: [],
+            }
+
+      const nextItem = {
+        ...(foodFormMode === "edit" ? editingFood?.originalItem : {}),
+        id:
+          foodFormMode === "edit"
+            ? editingFood?.originalItem?.id || editingFood?.id
+            : `item-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        name: foodForm.name.trim(),
+        price: parsedPrice,
+        description: foodForm.description.trim(),
+        image: imageUrl,
+        images: imageUrl ? [imageUrl] : [],
+        foodType: foodForm.foodType === "Veg" ? "Veg" : "Non-Veg",
+        isAvailable: foodForm.isAvailable !== false,
+        category: foodForm.sectionName.trim(),
+        preparationTime: foodForm.preparationTime.trim(),
+        approvalStatus: "approved",
+      }
+
+      if (foodFormMode === "edit") {
+        targetSection.items = targetSection.items.map((item) =>
+          String(item.id) === String(editingFood?.originalItem?.id || editingFood?.id) ? nextItem : item
+        )
+      } else {
+        targetSection.items.push(nextItem)
+      }
+
+      if (sectionIndex >= 0) {
+        menuSections[sectionIndex] = targetSection
+      } else {
+        menuSections.push(targetSection)
+      }
+
+      await persistRestaurantMenu(foodForm.restaurantId, menuSections)
+      toast.success(foodFormMode === "edit" ? "Food updated successfully" : "Food added successfully")
+      setShowFoodFormModal(false)
+      setEditingFood(null)
+      setFoodForm(createFoodForm())
+      setSelectedImageFile(null)
+      setImagePreviewUrl("")
+      await fetchAllFoods()
+    } catch (error) {
+      console.error("Error saving food:", error)
+      toast.error(error?.response?.data?.message || "Failed to save food")
+    } finally {
+      setSubmittingFood(false)
+    }
+  }
+
   const handleDelete = async (id) => {
     const food = foods.find(f => f.id === id)
     if (!food) return
@@ -224,10 +435,8 @@ export default function FoodsList() {
 
     try {
       setDeleting(true)
-      
-      // Get the restaurant's menu
-      const menuResponse = await restaurantAPI.getMenuByRestaurantId(food.restaurantId)
-      const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
+
+      const menu = await loadRestaurantMenu(food.restaurantId)
       
       if (!menu || !menu.sections) {
         throw new Error("Menu not found")
@@ -272,30 +481,7 @@ export default function FoodsList() {
         throw new Error("Item not found in menu")
       }
 
-      // Update menu in backend
-      // Note: Since we're admin, we need to use a workaround
-      // The restaurant menu update endpoint requires restaurant authentication
-      // For now, we'll try using the restaurant endpoint directly
-      // TODO: Create admin endpoint: PUT /api/admin/restaurants/:id/menu
-      try {
-        // Try using restaurant menu update endpoint
-        // This might fail if backend doesn't allow admin to update restaurant menus
-        const response = await apiClient.put(
-          `/restaurant/menu`,
-          { sections: updatedSections }
-        )
-        
-        if (!response.data || !response.data.success) {
-          throw new Error(response.data?.message || "Failed to update menu")
-        }
-      } catch (apiError) {
-        // If direct API call fails, we need an admin endpoint
-        // For now, show a helpful error message
-        if (apiError.response?.status === 401 || apiError.response?.status === 403) {
-          throw new Error("Admin cannot directly update restaurant menus. Please contact developer to add admin menu update endpoint.")
-        }
-        throw apiError
-      }
+      await persistRestaurantMenu(food.restaurantId, updatedSections)
 
       // Remove from local state
       setFoods(foods.filter(f => f.id !== id))
@@ -338,6 +524,14 @@ export default function FoodsList() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={openAddFoodModal}
+              className="px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 inline-flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Food</span>
+            </button>
             <div className="relative flex-1 sm:flex-initial min-w-[200px]">
               <input
                 type="text"
@@ -458,6 +652,13 @@ export default function FoodsList() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => openEditFoodModal(food)}
+                          className="p-1.5 rounded text-amber-600 hover:bg-amber-50 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleDelete(food.id)}
                           disabled={deleting}
                           className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -515,6 +716,170 @@ export default function FoodsList() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showFoodFormModal}
+        onOpenChange={(open) => {
+          setShowFoodFormModal(open)
+          if (!open) {
+            setEditingFood(null)
+            setFoodForm(createFoodForm())
+            setCategoryOptions([])
+            setSelectedImageFile(null)
+            setImagePreviewUrl("")
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-slate-200 bg-slate-50">
+            <DialogTitle className="text-lg font-semibold text-slate-900">
+              {foodFormMode === "edit" ? "Edit Food" : "Add Food"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Restaurant</label>
+                <select
+                  value={foodForm.restaurantId}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, restaurantId: e.target.value, sectionName: "" }))}
+                  disabled={foodFormMode === "edit"}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100"
+                >
+                  <option value="">Select restaurant</option>
+                  {restaurantOptions.map((restaurant) => (
+                    <option key={restaurant.id} value={restaurant.id}>
+                      {restaurant.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
+                <input
+                  list="food-category-options"
+                  value={foodForm.sectionName}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, sectionName: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                  placeholder="Select or enter category"
+                />
+                <datalist id="food-category-options">
+                  {categoryOptions.map((section) => (
+                    <option key={section.id} value={section.name} />
+                  ))}
+                </datalist>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Food Name</label>
+                <input
+                  type="text"
+                  value={foodForm.name}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Price</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={foodForm.price}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, price: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Food Type</label>
+                <select
+                  value={foodForm.foodType}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, foodType: e.target.value }))}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                >
+                  <option value="Veg">Veg</option>
+                  <option value="Non-Veg">Non-Veg</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Upload Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null
+                    setSelectedImageFile(file)
+                    if (file) {
+                      setImagePreviewUrl(URL.createObjectURL(file))
+                    } else {
+                      setImagePreviewUrl(foodForm.image.trim())
+                    }
+                  }}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white file:mr-3 file:rounded file:border-0 file:bg-slate-100 file:px-3 file:py-1.5 file:text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Timing</label>
+                <div className="relative">
+                  <select
+                  value={foodForm.preparationTime}
+                  onChange={(e) => setFoodForm((prev) => ({ ...prev, preparationTime: e.target.value }))}
+                    className="w-full px-3 py-2.5 pr-10 border border-slate-300 rounded-lg text-sm bg-white appearance-none"
+                  >
+                    <option value="">Select timing</option>
+                    <option value="10-20 mins">10-20 mins</option>
+                    <option value="20-25 mins">20-25 mins</option>
+                    <option value="25-35 mins">25-35 mins</option>
+                    <option value="35-45 mins">35-45 mins</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+                </div>
+              </div>
+              {imagePreviewUrl ? (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Image Preview</label>
+                  <div className="w-28 h-28 rounded-lg overflow-hidden border border-slate-200 bg-slate-50">
+                    <img
+                      src={imagePreviewUrl}
+                      alt="Food preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex items-center gap-6 pt-7">
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={foodForm.isAvailable}
+                    onChange={(e) => setFoodForm((prev) => ({ ...prev, isAvailable: e.target.checked }))}
+                  />
+                  Available
+                </label>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <textarea
+                rows={4}
+                value={foodForm.description}
+                onChange={(e) => setFoodForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white resize-none"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleFoodFormSubmit}
+                disabled={submittingFood}
+                className="px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 disabled:opacity-60 inline-flex items-center gap-2"
+              >
+                {submittingFood ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                <span>{submittingFood ? "Saving..." : foodFormMode === "edit" ? "Update Food" : "Add Food"}</span>
+              </button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

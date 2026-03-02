@@ -1347,12 +1347,16 @@ export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
       return {
         id: section?.id || `section-${sectionIndex}`,
         name: section?.name || "Unnamed Section",
-        items: Array.isArray(section?.items)
-          ? section.items.map((item) => {
+            items: Array.isArray(section?.items)
+              ? section.items.map((item) => {
               const existingItem = existingSection?.items?.find(
                 (i) => String(i.id) === String(item?.id),
               );
               const normalizedMedia = normalizeSingleItemImagesForAdmin(item);
+              const resolvedApprovalStatus =
+                item?.approvalStatus === "approved"
+                  ? "approved"
+                  : existingItem?.approvalStatus || item?.approvalStatus || "pending";
               return {
                 id: String(item?.id || `${Date.now()}-${Math.random()}`),
                 name: item?.name || "Unnamed Item",
@@ -1395,14 +1399,21 @@ export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
                 gst: Number(item?.gst) || 0,
                 images: normalizedMedia.images,
                 preparationTime: item?.preparationTime || "",
-                // Preserve current approval state when admin edits existing item
-                approvalStatus:
-                  existingItem?.approvalStatus || item?.approvalStatus || "pending",
-                rejectionReason: existingItem?.rejectionReason || "",
+                approvalStatus: resolvedApprovalStatus,
+                rejectionReason: resolvedApprovalStatus === "approved" ? "" : existingItem?.rejectionReason || "",
                 requestedAt: existingItem?.requestedAt || item?.requestedAt || new Date(),
-                approvedAt: existingItem?.approvedAt || item?.approvedAt || undefined,
-                approvedBy: existingItem?.approvedBy || item?.approvedBy || undefined,
-                rejectedAt: existingItem?.rejectedAt || item?.rejectedAt || undefined,
+                approvedAt:
+                  resolvedApprovalStatus === "approved"
+                    ? existingItem?.approvedAt || item?.approvedAt || new Date()
+                    : undefined,
+                approvedBy:
+                  resolvedApprovalStatus === "approved"
+                    ? existingItem?.approvedBy || item?.approvedBy || req.user?._id
+                    : undefined,
+                rejectedAt:
+                  resolvedApprovalStatus === "approved"
+                    ? undefined
+                    : existingItem?.rejectedAt || item?.rejectedAt || undefined,
               };
             })
           : [],
@@ -1421,6 +1432,12 @@ export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
                         (i) => String(i.id) === String(item?.id),
                       );
                       const normalizedMedia = normalizeSingleItemImagesForAdmin(item);
+                      const resolvedApprovalStatus =
+                        item?.approvalStatus === "approved"
+                          ? "approved"
+                          : existingItem?.approvalStatus ||
+                            item?.approvalStatus ||
+                            "pending";
                       return {
                         id: String(item?.id || `${Date.now()}-${Math.random()}`),
                         name: item?.name || "Unnamed Item",
@@ -1469,19 +1486,29 @@ export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
                         gst: Number(item?.gst) || 0,
                         images: normalizedMedia.images,
                         preparationTime: item?.preparationTime || "",
-                        approvalStatus:
-                          existingItem?.approvalStatus ||
-                          item?.approvalStatus ||
-                          "pending",
-                        rejectionReason: existingItem?.rejectionReason || "",
+                        approvalStatus: resolvedApprovalStatus,
+                        rejectionReason:
+                          resolvedApprovalStatus === "approved"
+                            ? ""
+                            : existingItem?.rejectionReason || "",
                         requestedAt:
                           existingItem?.requestedAt || item?.requestedAt || new Date(),
                         approvedAt:
-                          existingItem?.approvedAt || item?.approvedAt || undefined,
+                          resolvedApprovalStatus === "approved"
+                            ? existingItem?.approvedAt || item?.approvedAt || new Date()
+                            : undefined,
                         approvedBy:
-                          existingItem?.approvedBy || item?.approvedBy || undefined,
+                          resolvedApprovalStatus === "approved"
+                            ? existingItem?.approvedBy ||
+                              item?.approvedBy ||
+                              req.user?._id
+                            : undefined,
                         rejectedAt:
-                          existingItem?.rejectedAt || item?.rejectedAt || undefined,
+                          resolvedApprovalStatus === "approved"
+                            ? undefined
+                            : existingItem?.rejectedAt ||
+                              item?.rejectedAt ||
+                              undefined,
                       };
                     })
                   : [],
