@@ -34,6 +34,9 @@ const getUploadErrorMessage = (error, fileName = "image") => {
   return `Failed to upload ${fileName}: ${message}`
 }
 
+const serializeMenuSections = (sections) =>
+  JSON.stringify(Array.isArray(sections) ? sections : [])
+
 export default function HubMenu() {
   const navigate = useNavigate()
   const [loadingMenu, setLoadingMenu] = useState(true)
@@ -65,6 +68,9 @@ export default function HubMenu() {
   const [customDateTime, setCustomDateTime] = useState('')
   const [isScheduling, setIsScheduling] = useState(false)
   const [menuData, setMenuData] = useState([]) // Store menu groups with state
+  const menuDataRef = useRef([])
+  const lastSyncedMenuRef = useRef(serializeMenuSections([]))
+  const hasFetchedMenuRef = useRef(false)
   const scrollContainerRef = useRef(null)
   const [isScrolled, setIsScrolled] = useState(false)
   const mainScrollRef = useRef(null)
@@ -195,9 +201,23 @@ export default function HubMenu() {
     fetchRestaurantData()
   }, [])
 
+  useEffect(() => {
+    menuDataRef.current = menuData
+  }, [menuData])
+
   // Fetch menu from API - reusable function
   const fetchMenu = async (showLoading = true) => {
     try {
+      const currentSerializedMenu = serializeMenuSections(menuDataRef.current)
+      const hasUnsavedLocalChanges =
+        hasFetchedMenuRef.current && currentSerializedMenu !== lastSyncedMenuRef.current
+
+      // Never let silent/background refresh replace local edits that are not yet synced.
+      if (!showLoading && hasUnsavedLocalChanges) {
+        console.log('Skipping background menu refresh because local menu changes are not synced yet')
+        return
+      }
+
       if (showLoading) {
         setLoadingMenu(true)
       }
@@ -205,11 +225,15 @@ export default function HubMenu() {
       
       if (response.data && response.data.success && response.data.data && response.data.data.menu) {
         const menuSections = response.data.data.menu.sections || []
+        lastSyncedMenuRef.current = serializeMenuSections(menuSections)
+        hasFetchedMenuRef.current = true
         setMenuData(menuSections)
         
         // Menu data is now directly from backend, no need to transform
       } else {
         // Empty menu - start fresh
+        lastSyncedMenuRef.current = serializeMenuSections([])
+        hasFetchedMenuRef.current = true
         setMenuData([])
       }
     } catch (error) {
@@ -221,7 +245,6 @@ export default function HubMenu() {
         // Silently handle network errors - backend is not running
         // The axios interceptor already handles these with proper error messages
       }
-      setMenuData([])
     } finally {
       if (showLoading) {
         setLoadingMenu(false)
@@ -272,7 +295,12 @@ export default function HubMenu() {
 
   // Save menu to API whenever menuData changes (debounced)
   useEffect(() => {
-    if (!loadingMenu && menuData.length >= 0) {
+    if (!loadingMenu && hasFetchedMenuRef.current) {
+      const serializedCurrentMenu = serializeMenuSections(menuData)
+      if (serializedCurrentMenu === lastSyncedMenuRef.current) {
+        return
+      }
+
       const timeoutId = setTimeout(async () => {
         try {
           // Normalize menuData before saving to ensure proper structure matching backend schema
@@ -360,6 +388,7 @@ export default function HubMenu() {
           }))
           
           await restaurantAPI.updateMenu({ sections: normalizedSections })
+          lastSyncedMenuRef.current = serializeMenuSections(normalizedSections)
           console.log('✅ Menu saved successfully with', normalizedSections.length, 'sections')
         } catch (error) {
           console.error('Error saving menu:', error)
