@@ -517,12 +517,18 @@ export const restaurantAPI = {
       item,
     });
   },
-  getMenuByRestaurantId: (restaurantId) => {
+  getMenuByRestaurantId: (restaurantId, options = {}) => {
+    const params = { ...(options.params || {}) };
+    if (options.noCache) {
+      params._ts = Date.now();
+    }
+    const config = Object.keys(params).length > 0 ? { params } : {};
     return apiClient.get(
       API_ENDPOINTS.RESTAURANT.MENU_BY_RESTAURANT_ID.replace(
         ":id",
         restaurantId,
       ),
+      config,
     );
   },
 
@@ -615,8 +621,12 @@ export const restaurantAPI = {
   },
 
   // Get all restaurants (for user module)
-  getRestaurants: (params = {}) => {
-    return apiClient.get(API_ENDPOINTS.RESTAURANT.LIST, { params });
+  getRestaurants: (params = {}, options = {}) => {
+    const nextParams = { ...params };
+    if (options.noCache && !nextParams._ts) {
+      nextParams._ts = Date.now();
+    }
+    return apiClient.get(API_ENDPOINTS.RESTAURANT.LIST, { params: nextParams });
   },
 
   // Get restaurants with dishes under ?250
@@ -709,12 +719,18 @@ export const restaurantAPI = {
     );
   },
 
-  getMenuByRestaurantId: (restaurantId) => {
+  getMenuByRestaurantId: (restaurantId, options = {}) => {
+    const params = { ...(options.params || {}) };
+    if (options.noCache) {
+      params._ts = Date.now();
+    }
+    const config = Object.keys(params).length > 0 ? { params } : {};
     return apiClient.get(
       API_ENDPOINTS.RESTAURANT.MENU_BY_RESTAURANT_ID.replace(
         ":id",
         restaurantId,
       ),
+      config,
     );
   },
 

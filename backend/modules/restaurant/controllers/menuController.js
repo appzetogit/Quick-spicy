@@ -780,6 +780,13 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
 // Get menu by restaurant ID (public - for user module)
 export const getMenuByRestaurantId = async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      'Surrogate-Control': 'no-store',
+    });
+
     const { id } = req.params;
 
     // Find restaurant by ID, slug, or restaurantId

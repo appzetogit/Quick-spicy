@@ -153,8 +153,8 @@ export default function RestaurantDetails() {
                   // Don't throw error - let it fall through to show "Restaurant not found" message
                 } else {
                   // Include zoneId for zone-based filtering
-                  const searchParams = { limit: 100, zoneId: zoneId }
-                  const searchResponse = await restaurantAPI.getRestaurants(searchParams)
+                  const searchParams = { limit: 100, zoneId: zoneId, _ts: Date.now() }
+                  const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
                   const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
 
                   // Try to find by slug match or name match
@@ -493,8 +493,8 @@ export default function RestaurantDetails() {
               }
 
               // Include zoneId for zone-based filtering
-              const searchParams = { limit: 100, zoneId: zoneId }
-              const searchResponse = await restaurantAPI.getRestaurants(searchParams)
+              const searchParams = { limit: 100, zoneId: zoneId, _ts: Date.now() }
+              const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
               const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
 
               // Try to find by exact name match
@@ -620,7 +620,7 @@ export default function RestaurantDetails() {
               for (const lookupId of normalizedLookupIds) {
                 try {
                   console.log('📋 Fetching menu for restaurant lookup ID:', lookupId)
-                  const response = await restaurantAPI.getMenuByRestaurantId(lookupId)
+                  const response = await restaurantAPI.getMenuByRestaurantId(lookupId, { noCache: true })
                   if (response?.data?.success) {
                     menuResponse = response
                     resolvedMenuLookupId = lookupId

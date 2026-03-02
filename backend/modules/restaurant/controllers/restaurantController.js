@@ -153,6 +153,13 @@ function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
 // Get all restaurants (for user module)
 export const getRestaurants = async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      'Surrogate-Control': 'no-store',
+    });
+
     const { 
       limit = 50, 
       offset = 0,
@@ -349,6 +356,13 @@ export const getRestaurants = async (req, res) => {
 // Get restaurant by ID or slug
 export const getRestaurantById = async (req, res) => {
   try {
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      Pragma: 'no-cache',
+      Expires: '0',
+      'Surrogate-Control': 'no-store',
+    });
+
     const { id } = req.params;
     
     // Build query conditions - only include _id if it's a valid ObjectId
