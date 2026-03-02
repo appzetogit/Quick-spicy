@@ -69,11 +69,40 @@ const updateProfileSchema = Joi.object({
     publicId: Joi.string().trim().optional().allow(null, '')
   }).optional(),
   documents: Joi.object({
+    pan: Joi.object({
+      number: Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]$/)
+        .optional()
+        .allow(null, '')
+    }).optional(),
     bankDetails: Joi.object({
-      accountHolderName: Joi.string().trim().min(2).max(100).optional().allow(null, ''),
-      accountNumber: Joi.string().trim().min(9).max(18).optional().allow(null, ''),
-      ifscCode: Joi.string().trim().length(11).uppercase().optional().allow(null, ''),
-      bankName: Joi.string().trim().min(2).max(100).optional().allow(null, '')
+      accountHolderName: Joi.string()
+        .trim()
+        .min(2)
+        .max(100)
+        .pattern(/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/)
+        .optional()
+        .allow(null, ''),
+      accountNumber: Joi.string()
+        .trim()
+        .pattern(/^\d{9,18}$/)
+        .optional()
+        .allow(null, ''),
+      ifscCode: Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)
+        .optional()
+        .allow(null, ''),
+      bankName: Joi.string()
+        .trim()
+        .min(2)
+        .max(100)
+        .pattern(/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/)
+        .optional()
+        .allow(null, '')
     }).optional()
   }).optional()
 });
@@ -89,15 +118,21 @@ export const updateProfile = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, error.details[0].message);
     }
 
-    // Handle nested documents.bankDetails update properly
+    // Handle nested documents updates properly
     const setData = { ...updateData };
-    if (updateData.documents?.bankDetails) {
-      // Merge bankDetails with existing documents
-      setData['documents.bankDetails'] = {
-        ...delivery.documents?.bankDetails,
-        ...updateData.documents.bankDetails
-      };
-      // Remove the nested documents object to avoid conflicts
+    if (updateData.documents) {
+      if (updateData.documents.bankDetails) {
+        setData['documents.bankDetails'] = {
+          ...delivery.documents?.bankDetails,
+          ...updateData.documents.bankDetails
+        };
+      }
+      if (updateData.documents.pan) {
+        setData['documents.pan'] = {
+          ...delivery.documents?.pan,
+          ...updateData.documents.pan
+        };
+      }
       delete setData.documents;
     }
 
@@ -169,4 +204,3 @@ export const reverify = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to resubmit for verification');
   }
 });
-

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Search, Plus, Edit, Trash2, ToggleLeft, ToggleRight, Settings, ArrowUpDown, Check, Columns, DollarSign, Package } from "lucide-react"
+import { Search, Plus, Edit, Trash2, ToggleLeft, ToggleRight, Settings, ArrowUpDown, Check, Columns, Package } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
@@ -418,8 +418,8 @@ export default function EarningAddon() {
                         {visibleColumns.earningAmount && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                              <DollarSign className="w-4 h-4 text-emerald-500" />
-                              <span className="text-sm font-medium text-slate-900">₹{addon.earningAmount?.toFixed(2)}</span>
+                              <span className="text-sm font-semibold text-emerald-500">₹</span>
+                              <span className="text-sm font-medium text-slate-900">{addon.earningAmount?.toFixed(2)}</span>
                             </div>
                           </td>
                         )}
@@ -541,7 +541,7 @@ export default function EarningAddon() {
                   Earning Amount (₹) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <DollarSign className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-emerald-500">₹</span>
                   <input
                     type="number"
                     required
@@ -677,4 +677,3 @@ export default function EarningAddon() {
     </div>
   )
 }
-

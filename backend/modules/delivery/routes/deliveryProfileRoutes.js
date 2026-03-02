@@ -40,11 +40,40 @@ router.put('/profile', validate(Joi.object({
     publicId: Joi.string().trim().optional().allow(null, '')
   }).optional(),
   documents: Joi.object({
+    pan: Joi.object({
+      number: Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z]{5}[0-9]{4}[A-Z]$/)
+        .optional()
+        .allow(null, '')
+    }).optional(),
     bankDetails: Joi.object({
-      accountHolderName: Joi.string().trim().min(2).max(100).optional().allow(null, ''),
-      accountNumber: Joi.string().trim().min(9).max(18).optional().allow(null, ''),
-      ifscCode: Joi.string().trim().length(11).uppercase().optional().allow(null, ''),
-      bankName: Joi.string().trim().min(2).max(100).optional().allow(null, '')
+      accountHolderName: Joi.string()
+        .trim()
+        .min(2)
+        .max(100)
+        .pattern(/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/)
+        .optional()
+        .allow(null, ''),
+      accountNumber: Joi.string()
+        .trim()
+        .pattern(/^\d{9,18}$/)
+        .optional()
+        .allow(null, ''),
+      ifscCode: Joi.string()
+        .trim()
+        .uppercase()
+        .pattern(/^[A-Z]{4}0[A-Z0-9]{6}$/)
+        .optional()
+        .allow(null, ''),
+      bankName: Joi.string()
+        .trim()
+        .min(2)
+        .max(100)
+        .pattern(/^(?=.*[A-Za-z])[A-Za-z\s.'-]+$/)
+        .optional()
+        .allow(null, '')
     }).optional()
   }).optional()
 })), updateProfile);
@@ -74,4 +103,3 @@ router.get('/support-tickets', getDeliveryTickets);
 router.get('/support-tickets/:id', getTicketById);
 
 export default router;
-
