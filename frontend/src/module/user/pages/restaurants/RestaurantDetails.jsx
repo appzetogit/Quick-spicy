@@ -105,18 +105,15 @@ export default function RestaurantDetails() {
     const fetchRestaurant = async () => {
       if (!slug) return
 
-      // Prevent re-fetching if we've already fetched for this slug and zoneId hasn't changed meaningfully
-      // Only re-fetch if slug changed or if we're waiting for zoneId and it just became available
+      // Prevent re-fetching for the same slug. Mobile location/zone updates can
+      // trigger transient refetch failures that clear already-rendered content.
       if (fetchedRestaurantRef.current && restaurant && restaurant.slug === slug) {
-        // Only re-fetch if zoneId changed from null to a value (zone just detected)
-        if (zoneId && !loadingZone) {
-          // Zone is available, but we already have restaurant data - don't re-fetch
-          return
-        }
+        return
       }
 
       try {
-        setLoadingRestaurant(true)
+        // Keep the existing page visible on background retries.
+        setLoadingRestaurant(!fetchedRestaurantRef.current && !restaurant)
         setRestaurantError(null)
 
         console.log('Fetching restaurant with slug:', slug)
@@ -803,7 +800,9 @@ export default function RestaurantDetails() {
           console.error('❌ Response:', response)
           console.error('❌ apiRestaurant:', apiRestaurant)
           setRestaurantError('Restaurant not found')
-          setRestaurant(null)
+          if (!fetchedRestaurantRef.current) {
+            setRestaurant(null)
+          }
         }
       } catch (error) {
         // Check if it's a network error (backend not running)
@@ -818,17 +817,23 @@ export default function RestaurantDetails() {
           // The axios interceptor will show a toast notification
           console.error('Network error fetching restaurant (backend may not be running):', error)
           setRestaurantError('Backend server is not connected. Please make sure the backend is running.')
-          setRestaurant(null)
+          if (!fetchedRestaurantRef.current) {
+            setRestaurant(null)
+          }
         } else if (is404Error) {
           // 404 error - restaurant doesn't exist in database
           console.log(`Restaurant "${slug}" not found in database`)
           setRestaurantError('Restaurant not found')
-          setRestaurant(null)
+          if (!fetchedRestaurantRef.current) {
+            setRestaurant(null)
+          }
         } else {
           // Other errors
           console.error('Error fetching restaurant:', error)
           setRestaurantError(error.message || 'Failed to load restaurant')
-          setRestaurant(null)
+          if (!fetchedRestaurantRef.current) {
+            setRestaurant(null)
+          }
         }
       } finally {
         setLoadingRestaurant(false)
