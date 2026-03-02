@@ -249,6 +249,27 @@ export const updateMenu = asyncHandler(async (req, res) => {
     console.log('[UPDATE MENU] Existing sections count:', existingMenu.sections?.length || 0);
   }
 
+  // Guard against accidental destructive saves where a non-empty menu gets overwritten by an empty payload.
+  const incomingSections = Array.isArray(sections) ? sections : [];
+  const existingItemCount = (existingMenu?.sections || []).reduce((sum, section) => {
+    const sectionItems = (section.items || []).length;
+    const subsectionItems = (section.subsections || []).reduce(
+      (subSum, subsection) => subSum + (subsection.items || []).length,
+      0
+    );
+    return sum + sectionItems + subsectionItems;
+  }, 0);
+  const allowEmptyMenu = String(req.query?.allowEmpty || '').toLowerCase() === 'true';
+
+  if (existingItemCount > 0 && incomingSections.length === 0 && !allowEmptyMenu) {
+    console.warn('[UPDATE MENU] Rejected empty menu overwrite for non-empty menu.');
+    return errorResponse(
+      res,
+      400,
+      'Menu update rejected: empty payload would remove existing items. Pass allowEmpty=true to confirm.'
+    );
+  }
+
   // Debug: Log incoming images data
   if (sections && Array.isArray(sections)) {
     sections.forEach((section, sIdx) => {
@@ -291,6 +312,10 @@ export const updateMenu = asyncHandler(async (req, res) => {
         // CRITICAL: Find existing item to preserve approval status fields
         const existingItem = existingSection?.items?.find(i => String(i.id) === String(item.id));
 
+        const preservedApprovalStatus = existingItem?.approvalStatus !== undefined
+          ? existingItem.approvalStatus
+          : item.approvalStatus;
+
         return {
           id: String(item.id || Date.now() + Math.random()),
           name: item.name || "Unnamed Item",
@@ -332,9 +357,9 @@ export const updateMenu = asyncHandler(async (req, res) => {
           images: normalizedMedia.images,
           // CRITICAL: Preserve approval status fields from existing item
           // Restaurant should NOT be able to overwrite these fields
-          approvalStatus: existingItem?.approvalStatus || item.approvalStatus || 'pending',
+          approvalStatus: preservedApprovalStatus ?? (existingItem ? undefined : 'pending'),
           rejectionReason: existingItem?.rejectionReason || item.rejectionReason || '',
-          requestedAt: existingItem?.requestedAt || item.requestedAt || (item.approvalStatus === 'pending' ? new Date() : undefined),
+          requestedAt: existingItem?.requestedAt || item.requestedAt || (preservedApprovalStatus === 'pending' ? new Date() : undefined),
           approvedAt: existingItem?.approvedAt || item.approvedAt,
           approvedBy: existingItem?.approvedBy || item.approvedBy,
           rejectedAt: existingItem?.rejectedAt || item.rejectedAt,
@@ -351,6 +376,10 @@ export const updateMenu = asyncHandler(async (req, res) => {
             const normalizedMedia = normalizeSingleItemImages(item);
             // CRITICAL: Find existing item to preserve approval status fields
             const existingItem = existingSubsection?.items?.find(i => String(i.id) === String(item.id));
+
+            const preservedApprovalStatus = existingItem?.approvalStatus !== undefined
+              ? existingItem.approvalStatus
+              : item.approvalStatus;
 
             return {
               id: String(item.id || Date.now() + Math.random()),
@@ -393,9 +422,9 @@ export const updateMenu = asyncHandler(async (req, res) => {
               images: normalizedMedia.images,
               // CRITICAL: Preserve approval status fields from existing item
               // Restaurant should NOT be able to overwrite these fields
-              approvalStatus: existingItem?.approvalStatus || item.approvalStatus || 'pending',
+              approvalStatus: preservedApprovalStatus ?? (existingItem ? undefined : 'pending'),
               rejectionReason: existingItem?.rejectionReason || item.rejectionReason || '',
-              requestedAt: existingItem?.requestedAt || item.requestedAt || (item.approvalStatus === 'pending' ? new Date() : undefined),
+              requestedAt: existingItem?.requestedAt || item.requestedAt || (preservedApprovalStatus === 'pending' ? new Date() : undefined),
               approvedAt: existingItem?.approvedAt || item.approvedAt,
               approvedBy: existingItem?.approvedBy || item.approvedBy,
               rejectedAt: existingItem?.rejectedAt || item.rejectedAt,
@@ -896,9 +925,62 @@ export const getMenuByRestaurantId = async (req, res) => {
     }, 0);
     console.log('[USER MENU] Total items shown to user:', totalItems);
 
+    // Safety fallback: if strict approval filtering hides everything, show available items
+    // so a restaurant page doesn't appear empty due status drift on legacy data.
+    let sectionsToReturn = filteredSections;
+    if (totalItems === 0) {
+      console.log('[USER MENU] No items after approval filtering; applying availability-only fallback.');
+      const fallbackSections = (menu.sections || [])
+        .filter((section) => {
+          const sectionNameKey = String(section.name || '').trim().toLowerCase();
+          const categoryExists = categoryStatusByName.has(sectionNameKey);
+          const isCategoryActive = categoryExists ? categoryStatusByName.get(sectionNameKey) : true;
+          return section.isEnabled !== false && isCategoryActive;
+        })
+        .map((section) => {
+          const availableItems = sortNewestFirst(
+            (section.items || []).filter((item) => item.isAvailable !== false)
+          );
+          const availableSubsections = (section.subsections || [])
+            .map((subsection) => {
+              const availableSubsectionItems = sortNewestFirst(
+                (subsection.items || []).filter((item) => item.isAvailable !== false)
+              );
+              if (availableSubsectionItems.length === 0) return null;
+              return {
+                ...subsection,
+                items: availableSubsectionItems,
+              };
+            })
+            .filter((subsection) => subsection !== null);
+
+          if (availableItems.length === 0 && availableSubsections.length === 0) {
+            return null;
+          }
+          return {
+            ...section,
+            name: section.name || "Unnamed Section",
+            items: availableItems,
+            subsections: availableSubsections,
+          };
+        })
+        .filter((section) => section !== null);
+
+      const fallbackItemCount = fallbackSections.reduce((sum, section) => {
+        const sectionItems = (section.items || []).length;
+        const subsectionItems = (section.subsections || []).reduce((subSum, sub) => subSum + (sub.items || []).length, 0);
+        return sum + sectionItems + subsectionItems;
+      }, 0);
+
+      if (fallbackItemCount > 0) {
+        console.log('[USER MENU] Fallback applied. Items shown:', fallbackItemCount);
+        sectionsToReturn = fallbackSections;
+      }
+    }
+
     return successResponse(res, 200, 'Menu retrieved successfully', {
       menu: {
-        sections: filteredSections,
+        sections: sectionsToReturn,
         isActive: menu.isActive,
       },
     });

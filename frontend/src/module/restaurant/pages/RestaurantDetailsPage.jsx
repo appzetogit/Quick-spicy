@@ -30,7 +30,8 @@ import {
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { useNavigate } from "react-router-dom"
-import { getAllFoods } from "../utils/foodManagement"
+import { restaurantAPI } from "@/lib/api"
+import { flattenMenuItems, getMenuFromResponse } from "../utils/menuItems"
 import { getRestaurantData } from "../utils/restaurantManagement"
 
 export default function RestaurantDetailsPage() {
@@ -38,7 +39,7 @@ export default function RestaurantDetailsPage() {
   const [activeCategory, setActiveCategory] = useState("all")
   const [showMenu, setShowMenu] = useState(false)
   const [restaurantData, setRestaurantData] = useState(() => getRestaurantData())
-  const [foodItems, setFoodItems] = useState(() => getAllFoods())
+  const [foodItems, setFoodItems] = useState([])
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -81,8 +82,21 @@ export default function RestaurantDetailsPage() {
 
   // Load foods and listen for updates
   useEffect(() => {
-    const refreshFoods = () => {
-      setFoodItems(getAllFoods())
+    let isMounted = true
+
+    const refreshFoods = async () => {
+      try {
+        const response = await restaurantAPI.getMenu()
+        const menu = getMenuFromResponse(response)
+        const foods = flattenMenuItems(menu)
+        if (isMounted) {
+          setFoodItems(foods)
+        }
+      } catch {
+        if (isMounted) {
+          setFoodItems([])
+        }
+      }
     }
 
     // Initial load
@@ -96,6 +110,7 @@ export default function RestaurantDetailsPage() {
     window.addEventListener('storage', refreshFoods)
 
     return () => {
+      isMounted = false
       window.removeEventListener('foodsChanged', refreshFoods)
       window.removeEventListener('foodAdded', refreshFoods)
       window.removeEventListener('foodUpdated', refreshFoods)

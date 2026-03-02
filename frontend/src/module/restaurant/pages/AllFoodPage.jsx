@@ -11,8 +11,9 @@ import {
 } from "lucide-react"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
-import { formatCurrency, usdToInr } from "../utils/currency"
-import { getAllFoods } from "../utils/foodManagement"
+import { formatCurrency } from "../utils/currency"
+import { restaurantAPI } from "@/lib/api"
+import { flattenMenuItems, getMenuFromResponse } from "../utils/menuItems"
 
 export default function AllFoodPage() {
   const navigate = useNavigate()
@@ -23,7 +24,7 @@ export default function AllFoodPage() {
   const [showFilterModal, setShowFilterModal] = useState(false)
   const [foodTypeFilter, setFoodTypeFilter] = useState("all")
   const [stockFilter, setStockFilter] = useState("all")
-  const [allFoods, setAllFoods] = useState(() => getAllFoods())
+  const [allFoods, setAllFoods] = useState([])
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -55,8 +56,21 @@ export default function AllFoodPage() {
 
   // Load foods and listen for updates
   useEffect(() => {
-    const refreshFoods = () => {
-      setAllFoods(getAllFoods())
+    let isMounted = true
+
+    const refreshFoods = async () => {
+      try {
+        const response = await restaurantAPI.getMenu()
+        const menu = getMenuFromResponse(response)
+        const foods = flattenMenuItems(menu)
+        if (isMounted) {
+          setAllFoods(foods)
+        }
+      } catch {
+        if (isMounted) {
+          setAllFoods([])
+        }
+      }
     }
 
     // Initial load
@@ -70,6 +84,7 @@ export default function AllFoodPage() {
     window.addEventListener('storage', refreshFoods)
 
     return () => {
+      isMounted = false
       window.removeEventListener('foodsChanged', refreshFoods)
       window.removeEventListener('foodAdded', refreshFoods)
       window.removeEventListener('foodUpdated', refreshFoods)

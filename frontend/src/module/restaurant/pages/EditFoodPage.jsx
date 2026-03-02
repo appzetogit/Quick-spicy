@@ -18,13 +18,36 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
-import { getFoodById, saveFood } from "../utils/foodManagement"
+import { restaurantAPI } from "@/lib/api"
+import { findItemInSections, flattenMenuItems, getMenuFromResponse } from "../utils/menuItems"
+
+const defaultFormData = {
+  name: "",
+  nameArabic: "",
+  image: "",
+  price: 0.00,
+  availabilityTimeStart: "12:01 AM",
+  availabilityTimeEnd: "11:57 PM",
+  description: "",
+  category: "Varieties",
+  foodType: "Non-Veg",
+  discountType: "Percent",
+  discountAmount: 0.0,
+  discount: 0,
+  isAvailable: true,
+  isRecommended: false,
+  variations: [],
+  tags: [],
+  nutrition: [],
+  allergies: []
+}
 
 export default function EditFoodPage() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isNewFood = id === "new" || !id
   const [showMenu, setShowMenu] = useState(false)
+  const [menuSections, setMenuSections] = useState([])
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -46,75 +69,55 @@ export default function EditFoodPage() {
     }
   }, [])
 
-  // Default form data for new food
-  const defaultFormData = {
-    name: "",
-    nameArabic: "",
-    image: "",
-    price: 0.00,
-    availabilityTimeStart: "12:01 AM",
-    availabilityTimeEnd: "11:57 PM",
-    description: "",
-    category: "Varieties",
-    foodType: "Non-Veg",
-    discountType: "Percent",
-    discountAmount: 0.0,
-    discount: 0,
-    isAvailable: true,
-    isRecommended: false,
-    variations: [],
-    tags: [],
-    nutrition: [],
-    allergies: []
-  }
+  const [formData, setFormData] = useState(defaultFormData)
 
-  // Load food data from localStorage if editing
-  const [formData, setFormData] = useState(() => {
-    if (isNewFood) {
-      return defaultFormData
-    }
-    // Load existing food data
-    const existingFood = getFoodById(id)
-    if (existingFood) {
-      return {
-        ...defaultFormData,
-        ...existingFood,
-        // Ensure all fields are present
-        nameArabic: existingFood.nameArabic || "",
-        availabilityTimeStart: existingFood.availabilityTimeStart || "12:01 AM",
-        availabilityTimeEnd: existingFood.availabilityTimeEnd || "11:57 PM",
-        description: existingFood.description || "",
-        discountType: existingFood.discountType || "Percent",
-        discountAmount: existingFood.discountAmount || 0.0,
-        variations: existingFood.variations || [],
-        tags: existingFood.tags || [],
-        nutrition: existingFood.nutrition || [],
-        allergies: existingFood.allergies || []
-      }
-    }
-    return defaultFormData
-  })
-
-  // Reload food data when id changes
+  // Reload food data from backend menu when id changes
   useEffect(() => {
-    if (!isNewFood && id) {
-      const existingFood = getFoodById(id)
-      if (existingFood) {
-        setFormData({
-          ...defaultFormData,
-          ...existingFood,
-          nameArabic: existingFood.nameArabic || "",
-          availabilityTimeStart: existingFood.availabilityTimeStart || "12:01 AM",
-          availabilityTimeEnd: existingFood.availabilityTimeEnd || "11:57 PM",
-          description: existingFood.description || "",
-          discountType: existingFood.discountType || "Percent",
-          discountAmount: existingFood.discountAmount || 0.0,
-          variations: existingFood.variations || [],
-          tags: existingFood.tags || [],
-          nutrition: existingFood.nutrition || [],
-          allergies: existingFood.allergies || []
-        })
+    let isMounted = true
+
+    const loadFromMenu = async () => {
+      try {
+        const response = await restaurantAPI.getMenu()
+        const menu = getMenuFromResponse(response)
+        const sections = Array.isArray(menu?.sections) ? menu.sections : []
+        if (!isMounted) return
+
+        setMenuSections(sections)
+
+        if (isNewFood) {
+          setFormData(defaultFormData)
+          return
+        }
+
+        const items = flattenMenuItems(menu)
+        const existingFood = items.find((item) => String(item.id) === String(id))
+        if (existingFood) {
+          setFormData({
+            ...defaultFormData,
+            ...existingFood,
+            nameArabic: existingFood.nameArabic || "",
+            availabilityTimeStart: existingFood.availabilityTimeStart || "12:01 AM",
+            availabilityTimeEnd: existingFood.availabilityTimeEnd || "11:57 PM",
+            description: existingFood.description || "",
+            discountType: existingFood.discountType || "Percent",
+            discountAmount: existingFood.discountAmount || 0.0,
+            variations: existingFood.variations || [],
+            tags: existingFood.tags || [],
+            nutrition: existingFood.nutrition || [],
+            allergies: existingFood.allergies || [],
+          })
+        }
+      } catch {
+        if (isMounted) {
+          setMenuSections([])
+        }
       }
+    }
+
+    loadFromMenu()
+
+    return () => {
+      isMounted = false
     }
   }, [id, isNewFood])
 
@@ -217,7 +220,7 @@ export default function EditFoodPage() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     
     // Validate required fields
@@ -241,13 +244,71 @@ export default function EditFoodPage() {
         : null
     }
 
-    // Save food to localStorage
-    const savedFood = saveFood(foodDataToSave)
-    
-    if (savedFood) {
-      // Navigate to food details page
-      navigate(`/restaurant/food/${savedFood.id}`)
-    } else {
+    const nextSections = [...menuSections]
+
+    if (isNewFood) {
+      const newItemId = `item-${Date.now()}-${Math.floor(Math.random() * 1000000)}`
+      const newItem = { ...foodDataToSave, id: newItemId }
+
+      let targetSectionIndex = nextSections.findIndex(
+        (section) => String(section?.name || "").toLowerCase() === String(newItem.category || "").toLowerCase(),
+      )
+
+      if (targetSectionIndex === -1) {
+        nextSections.push({
+          id: `section-${Date.now()}`,
+          name: newItem.category || "Varieties",
+          items: [],
+          subsections: [],
+        })
+        targetSectionIndex = nextSections.length - 1
+      }
+
+      if (!Array.isArray(nextSections[targetSectionIndex].items)) {
+        nextSections[targetSectionIndex].items = []
+      }
+      nextSections[targetSectionIndex].items.push(newItem)
+
+      try {
+        await restaurantAPI.updateMenu({ sections: nextSections })
+        window.dispatchEvent(new CustomEvent("foodsChanged"))
+        window.dispatchEvent(new CustomEvent("foodAdded", { detail: { food: newItem } }))
+        navigate(`/restaurant/food/${newItem.id}`)
+      } catch {
+        alert("Error saving food. Please try again.")
+      }
+      return
+    }
+
+    const position = findItemInSections(nextSections, id)
+    if (!position) {
+      alert("Error saving food. Please try again.")
+      return
+    }
+
+    const targetCollection = position.inSubsection
+      ? nextSections[position.sectionIndex]?.subsections?.[position.subsectionIndex]?.items
+      : nextSections[position.sectionIndex]?.items
+
+    if (!Array.isArray(targetCollection) || !targetCollection[position.itemIndex]) {
+      alert("Error saving food. Please try again.")
+      return
+    }
+
+    const existing = targetCollection[position.itemIndex]
+    const updatedItem = {
+      ...existing,
+      ...foodDataToSave,
+      id: existing.id,
+    }
+    targetCollection[position.itemIndex] = updatedItem
+
+    try {
+      await restaurantAPI.updateMenu({ sections: nextSections })
+      window.dispatchEvent(new CustomEvent("foodsChanged"))
+      window.dispatchEvent(new CustomEvent("foodUpdated", { detail: { food: updatedItem } }))
+      navigate(`/restaurant/food/${updatedItem.id}`)
+    } catch {
       alert("Error saving food. Please try again.")
     }
   }
