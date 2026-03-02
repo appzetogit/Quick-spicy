@@ -49,6 +49,8 @@ import fssaiLogo from "@/assets/fssai.png"
 
 
 
+const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
+
 export default function RestaurantDetails() {
   const { slug } = useParams()
   const navigate = useNavigate()
@@ -1922,6 +1924,11 @@ export default function RestaurantDetails() {
                                   src={item.image}
                                   alt={item.name}
                                   className="w-full h-full object-cover rounded-2xl shadow-sm"
+                                  onError={(e) => {
+                                    if (e.currentTarget.src !== FOOD_IMAGE_FALLBACK) {
+                                      e.currentTarget.src = FOOD_IMAGE_FALLBACK
+                                    }
+                                  }}
                                 />
                               ) : (
                                 <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
@@ -2134,6 +2141,11 @@ export default function RestaurantDetails() {
                                             src={item.image}
                                             alt={item.name}
                                             className="w-full h-full object-cover rounded-2xl shadow-sm"
+                                            onError={(e) => {
+                                              if (e.currentTarget.src !== FOOD_IMAGE_FALLBACK) {
+                                                e.currentTarget.src = FOOD_IMAGE_FALLBACK
+                                              }
+                                            }}
                                           />
                                         ) : (
                                           <div className="w-full h-full bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center">
