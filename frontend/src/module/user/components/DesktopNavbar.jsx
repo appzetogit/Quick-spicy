@@ -23,6 +23,8 @@ export default function DesktopNavbar() {
     const [heroSearch, setHeroSearch] = useState("")
     const [logoUrl, setLogoUrl] = useState(null)
     const [companyName, setCompanyName] = useState(null)
+    const [hasScrolledPastBanner, setHasScrolledPastBanner] = useState(false)
+    const navRef = useRef(null)
     const cartCount = getCartCount()
 
 
@@ -48,7 +50,11 @@ export default function DesktopNavbar() {
     const isUnder250 = location.pathname === "/under-250" || location.pathname === "/user/under-250"
     const isProfile = location.pathname.startsWith("/profile") || location.pathname.startsWith("/user/profile")
     const isDelivery = !isDining && !isUnder250 && !isProfile && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
-    const isBannerRoute = true
+    const isBannerRoute =
+        location.pathname === "/" ||
+        location.pathname === "/user" ||
+        location.pathname === "/under-250" ||
+        location.pathname === "/user/under-250"
 
     // Load business settings logo
     useEffect(() => {
@@ -98,18 +104,48 @@ export default function DesktopNavbar() {
         }
     }, [])
 
-    // Always visible (sticky)
-    // Removed scroll listener logic
+    useEffect(() => {
+        if (!isBannerRoute) {
+            setHasScrolledPastBanner(true)
+            return
+        }
+
+        const handleScroll = () => {
+            const heroShell =
+                document.querySelector('[data-home-hero-shell="true"]') ||
+                document.querySelector('[data-banner-shell="true"]')
+            const navElement = navRef.current
+
+            if (!heroShell || !navElement) {
+                setHasScrolledPastBanner(false)
+                return
+            }
+
+            const heroRect = heroShell.getBoundingClientRect()
+            const navHeight = navElement.getBoundingClientRect().height || 0
+            setHasScrolledPastBanner(heroRect.bottom <= navHeight)
+        }
+
+        handleScroll()
+        window.addEventListener("scroll", handleScroll, { passive: true })
+        window.addEventListener("resize", handleScroll)
+
+        return () => {
+            window.removeEventListener("scroll", handleScroll)
+            window.removeEventListener("resize", handleScroll)
+        }
+    }, [isBannerRoute])
 
     return (
         <nav
-            className={`hidden md:flex flex-col fixed top-0 left-0 right-0 z-50 py-2 ${isBannerRoute
+            ref={navRef}
+            className={`hidden md:flex flex-col fixed top-0 left-0 right-0 z-50 py-2 transition-all duration-300 ${(isBannerRoute && !hasScrolledPastBanner)
                 ? "bg-transparent !bg-transparent border-0 shadow-none"
                 : "bg-white dark:bg-[#1a1a1a] border-b border-gray-200 dark:border-gray-800 shadow-sm"
                 }`}
         >
             {/* Top Row: Location - Search - Icons */}
-            <div className={`w-full ${isBannerRoute ? "border-b border-transparent" : "border-b border-gray-100 dark:border-gray-800"}`}>
+            <div className={`w-full ${(isBannerRoute && !hasScrolledPastBanner) ? "border-b border-transparent" : "border-b border-gray-100 dark:border-gray-800"}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16 gap-4">
                         {/* Left: Logo & Location */}
@@ -259,7 +295,7 @@ export default function DesktopNavbar() {
             </div>
 
             {/* Bottom Row: Navigation Tabs & Veg Mode */}
-            <div className={`w-full pb-3 ${isBannerRoute ? "bg-transparent !bg-transparent" : "bg-white dark:bg-[#1a1a1a]"}`}>
+            <div className={`w-full pb-3 ${(isBannerRoute && !hasScrolledPastBanner) ? "bg-transparent !bg-transparent" : "bg-white dark:bg-[#1a1a1a]"}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-center h-12">
                         {/* Navigation Tabs - Centered with spacing */}

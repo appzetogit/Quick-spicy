@@ -313,6 +313,7 @@ export default function Home() {
   const [heroBannerImages, setHeroBannerImages] = useState([])
   const [heroBannersData, setHeroBannersData] = useState([]) // Store full banner data with linked restaurants
   const [loadingBanners, setLoadingBanners] = useState(true)
+  const [hasScrolledPastBanner, setHasScrolledPastBanner] = useState(false)
   const [landingCategories, setLandingCategories] = useState([])
   const [landingExploreMore, setLandingExploreMore] = useState([])
   const [exploreMoreHeading, setExploreMoreHeading] = useState("Explore More")
@@ -324,6 +325,8 @@ export default function Home() {
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
+  const heroShellRef = useRef(null)
+  const stickyHeaderRef = useRef(null)
 
   const normalizeImageUrl = useCallback((imageUrl) => {
     if (typeof imageUrl !== "string") return ""
@@ -464,6 +467,31 @@ export default function Home() {
     }, 60000)
 
     return () => clearInterval(intervalId)
+  }, [])
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const heroShell = heroShellRef.current
+      const stickyHeader = stickyHeaderRef.current
+
+      if (!heroShell) {
+        setHasScrolledPastBanner(false)
+        return
+      }
+
+      const heroRect = heroShell.getBoundingClientRect()
+      const stickyHeight = stickyHeader?.getBoundingClientRect().height || 0
+      setHasScrolledPastBanner(heroRect.bottom <= stickyHeight)
+    }
+
+    handleScroll()
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    window.addEventListener("resize", handleScroll)
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", handleScroll)
+    }
   }, [])
 
   // Merge API explore items with fallback to ensure all 4 cards are shown
@@ -1599,8 +1627,123 @@ export default function Home() {
         `}</style>
       </div>
 
-      {/* Top Hero Shell: header/search + banner in one container */}
+      {hasScrolledPastBanner && (
+        <div
+          ref={stickyHeaderRef}
+          className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 transition-all duration-300"
+        >
+        <motion.div
+          className="relative z-50 pt-2 sm:pt-3 lg:pt-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: "easeOut" }}
+        >
+          <PageNavbar textColor="black" zIndex={50} />
+        </motion.div>
+
+        {!hasLiveLocation && (
+          <div className="px-3 sm:px-6 lg:px-8 pb-2">
+            <button
+              type="button"
+              onClick={handleLocationClick}
+              className="w-full max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto text-left rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#151515] px-3 py-2.5 flex items-start gap-2.5"
+            >
+              <MapPin className="h-4 w-4 text-[#EB590E] mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold tracking-wide text-gray-500 dark:text-gray-400 uppercase">
+                  Saved Address
+                </p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {savedAddressText || "No saved address. Tap to add one."}
+                </p>
+              </div>
+            </button>
+          </div>
+        )}
+
+        <motion.div
+          className="w-full py-3 sm:py-4 bg-white/95 transition-colors duration-300"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
+        >
+          <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4 lg:gap-6">
+            <motion.div
+              className="flex-1 relative"
+              whileHover={{ scale: 1.02 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
+                <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                  <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
+                  <div className="flex-1 relative">
+                    <div className="relative w-full">
+                      <Input
+                        value={heroSearch}
+                        onChange={(e) => setHeroSearch(e.target.value)}
+                        onFocus={handleSearchFocus}
+                        onClick={handleSearchFocus}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && heroSearch.trim()) {
+                            navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
+                            closeSearch()
+                            setHeroSearch("")
+                          }
+                        }}
+                        aria-label="Search restaurants and food"
+                        className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                      />
+                      {!heroSearch && (
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
+                          <AnimatePresence mode="wait">
+                            <motion.span
+                              key={placeholderIndex}
+                              initial={{ y: 16, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              exit={{ y: -16, opacity: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
+                            >
+                              {placeholders[placeholderIndex]}
+                            </motion.span>
+                          </AnimatePresence>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              ref={vegModeToggleRef}
+              className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <div className="flex flex-col items-center">
+                <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
+                <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
+              </div>
+              <Switch
+                checked={vegMode}
+                onCheckedChange={handleVegModeChange}
+                aria-label="Toggle Veg Mode"
+                className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
+              />
+            </motion.div>
+          </div>
+        </motion.div>
+        </div>
+      )}
+
+      {/* Top Hero Shell: banner */}
       <div
+        ref={heroShellRef}
+        data-home-hero-shell="true"
         className="relative w-full overflow-hidden aspect-[16/9] sm:aspect-[16/7] lg:aspect-[16/6] min-h-[290px] sm:min-h-[340px] lg:min-h-[400px] max-h-[620px] mb-3 md:-mt-40"
         onTouchStart={heroBannerImages.length > 0 ? handleTouchStart : undefined}
         onTouchMove={heroBannerImages.length > 0 ? handleTouchMove : undefined}

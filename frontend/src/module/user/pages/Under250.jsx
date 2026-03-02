@@ -41,6 +41,9 @@ export default function Under250() {
   const [loadingBanner, setLoadingBanner] = useState(true)
   const [under250Restaurants, setUnder250Restaurants] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
+  const [hasScrolledPastBanner, setHasScrolledPastBanner] = useState(false)
+  const bannerShellRef = useRef(null)
+  const stickyHeaderRef = useRef(null)
 
   const sortOptions = [
     { id: null, label: 'Relevance' },
@@ -256,6 +259,31 @@ export default function Under250() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  useEffect(() => {
+    const handleBannerScroll = () => {
+      const bannerShell = bannerShellRef.current
+      const stickyHeader = stickyHeaderRef.current
+
+      if (!bannerShell) {
+        setHasScrolledPastBanner(false)
+        return
+      }
+
+      const bannerRect = bannerShell.getBoundingClientRect()
+      const stickyHeight = stickyHeader?.getBoundingClientRect().height || 0
+      setHasScrolledPastBanner(bannerRect.bottom <= stickyHeight)
+    }
+
+    handleBannerScroll()
+    window.addEventListener("scroll", handleBannerScroll, { passive: true })
+    window.addEventListener("resize", handleBannerScroll)
+
+    return () => {
+      window.removeEventListener("scroll", handleBannerScroll)
+      window.removeEventListener("resize", handleBannerScroll)
+    }
+  }, [])
+
   // Helper function to update item quantity in bothlocal state and cart
   const updateItemQuantity = (item, newQuantity, event = null, restaurantName = null) => {
     // Check authentication
@@ -389,15 +417,24 @@ export default function Under250() {
   return (
 
     <div className={`relative min-h-screen bg-white dark:bg-[#0a0a0a] ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
-      {/* Mobile Navbar - Sticky & Hidden on Desktop */}
-      <div className="absolute top-0 left-0 right-0 z-40 w-full md:hidden">
+      <div
+        ref={stickyHeaderRef}
+        className={`fixed top-0 left-0 right-0 z-40 w-full md:hidden transition-all duration-300 ${hasScrolledPastBanner
+          ? "bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200"
+          : "bg-transparent"
+          }`}
+      >
         <div className="relative z-50 pt-2 sm:pt-3 pb-2">
           <PageNavbar textColor="black" zIndex={20} showProfile={true} />
         </div>
       </div>
 
       {/* Banner Section */}
-      <div className="relative w-full overflow-hidden h-[clamp(240px,42vw,520px)] md:-mt-40">
+      <div
+        ref={bannerShellRef}
+        data-banner-shell="true"
+        className="relative w-full overflow-hidden h-[clamp(240px,42vw,520px)] md:-mt-40"
+      >
         {/* Banner Image */}
         {bannerImage && (
           <div className="absolute top-0 left-0 right-0 bottom-0 z-0 overflow-hidden">
