@@ -16,8 +16,53 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
-import { formatCurrency, usdToInr } from "../utils/currency"
-import { getFoodById, saveFood } from "../utils/foodManagement"
+import { formatCurrency } from "../utils/currency"
+import { restaurantAPI } from "@/lib/api"
+import { findItemInSections, flattenMenuItems, getMenuFromResponse } from "../utils/menuItems"
+
+const getDefaultFoodData = (foodId) => ({
+  id: foodId || "",
+  name: "Food Not Found",
+  nameArabic: "",
+  image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop",
+  price: 0,
+  rating: 0.0,
+  reviews: 0,
+  availabilityTime: "12:01 AM - 11:57 PM",
+  description: "",
+  category: "Varieties",
+  foodType: "Non-Veg",
+  discountType: "Percent",
+  discountAmount: 0.0,
+  discount: 0,
+  variations: [],
+  tags: [],
+  nutrition: [],
+  allergies: [],
+  isAvailable: true,
+  isRecommended: false,
+})
+
+const toFoodData = (food, fallbackId = "") => {
+  if (!food) return getDefaultFoodData(fallbackId)
+  return {
+    ...food,
+    id: String(food.id || food._id || fallbackId || ""),
+    availabilityTime: food.availabilityTimeStart && food.availabilityTimeEnd
+      ? `${food.availabilityTimeStart} - ${food.availabilityTimeEnd}`
+      : "12:01 AM - 11:57 PM",
+    nameArabic: food.nameArabic || "",
+    description: food.description || "",
+    discountType: food.discountType || "Percent",
+    discountAmount: food.discountAmount || 0.0,
+    variations: Array.isArray(food.variations) ? food.variations : [],
+    tags: Array.isArray(food.tags) ? food.tags : [],
+    nutrition: Array.isArray(food.nutrition) ? food.nutrition : [],
+    allergies: Array.isArray(food.allergies) ? food.allergies : [],
+    isAvailable: food.isAvailable !== false,
+    isRecommended: !!food.isRecommended,
+  }
+}
 
 export default function FoodDetailsPage() {
   const navigate = useNavigate()
@@ -25,68 +70,14 @@ export default function FoodDetailsPage() {
   const [activeTab, setActiveTab] = useState("overview")
   const [showMenu, setShowMenu] = useState(false)
   const [showStockModal, setShowStockModal] = useState(false)
+  const [menuSections, setMenuSections] = useState([])
   const [stockData, setStockData] = useState({
     mainStock: 0,
     variations: []
   })
-  
-  // Load food data dynamically
-  const loadFoodData = (foodId) => {
-    const food = getFoodById(foodId)
-    if (food) {
-      return {
-        ...food,
-        // Format availability time
-        availabilityTime: food.availabilityTimeStart && food.availabilityTimeEnd
-          ? `${food.availabilityTimeStart} - ${food.availabilityTimeEnd}`
-          : "12:01 AM - 11:57 PM",
-        // Ensure all fields are present
-        nameArabic: food.nameArabic || "",
-        description: food.description || "",
-        discountType: food.discountType || "Percent",
-        discountAmount: food.discountAmount || 0.0,
-        variations: food.variations || [],
-        tags: food.tags || [],
-        nutrition: food.nutrition || [],
-        allergies: food.allergies || [],
-        isAvailable: food.isAvailable !== undefined ? food.isAvailable : true,
-        isRecommended: food.isRecommended || false
-      }
-    }
-    // Return default if not found
-    return {
-      id: foodId || 1,
-      name: "Food Not Found",
-      nameArabic: "",
-      image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop",
-      price: 0,
-      rating: 0.0,
-      reviews: 0,
-      availabilityTime: "12:01 AM - 11:57 PM",
-      description: "",
-      category: "Varieties",
-      foodType: "Non-Veg",
-      discountType: "Percent",
-      discountAmount: 0.0,
-      discount: 0,
-      variations: [],
-      tags: [],
-      nutrition: [],
-      allergies: [],
-      isAvailable: true,
-      isRecommended: false
-    }
-  }
-
-  const [foodData, setFoodData] = useState(() => loadFoodData(id))
-  const [isAvailable, setIsAvailable] = useState(() => {
-    const initialFood = loadFoodData(id)
-    return initialFood.isAvailable
-  })
-  const [isRecommended, setIsRecommended] = useState(() => {
-    const initialFood = loadFoodData(id)
-    return initialFood.isRecommended
-  })
+  const [foodData, setFoodData] = useState(() => getDefaultFoodData(id))
+  const [isAvailable, setIsAvailable] = useState(true)
+  const [isRecommended, setIsRecommended] = useState(false)
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -110,11 +101,32 @@ export default function FoodDetailsPage() {
 
   // Load food data and listen for updates
   useEffect(() => {
-    const refreshFoodData = () => {
-      const updatedFood = loadFoodData(id)
-      setFoodData(updatedFood)
-      setIsAvailable(updatedFood.isAvailable)
-      setIsRecommended(updatedFood.isRecommended)
+    let isMounted = true
+
+    const refreshFoodData = async () => {
+      try {
+        const response = await restaurantAPI.getMenu()
+        const menu = getMenuFromResponse(response)
+        const sections = Array.isArray(menu?.sections) ? menu.sections : []
+        const items = flattenMenuItems(menu)
+        const item = items.find((entry) => String(entry.id) === String(id))
+        const mapped = toFoodData(item, id)
+
+        if (isMounted) {
+          setMenuSections(sections)
+          setFoodData(mapped)
+          setIsAvailable(mapped.isAvailable)
+          setIsRecommended(mapped.isRecommended)
+        }
+      } catch {
+        if (isMounted) {
+          const fallback = getDefaultFoodData(id)
+          setMenuSections([])
+          setFoodData(fallback)
+          setIsAvailable(fallback.isAvailable)
+          setIsRecommended(fallback.isRecommended)
+        }
+      }
     }
 
     // Initial load
@@ -126,6 +138,7 @@ export default function FoodDetailsPage() {
     window.addEventListener('storage', refreshFoodData)
 
     return () => {
+      isMounted = false
       window.removeEventListener('foodsChanged', refreshFoodData)
       window.removeEventListener('foodUpdated', refreshFoodData)
       window.removeEventListener('storage', refreshFoodData)
@@ -134,45 +147,61 @@ export default function FoodDetailsPage() {
 
   // Initialize stock data when modal opens
   const handleOpenStockModal = () => {
-    const food = getFoodById(id)
-    if (food) {
-      setStockData({
-        mainStock: typeof food.stock === 'number' ? food.stock : (food.stock === 'Unlimited' || food.stock === 'unlimited' ? 'Unlimited' : 0),
-        variations: food.variations ? food.variations.map(v => ({
-          id: v.id,
-          name: v.name,
-          stock: v.stock || 0
-        })) : []
-      })
-      setShowStockModal(true)
-    }
+    setStockData({
+      mainStock:
+        typeof foodData.stock === "number"
+          ? foodData.stock
+          : foodData.stock === "Unlimited" || foodData.stock === "unlimited"
+            ? "Unlimited"
+            : 0,
+      variations: Array.isArray(foodData.variations)
+        ? foodData.variations.map((v) => ({
+            id: v.id,
+            name: v.name,
+            stock: v.stock || 0,
+          }))
+        : [],
+    })
+    setShowStockModal(true)
   }
 
   // Handle stock update
-  const handleUpdateStock = () => {
-    const food = getFoodById(id)
-    if (!food) return
+  const handleUpdateStock = async () => {
+    const position = findItemInSections(menuSections, id)
+    if (!position) return
 
-    // Update main stock
-    const updatedFood = {
-      ...food,
-      stock: stockData.mainStock
+    const nextSections = [...menuSections]
+    const targetCollection = position.inSubsection
+      ? nextSections[position.sectionIndex]?.subsections?.[position.subsectionIndex]?.items
+      : nextSections[position.sectionIndex]?.items
+
+    if (!Array.isArray(targetCollection) || !targetCollection[position.itemIndex]) return
+
+    const currentItem = targetCollection[position.itemIndex]
+    const updatedItem = {
+      ...currentItem,
+      stock: stockData.mainStock,
+      variations: Array.isArray(currentItem.variations)
+        ? currentItem.variations.map((variation) => {
+            const updatedVariation = stockData.variations.find(
+              (entry) => String(entry.id) === String(variation.id),
+            )
+            return updatedVariation ? { ...variation, stock: updatedVariation.stock } : variation
+          })
+        : [],
     }
 
-    // Update variation stocks
-    if (stockData.variations.length > 0) {
-      updatedFood.variations = food.variations.map(v => {
-        const updatedVariation = stockData.variations.find(sv => sv.id === v.id)
-        return updatedVariation ? { ...v, stock: updatedVariation.stock } : v
-      })
-    }
+    targetCollection[position.itemIndex] = updatedItem
 
-    // Save updated food
-    const saved = saveFood(updatedFood)
-    if (saved) {
+    try {
+      await restaurantAPI.updateMenu({ sections: nextSections })
+      setMenuSections(nextSections)
+      const mapped = toFoodData(updatedItem, id)
+      setFoodData(mapped)
       setShowStockModal(false)
-      // Food data will refresh automatically via event listeners
-    } else {
+      window.dispatchEvent(new CustomEvent("foodsChanged"))
+      window.dispatchEvent(new CustomEvent("foodUpdated", { detail: { food: mapped } }))
+    } catch {
       alert("Error updating stock. Please try again.")
     }
   }

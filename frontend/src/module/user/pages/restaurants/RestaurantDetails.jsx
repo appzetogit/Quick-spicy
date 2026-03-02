@@ -518,7 +518,23 @@ export default function RestaurantDetails() {
             }
           }
 
-          if (restaurantIdForMenu) {
+          const normalizedLookupIds = [
+            restaurantIdForMenu,
+            slug,
+            transformedRestaurant.id,
+            transformedRestaurant.restaurantId,
+            transformedRestaurant.mongoId,
+            apiRestaurant?.restaurantId,
+            apiRestaurant?._id,
+            actualRestaurant?.restaurantId,
+            actualRestaurant?._id,
+            actualRestaurant?.slug,
+          ]
+            .filter(Boolean)
+            .map((value) => String(value).trim())
+            .filter((value, index, arr) => arr.indexOf(value) === index)
+
+          if (normalizedLookupIds.length > 0) {
             let hasPreviousOrderForRestaurant = false
             if (isModuleAuthenticated('user')) {
               try {
@@ -526,7 +542,7 @@ export default function RestaurantDetails() {
                 const targetRestaurantName = normalize(transformedRestaurant.name)
                 const targetRestaurantIds = new Set(
                   [
-                    restaurantIdForMenu,
+                    ...normalizedLookupIds,
                     transformedRestaurant.id,
                     transformedRestaurant.restaurantId,
                     apiRestaurant?.restaurantId,
@@ -597,7 +613,27 @@ export default function RestaurantDetails() {
 
             try {
               console.log('📋 Fetching menu for restaurant ID:', restaurantIdForMenu)
-              const menuResponse = await restaurantAPI.getMenuByRestaurantId(restaurantIdForMenu)
+              let menuResponse = null
+              let resolvedMenuLookupId = null
+              for (const lookupId of normalizedLookupIds) {
+                try {
+                  console.log('📋 Fetching menu for restaurant lookup ID:', lookupId)
+                  const response = await restaurantAPI.getMenuByRestaurantId(lookupId)
+                  if (response?.data?.success) {
+                    menuResponse = response
+                    resolvedMenuLookupId = lookupId
+                    break
+                  }
+                } catch (lookupError) {
+                  if (lookupError?.response?.status !== 404) {
+                    throw lookupError
+                  }
+                }
+              }
+              if (!menuResponse) {
+                throw Object.assign(new Error('Menu not found'), { response: { status: 404 } })
+              }
+              console.log('✅ Menu resolved using lookup ID:', resolvedMenuLookupId)
               if (menuResponse.data && menuResponse.data.success && menuResponse.data.data && menuResponse.data.data.menu) {
                 const menuSections = menuResponse.data.data.menu.sections || []
 
@@ -673,7 +709,27 @@ export default function RestaurantDetails() {
 
             try {
               console.log('📋 Fetching inventory for restaurant ID:', restaurantIdForMenu)
-              const inventoryResponse = await restaurantAPI.getInventoryByRestaurantId(restaurantIdForMenu)
+              let inventoryResponse = null
+              let resolvedInventoryLookupId = null
+              for (const lookupId of normalizedLookupIds) {
+                try {
+                  console.log('📋 Fetching inventory for restaurant lookup ID:', lookupId)
+                  const response = await restaurantAPI.getInventoryByRestaurantId(lookupId)
+                  if (response?.data?.success) {
+                    inventoryResponse = response
+                    resolvedInventoryLookupId = lookupId
+                    break
+                  }
+                } catch (lookupError) {
+                  if (lookupError?.response?.status !== 404) {
+                    throw lookupError
+                  }
+                }
+              }
+              if (!inventoryResponse) {
+                throw Object.assign(new Error('Inventory not found'), { response: { status: 404 } })
+              }
+              console.log('✅ Inventory resolved using lookup ID:', resolvedInventoryLookupId)
               if (inventoryResponse.data && inventoryResponse.data.success && inventoryResponse.data.data && inventoryResponse.data.data.inventory) {
                 const inventoryCategories = inventoryResponse.data.data.inventory.categories || []
 
