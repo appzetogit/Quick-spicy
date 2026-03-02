@@ -1315,6 +1315,27 @@ const normalizeSingleItemImagesForAdmin = (item = {}) => {
   };
 };
 
+const getTotalMenuItemCount = (sections = []) => {
+  if (!Array.isArray(sections)) return 0;
+
+  let count = 0;
+  sections.forEach((section = {}) => {
+    if (Array.isArray(section.items)) {
+      count += section.items.length;
+    }
+
+    if (Array.isArray(section.subsections)) {
+      section.subsections.forEach((subsection = {}) => {
+        if (Array.isArray(subsection.items)) {
+          count += subsection.items.length;
+        }
+      });
+    }
+  });
+
+  return count;
+};
+
 /**
  * Update Restaurant Menu (Admin)
  * PUT /api/admin/restaurants/:id/menu
@@ -1322,7 +1343,7 @@ const normalizeSingleItemImagesForAdmin = (item = {}) => {
 export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { sections } = req.body || {};
+    const { sections, allowEmpty } = req.body || {};
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return errorResponse(res, 400, "Invalid restaurant ID");
@@ -1492,6 +1513,23 @@ export const updateRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
         order: Number.isFinite(section?.order) ? section.order : sectionIndex,
       };
     });
+
+    const existingItemCount = getTotalMenuItemCount(existingMenu?.sections || []);
+    const incomingItemCount = getTotalMenuItemCount(normalizedSections);
+    const shouldAllowEmptyOverwrite =
+      allowEmpty === true || String(allowEmpty).toLowerCase() === "true";
+
+    if (
+      existingItemCount > 0 &&
+      incomingItemCount === 0 &&
+      !shouldAllowEmptyOverwrite
+    ) {
+      return errorResponse(
+        res,
+        400,
+        "Refusing to overwrite non-empty menu with empty data. Pass allowEmpty=true to confirm."
+      );
+    }
 
     let menu = existingMenu;
     if (!menu) {
