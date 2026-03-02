@@ -1,0 +1,322 @@
+{
+  "createdAt": "2026-03-02T17:41:12.587Z",
+  "databaseName": "quickspicy",
+  "collectionCount": 63,
+  "collections": [
+    {
+      "name": "gourmetrestaurants",
+      "count": 0,
+      "file": "gourmetrestaurants.ndjson"
+    },
+    {
+      "name": "users",
+      "count": 22,
+      "file": "users.ndjson"
+    },
+    {
+      "name": "deliverywithdrawalrequests",
+      "count": 1,
+      "file": "deliverywithdrawalrequests.ndjson"
+    },
+    {
+      "name": "menus",
+      "count": 18,
+      "file": "menus.ndjson"
+    },
+    {
+      "name": "deliverywallets",
+      "count": 11,
+      "file": "deliverywallets.ndjson"
+    },
+    {
+      "name": "zones",
+      "count": 3,
+      "file": "zones.ndjson"
+    },
+    {
+      "name": "environmentvariables",
+      "count": 5,
+      "file": "environmentvariables.ndjson"
+    },
+    {
+      "name": "deliveries",
+      "count": 12,
+      "file": "deliveries.ndjson"
+    },
+    {
+      "name": "feedbacks",
+      "count": 0,
+      "file": "feedbacks.ndjson"
+    },
+    {
+      "name": "refundpolicies",
+      "count": 1,
+      "file": "refundpolicies.ndjson"
+    },
+    {
+      "name": "ordersettlements",
+      "count": 1,
+      "file": "ordersettlements.ndjson"
+    },
+    {
+      "name": "admincategorymanagements",
+      "count": 2,
+      "file": "admincategorymanagements.ndjson"
+    },
+    {
+      "name": "feesettings",
+      "count": 17,
+      "file": "feesettings.ndjson"
+    },
+    {
+      "name": "dininglimelights",
+      "count": 0,
+      "file": "dininglimelights.ndjson"
+    },
+    {
+      "name": "outlettimings",
+      "count": 4,
+      "file": "outlettimings.ndjson"
+    },
+    {
+      "name": "deliverysupporttickets",
+      "count": 0,
+      "file": "deliverysupporttickets.ndjson"
+    },
+    {
+      "name": "tablebookings",
+      "count": 0,
+      "file": "tablebookings.ndjson"
+    },
+    {
+      "name": "admincommissions",
+      "count": 4,
+      "file": "admincommissions.ndjson"
+    },
+    {
+      "name": "cancellationpolicies",
+      "count": 1,
+      "file": "cancellationpolicies.ndjson"
+    },
+    {
+      "name": "landingpageexploremores",
+      "count": 4,
+      "file": "landingpageexploremores.ndjson"
+    },
+    {
+      "name": "earningaddons",
+      "count": 1,
+      "file": "earningaddons.ndjson"
+    },
+    {
+      "name": "top10restaurants",
+      "count": 0,
+      "file": "top10restaurants.ndjson"
+    },
+    {
+      "name": "offers",
+      "count": 3,
+      "file": "offers.ndjson"
+    },
+    {
+      "name": "diningbanners",
+      "count": 0,
+      "file": "diningbanners.ndjson"
+    },
+    {
+      "name": "staffmanagements",
+      "count": 0,
+      "file": "staffmanagements.ndjson"
+    },
+    {
+      "name": "diningmusttries",
+      "count": 0,
+      "file": "diningmusttries.ndjson"
+    },
+    {
+      "name": "etalogs",
+      "count": 0,
+      "file": "etalogs.ndjson"
+    },
+    {
+      "name": "payments",
+      "count": 1,
+      "file": "payments.ndjson"
+    },
+    {
+      "name": "menuitemschedules",
+      "count": 0,
+      "file": "menuitemschedules.ndjson"
+    },
+    {
+      "name": "termsandconditions",
+      "count": 0,
+      "file": "termsandconditions.ndjson"
+    },
+    {
+      "name": "under250banners",
+      "count": 1,
+      "file": "under250banners.ndjson"
+    },
+    {
+      "name": "diningreviews",
+      "count": 0,
+      "file": "diningreviews.ndjson"
+    },
+    {
+      "name": "feedbackexperiences",
+      "count": 0,
+      "file": "feedbackexperiences.ndjson"
+    },
+    {
+      "name": "landingpagecategories",
+      "count": 0,
+      "file": "landingpagecategories.ndjson"
+    },
+    {
+      "name": "deliveryboycommissions",
+      "count": 1,
+      "file": "deliveryboycommissions.ndjson"
+    },
+    {
+      "name": "restaurantwallets",
+      "count": 5,
+      "file": "restaurantwallets.ndjson"
+    },
+    {
+      "name": "withdrawalrequests",
+      "count": 0,
+      "file": "withdrawalrequests.ndjson"
+    },
+    {
+      "name": "diningrestaurants",
+      "count": 0,
+      "file": "diningrestaurants.ndjson"
+    },
+    {
+      "name": "inventories",
+      "count": 0,
+      "file": "inventories.ndjson"
+    },
+    {
+      "name": "restaurantcomplaints",
+      "count": 1,
+      "file": "restaurantcomplaints.ndjson"
+    },
+    {
+      "name": "diningbankoffers",
+      "count": 0,
+      "file": "diningbankoffers.ndjson"
+    },
+    {
+      "name": "otps",
+      "count": 0,
+      "file": "otps.ndjson"
+    },
+    {
+      "name": "restaurantcommissions",
+      "count": 1,
+      "file": "restaurantcommissions.ndjson"
+    },
+    {
+      "name": "earningaddonhistories",
+      "count": 0,
+      "file": "earningaddonhistories.ndjson"
+    },
+    {
+      "name": "restaurantcategories",
+      "count": 103,
+      "file": "restaurantcategories.ndjson"
+    },
+    {
+      "name": "deliveryemergencyhelps",
+      "count": 1,
+      "file": "deliveryemergencyhelps.ndjson"
+    },
+    {
+      "name": "herobanners",
+      "count": 2,
+      "file": "herobanners.ndjson"
+    },
+    {
+      "name": "safetyemergencies",
+      "count": 0,
+      "file": "safetyemergencies.ndjson"
+    },
+    {
+      "name": "landingpagesettings",
+      "count": 1,
+      "file": "landingpagesettings.ndjson"
+    },
+    {
+      "name": "restaurants",
+      "count": 17,
+      "file": "restaurants.ndjson"
+    },
+    {
+      "name": "adminwallets",
+      "count": 0,
+      "file": "adminwallets.ndjson"
+    },
+    {
+      "name": "diningofferbanners",
+      "count": 0,
+      "file": "diningofferbanners.ndjson"
+    },
+    {
+      "name": "userwallets",
+      "count": 16,
+      "file": "userwallets.ndjson"
+    },
+    {
+      "name": "privacypolicies",
+      "count": 1,
+      "file": "privacypolicies.ndjson"
+    },
+    {
+      "name": "diningstories",
+      "count": 0,
+      "file": "diningstories.ndjson"
+    },
+    {
+      "name": "businesssettings",
+      "count": 1,
+      "file": "businesssettings.ndjson"
+    },
+    {
+      "name": "diningcategories",
+      "count": 0,
+      "file": "diningcategories.ndjson"
+    },
+    {
+      "name": "abouts",
+      "count": 1,
+      "file": "abouts.ndjson"
+    },
+    {
+      "name": "admins",
+      "count": 2,
+      "file": "admins.ndjson"
+    },
+    {
+      "name": "auditlogs",
+      "count": 1,
+      "file": "auditlogs.ndjson"
+    },
+    {
+      "name": "orderevents",
+      "count": 124,
+      "file": "orderevents.ndjson"
+    },
+    {
+      "name": "orders",
+      "count": 88,
+      "file": "orders.ndjson"
+    },
+    {
+      "name": "shippingpolicies",
+      "count": 1,
+      "file": "shippingpolicies.ndjson"
+    }
+  ]
+}

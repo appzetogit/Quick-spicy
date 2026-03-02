@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, Component } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
@@ -51,7 +51,7 @@ import fssaiLogo from "@/assets/fssai.png"
 
 const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
 
-export default function RestaurantDetails() {
+function RestaurantDetailsContent() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -91,6 +91,7 @@ export default function RestaurantDetails() {
   const [loadingRestaurant, setLoadingRestaurant] = useState(true)
   const [restaurantError, setRestaurantError] = useState(null)
   const fetchedRestaurantRef = useRef(false) // Track if restaurant has been fetched for current slug
+  const fetchedSlugRef = useRef(null)
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -107,7 +108,7 @@ export default function RestaurantDetails() {
 
       // Prevent re-fetching for the same slug. Mobile location/zone updates can
       // trigger transient refetch failures that clear already-rendered content.
-      if (fetchedRestaurantRef.current && restaurant && restaurant.slug === slug) {
+      if (fetchedRestaurantRef.current && fetchedSlugRef.current === slug && restaurant) {
         return
       }
 
@@ -460,6 +461,7 @@ export default function RestaurantDetails() {
 
           setRestaurant(transformedRestaurant)
           fetchedRestaurantRef.current = true // Mark as fetched
+          fetchedSlugRef.current = slug
 
           // Load outlet timings from public endpoint (source of truth for daily opening slots)
           try {
@@ -799,8 +801,8 @@ export default function RestaurantDetails() {
           console.error('❌ No restaurant data found in API response')
           console.error('❌ Response:', response)
           console.error('❌ apiRestaurant:', apiRestaurant)
-          setRestaurantError('Restaurant not found')
           if (!fetchedRestaurantRef.current) {
+            setRestaurantError('Restaurant not found')
             setRestaurant(null)
           }
         }
@@ -816,22 +818,22 @@ export default function RestaurantDetails() {
           // Don't show "Restaurant not found" for network errors
           // The axios interceptor will show a toast notification
           console.error('Network error fetching restaurant (backend may not be running):', error)
-          setRestaurantError('Backend server is not connected. Please make sure the backend is running.')
           if (!fetchedRestaurantRef.current) {
+            setRestaurantError('Backend server is not connected. Please make sure the backend is running.')
             setRestaurant(null)
           }
         } else if (is404Error) {
           // 404 error - restaurant doesn't exist in database
           console.log(`Restaurant "${slug}" not found in database`)
-          setRestaurantError('Restaurant not found')
           if (!fetchedRestaurantRef.current) {
+            setRestaurantError('Restaurant not found')
             setRestaurant(null)
           }
         } else {
           // Other errors
           console.error('Error fetching restaurant:', error)
-          setRestaurantError(error.message || 'Failed to load restaurant')
           if (!fetchedRestaurantRef.current) {
+            setRestaurantError(error.message || 'Failed to load restaurant')
             setRestaurant(null)
           }
         }
@@ -840,9 +842,12 @@ export default function RestaurantDetails() {
       }
     }
 
-    // Reset fetched flag when slug changes
-    if (fetchedRestaurantRef.current && restaurant?.slug !== slug) {
+    // Reset fetched flag only when URL slug changes.
+    // Do not compare with restaurant.slug because canonical API slug may differ
+    // from route slug (e.g. "restaurant-2513"), causing refetch loops.
+    if (fetchedRestaurantRef.current && fetchedSlugRef.current !== slug) {
       fetchedRestaurantRef.current = false
+      fetchedSlugRef.current = null
     }
 
     // Wait for zone to load before fetching (if zone-based search might be needed)
@@ -853,7 +858,7 @@ export default function RestaurantDetails() {
     }
 
     fetchRestaurant()
-  }, [slug, zoneId, loadingZone, restaurant?.slug])
+  }, [slug, zoneId, loadingZone, restaurant])
 
   // Track previous values to prevent unnecessary recalculations
   const prevCoordsRef = useRef({ userLat: null, userLng: null, restaurantLat: null, restaurantLng: null })
@@ -1467,8 +1472,8 @@ export default function RestaurantDetails() {
 
   // Show loading state
   if (loadingRestaurant) {
-    return (
-      <AnimatedPage>
+  return (
+    <AnimatedPage>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-8 w-8 text-[#EB590E] animate-spin" />
@@ -2247,7 +2252,7 @@ export default function RestaurantDetails() {
                 License No.
               </p>
               <p className="text-sm font-semibold text-gray-600 dark:text-gray-300 font-mono tracking-wide">
-                {restaurant.onboarding.step3.fssai.registrationNumber}
+                {restaurant?.onboarding?.step3?.fssai?.registrationNumber}
               </p>
             </div>
           </div>
@@ -3170,11 +3175,12 @@ export default function RestaurantDetails() {
                           Restaurant coupons
                         </h3>
                         <div className="space-y-3">
-                          {restaurant.restaurantOffers.coupons.map((coupon) => {
-                            const isExpanded = expandedCoupons.has(coupon.id)
+                          {restaurant.restaurantOffers.coupons.map((coupon, couponIndex) => {
+                            const couponKey = coupon?.id || coupon?.code || `coupon-${couponIndex}`
+                            const isExpanded = expandedCoupons.has(couponKey)
                             return (
                               <div
-                                key={coupon.id}
+                                key={couponKey}
                                 className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
                               >
                                 <button
@@ -3182,10 +3188,10 @@ export default function RestaurantDetails() {
                                   onClick={() => {
                                     setExpandedCoupons((prev) => {
                                       const newSet = new Set(prev)
-                                      if (newSet.has(coupon.id)) {
-                                        newSet.delete(coupon.id)
+                                      if (newSet.has(couponKey)) {
+                                        newSet.delete(couponKey)
                                       } else {
-                                        newSet.add(coupon.id)
+                                        newSet.add(couponKey)
                                       }
                                       return newSet
                                     })
@@ -3206,10 +3212,12 @@ export default function RestaurantDetails() {
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         // Copy code to clipboard
-                                        navigator.clipboard.writeText(coupon.code)
+                                        if (coupon?.code) {
+                                          navigator.clipboard.writeText(coupon.code)
+                                        }
                                       }}
                                     >
-                                      {coupon.code}
+                                      {coupon?.code || "Copy"}
                                     </button>
                                     <ChevronDown
                                       className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""
@@ -3330,7 +3338,7 @@ export default function RestaurantDetails() {
                             Lic. No.
                           </p>
                           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                            {restaurant.onboarding.step3.fssai.registrationNumber}
+                            {restaurant?.onboarding?.step3?.fssai?.registrationNumber}
                           </p>
                         </div>
                       </div>
@@ -3359,6 +3367,56 @@ export default function RestaurantDetails() {
           document.body
         )}
     </AnimatedPage>
+  )
+}
+
+class RestaurantDetailsErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error, info) {
+    console.error("RestaurantDetails crashed:", error, info)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <AnimatedPage>
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+            <div className="flex flex-col items-center gap-4 text-center">
+              <AlertCircle className="h-12 w-12 text-red-500" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Something went wrong
+                </h2>
+                <p className="text-sm text-gray-600 mb-4 max-w-md">
+                  We could not load this restaurant page right now.
+                </p>
+                <Button onClick={() => window.location.reload()} variant="outline">
+                  Reload Page
+                </Button>
+              </div>
+            </div>
+          </div>
+        </AnimatedPage>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
+export default function RestaurantDetails() {
+  return (
+    <RestaurantDetailsErrorBoundary>
+      <RestaurantDetailsContent />
+    </RestaurantDetailsErrorBoundary>
   )
 }
 
