@@ -154,13 +154,13 @@ export default function TransactionReport() {
 
   const formatCurrency = (amount) => {
     if (amount >= 1000) {
-      return `$ ${(amount / 1000).toFixed(2)}K`
+      return `₹ ${(amount / 1000).toFixed(2)}K`
     }
-    return `$ ${amount.toFixed(2)}`
+    return `₹ ${amount.toFixed(2)}`
   }
 
   const formatFullCurrency = (amount) => {
-    return `$ ${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `₹ ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   if (loading) {

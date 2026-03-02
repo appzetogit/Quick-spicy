@@ -212,14 +212,14 @@ export const exportTransactionReportToPDF = (transactions, filename = "transacti
               <td>${transaction.orderId}</td>
               <td>${transaction.restaurant}</td>
               <td>${transaction.customerName}</td>
-              <td>$${transaction.totalItemAmount.toFixed(2)}</td>
-              <td>$${transaction.itemDiscount.toFixed(2)}</td>
-              <td>$${transaction.couponDiscount.toFixed(2)}</td>
-              <td>$${transaction.referralDiscount.toFixed(2)}</td>
-              <td>$${transaction.discountedAmount.toFixed(2)}</td>
-              <td>$${transaction.vatTax.toFixed(2)}</td>
-              <td>$${transaction.deliveryCharge.toFixed(2)}</td>
-              <td>$${transaction.orderAmount.toFixed(2)}</td>
+              <td>₹${transaction.totalItemAmount.toFixed(2)}</td>
+              <td>₹${transaction.itemDiscount.toFixed(2)}</td>
+              <td>₹${transaction.couponDiscount.toFixed(2)}</td>
+              <td>₹${transaction.referralDiscount.toFixed(2)}</td>
+              <td>₹${transaction.discountedAmount.toFixed(2)}</td>
+              <td>₹${transaction.vatTax.toFixed(2)}</td>
+              <td>₹${transaction.deliveryCharge.toFixed(2)}</td>
+              <td>₹${transaction.orderAmount.toFixed(2)}</td>
             </tr>
           `).join("")}
         </tbody>
@@ -250,4 +250,3 @@ export const exportTransactionReportToJSON = (transactions, filename = "transact
   link.click()
   document.body.removeChild(link)
 }
-

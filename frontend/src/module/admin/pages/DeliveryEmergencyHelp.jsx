@@ -43,19 +43,19 @@ export default function DeliveryEmergencyHelp() {
 
   const validateForm = () => {
     const errors = {}
-    const phoneRegex = /^[\d\s\-\+\(\)]+$/
+    const phoneRegex = /^\d{10}$/
 
     if (formData.medicalEmergency && !phoneRegex.test(formData.medicalEmergency.trim())) {
-      errors.medicalEmergency = "Invalid phone number format"
+      errors.medicalEmergency = "Phone number must be exactly 10 digits"
     }
     if (formData.accidentHelpline && !phoneRegex.test(formData.accidentHelpline.trim())) {
-      errors.accidentHelpline = "Invalid phone number format"
+      errors.accidentHelpline = "Phone number must be exactly 10 digits"
     }
     if (formData.contactPolice && !phoneRegex.test(formData.contactPolice.trim())) {
-      errors.contactPolice = "Invalid phone number format"
+      errors.contactPolice = "Phone number must be exactly 10 digits"
     }
     if (formData.insurance && !phoneRegex.test(formData.insurance.trim())) {
-      errors.insurance = "Invalid phone number format"
+      errors.insurance = "Phone number must be exactly 10 digits"
     }
 
     setFormErrors(errors)
@@ -63,9 +63,10 @@ export default function DeliveryEmergencyHelp() {
   }
 
   const handleInputChange = (field, value) => {
+    const sanitizedValue = value.replace(/\D/g, "").slice(0, 10)
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      [field]: sanitizedValue
     }))
     // Clear error for this field when user starts typing
     if (formErrors[field]) {
@@ -198,6 +199,8 @@ export default function DeliveryEmergencyHelp() {
                     value={formData[field.id]}
                     onChange={(e) => handleInputChange(field.id, e.target.value)}
                     placeholder={field.placeholder}
+                    inputMode="numeric"
+                    maxLength={10}
                     className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                       formErrors[field.id]
                         ? "border-red-300 focus:ring-red-500"
@@ -252,4 +255,3 @@ export default function DeliveryEmergencyHelp() {
     </div>
   )
 }
-

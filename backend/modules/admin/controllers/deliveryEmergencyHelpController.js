@@ -74,20 +74,20 @@ export const createOrUpdateEmergencyHelp = asyncHandler(async (req, res) => {
     const { medicalEmergency, accidentHelpline, contactPolice, insurance } = req.body;
     const adminId = req.admin._id;
 
-    // Validate phone numbers (optional, but if provided should be valid format)
-    const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+    // Validate phone numbers (optional, but if provided should be exactly 10 digits)
+    const phoneRegex = /^\d{10}$/;
     
-    if (medicalEmergency && !phoneRegex.test(medicalEmergency)) {
-      return errorResponse(res, 400, 'Invalid medical emergency phone number format');
+    if (medicalEmergency && !phoneRegex.test(String(medicalEmergency).trim())) {
+      return errorResponse(res, 400, 'Medical emergency phone number must be exactly 10 digits');
     }
-    if (accidentHelpline && !phoneRegex.test(accidentHelpline)) {
-      return errorResponse(res, 400, 'Invalid accident helpline phone number format');
+    if (accidentHelpline && !phoneRegex.test(String(accidentHelpline).trim())) {
+      return errorResponse(res, 400, 'Accident helpline phone number must be exactly 10 digits');
     }
-    if (contactPolice && !phoneRegex.test(contactPolice)) {
-      return errorResponse(res, 400, 'Invalid contact police phone number format');
+    if (contactPolice && !phoneRegex.test(String(contactPolice).trim())) {
+      return errorResponse(res, 400, 'Contact police phone number must be exactly 10 digits');
     }
-    if (insurance && !phoneRegex.test(insurance)) {
-      return errorResponse(res, 400, 'Invalid insurance phone number format');
+    if (insurance && !phoneRegex.test(String(insurance).trim())) {
+      return errorResponse(res, 400, 'Insurance phone number must be exactly 10 digits');
     }
 
     // Find existing active record
@@ -153,4 +153,3 @@ export const toggleEmergencyHelpStatus = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to update emergency help status');
   }
 });
-
