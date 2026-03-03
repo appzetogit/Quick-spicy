@@ -1,0 +1,11 @@
+{
+  "createdAt": "2026-03-02T18:21:27.748Z",
+  "sourceBackup": "backend/scripts/backups/restaurant-menu-times-images-backup-2026-03-02T23-49-52-800+05-30",
+  "restaurantsCount": 17,
+  "menusCount": 18,
+  "outletTimingsCount": 4,
+  "menuItemSchedulesCount": 0,
+  "restaurantsWithMenuItemImages": 10,
+  "restaurantsWithOutletTimings": 4,
+  "totalDistinctMenuItemImages": 590
+}
