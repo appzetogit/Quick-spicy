@@ -39,6 +39,7 @@ const FSSAI_NUMBER_REGEX = /^\d{14}$/
 const BANK_ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/
 const IFSC_CODE_REGEX = /^[A-Z0-9]{11}$/
 const ACCOUNT_HOLDER_NAME_REGEX = /^[A-Za-z ]+$/
+const LOCAL_IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp,.heic,.heif"
 const GALLERY_IMAGE_ACCEPT =
   ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
 
@@ -1368,7 +1369,7 @@ export default function RestaurantOnboarding() {
               id="menuImagesInput"
               type="file"
               multiple
-              accept={GALLERY_IMAGE_ACCEPT}
+              accept={LOCAL_IMAGE_FILE_ACCEPT}
               className="hidden"
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
@@ -1510,7 +1511,7 @@ export default function RestaurantOnboarding() {
           <input
             id="profileImageInput"
             type="file"
-            accept={GALLERY_IMAGE_ACCEPT}
+            accept={LOCAL_IMAGE_FILE_ACCEPT}
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0] || null
