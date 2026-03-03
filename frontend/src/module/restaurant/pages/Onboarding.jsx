@@ -35,6 +35,10 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const ONBOARDING_STORAGE_KEY = "restaurant_onboarding_data"
 const PAN_NUMBER_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const FSSAI_NUMBER_REGEX = /^\d{14}$/
+const BANK_ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/
+const IFSC_CODE_REGEX = /^[A-Z0-9]{11}$/
+const ACCOUNT_HOLDER_NAME_REGEX = /^[A-Za-z ]+$/
 const GALLERY_IMAGE_ACCEPT =
   ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
 
@@ -72,6 +76,15 @@ const getVerifiedPhoneFromStoredRestaurant = () => {
     return ""
   }
 }
+
+const normalizeAccountTypeValue = (value) => {
+  const normalized = String(value || "").trim().toLowerCase()
+  if (normalized === "saving" || normalized === "savings") return "Saving"
+  if (normalized === "current") return "Current"
+  return ""
+}
+
+const getTodayLocalYMD = () => formatDateToLocalYMD(new Date())
 
 // Helper functions for localStorage
 const saveOnboardingToLocalStorage = (step1, step2, step3, step4, currentStep) => {
@@ -415,9 +428,9 @@ export default function RestaurantOnboarding() {
           fssaiImage: localData.step3.fssaiImage || null,
           accountNumber: localData.step3.accountNumber || "",
           confirmAccountNumber: localData.step3.confirmAccountNumber || "",
-          ifscCode: localData.step3.ifscCode || "",
+          ifscCode: (localData.step3.ifscCode || "").toUpperCase(),
           accountHolderName: localData.step3.accountHolderName || "",
-          accountType: localData.step3.accountType || "",
+          accountType: normalizeAccountTypeValue(localData.step3.accountType || ""),
         })
       }
       if (localData.step4) {
@@ -536,9 +549,9 @@ export default function RestaurantOnboarding() {
               fssaiImage: null, // Don't load images from API, user needs to re-upload
               accountNumber: data.step3.bank?.accountNumber || "",
               confirmAccountNumber: data.step3.bank?.accountNumber || "",
-              ifscCode: data.step3.bank?.ifscCode || "",
+              ifscCode: (data.step3.bank?.ifscCode || "").toUpperCase(),
               accountHolderName: data.step3.bank?.accountHolderName || "",
-              accountType: data.step3.bank?.accountType || "",
+              accountType: normalizeAccountTypeValue(data.step3.bank?.accountType || ""),
             })
           }
 
@@ -709,9 +722,13 @@ export default function RestaurantOnboarding() {
 
     if (!step3.fssaiNumber?.trim()) {
       errors.push("FSSAI number is required")
+    } else if (!FSSAI_NUMBER_REGEX.test(step3.fssaiNumber.trim())) {
+      errors.push("FSSAI number must contain exactly 14 digits")
     }
     if (!step3.fssaiExpiry?.trim()) {
       errors.push("FSSAI expiry date is required")
+    } else if (step3.fssaiExpiry < getTodayLocalYMD()) {
+      errors.push("FSSAI expiry date cannot be in the past")
     }
     // Validate FSSAI image - must be a File or existing URL
     if (!step3.fssaiImage) {
@@ -753,21 +770,31 @@ export default function RestaurantOnboarding() {
 
     if (!step3.accountNumber?.trim()) {
       errors.push("Account number is required")
+    } else if (!BANK_ACCOUNT_NUMBER_REGEX.test(step3.accountNumber.trim())) {
+      errors.push("Account number must contain 9 to 18 digits only")
     }
     if (!step3.confirmAccountNumber?.trim()) {
       errors.push("Please confirm your account number")
+    } else if (!BANK_ACCOUNT_NUMBER_REGEX.test(step3.confirmAccountNumber.trim())) {
+      errors.push("Confirm account number must contain 9 to 18 digits only")
     }
     if (step3.accountNumber && step3.confirmAccountNumber && step3.accountNumber !== step3.confirmAccountNumber) {
       errors.push("Account number and confirmation do not match")
     }
     if (!step3.ifscCode?.trim()) {
       errors.push("IFSC code is required")
+    } else if (!IFSC_CODE_REGEX.test(step3.ifscCode.trim().toUpperCase())) {
+      errors.push("IFSC code must contain exactly 11 alphanumeric characters")
     }
     if (!step3.accountHolderName?.trim()) {
       errors.push("Account holder name is required")
+    } else if (!ACCOUNT_HOLDER_NAME_REGEX.test(step3.accountHolderName.trim())) {
+      errors.push("Account holder name must contain only letters")
     }
     if (!step3.accountType?.trim()) {
       errors.push("Account type is required")
+    } else if (!["Saving", "Current"].includes(step3.accountType.trim())) {
+      errors.push("Account type must be either Saving or Current")
     }
 
     return errors
@@ -823,7 +850,7 @@ export default function RestaurantOnboarding() {
         confirmAccountNumber: "1234567890123",
         ifscCode: "HDFC0001234",
         accountHolderName: "John Doe",
-        accountType: "savings",
+        accountType: "Saving",
       })
       toast.success("Step 3 filled with dummy data", { duration: 2000 })
     } else if (step === 4) {
@@ -831,7 +858,7 @@ export default function RestaurantOnboarding() {
         estimatedDeliveryTime: "25-30 mins",
         featuredDish: "Butter Chicken Special",
         featuredPrice: "249",
-        offer: "Flat ₹50 OFF above ₹199",
+        offer: "Flat 50 Rs. OFF on Order Above Rs.199",
       })
       toast.success("Step 4 filled with dummy data", { duration: 2000 })
     }
@@ -1335,7 +1362,7 @@ export default function RestaurantOnboarding() {
               className="inline-flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white text-black  border-black text-xs font-medium cursor-pointer     w-full items-center"
             >
               <Upload className="w-4.5 h-4.5" />
-              <span>Choose files</span>
+              <span>Upload</span>
             </label>
             <input
               id="menuImagesInput"
@@ -1596,10 +1623,15 @@ export default function RestaurantOnboarding() {
             />
           </div>
           <div>
-            <Label className="text-xs text-gray-700">Name on PAN</Label>
+            <Label className="text-xs text-gray-700">PAN Card Holder Name</Label>
             <Input
               value={step3.nameOnPan || ""}
-              onChange={(e) => setStep3({ ...step3, nameOnPan: e.target.value })}
+              onChange={(e) =>
+                setStep3({
+                  ...step3,
+                  nameOnPan: e.target.value.replace(/[^A-Za-z ]/g, ""),
+                })
+              }
               className="mt-1 bg-white text-sm text-black placeholder-black"
             />
           </div>
@@ -1675,9 +1707,11 @@ export default function RestaurantOnboarding() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             value={step3.fssaiNumber || ""}
-            onChange={(e) => setStep3({ ...step3, fssaiNumber: e.target.value })}
+            onChange={(e) =>
+              setStep3({ ...step3, fssaiNumber: e.target.value.replace(/\D/g, "").slice(0, 14) })
+            }
             className="bg-white text-sm"
-            placeholder="FSSAI number"
+            placeholder="FSSAI number (14 digits)"
           />
           <div>
             <Label className="text-xs text-gray-700 mb-1 block">FSSAI expiry date</Label>
@@ -1705,8 +1739,9 @@ export default function RestaurantOnboarding() {
                   <Calendar
                     mode="single"
                     selected={parseLocalYMDDate(step3.fssaiExpiry)}
+                    disabled={(date) => formatDateToLocalYMD(date) < getTodayLocalYMD()}
                     onSelect={(date) => {
-                      if (date) {
+                      if (date && formatDateToLocalYMD(date) >= getTodayLocalYMD()) {
                         const formattedDate = formatDateToLocalYMD(date)
                         setStep3({ ...step3, fssaiExpiry: formattedDate })
                         setIsFssaiCalendarOpen(false)
@@ -1738,7 +1773,7 @@ export default function RestaurantOnboarding() {
           <Input
             value={step3.accountNumber || ""}
             onChange={(e) =>
-              setStep3({ ...step3, accountNumber: e.target.value.trim() })
+              setStep3({ ...step3, accountNumber: e.target.value.replace(/\D/g, "").slice(0, 18) })
             }
             className="bg-white text-sm"
             placeholder="Account number"
@@ -1746,7 +1781,10 @@ export default function RestaurantOnboarding() {
           <Input
             value={step3.confirmAccountNumber || ""}
             onChange={(e) =>
-              setStep3({ ...step3, confirmAccountNumber: e.target.value.trim() })
+              setStep3({
+                ...step3,
+                confirmAccountNumber: e.target.value.replace(/\D/g, "").slice(0, 18),
+              })
             }
             className="bg-white text-sm"
             placeholder="Re-enter account number"
@@ -1755,21 +1793,35 @@ export default function RestaurantOnboarding() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input
             value={step3.ifscCode || ""}
-            onChange={(e) => setStep3({ ...step3, ifscCode: e.target.value })}
+            onChange={(e) =>
+              setStep3({
+                ...step3,
+                ifscCode: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11),
+              })
+            }
             className="bg-white text-sm"
             placeholder="IFSC code"
           />
-          <Input
+          <Select
             value={step3.accountType || ""}
-            onChange={(e) => setStep3({ ...step3, accountType: e.target.value })}
-            className="bg-white text-sm"
-            placeholder="Account type (savings / current)"
-          />
+            onValueChange={(value) => setStep3({ ...step3, accountType: value })}
+          >
+            <SelectTrigger className="bg-white text-sm">
+              <SelectValue placeholder="Select account type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Saving">Saving</SelectItem>
+              <SelectItem value="Current">Current</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <Input
           value={step3.accountHolderName || ""}
           onChange={(e) =>
-            setStep3({ ...step3, accountHolderName: e.target.value })
+            setStep3({
+              ...step3,
+              accountHolderName: e.target.value.replace(/[^A-Za-z ]/g, ""),
+            })
           }
           className="bg-white text-sm"
           placeholder="Account holder name"
@@ -1824,7 +1876,7 @@ export default function RestaurantOnboarding() {
             value={step4.offer || ""}
             onChange={(e) => setStep4({ ...step4, offer: e.target.value })}
             className="mt-1 bg-white text-sm"
-            placeholder="e.g., Flat ₹50 OFF above ₹199"
+            placeholder="e.g., Flat 50 Rs. OFF on Order Above Rs.199"
           />
         </div>
       </section>
