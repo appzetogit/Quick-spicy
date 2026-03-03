@@ -1930,8 +1930,8 @@ function RestaurantDetailsContent() {
                                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{item.description}</p>
                               )}
 
-                              {/* Action Buttons - Bookmark and Share */}
-                              <div className="flex gap-4 mt-3">
+                              {/* Mobile-only action buttons */}
+                              <div className="flex gap-4 mt-3 md:hidden">
                                 <button
                                   type="button"
                                   onClick={(e) => {
@@ -1960,6 +1960,7 @@ function RestaurantDetailsContent() {
                                   <Share2 size={18} />
                                 </button>
                               </div>
+
                             </div>
 
                             {/* Right Side - Image and Add Button */}
@@ -2153,8 +2154,8 @@ function RestaurantDetailsContent() {
                                           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{item.description}</p>
                                         )}
 
-                                        {/* Action Buttons - Bookmark and Share */}
-                                        <div className="flex gap-4 mt-3">
+                                        {/* Mobile-only action buttons */}
+                                        <div className="flex gap-4 mt-3 md:hidden">
                                           <button
                                             type="button"
                                             onClick={(e) => {
@@ -2179,6 +2180,7 @@ function RestaurantDetailsContent() {
                                             <Share2 size={18} />
                                           </button>
                                         </div>
+
                                       </div>
 
                                       {/* Right Side - Image and Add Button */}
@@ -2893,27 +2895,6 @@ function RestaurantDetailsContent() {
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                           {selectedItem.name}
                         </h2>
-                      </div>
-                      {/* Bookmark and Share Icons (Desktop) */}
-                      <div className="hidden md:flex items-center gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleBookmarkClick(selectedItem)
-                          }}
-                          className={`h-8 w-8 rounded-full border flex items-center justify-center transition-all duration-300 ${isDishFavorite(selectedItem.id, restaurant?.restaurantId || restaurant?._id || restaurant?.id)
-                            ? "border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/30 text-red-500 dark:text-red-400"
-                            : "border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
-                            }`}
-                        >
-                          <Bookmark
-                            className={`h-4 w-4 transition-all duration-300 ${isDishFavorite(selectedItem.id, restaurant?.restaurantId || restaurant?._id || restaurant?.id) ? "fill-red-500 dark:fill-red-400" : ""
-                              }`}
-                          />
-                        </button>
-                        <button className="h-8 w-8 rounded-full border border-gray-300 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center justify-center transition-colors">
-                          <Share2 className="h-4 w-4" />
-                        </button>
                       </div>
                     </div>
 
