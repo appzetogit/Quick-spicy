@@ -112,11 +112,10 @@ export default function EditOwner() {
   useEffect(() => {
     const changed = 
       formData.name !== ownerData.name ||
-      formData.phone !== ownerData.phone ||
       formData.email !== ownerData.email ||
       profileImageFile !== null
     setHasChanges(changed)
-  }, [formData.name, formData.phone, formData.email, ownerData.name, ownerData.phone, ownerData.email, profileImageFile])
+  }, [formData.name, formData.email, ownerData.name, ownerData.email, profileImageFile])
 
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
@@ -334,9 +333,9 @@ export default function EditOwner() {
               <Input
                 type="tel"
                 value={loading ? "Loading..." : formData.phone}
-                onChange={(e) => handleInputChange("phone", e.target.value)}
                 placeholder="Enter phone number"
                 className="w-full pr-10 focus-visible:border-black focus-visible:ring-0"
+                readOnly
                 disabled={loading || saving}
               />
               <Edit className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600" />
