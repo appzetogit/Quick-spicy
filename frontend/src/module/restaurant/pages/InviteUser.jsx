@@ -102,12 +102,8 @@ export default function InviteUser() {
     }
     // Remove any non-digit characters for validation
     const digitsOnly = phone.replace(/\D/g, "")
-    if (digitsOnly.length < 10) {
-      setPhoneError("Phone number must be at least 10 digits")
-      return false
-    }
-    if (digitsOnly.length > 15) {
-      setPhoneError("Phone number is too long")
+    if (digitsOnly.length !== 10) {
+      setPhoneError("Phone number must contain exactly 10 digits")
       return false
     }
     setPhoneError("")
@@ -130,7 +126,7 @@ export default function InviteUser() {
   }
 
   const handlePhoneChange = (e) => {
-    const value = e.target.value.replace(/\D/g, "") // Only allow digits
+    const value = e.target.value.replace(/\D/g, "").slice(0, 10) // Only allow digits
     setPhoneNumber(value)
     if (value) {
       validatePhone(value)
@@ -257,7 +253,7 @@ export default function InviteUser() {
 
   const isFormValid = name.trim().length >= 2 && !nameError && (
     addMethod === "phone" 
-      ? phoneNumber.trim().length >= 10 && !phoneError
+      ? phoneNumber.trim().length === 10 && !phoneError
       : email.trim() && !emailError
   )
 
@@ -326,7 +322,7 @@ export default function InviteUser() {
               onChange={handlePhoneChange}
               placeholder="Enter phone number"
               className={`flex-1 h-12 border-gray-200 rounded-lg ${phoneError ? "border-red-500" : ""}`}
-              maxLength={15}
+              maxLength={10}
             />
           </div>
           {phoneError && (
