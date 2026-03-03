@@ -27,6 +27,7 @@ const ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/
 const IFSC_REGEX = /^[A-Z]{4}0[A-Z0-9]{6}$/
 const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s.'-]*$/
+const FEATURED_DISH_NAME_REGEX = /^[A-Za-z ]+$/
 const sanitizeDigits = (value = "") => value.replace(/\D/g, "")
 const sanitizePan = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10)
 const sanitizeFssai = (value = "") => value.replace(/\D/g, "").slice(0, 14)
@@ -34,6 +35,7 @@ const sanitizeIfsc = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, "
 const sanitizeGst = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15)
 const normalizeName = (value = "") => value.replace(/\s+/g, " ").trimStart()
 const hasLetters = (value = "") => /[A-Za-z]/.test(value)
+const getTodayLocalYMD = () => new Date().toISOString().split("T")[0]
 const getStoredFileLabel = (value) => {
   if (!value) return ""
   if (value instanceof File) return value.name
@@ -187,6 +189,7 @@ export default function AddRestaurant() {
     if (!step3.fssaiNumber?.trim()) errors.push("FSSAI number is required")
     if (step3.fssaiNumber?.trim() && !FSSAI_REGEX.test(step3.fssaiNumber.trim())) errors.push("FSSAI number must be 14 digits")
     if (!step3.fssaiExpiry?.trim()) errors.push("FSSAI expiry date is required")
+    if (step3.fssaiExpiry?.trim() && step3.fssaiExpiry < getTodayLocalYMD()) errors.push("FSSAI expiry date cannot be in the past")
     if (!step3.fssaiImage) errors.push("FSSAI image is required")
     if (step3.gstRegistered) {
       if (!step3.gstNumber?.trim()) errors.push("GST number is required when GST registered")
@@ -213,7 +216,7 @@ export default function AddRestaurant() {
       errors.push("Account holder name must contain characters only")
     }
     if (!step3.accountType?.trim()) errors.push("Account type is required")
-    if (step3.accountType?.trim() && !hasLetters(step3.accountType.trim())) errors.push("Account type must contain characters")
+    if (step3.accountType?.trim() && !["Saving", "Current"].includes(step3.accountType.trim())) errors.push("Account type must be either Saving or Current")
     return errors
   }
 
@@ -221,7 +224,8 @@ export default function AddRestaurant() {
     const errors = []
     if (!step4.estimatedDeliveryTime?.trim()) errors.push("Estimated delivery time is required")
     if (!step4.featuredDish?.trim()) errors.push("Featured dish name is required")
-    if (!step4.featuredPrice || isNaN(parseFloat(step4.featuredPrice)) || parseFloat(step4.featuredPrice) <= 0) {
+    if (step4.featuredDish?.trim() && !FEATURED_DISH_NAME_REGEX.test(step4.featuredDish.trim())) errors.push("Featured dish name must contain only letters")
+    if (!step4.featuredPrice || !/^\d+$/.test(String(step4.featuredPrice)) || Number(step4.featuredPrice) <= 0) {
       errors.push("Featured dish price is required and must be greater than 0")
     }
     if (!step4.offer?.trim()) errors.push("Special offer/promotion is required")
@@ -743,6 +747,7 @@ export default function AddRestaurant() {
               type="date"
               value={step3.fssaiExpiry || ""}
               onChange={(e) => setStep3({ ...step3, fssaiExpiry: e.target.value })}
+              min={getTodayLocalYMD()}
               className="bg-white text-sm"
             />
           </div>
@@ -766,7 +771,11 @@ export default function AddRestaurant() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Input value={step3.ifscCode || ""} onChange={(e) => setStep3({ ...step3, ifscCode: sanitizeIfsc(e.target.value) })} className="bg-white text-sm" placeholder="IFSC code*" maxLength={11} />
-          <Input value={step3.accountType || ""} onChange={(e) => setStep3({ ...step3, accountType: e.target.value })} className="bg-white text-sm" placeholder="Account type (savings / current)*" />
+          <select value={step3.accountType || ""} onChange={(e) => setStep3({ ...step3, accountType: e.target.value })} className="bg-white text-sm border border-input rounded-md h-10 px-3">
+            <option value="">Select account type</option>
+            <option value="Saving">Saving</option>
+            <option value="Current">Current</option>
+          </select>
         </div>
         <Input value={step3.accountHolderName || ""} onChange={(e) => setStep3({ ...step3, accountHolderName: normalizeName(e.target.value) })} className="bg-white text-sm" placeholder="Account holder name*" />
       </section>
@@ -783,15 +792,15 @@ export default function AddRestaurant() {
         </div>
         <div>
           <Label className="text-xs text-gray-700">Featured Dish Name*</Label>
-          <Input value={step4.featuredDish || ""} onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., Butter Chicken Special" />
+          <Input value={step4.featuredDish || ""} onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value.replace(/[^A-Za-z ]/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., Butter Chicken Special" />
         </div>
         <div>
           <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
-          <Input type="number" value={step4.featuredPrice || ""} onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., 249" min="0" />
+          <Input type="text" inputMode="numeric" value={step4.featuredPrice || ""} onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value.replace(/\D/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., 249" />
         </div>
         <div>
           <Label className="text-xs text-gray-700">Special Offer/Promotion*</Label>
-          <Input value={step4.offer || ""} onChange={(e) => setStep4({ ...step4, offer: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., Flat ₹50 OFF above ₹199" />
+          <Input value={step4.offer || ""} onChange={(e) => setStep4({ ...step4, offer: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., Flat 50 Rs. OFF on Order Above Rs.199" />
         </div>
       </section>
 

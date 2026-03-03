@@ -35,13 +35,27 @@ const daysOfWeek = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const ONBOARDING_STORAGE_KEY = "restaurant_onboarding_data"
 const PAN_NUMBER_REGEX = /^[A-Z]{5}[0-9]{4}[A-Z]$/
+const GST_NUMBER_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const FSSAI_NUMBER_REGEX = /^\d{14}$/
 const BANK_ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/
 const IFSC_CODE_REGEX = /^[A-Z0-9]{11}$/
 const ACCOUNT_HOLDER_NAME_REGEX = /^[A-Za-z ]+$/
+const GST_LEGAL_NAME_REGEX = /^[A-Za-z ]+$/
+const FEATURED_DISH_NAME_REGEX = /^[A-Za-z ]+$/
 const LOCAL_IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp,.heic,.heif"
 const GALLERY_IMAGE_ACCEPT =
   ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+let onboardingFileCache = {
+  step2: {
+    menuImages: [],
+    profileImage: null,
+  },
+  step3: {
+    panImage: null,
+    gstImage: null,
+    fssaiImage: null,
+  },
+}
 
 const isUploadableFile = (value) => {
   if (!value || typeof value !== "object") return false
@@ -154,6 +168,34 @@ const clearOnboardingFromLocalStorage = () => {
     localStorage.removeItem(ONBOARDING_STORAGE_KEY)
   } catch (error) {
     console.error("Failed to clear onboarding data from localStorage:", error)
+  }
+}
+
+const syncOnboardingFileCache = (step2, step3) => {
+  onboardingFileCache = {
+    step2: {
+      menuImages: (step2?.menuImages || []).filter((img) => isUploadableFile(img)),
+      profileImage: isUploadableFile(step2?.profileImage) ? step2.profileImage : null,
+    },
+    step3: {
+      panImage: isUploadableFile(step3?.panImage) ? step3.panImage : null,
+      gstImage: isUploadableFile(step3?.gstImage) ? step3.gstImage : null,
+      fssaiImage: isUploadableFile(step3?.fssaiImage) ? step3.fssaiImage : null,
+    },
+  }
+}
+
+const clearOnboardingFileCache = () => {
+  onboardingFileCache = {
+    step2: {
+      menuImages: [],
+      profileImage: null,
+    },
+    step3: {
+      panImage: null,
+      gstImage: null,
+      fssaiImage: null,
+    },
   }
 }
 
@@ -398,16 +440,18 @@ export default function RestaurantOnboarding() {
         const restoredMenuImages = (localData.step2.menuImages || []).filter(
           (img) => img?.url || (typeof img === "string" && img.startsWith("http"))
         )
+        const cachedMenuImages = onboardingFileCache.step2.menuImages || []
         const restoredProfileImage =
           localData.step2.profileImage?.url ||
             (typeof localData.step2.profileImage === "string" &&
             localData.step2.profileImage.startsWith("http"))
             ? localData.step2.profileImage
             : null
+        const cachedProfileImage = onboardingFileCache.step2.profileImage || null
 
         setStep2({
-          menuImages: restoredMenuImages,
-          profileImage: restoredProfileImage,
+          menuImages: [...restoredMenuImages, ...cachedMenuImages],
+          profileImage: cachedProfileImage || restoredProfileImage,
           cuisines: localData.step2.cuisines || [],
           openingTime: normalizeTimeValue(localData.step2.openingTime),
           closingTime: normalizeTimeValue(localData.step2.closingTime),
@@ -418,15 +462,15 @@ export default function RestaurantOnboarding() {
         setStep3({
           panNumber: localData.step3.panNumber || "",
           nameOnPan: localData.step3.nameOnPan || "",
-          panImage: localData.step3.panImage || null,
+          panImage: onboardingFileCache.step3.panImage || localData.step3.panImage || null,
           gstRegistered: localData.step3.gstRegistered || false,
           gstNumber: localData.step3.gstNumber || "",
           gstLegalName: localData.step3.gstLegalName || "",
           gstAddress: localData.step3.gstAddress || "",
-          gstImage: localData.step3.gstImage || null,
+          gstImage: onboardingFileCache.step3.gstImage || localData.step3.gstImage || null,
           fssaiNumber: localData.step3.fssaiNumber || "",
           fssaiExpiry: localData.step3.fssaiExpiry || "",
-          fssaiImage: localData.step3.fssaiImage || null,
+          fssaiImage: onboardingFileCache.step3.fssaiImage || localData.step3.fssaiImage || null,
           accountNumber: localData.step3.accountNumber || "",
           confirmAccountNumber: localData.step3.confirmAccountNumber || "",
           ifscCode: (localData.step3.ifscCode || "").toUpperCase(),
@@ -480,6 +524,10 @@ export default function RestaurantOnboarding() {
   useEffect(() => {
     saveOnboardingToLocalStorage(step1, step2, step3, step4, step)
   }, [step1, step2, step3, step4, step])
+
+  useEffect(() => {
+    syncOnboardingFileCache(step2, step3)
+  }, [step2, step3])
 
   useEffect(() => {
     return () => {
@@ -537,17 +585,17 @@ export default function RestaurantOnboarding() {
             setStep3({
               panNumber: data.step3.pan?.panNumber || "",
               nameOnPan: data.step3.pan?.nameOnPan || "",
-              panImage: null, // Don't load images from API, user needs to re-upload
+              panImage: onboardingFileCache.step3.panImage || null,
               gstRegistered: data.step3.gst?.isRegistered || false,
               gstNumber: data.step3.gst?.gstNumber || "",
               gstLegalName: data.step3.gst?.legalName || "",
               gstAddress: data.step3.gst?.address || "",
-              gstImage: null, // Don't load images from API, user needs to re-upload
+              gstImage: onboardingFileCache.step3.gstImage || null,
               fssaiNumber: data.step3.fssai?.registrationNumber || "",
               fssaiExpiry: data.step3.fssai?.expiryDate
                 ? data.step3.fssai.expiryDate.slice(0, 10)
                 : "",
-              fssaiImage: null, // Don't load images from API, user needs to re-upload
+              fssaiImage: onboardingFileCache.step3.fssaiImage || null,
               accountNumber: data.step3.bank?.accountNumber || "",
               confirmAccountNumber: data.step3.bank?.accountNumber || "",
               ifscCode: (data.step3.bank?.ifscCode || "").toUpperCase(),
@@ -687,8 +735,10 @@ export default function RestaurantOnboarding() {
     }
     if (!step4.featuredDish || !step4.featuredDish.trim()) {
       errors.push("Featured dish name is required")
+    } else if (!FEATURED_DISH_NAME_REGEX.test(step4.featuredDish.trim())) {
+      errors.push("Featured dish name must contain only letters")
     }
-    if (!step4.featuredPrice || step4.featuredPrice === "" || isNaN(parseFloat(step4.featuredPrice)) || parseFloat(step4.featuredPrice) <= 0) {
+    if (!step4.featuredPrice || !/^\d+$/.test(String(step4.featuredPrice)) || Number(step4.featuredPrice) <= 0) {
       errors.push("Featured dish price is required and must be greater than 0")
     }
     if (!step4.offer || !step4.offer.trim()) {
@@ -748,9 +798,13 @@ export default function RestaurantOnboarding() {
     if (step3.gstRegistered) {
       if (!step3.gstNumber?.trim()) {
         errors.push("GST number is required when GST registered")
+      } else if (!GST_NUMBER_REGEX.test(step3.gstNumber.trim().toUpperCase())) {
+        errors.push("GST number must be a valid 15-character GSTIN")
       }
       if (!step3.gstLegalName?.trim()) {
         errors.push("GST legal name is required when GST registered")
+      } else if (!GST_LEGAL_NAME_REGEX.test(step3.gstLegalName.trim())) {
+        errors.push("GST legal name must contain only letters")
       }
       if (!step3.gstAddress?.trim()) {
         errors.push("GST registered address is required when GST registered")
@@ -1148,6 +1202,7 @@ export default function RestaurantOnboarding() {
 
         // Clear localStorage when onboarding is complete
         clearOnboardingFromLocalStorage()
+        clearOnboardingFileCache()
 
         // Show success message briefly, then navigate
         console.log('✅ Onboarding completed successfully, redirecting to restaurant home...')
@@ -1675,13 +1730,23 @@ export default function RestaurantOnboarding() {
           <div className="space-y-3">
             <Input
               value={step3.gstNumber || ""}
-              onChange={(e) => setStep3({ ...step3, gstNumber: e.target.value })}
+              onChange={(e) =>
+                setStep3({
+                  ...step3,
+                  gstNumber: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15),
+                })
+              }
               className="bg-white text-sm"
-              placeholder="GST number"
+              placeholder="GST number (15 characters)"
             />
             <Input
               value={step3.gstLegalName || ""}
-              onChange={(e) => setStep3({ ...step3, gstLegalName: e.target.value })}
+              onChange={(e) =>
+                setStep3({
+                  ...step3,
+                  gstLegalName: e.target.value.replace(/[^A-Za-z ]/g, ""),
+                })
+              }
               className="bg-white text-sm"
               placeholder="Legal name"
             />
@@ -1853,7 +1918,12 @@ export default function RestaurantOnboarding() {
           <Label className="text-xs text-gray-700">Featured Dish Name*</Label>
           <Input
             value={step4.featuredDish || ""}
-            onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value })}
+            onChange={(e) =>
+              setStep4({
+                ...step4,
+                featuredDish: e.target.value.replace(/[^A-Za-z ]/g, ""),
+              })
+            }
             className="mt-1 bg-white text-sm"
             placeholder="e.g., Butter Chicken Special"
           />
@@ -1862,12 +1932,17 @@ export default function RestaurantOnboarding() {
         <div>
           <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
           <Input
-            type="number"
+            type="text"
+            inputMode="numeric"
             value={step4.featuredPrice || ""}
-            onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value })}
+            onChange={(e) =>
+              setStep4({
+                ...step4,
+                featuredPrice: e.target.value.replace(/\D/g, ""),
+              })
+            }
             className="mt-1 bg-white text-sm"
             placeholder="e.g., 249"
-            min="0"
           />
         </div>
 
