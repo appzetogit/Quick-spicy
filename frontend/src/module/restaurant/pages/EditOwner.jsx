@@ -329,17 +329,14 @@ export default function EditOwner() {
           {/* Phone Number Field */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Phone number</label>
-            <div className="relative">
-              <Input
-                type="tel"
-                value={loading ? "Loading..." : formData.phone}
-                placeholder="Enter phone number"
-                className="w-full pr-10 focus-visible:border-black focus-visible:ring-0"
-                readOnly
-                disabled={loading || saving}
-              />
-              <Edit className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-blue-600" />
-            </div>
+            <Input
+              type="tel"
+              value={loading ? "Loading..." : formData.phone}
+              placeholder="Enter phone number"
+              className="w-full focus-visible:border-black focus-visible:ring-0"
+              readOnly
+              disabled={loading || saving}
+            />
           </div>
 
           {/* Email Field */}
