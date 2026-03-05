@@ -373,6 +373,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         cancelledBy: order.cancelledBy || null,
         tracking: order.tracking || {},
         deliveryState: order.deliveryState || {},
+        orderOtp: order.deliveryVerification?.dropOtp?.code || null,
         billImageUrl: order.billImageUrl || null, // Bill image captured by delivery boy
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,

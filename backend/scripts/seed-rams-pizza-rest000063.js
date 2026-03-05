@@ -93,58 +93,34 @@ const buildSections = () => [
         id: 'subsection-fried-chicken',
         name: 'Fried Chicken',
         items: [
-          makeItem('chicken-fried', 'Fried Chicken', 170, {
-            category: 'Chicken',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('chicken-fried', '2 pcs', 170),
-              makeVariation('chicken-fried', '5 pcs', 390),
-              makeVariation('chicken-fried', '9 pcs', 720),
-            ],
-          }),
+          makeItem('chicken-fried-2', 'Fried Chicken 2 pcs', 170, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-fried-5', 'Fried Chicken 5 pcs', 390, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-fried-9', 'Fried Chicken 9 pcs', 720, { category: 'Chicken', foodType: 'Non-Veg' }),
         ],
       },
       {
         id: 'subsection-grilled-chicken',
         name: 'Grilled Chicken',
         items: [
-          makeItem('chicken-grilled', 'Grilled Chicken', 170, {
-            category: 'Chicken',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('chicken-grilled', '2 pcs', 170),
-              makeVariation('chicken-grilled', '5 pcs', 390),
-              makeVariation('chicken-grilled', '9 pcs', 720),
-            ],
-          }),
+          makeItem('chicken-grilled-2', 'Grilled Chicken 2 pcs', 170, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-grilled-5', 'Grilled Chicken 5 pcs', 390, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-grilled-9', 'Grilled Chicken 9 pcs', 720, { category: 'Chicken', foodType: 'Non-Veg' }),
         ],
       },
       {
         id: 'subsection-chicken-lollipop',
         name: 'Chicken Lollipop',
         items: [
-          makeItem('chicken-lollipop-fried', 'Fried Chicken Lollipop', 240, {
-            category: 'Chicken',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('chicken-lollipop-fried', '4 pcs', 240),
-              makeVariation('chicken-lollipop-fried', '6 pcs', 360),
-            ],
-          }),
+          makeItem('chicken-lollipop-fried-4', 'Fried Chicken Lollipop 4 pcs', 240, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-lollipop-fried-6', 'Fried Chicken Lollipop 6 pcs', 360, { category: 'Chicken', foodType: 'Non-Veg' }),
         ],
       },
       {
         id: 'subsection-chicken-wings',
         name: 'Chicken Wings',
         items: [
-          makeItem('chicken-wings', 'Chicken Wings', 150, {
-            category: 'Chicken',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('chicken-wings', '4 pcs', 150),
-              makeVariation('chicken-wings', '6 pcs', 220),
-            ],
-          }),
+          makeItem('chicken-wings-4', 'Chicken Wings 4 pcs', 150, { category: 'Chicken', foodType: 'Non-Veg' }),
+          makeItem('chicken-wings-6', 'Chicken Wings 6 pcs', 220, { category: 'Chicken', foodType: 'Non-Veg' }),
         ],
       },
     ],
@@ -160,44 +136,20 @@ const buildSections = () => [
         id: 'subsection-veg-garlic-breads',
         name: 'Veg Garlic Breads',
         items: [
-          makeItem('garlic-veg-cheese', 'Garlic Bread With Cheese', 80, {
-            category: 'Garlic Breads',
-            foodType: 'Veg',
-            variations: [
-              makeVariation('garlic-veg-cheese', '2 pcs', 80),
-              makeVariation('garlic-veg-cheese', '4 pcs', 150),
-            ],
-          }),
-          makeItem('garlic-veg-supreme', 'Garlic Bread Supreme', 90, {
-            category: 'Garlic Breads',
-            foodType: 'Veg',
-            variations: [
-              makeVariation('garlic-veg-supreme', '2 pcs', 90),
-              makeVariation('garlic-veg-supreme', '4 pcs', 160),
-            ],
-          }),
+          makeItem('garlic-veg-cheese-2', 'Garlic Bread With Cheese 2 pcs', 80, { category: 'Garlic Breads', foodType: 'Veg' }),
+          makeItem('garlic-veg-cheese-4', 'Garlic Bread With Cheese 4 pcs', 150, { category: 'Garlic Breads', foodType: 'Veg' }),
+          makeItem('garlic-veg-supreme-2', 'Garlic Bread Supreme 2 pcs', 90, { category: 'Garlic Breads', foodType: 'Veg' }),
+          makeItem('garlic-veg-supreme-4', 'Garlic Bread Supreme 4 pcs', 160, { category: 'Garlic Breads', foodType: 'Veg' }),
         ],
       },
       {
         id: 'subsection-nonveg-garlic-breads',
         name: 'Non-Veg Garlic Breads',
         items: [
-          makeItem('garlic-chicken-cheese', 'Chicken Garlic Bread With Cheese', 90, {
-            category: 'Garlic Breads',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('garlic-chicken-cheese', '2 pcs', 90),
-              makeVariation('garlic-chicken-cheese', '4 pcs', 160),
-            ],
-          }),
-          makeItem('garlic-chicken-supreme', 'Chicken Garlic Bread Supreme', 100, {
-            category: 'Garlic Breads',
-            foodType: 'Non-Veg',
-            variations: [
-              makeVariation('garlic-chicken-supreme', '2 pcs', 100),
-              makeVariation('garlic-chicken-supreme', '4 pcs', 170),
-            ],
-          }),
+          makeItem('garlic-chicken-cheese-2', 'Chicken Garlic Bread With Cheese 2 pcs', 90, { category: 'Garlic Breads', foodType: 'Non-Veg' }),
+          makeItem('garlic-chicken-cheese-4', 'Chicken Garlic Bread With Cheese 4 pcs', 160, { category: 'Garlic Breads', foodType: 'Non-Veg' }),
+          makeItem('garlic-chicken-supreme-2', 'Chicken Garlic Bread Supreme 2 pcs', 100, { category: 'Garlic Breads', foodType: 'Non-Veg' }),
+          makeItem('garlic-chicken-supreme-4', 'Chicken Garlic Bread Supreme 4 pcs', 170, { category: 'Garlic Breads', foodType: 'Non-Veg' }),
         ],
       },
     ],
@@ -208,30 +160,12 @@ const buildSections = () => [
     id: 'section-momos',
     name: 'Momos',
     items: [
-      makeItem('momos-veg', 'Veg Momos', 120, {
-        category: 'Momos',
-        foodType: 'Veg',
-        variations: [
-          makeVariation('momos-veg', '4 pcs', 120),
-          makeVariation('momos-veg', '6 pcs', 180),
-        ],
-      }),
-      makeItem('momos-chicken', 'Chicken Momos', 140, {
-        category: 'Momos',
-        foodType: 'Non-Veg',
-        variations: [
-          makeVariation('momos-chicken', '4 pcs', 140),
-          makeVariation('momos-chicken', '6 pcs', 210),
-        ],
-      }),
-      makeItem('spring-rolls', 'Spring Rolls', 100, {
-        category: 'Momos',
-        foodType: 'Veg',
-        variations: [
-          makeVariation('spring-rolls', '4 pcs', 100),
-          makeVariation('spring-rolls', '6 pcs', 150),
-        ],
-      }),
+      makeItem('momos-veg-4', 'Veg Momos 4 pcs', 120, { category: 'Momos', foodType: 'Veg' }),
+      makeItem('momos-veg-6', 'Veg Momos 6 pcs', 180, { category: 'Momos', foodType: 'Veg' }),
+      makeItem('momos-chicken-4', 'Chicken Momos 4 pcs', 140, { category: 'Momos', foodType: 'Non-Veg' }),
+      makeItem('momos-chicken-6', 'Chicken Momos 6 pcs', 210, { category: 'Momos', foodType: 'Non-Veg' }),
+      makeItem('spring-rolls-4', 'Spring Rolls 4 pcs', 100, { category: 'Momos', foodType: 'Veg' }),
+      makeItem('spring-rolls-6', 'Spring Rolls 6 pcs', 150, { category: 'Momos', foodType: 'Veg' }),
     ],
     subsections: [],
     isEnabled: true,
@@ -271,77 +205,22 @@ const buildSections = () => [
     id: 'section-veg-pizza',
     name: 'Veg Pizza',
     items: [
-      makeItem('pizza-margherita', 'Margherita Pizza', 100, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        variations: [
-          makeVariation('pizza-margherita', 'Small', 100),
-          makeVariation('pizza-margherita', 'Large', 150),
-        ],
-      }),
-      makeItem('pizza-classic', 'Classic Pizza', 130, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'onion, tomato, capsicum',
-        variations: [
-          makeVariation('pizza-classic', 'Small', 130),
-          makeVariation('pizza-classic', 'Large', 180),
-        ],
-      }),
-      makeItem('pizza-spicy-paneer', 'Spicy Paneer Pizza', 150, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'green chilli, onion, tomato, capsicum',
-        variations: [
-          makeVariation('pizza-spicy-paneer', 'Small', 150),
-          makeVariation('pizza-spicy-paneer', 'Large', 210),
-        ],
-      }),
-      makeItem('pizza-paneer-pepper', 'Paneer Pepper Pizza', 150, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'paneer, onion, tomato, capsicum',
-        variations: [
-          makeVariation('pizza-paneer-pepper', 'Small', 150),
-          makeVariation('pizza-paneer-pepper', 'Large', 210),
-        ],
-      }),
-      makeItem('pizza-veg-corn', 'Veg Corn Pizza', 170, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'corn, black olives, onion, tomato, capsicum',
-        variations: [
-          makeVariation('pizza-veg-corn', 'Small', 170),
-          makeVariation('pizza-veg-corn', 'Large', 230),
-        ],
-      }),
-      makeItem('pizza-mushroom-corn', 'Mushroom Corn Pizza', 180, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'mushroom, corn, onion, red paprika',
-        variations: [
-          makeVariation('pizza-mushroom-corn', 'Small', 180),
-          makeVariation('pizza-mushroom-corn', 'Large', 240),
-        ],
-      }),
-      makeItem('pizza-rams-special', "Ram's Special Pizza", 200, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'onion, tomato, capsicum, jalapeno, mushroom, corn',
-        variations: [
-          makeVariation('pizza-rams-special', 'Small', 200),
-          makeVariation('pizza-rams-special', 'Large', 260),
-        ],
-      }),
-      makeItem('pizza-rams-double-cheese-burst', "Ram's Special Double Cheese Burst Pizza", 220, {
-        category: 'Veg Pizza',
-        foodType: 'Veg',
-        description: 'cheese, corn, paprika, jalapeno',
-        variations: [
-          makeVariation('pizza-rams-double-cheese-burst', 'Small', 220),
-          makeVariation('pizza-rams-double-cheese-burst', 'Large', 280),
-        ],
-      }),
+      makeItem('pizza-margherita-small', 'Margherita Pizza Small', 100, { category: 'Veg Pizza', foodType: 'Veg' }),
+      makeItem('pizza-margherita-large', 'Margherita Pizza Large', 150, { category: 'Veg Pizza', foodType: 'Veg' }),
+      makeItem('pizza-classic-small', 'Classic Pizza Small', 130, { category: 'Veg Pizza', foodType: 'Veg', description: 'onion, tomato, capsicum' }),
+      makeItem('pizza-classic-large', 'Classic Pizza Large', 180, { category: 'Veg Pizza', foodType: 'Veg', description: 'onion, tomato, capsicum' }),
+      makeItem('pizza-spicy-paneer-small', 'Spicy Paneer Pizza Small', 150, { category: 'Veg Pizza', foodType: 'Veg', description: 'green chilli, onion, tomato, capsicum' }),
+      makeItem('pizza-spicy-paneer-large', 'Spicy Paneer Pizza Large', 210, { category: 'Veg Pizza', foodType: 'Veg', description: 'green chilli, onion, tomato, capsicum' }),
+      makeItem('pizza-paneer-pepper-small', 'Paneer Pepper Pizza Small', 150, { category: 'Veg Pizza', foodType: 'Veg', description: 'paneer, onion, tomato, capsicum' }),
+      makeItem('pizza-paneer-pepper-large', 'Paneer Pepper Pizza Large', 210, { category: 'Veg Pizza', foodType: 'Veg', description: 'paneer, onion, tomato, capsicum' }),
+      makeItem('pizza-veg-corn-small', 'Veg Corn Pizza Small', 170, { category: 'Veg Pizza', foodType: 'Veg', description: 'corn, black olives, onion, tomato, capsicum' }),
+      makeItem('pizza-veg-corn-large', 'Veg Corn Pizza Large', 230, { category: 'Veg Pizza', foodType: 'Veg', description: 'corn, black olives, onion, tomato, capsicum' }),
+      makeItem('pizza-mushroom-corn-small', 'Mushroom Corn Pizza Small', 180, { category: 'Veg Pizza', foodType: 'Veg', description: 'mushroom, corn, onion, red paprika' }),
+      makeItem('pizza-mushroom-corn-large', 'Mushroom Corn Pizza Large', 240, { category: 'Veg Pizza', foodType: 'Veg', description: 'mushroom, corn, onion, red paprika' }),
+      makeItem('pizza-rams-special-small', "Ram's Special Pizza Small", 200, { category: 'Veg Pizza', foodType: 'Veg', description: 'onion, tomato, capsicum, jalapeno, mushroom, corn' }),
+      makeItem('pizza-rams-special-large', "Ram's Special Pizza Large", 260, { category: 'Veg Pizza', foodType: 'Veg', description: 'onion, tomato, capsicum, jalapeno, mushroom, corn' }),
+      makeItem('pizza-rams-double-cheese-burst-small', "Ram's Special Double Cheese Burst Pizza Small", 220, { category: 'Veg Pizza', foodType: 'Veg', description: 'cheese, corn, paprika, jalapeno' }),
+      makeItem('pizza-rams-double-cheese-burst-large', "Ram's Special Double Cheese Burst Pizza Large", 280, { category: 'Veg Pizza', foodType: 'Veg', description: 'cheese, corn, paprika, jalapeno' }),
       makeItem('pizza-extra-cheese', 'Extra Cheese Topping', 30, {
         category: 'Veg Pizza',
         foodType: 'Veg',

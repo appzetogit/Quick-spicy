@@ -102,6 +102,14 @@ export default function OrdersTable({
                   </div>
                 </th>
               )}
+              {visibleColumns.orderOtp && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <span>Order OTP</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                  </div>
+                </th>
+              )}
               {visibleColumns.customer && (
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
@@ -184,6 +192,13 @@ export default function OrdersTable({
                 {visibleColumns.orderDate && (
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-medium text-slate-700">{order.date}, {order.time}</span>
+                  </td>
+                )}
+                {visibleColumns.orderOtp && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-semibold text-slate-900">
+                      {order.orderOtp || "--"}
+                    </span>
                   </td>
                 )}
                 {visibleColumns.customer && (
