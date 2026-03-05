@@ -203,6 +203,7 @@ import { sendPushNotification } from "../controllers/pushNotificationController.
 import {
   getOrders,
   getOrderById,
+  deleteOrder,
   acceptOrder,
   rejectOrder,
   getSearchingDeliverymanOrders,
@@ -466,6 +467,7 @@ router.delete("/safety-emergency/:id", deleteSafetyEmergency);
 
 // Order Management
 router.get("/orders", getOrders);
+router.delete("/orders/:id", deleteOrder);
 router.patch("/orders/:id/accept", acceptOrder);
 router.patch("/orders/:id/reject", rejectOrder);
 router.get("/orders/searching-deliveryman", getSearchingDeliverymanOrders);

@@ -1492,6 +1492,11 @@ export const adminAPI = {
     });
   },
 
+  // Delete order (admin)
+  deleteOrder: (id) => {
+    return apiClient.delete(`/admin/orders/${encodeURIComponent(id)}`);
+  },
+
   // Get orders searching for deliveryman
   getSearchingDeliverymanOrders: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS_SEARCHING_DELIVERYMAN, {

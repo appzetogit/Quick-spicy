@@ -4,6 +4,7 @@ import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 import { findNearestDeliveryBoys } from '../../order/services/deliveryAssignmentService.js';
 import { notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
+import { removeActiveOrderTracking } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 
 /**
  * Get all orders for admin
@@ -438,6 +439,58 @@ export const getOrderById = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('Error fetching order:', error);
     return errorResponse(res, 500, 'Failed to fetch order');
+  }
+});
+
+/**
+ * Delete order as admin (hard delete)
+ * DELETE /api/admin/orders/:id
+ */
+export const deleteOrder = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    let order = null;
+
+    if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+      order = await Order.findById(id).lean();
+    }
+
+    if (!order) {
+      order = await Order.findOne({ orderId: id }).lean();
+    }
+
+    if (!order) {
+      return errorResponse(res, 404, 'Order not found');
+    }
+
+    const orderMongoId = order._id;
+    const orderTrackingId = order.orderId || orderMongoId?.toString();
+
+    // Best-effort cleanup for order-linked records and realtime tracking data.
+    const [OrderSettlementModule, OrderEventModule, ETALogModule, PaymentModule] = await Promise.all([
+      import('../../order/models/OrderSettlement.js'),
+      import('../../order/models/OrderEvent.js'),
+      import('../../order/models/ETALog.js'),
+      import('../../payment/models/Payment.js'),
+    ]);
+
+    await Promise.allSettled([
+      Order.deleteOne({ _id: orderMongoId }),
+      OrderSettlementModule.default.deleteOne({ orderId: orderMongoId }),
+      OrderEventModule.default.deleteMany({ orderId: orderMongoId }),
+      ETALogModule.default.deleteMany({ orderId: orderMongoId }),
+      PaymentModule.default.deleteMany({ orderId: orderMongoId }),
+      removeActiveOrderTracking(orderTrackingId),
+    ]);
+
+    return successResponse(res, 200, 'Order deleted successfully', {
+      orderId: order.orderId,
+      id: orderMongoId?.toString(),
+    });
+  } catch (error) {
+    console.error('Error deleting order:', error);
+    return errorResponse(res, 500, 'Failed to delete order');
   }
 });
 
