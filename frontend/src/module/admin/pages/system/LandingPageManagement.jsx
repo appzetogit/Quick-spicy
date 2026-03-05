@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Tag, UtensilsCrossed, Trophy, ChefHat, Megaphone, Search } from "lucide-react"
 import api from "@/lib/api"
 import { adminAPI } from "@/lib/api"
@@ -56,9 +56,10 @@ export default function LandingPageManagement() {
   const diningBannersFileInputRef = useRef(null)
 
   // Settings
-  const [settings, setSettings] = useState({ exploreMoreHeading: "Explore More" })
+  const [settings, setSettings] = useState({ exploreMoreHeading: "Explore More", recommendedRestaurantIds: [] })
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [recommendedSearchQuery, setRecommendedSearchQuery] = useState("")
 
   // Top 10 Restaurants
   const [top10Restaurants, setTop10Restaurants] = useState([])
@@ -142,6 +143,7 @@ export default function LandingPageManagement() {
     fetchUnder250Banners()
     fetchDiningBanners()
     fetchAllRestaurants()
+    fetchSettings()
   }, [])
 
   // Fetch Top 10 and Gourmet when Explore More tab is active
@@ -374,6 +376,35 @@ export default function LandingPageManagement() {
     return restaurant.name?.toLowerCase().includes(query) ||
       restaurant.restaurantId?.toLowerCase().includes(query)
   })
+
+  const filteredRestaurantsForRecommended = useMemo(() => {
+    const query = recommendedSearchQuery.trim().toLowerCase()
+    return allRestaurants
+      .filter((restaurant) => {
+        if (!query) return true
+        return restaurant.name?.toLowerCase().includes(query) ||
+          restaurant.restaurantId?.toLowerCase().includes(query)
+      })
+      .slice(0, 80)
+  }, [allRestaurants, recommendedSearchQuery])
+
+  const recommendedRestaurantsSelected = useMemo(() => {
+    const selectedIds = new Set(settings.recommendedRestaurantIds || [])
+    return allRestaurants.filter((restaurant) => selectedIds.has(restaurant._id))
+  }, [allRestaurants, settings.recommendedRestaurantIds])
+
+  const toggleRecommendedRestaurant = (restaurantId) => {
+    setSettings((prev) => {
+      const previousIds = Array.isArray(prev.recommendedRestaurantIds) ? prev.recommendedRestaurantIds : []
+      const alreadySelected = previousIds.includes(restaurantId)
+      return {
+        ...prev,
+        recommendedRestaurantIds: alreadySelected
+          ? previousIds.filter((id) => id !== restaurantId)
+          : [...previousIds, restaurantId],
+      }
+    })
+  }
 
   // ==================== CATEGORIES ====================
   const fetchCategories = async () => {
@@ -998,12 +1029,16 @@ export default function LandingPageManagement() {
       setError(null)
       const response = await api.get('/hero-banners/landing/settings', getAuthConfig())
       if (response.data.success) {
-        setSettings(response.data.data.settings || { exploreMoreHeading: "Explore More" })
+        const nextSettings = response.data.data.settings || {}
+        setSettings({
+          exploreMoreHeading: nextSettings.exploreMoreHeading || "Explore More",
+          recommendedRestaurantIds: Array.isArray(nextSettings.recommendedRestaurantIds) ? nextSettings.recommendedRestaurantIds : []
+        })
       }
     } catch (err) {
       // Silently handle 401/404 errors - endpoints may not exist yet, use default settings
       if (err.response?.status === 401 || err.response?.status === 404) {
-        setSettings({ exploreMoreHeading: "Explore More" }) // Use default settings
+        setSettings({ exploreMoreHeading: "Explore More", recommendedRestaurantIds: [] }) // Use default settings
         setError(null) // Clear any previous error
       } else {
         // Filter out token-related errors
@@ -1021,9 +1056,18 @@ export default function LandingPageManagement() {
       setError(null)
       setSuccess(null)
       const response = await api.patch('/hero-banners/landing/settings', {
-        exploreMoreHeading: settings.exploreMoreHeading
+        exploreMoreHeading: settings.exploreMoreHeading,
+        recommendedRestaurantIds: Array.isArray(settings.recommendedRestaurantIds) ? settings.recommendedRestaurantIds : []
       }, getAuthConfig())
       if (response.data.success) {
+        const savedSettings = response.data.data?.settings || {}
+        setSettings((prev) => ({
+          ...prev,
+          exploreMoreHeading: savedSettings.exploreMoreHeading || prev.exploreMoreHeading,
+          recommendedRestaurantIds: Array.isArray(savedSettings.recommendedRestaurantIds)
+            ? savedSettings.recommendedRestaurantIds
+            : prev.recommendedRestaurantIds
+        }))
         setSuccess('Settings saved successfully!')
         setTimeout(() => setSuccess(null), 3000)
       }
@@ -1711,6 +1755,98 @@ export default function LandingPageManagement() {
         {/* Explore More Tab */}
         {activeTab === 'explore-more' && (
           <>
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+              <div className="flex items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg font-bold text-slate-900">Landing Settings</h2>
+                <Button
+                  onClick={handleSaveSettings}
+                  disabled={settingsSaving || settingsLoading}
+                  className="bg-blue-500 hover:bg-blue-600 text-white"
+                >
+                  {settingsSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  Save Settings
+                </Button>
+              </div>
+
+              {settingsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="w-6 h-6 text-blue-600 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  <div>
+                    <Label htmlFor="explore-more-heading">Explore More Heading</Label>
+                    <Input
+                      id="explore-more-heading"
+                      value={settings.exploreMoreHeading || ""}
+                      onChange={(e) => setSettings((prev) => ({ ...prev, exploreMoreHeading: e.target.value }))}
+                      className="mt-2"
+                      placeholder="Explore More"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="recommended-search">Recommended For You Restaurants</Label>
+                    <p className="text-xs text-slate-500 mt-1 mb-2">
+                      Choose multiple restaurants to display below filters on the user home page.
+                    </p>
+
+                    <div className="relative mb-3">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="recommended-search"
+                        value={recommendedSearchQuery}
+                        onChange={(e) => setRecommendedSearchQuery(e.target.value)}
+                        placeholder="Search restaurants..."
+                        className="pl-9"
+                      />
+                    </div>
+
+                    {recommendedRestaurantsSelected.length > 0 && (
+                      <div className="mb-3 flex flex-wrap gap-2">
+                        {recommendedRestaurantsSelected.map((restaurant) => (
+                          <button
+                            key={restaurant._id}
+                            type="button"
+                            onClick={() => toggleRecommendedRestaurant(restaurant._id)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs hover:bg-blue-100"
+                          >
+                            <span>{restaurant.name}</span>
+                            <span className="text-blue-500">x</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="max-h-72 overflow-y-auto border border-slate-200 rounded-lg divide-y divide-slate-100">
+                      {filteredRestaurantsForRecommended.length === 0 ? (
+                        <div className="p-4 text-sm text-slate-500 text-center">No restaurants found</div>
+                      ) : (
+                        filteredRestaurantsForRecommended.map((restaurant) => {
+                          const isChecked = (settings.recommendedRestaurantIds || []).includes(restaurant._id)
+                          return (
+                            <label
+                              key={restaurant._id}
+                              className="flex items-center justify-between gap-3 px-3 py-2 cursor-pointer hover:bg-slate-50"
+                            >
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800 truncate">{restaurant.name}</p>
+                                <p className="text-xs text-slate-500 truncate">{restaurant.restaurantId || "No ID"}</p>
+                              </div>
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => toggleRecommendedRestaurant(restaurant._id)}
+                              />
+                            </label>
+                          )
+                        })
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Sub-tabs for Explore More */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-2 mb-6">
               <div className="flex gap-2 overflow-x-auto">

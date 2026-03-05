@@ -317,6 +317,8 @@ export default function Home() {
   const [landingCategories, setLandingCategories] = useState([])
   const [landingExploreMore, setLandingExploreMore] = useState([])
   const [exploreMoreHeading, setExploreMoreHeading] = useState("Explore More")
+  const [recommendedRestaurantIds, setRecommendedRestaurantIds] = useState([])
+  const [recommendedRestaurantsFromSettings, setRecommendedRestaurantsFromSettings] = useState([])
   const [loadingLandingConfig, setLoadingLandingConfig] = useState(true)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
@@ -716,6 +718,12 @@ export default function Home() {
               .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
           )
           setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
+          setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
+            ? response.data.data.settings.recommendedRestaurantIds
+            : [])
+          setRecommendedRestaurantsFromSettings(Array.isArray(response.data.data.settings?.recommendedRestaurants)
+            ? response.data.data.settings.recommendedRestaurants
+            : [])
         }
       } catch (error) {
         console.error('Error fetching landing config:', error)
@@ -723,6 +731,8 @@ export default function Home() {
         setLandingCategories([])
         setLandingExploreMore([])
         setExploreMoreHeading("Explore More")
+        setRecommendedRestaurantIds([])
+        setRecommendedRestaurantsFromSettings([])
       } finally {
         setLoadingLandingConfig(false)
       }
@@ -1557,6 +1567,67 @@ export default function Home() {
     return filtered
   }, [restaurantsData, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
+  const recommendedForYouRestaurants = useMemo(() => {
+    const idsInOrder = (recommendedRestaurantIds || []).map((id) => String(id))
+    const hasIds = idsInOrder.length > 0
+    const fromSettings = Array.isArray(recommendedRestaurantsFromSettings)
+      ? recommendedRestaurantsFromSettings
+      : []
+
+    // Primary source: restaurants returned by landing settings API (already admin-selected).
+    const fromSettingsMapped = fromSettings.map((restaurant) => {
+      const restaurantId = restaurant?._id ? String(restaurant._id) : ''
+      const cuisine = Array.isArray(restaurant?.cuisines) && restaurant.cuisines.length > 0
+        ? restaurant.cuisines[0]
+        : 'Multi-cuisine'
+      const imageCandidates = [
+        ...extractImages(restaurant?.coverImages),
+        ...extractImages(restaurant?.profileImage),
+        ...extractImages(restaurant?.menuImages),
+      ]
+      const image = imageCandidates[0] || foodImages[0]
+
+      return {
+        id: restaurant?.restaurantId || restaurantId,
+        mongoId: restaurantId,
+        name: restaurant?.name || 'Restaurant',
+        cuisine,
+        rating: Number(restaurant?.rating) || 4.0,
+        distance: '',
+        deliveryTime: '',
+        image: normalizeImageUrl(image) || foodImages[0],
+        images: imageCandidates.length > 0 ? imageCandidates : [foodImages[0]],
+        slug: restaurant?.slug || restaurant?.restaurantId || restaurantId,
+        offer: null,
+        isActive: true,
+        isAcceptingOrders: true,
+      }
+    })
+
+    // Keep admin-selected order when IDs exist.
+    const orderedFromSettings = hasIds
+      ? idsInOrder
+        .map((id) => fromSettingsMapped.find((restaurant) => String(restaurant.mongoId) === id))
+        .filter(Boolean)
+      : fromSettingsMapped
+
+    // Fallback: if settings payload misses some entries, recover them from fetched restaurant list by ID.
+    const existingIds = new Set(orderedFromSettings.map((restaurant) => String(restaurant.mongoId || restaurant.id)))
+    const fromFetchedMissing = (restaurantsData || [])
+      .filter((restaurant) => {
+        const mongoId = String(restaurant.mongoId || '')
+        return hasIds && idsInOrder.includes(mongoId) && !existingIds.has(mongoId)
+      })
+
+    return [...orderedFromSettings, ...fromFetchedMissing].slice(0, 12)
+  }, [
+    recommendedRestaurantIds,
+    recommendedRestaurantsFromSettings,
+    restaurantsData,
+    extractImages,
+    normalizeImageUrl
+  ])
+
   // Featured foods removed - will be handled by restaurants data from API
   const filteredFeaturedFoods = useMemo(() => {
     // Return empty array - featured foods will come from API if needed
@@ -2248,6 +2319,57 @@ export default function Home() {
             })}
           </div>
         </motion.section>
+
+        {recommendedForYouRestaurants.length > 0 && (
+          <motion.section
+            className="pt-1 sm:pt-2"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.h2
+              className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-2 sm:mb-3 px-1"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              Recommended For You
+            </motion.h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {recommendedForYouRestaurants.map((restaurant, index) => {
+                const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
+                return (
+                  <motion.div
+                    key={`recommended-${restaurant.mongoId || restaurant.id || restaurantSlug}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
+                  >
+                    <Link to={`/user/restaurants/${restaurantSlug}`} className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a]">
+                      <div className="relative h-24 sm:h-28 md:h-32 bg-gray-100">
+                        <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-white/95 text-[10px] font-semibold text-green-700">
+                          {Number(restaurant.rating || 0).toFixed(1)}
+                        </div>
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{restaurant.name}</p>
+                        <p className="text-[11px] sm:text-xs text-green-600 font-medium mt-1 flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          Near & Fast
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </motion.section>
+        )}
 
         {/* Explore More Section */}
         <motion.section
