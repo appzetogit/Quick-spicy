@@ -562,6 +562,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
             restaurantLng,
             order.restaurantId,
             5,
+            { requiredZoneId: order?.assignmentInfo?.zoneId || null },
           );
 
           if (priorityDeliveryBoys.length > 0) {
@@ -587,6 +588,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
               restaurantLng,
               order.restaurantId,
               50,
+              { requiredZoneId: order?.assignmentInfo?.zoneId || null },
             );
             const expandedIds = expandedDeliveryBoys.map((d) => d.deliveryPartnerId);
             if (expandedIds.length > 0) {

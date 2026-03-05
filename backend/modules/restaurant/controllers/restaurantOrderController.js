@@ -380,13 +380,20 @@ export const acceptOrder = asyncHandler(async (req, res) => {
             console.log(`⚠️ Order ${order.orderId} already has delivery partner: ${freshOrder.deliveryPartnerId}`);
           } else {
             // Step 1: Find nearest delivery boys (within 5km priority distance)
-            const priorityDeliveryBoys = await findNearestDeliveryBoys(restaurantLat, restaurantLng, restaurantId, 5);
+            const priorityDeliveryBoys = await findNearestDeliveryBoys(
+              restaurantLat,
+              restaurantLng,
+              restaurantId,
+              5,
+              { requiredZoneId: freshOrder?.assignmentInfo?.zoneId || null }
+            );
             
             if (priorityDeliveryBoys && priorityDeliveryBoys.length > 0) {
               console.log(`✅ Found ${priorityDeliveryBoys.length} priority delivery partners within 5km`);
               
               // Store priority notification info in order
               freshOrder.assignmentInfo = {
+                ...(freshOrder.assignmentInfo || {}),
                 priorityNotifiedAt: new Date(),
                 priorityDeliveryPartnerIds: priorityDeliveryBoys.map(db => db.deliveryPartnerId),
                 notificationPhase: 'priority'
@@ -423,7 +430,8 @@ export const acceptOrder = asyncHandler(async (req, res) => {
                       restaurantLat, 
                       restaurantLng, 
                       restaurantId, 
-                      50 // Max distance 50km
+                      50, // Max distance 50km
+                      { requiredZoneId: checkOrder?.assignmentInfo?.zoneId || null }
                     );
 
                     // Filter out priority delivery boys
@@ -465,7 +473,14 @@ export const acceptOrder = asyncHandler(async (req, res) => {
             } else {
               // No priority delivery boys found, immediately try to find any delivery boy
               console.log(`⚠️ No priority delivery partners found, searching for any available delivery partner`);
-              const anyDeliveryBoy = await findNearestDeliveryBoy(restaurantLat, restaurantLng, restaurantId, 50);
+              const anyDeliveryBoy = await findNearestDeliveryBoy(
+                restaurantLat,
+                restaurantLng,
+                restaurantId,
+                50,
+                [],
+                { requiredZoneId: freshOrder?.assignmentInfo?.zoneId || null }
+              );
               
               if (anyDeliveryBoy) {
                 const populatedOrder = await Order.findById(freshOrder._id)
@@ -1032,7 +1047,7 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
       restaurantLng,
       restaurantId,
       20, // 20km radius for priority
-      10  // Top 10 nearest
+      { requiredZoneId: order?.assignmentInfo?.zoneId || null }
     );
 
     if (!priorityDeliveryBoys || priorityDeliveryBoys.length === 0) {
@@ -1042,7 +1057,7 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
         restaurantLng,
         restaurantId,
         50, // 50km radius
-        20  // Top 20 nearest
+        { requiredZoneId: order?.assignmentInfo?.zoneId || null }
       );
 
       if (!allDeliveryBoys || allDeliveryBoys.length === 0) {
