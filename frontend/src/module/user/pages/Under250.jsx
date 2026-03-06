@@ -22,6 +22,7 @@ import { isModuleAuthenticated } from "@/lib/utils/auth"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+const RUPEE_SYMBOL = "\u20B9"
 
 
 export default function Under250() {
@@ -605,7 +606,7 @@ export default function Under250() {
           <div className="flex justify-center items-center py-12">
             <div className="text-gray-500 dark:text-gray-400">
               {under250Restaurants.length === 0
-                ? "No restaurants with dishes under â‚¹250 found."
+                ? `No restaurants with dishes under ${RUPEE_SYMBOL}250 found.`
                 : "No restaurants match the selected filters."}
             </div>
           </div>
@@ -715,7 +716,7 @@ export default function Under250() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">
-                                    â‚¹{Math.round(item.price)}
+                                    {RUPEE_SYMBOL}{Math.round(item.price)}
                                   </p>
                                   {item.bestPrice && (
                                     <p className="text-xs md:text-sm lg:text-base text-gray-500 dark:text-gray-400">Best price</p>
@@ -1065,11 +1066,11 @@ export default function Under250() {
                     <div className="flex items-center gap-1 md:gap-2">
                       {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
                         <span className="text-sm md:text-base lg:text-lg line-through text-red-200">
-                          â‚¹{Math.round(selectedItem.originalPrice)}
+                          {RUPEE_SYMBOL}{Math.round(selectedItem.originalPrice)}
                         </span>
                       )}
                       <span className="text-base md:text-lg lg:text-xl font-bold">
-                        â‚¹{Math.round(selectedItem.price)}
+                        {RUPEE_SYMBOL}{Math.round(selectedItem.price)}
                       </span>
                     </div>
                   </Button>
