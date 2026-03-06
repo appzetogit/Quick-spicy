@@ -220,9 +220,8 @@ export default function Profile() {
           url: referralLink,
         })
       } else {
-        await navigator.clipboard.writeText(`${shareText} ${referralLink}`)
-        setReferralCopied(true)
-        setTimeout(() => setReferralCopied(false), 1500)
+        const fallbackUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${referralLink}`)}`
+        window.open(fallbackUrl, "_blank", "noopener,noreferrer")
       }
     } catch (error) {
       console.error("Failed to share referral:", error)
@@ -466,8 +465,12 @@ export default function Profile() {
                   </span>
                   <button
                     type="button"
-                    onClick={handleCopyReferral}
-                    className="inline-flex items-center gap-1 text-xs text-[#EB590E] font-medium"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleCopyReferral()
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-[#EB590E] font-medium px-2 py-1 rounded-md"
                     disabled={!referralCode}
                   >
                     <Copy className="h-3.5 w-3.5" />
@@ -480,8 +483,12 @@ export default function Profile() {
                   </p>
                   <button
                     type="button"
-                    onClick={handleShareReferral}
-                    className="inline-flex items-center gap-1 text-xs text-[#EB590E] font-medium ml-2"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      handleShareReferral()
+                    }}
+                    className="inline-flex items-center gap-1 text-xs text-[#EB590E] font-medium ml-2 px-2 py-1 rounded-md"
                     disabled={!referralCode}
                   >
                     <Share2 className="h-3.5 w-3.5" />
