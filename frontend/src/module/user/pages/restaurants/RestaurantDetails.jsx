@@ -33,6 +33,10 @@ import {
   Eye,
   Users,
   AlertCircle,
+  Copy,
+  MessageCircle,
+  Send,
+  Mail,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -82,6 +86,8 @@ function RestaurantDetailsContent() {
   const [searchQuery, setSearchQuery] = useState("")
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const [showMenuOptionsSheet, setShowMenuOptionsSheet] = useState(false)
+  const [showShareModal, setShowShareModal] = useState(false)
+  const [sharePayload, setSharePayload] = useState(null)
   const [expandedAddButtons, setExpandedAddButtons] = useState(new Set())
   const [expandedSections, setExpandedSections] = useState(new Set([0])) // Default: Recommended section is expanded
   const [loadingMenuItems, setLoadingMenuItems] = useState(true)
@@ -1251,34 +1257,33 @@ function RestaurantDetailsContent() {
     const shareUrl = `${window.location.origin}/user/restaurants/${restaurantSlug}`
     const shareText = `Check out ${restaurantName} on ${companyName}! ${shareUrl}`
 
-    // Try Web Share API first (mobile)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: restaurantName,
-          text: shareText,
-          url: shareUrl,
-        })
-        toast.success("Restaurant shared successfully")
-        setShowMenuOptionsSheet(false)
-      } catch (error) {
-        // User cancelled or error occurred
-        if (error.name !== "AbortError") {
-          // Fallback to copy to clipboard
-          await copyToClipboard(shareUrl)
-        }
-      }
-    } else {
-      // Fallback to copy to clipboard
-      await copyToClipboard(shareUrl)
+    const payload = {
+      title: restaurantName,
+      text: shareText,
+      url: shareUrl,
     }
+
+    if (isMobileDevice()) {
+      openShareModal(payload)
+      setShowMenuOptionsSheet(false)
+      return
+    }
+
+    const shared = await tryNativeShare(payload)
+    if (shared) {
+      toast.success("Restaurant shared successfully")
+      setShowMenuOptionsSheet(false)
+      return
+    }
+
+    openShareModal(payload)
+    setShowMenuOptionsSheet(false)
   }
 
 
 
   // Handle share click
   const handleShareClick = async (item) => {
-    const restaurantId = restaurant?.restaurantId || restaurant?._id || restaurant?.id
     const dishId = item.id || item._id
     const restaurantSlug = restaurant?.slug || slug || ""
 
@@ -1286,26 +1291,24 @@ function RestaurantDetailsContent() {
     const shareUrl = `${window.location.origin}/user/restaurants/${restaurantSlug}?dish=${dishId}`
     const shareText = `Check out ${item.name} from ${restaurant?.name || "this restaurant"}! ${shareUrl}`
 
-    // Try Web Share API first (mobile)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${item.name} - ${restaurant?.name || ""}`,
-          text: shareText,
-          url: shareUrl,
-        })
-        toast.success("Dish shared successfully")
-      } catch (error) {
-        // User cancelled or error occurred
-        if (error.name !== "AbortError") {
-          // Fallback to copy to clipboard
-          await copyToClipboard(shareUrl)
-        }
-      }
-    } else {
-      // Fallback to copy to clipboard
-      await copyToClipboard(shareUrl)
+    const payload = {
+      title: `${item.name} - ${restaurant?.name || ""}`,
+      text: shareText,
+      url: shareUrl,
     }
+
+    if (isMobileDevice()) {
+      openShareModal(payload)
+      return
+    }
+
+    const shared = await tryNativeShare(payload)
+    if (shared) {
+      toast.success("Dish shared successfully")
+      return
+    }
+
+    openShareModal(payload)
   }
 
   // Copy to clipboard helper
@@ -1328,6 +1331,68 @@ function RestaurantDetailsContent() {
         toast.error("Failed to copy link")
       }
       document.body.removeChild(textArea)
+    }
+  }
+
+  const isMobileDevice = () => {
+    if (typeof window === "undefined" || typeof navigator === "undefined") return false
+    const mobileUA = /Android|iPhone|iPad|iPod|Windows Phone|Opera Mini|IEMobile/i.test(navigator.userAgent)
+    const smallViewport = window.matchMedia?.("(max-width: 768px)")?.matches
+    return Boolean(mobileUA || smallViewport)
+  }
+
+  const openShareModal = (payload) => {
+    setSharePayload(payload)
+    setShowShareModal(true)
+  }
+
+  const tryNativeShare = async (payload) => {
+    if (typeof navigator === "undefined" || !navigator.share) return false
+    try {
+      await navigator.share(payload)
+      return true
+    } catch (error) {
+      if (error?.name === "AbortError") return true
+      return false
+    }
+  }
+
+  const openShareTarget = (target) => {
+    if (!sharePayload?.url) return
+
+    const text = sharePayload.text || ""
+    const url = sharePayload.url
+    const encodedText = encodeURIComponent(text)
+    const encodedUrl = encodeURIComponent(url)
+
+    let shareLink = ""
+
+    if (target === "whatsapp") {
+      shareLink = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`
+    } else if (target === "telegram") {
+      shareLink = `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`
+    } else if (target === "email") {
+      shareLink = `mailto:?subject=${encodeURIComponent(sharePayload.title || "Check this out")}&body=${encodeURIComponent(`${text}\n\n${url}`)}`
+    }
+
+    if (shareLink) {
+      window.open(shareLink, "_blank", "noopener,noreferrer")
+      setShowShareModal(false)
+    }
+  }
+
+  const copyShareLink = async () => {
+    if (!sharePayload?.url) return
+    await copyToClipboard(sharePayload.url)
+    setShowShareModal(false)
+  }
+
+  const handleSystemShareFromModal = async () => {
+    if (!sharePayload) return
+    const shared = await tryNativeShare(sharePayload)
+    if (shared) {
+      setShowShareModal(false)
+      toast.success("Shared successfully")
     }
   }
 
@@ -3374,6 +3439,84 @@ function RestaurantDetailsContent() {
                   {/* Bottom Handle */}
                   <div className="px-4 pb-2 pt-2 flex justify-center">
                     <div className="h-1 w-12 bg-gray-300 rounded-full" />
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+
+      {/* Share Modal */}
+      {typeof window !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showShareModal && sharePayload && (
+              <>
+                <motion.div
+                  className="fixed inset-0 bg-black/50 z-[10020]"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setShowShareModal(false)}
+                />
+                <motion.div
+                  className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[10021] w-[92vw] max-w-md bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.16 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between gap-3">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">Share</h3>
+                    <button
+                      className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                      onClick={() => setShowShareModal(false)}
+                      aria-label="Close share modal"
+                    >
+                      <X className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                    </button>
+                  </div>
+
+                  <div className="px-5 py-4 space-y-2">
+                    {typeof navigator !== "undefined" && navigator.share && (
+                      <button
+                        className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                        onClick={handleSystemShareFromModal}
+                      >
+                        <Share2 className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                        <span className="text-sm font-medium text-gray-900 dark:text-white">Share via system apps</span>
+                      </button>
+                    )}
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                      onClick={() => openShareTarget("whatsapp")}
+                    >
+                      <MessageCircle className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">WhatsApp</span>
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                      onClick={() => openShareTarget("telegram")}
+                    >
+                      <Send className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Telegram</span>
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                      onClick={() => openShareTarget("email")}
+                    >
+                      <Mail className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Email</span>
+                    </button>
+                    <button
+                      className="w-full flex items-center gap-3 px-3 py-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 text-left"
+                      onClick={copyShareLink}
+                    >
+                      <Copy className="h-5 w-5 text-gray-700 dark:text-gray-300" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-white">Copy link</span>
+                    </button>
                   </div>
                 </motion.div>
               </>
