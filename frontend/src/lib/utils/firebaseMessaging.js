@@ -15,6 +15,7 @@ const tokenCachePrefix = "fcm_web_registered_token_";
 let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
+let serviceWorkerMessageListenerAttached = false;
 const MESSAGING_APP_NAME = "web-push-app";
 const recentForegroundNotifications = new Map();
 let pushSoundAudio = null;
@@ -252,6 +253,66 @@ async function saveTokenByModule(moduleName, token) {
   }
 }
 
+function showForegroundNotification(payload = {}) {
+  const notificationKey = getNotificationKey(payload);
+  if (wasRecentlyHandled(notificationKey)) {
+    return;
+  }
+
+  const title =
+    payload?.notification?.title ||
+    payload?.data?.title ||
+    "New notification";
+  const body =
+    payload?.notification?.body ||
+    payload?.data?.body ||
+    "";
+  const image =
+    payload?.notification?.image ||
+    payload?.notification?.imageUrl ||
+    payload?.data?.image ||
+    payload?.data?.imageUrl ||
+    undefined;
+
+  playPushSound(payload);
+
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    try {
+      new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        image,
+        tag: notificationKey || undefined,
+      });
+    } catch {
+      // Ignore Notification API errors and fallback to toast.
+    }
+  }
+
+  if (body) {
+    toast.success(`${title}: ${body}`);
+  } else {
+    toast.success(title);
+  }
+}
+
+function attachServiceWorkerMessageListener() {
+  if (
+    serviceWorkerMessageListenerAttached ||
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event?.data?.type !== "push-notification-received") return;
+    showForegroundNotification(event.data.payload || {});
+  });
+
+  serviceWorkerMessageListenerAttached = true;
+}
+
 async function attachForegroundListener(firebaseAppInstance) {
   if (foregroundListenerAttached) return;
 
@@ -261,42 +322,10 @@ async function attachForegroundListener(firebaseAppInstance) {
 
   const messaging = getMessaging(firebaseAppInstance);
   setupPushSoundUnlock();
+  attachServiceWorkerMessageListener();
 
   onMessage(messaging, (payload) => {
-    const notificationKey = getNotificationKey(payload);
-    if (wasRecentlyHandled(notificationKey)) {
-      return;
-    }
-
-    const title = payload?.notification?.title || "New notification";
-    const body = payload?.notification?.body || "";
-    const image =
-      payload?.notification?.image ||
-      payload?.notification?.imageUrl ||
-      payload?.data?.image ||
-      payload?.data?.imageUrl ||
-      undefined;
-
-    playPushSound(payload);
-
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      try {
-        new Notification(title, {
-          body,
-          icon: "/favicon.ico",
-          image,
-          tag: notificationKey || undefined,
-        });
-      } catch {
-        // Ignore Notification API errors and fallback to toast.
-      }
-    }
-
-    if (body) {
-      toast.success(`${title}: ${body}`);
-    } else {
-      toast.success(title);
-    }
+    showForegroundNotification(payload);
   });
 
   foregroundListenerAttached = true;

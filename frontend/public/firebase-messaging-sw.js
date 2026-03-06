@@ -14,6 +14,16 @@ const getNotificationKey = (payload) =>
     payload?.data?.targetUrl || payload?.data?.link || "",
   ].join("::");
 
+async function notifyOpenClients(payload) {
+  const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+  windowClients.forEach((client) => {
+    client.postMessage({
+      type: "push-notification-received",
+      payload,
+    });
+  });
+}
+
 async function loadFirebaseWebConfig() {
   const candidates = ["/api/env/public"];
   if (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1") {
@@ -57,6 +67,8 @@ async function loadFirebaseWebConfig() {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
+    notifyOpenClients(payload);
+
     if (payload?.notification?.title || payload?.notification?.body) {
       return;
     }
