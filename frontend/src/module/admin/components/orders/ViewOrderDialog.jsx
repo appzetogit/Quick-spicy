@@ -53,21 +53,40 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
 
   // Format address for display
   const formatAddress = (address) => {
-    if (!address) return "N/A"
-    
-    const parts = []
-    if (address.label) parts.push(address.label)
-    if (address.street) parts.push(address.street)
-    if (address.additionalDetails) parts.push(address.additionalDetails)
-    if (address.formattedAddress) {
-      parts.push(address.formattedAddress)
-    } else {
-      if (address.city) parts.push(address.city)
-      if (address.state) parts.push(address.state)
-      if (address.zipCode) parts.push(address.zipCode)
-    }
-    
-    return parts.length > 0 ? parts.join(", ") : "Address not available"
+    if (!address || typeof address !== "object") return "N/A"
+
+    const formattedAddress = String(address.formattedAddress || "").trim()
+    const rawAddress = String(address.address || "").trim()
+    const parts = [
+      formattedAddress,
+      rawAddress,
+      address.label,
+      address.street,
+      address.additionalDetails,
+      address.landmark,
+      address.addressLine1,
+      address.addressLine2,
+      address.area,
+      address.city,
+      address.state,
+      address.zipCode,
+      address.postalCode,
+    ]
+      .map((value) => String(value || "").trim())
+      .filter(Boolean)
+
+    const uniqueParts = []
+    parts.forEach((part) => {
+      const key = part.toLowerCase()
+      const isContained = uniqueParts.some((existingPart) => {
+        const existingKey = existingPart.toLowerCase()
+        return existingKey === key || existingKey.includes(key) || key.includes(existingKey)
+      })
+      if (isContained) return
+      uniqueParts.push(part)
+    })
+
+    return uniqueParts.length > 0 ? uniqueParts.join(", ") : "Address not available"
   }
 
   // Get coordinates if available

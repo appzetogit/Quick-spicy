@@ -4,6 +4,20 @@ import { BellRing, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { enablePushNotificationSound, isPushSoundEnabled } from "@/lib/utils/firebaseMessaging";
 
+function isMobileDevice() {
+  if (typeof window === "undefined" || typeof navigator === "undefined") return false;
+
+  const userAgent = navigator.userAgent || "";
+  const isMobileUserAgent = /Android|iPhone|iPad|iPod|Mobile|IEMobile|Opera Mini/i.test(userAgent);
+  const isSmallViewport = window.matchMedia?.("(max-width: 768px)")?.matches;
+  const isWebView =
+    Boolean(window.ReactNativeWebView) ||
+    Boolean(window.flutter_inappwebview) ||
+    /\bwv\b|WebView/i.test(userAgent);
+
+  return Boolean(isMobileUserAgent || isSmallViewport || isWebView);
+}
+
 export default function PushSoundEnableButton() {
   const location = useLocation();
   const [enabled, setEnabled] = useState(() => isPushSoundEnabled());
@@ -11,20 +25,29 @@ export default function PushSoundEnableButton() {
     typeof Notification === "undefined" ? "unsupported" : Notification.permission,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => isMobileDevice());
   const isAdminRoute = location.pathname.startsWith("/admin");
   const shouldShowPrompt = useMemo(() => {
+    if (isMobile) return false;
     if (isAdminRoute) return false;
     if (permission === "denied") return false;
     return permission !== "granted" || !enabled;
-  }, [enabled, isAdminRoute, permission]);
+  }, [enabled, isAdminRoute, isMobile, permission]);
 
   useEffect(() => {
     const syncState = () => {
       setEnabled(isPushSoundEnabled());
+      setIsMobile(isMobileDevice());
       setPermission(typeof Notification === "undefined" ? "unsupported" : Notification.permission);
     };
+
     window.addEventListener("push-sound-enabled", syncState);
-    return () => window.removeEventListener("push-sound-enabled", syncState);
+    window.addEventListener("resize", syncState);
+
+    return () => {
+      window.removeEventListener("push-sound-enabled", syncState);
+      window.removeEventListener("resize", syncState);
+    };
   }, []);
 
   const handleEnable = async () => {
@@ -57,7 +80,7 @@ export default function PushSoundEnableButton() {
       : "Allow Notifications";
 
   return (
-    <div className="fixed bottom-4 right-4 z-[100] max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-4 right-4 z-[100] hidden max-w-[calc(100vw-2rem)] md:block">
       <div className="rounded-2xl border border-amber-200 bg-white/95 p-3 shadow-lg backdrop-blur">
         <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-900">
           <BellRing className="h-4 w-4 text-amber-600" />

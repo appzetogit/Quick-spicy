@@ -57,6 +57,7 @@ const debugError = (...args) => {}
 
 
 const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
+const RUPEE_SYMBOL = "\u20B9"
 
 function RestaurantDetailsContent() {
   const { slug } = useParams()
@@ -1472,7 +1473,7 @@ function RestaurantDetailsContent() {
     return sorted
   }
 
-  // Helper function to check if a section has any items under ?250
+  // Helper function to check if a section has any items under Rs 250
   const sectionHasItemsUnder250 = (section) => {
     if (!showOnlyUnder250) return true; // If not filtering, show all sections
 
@@ -1503,7 +1504,7 @@ function RestaurantDetailsContent() {
     return false;
   }
 
-  // Filter sections to only show those with items under ?250
+  // Filter sections to only show those with items under Rs 250
   // Returns array of { section, originalIndex } to preserve original index for expanded sections
   const getFilteredSections = () => {
     if (!restaurant?.menuSections) return [];
@@ -1968,7 +1969,7 @@ function RestaurantDetailsContent() {
                                     <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
                                   </div>
                                 )}
-                                {item.isSpicy && <span className="text-red-500">???</span>}
+                                {item.isSpicy && <span className="text-xs font-semibold text-red-500">Spicy</span>}
                               </div>
 
                               <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{item.name}</h3>
@@ -1984,7 +1985,7 @@ function RestaurantDetailsContent() {
                               )}
 
                               <div className="flex items-center gap-3 mt-1">
-                                <p className="font-semibold text-gray-900 dark:text-white">?{Math.round(item.price)}</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">{RUPEE_SYMBOL}{Math.round(item.price)}</p>
                                 {/* Preparation Time - Show if available */}
                                 {item.preparationTime && String(item.preparationTime).trim() && (
                                   <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
@@ -2192,7 +2193,7 @@ function RestaurantDetailsContent() {
                                               <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
                                             </div>
                                           )}
-                                          {item.isSpicy && <span className="text-red-500">???</span>}
+                                          {item.isSpicy && <span className="text-xs font-semibold text-red-500">Spicy</span>}
                                         </div>
 
                                         <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{item.name}</h3>
@@ -2208,7 +2209,7 @@ function RestaurantDetailsContent() {
                                         )}
 
                                         <div className="flex items-center gap-3 mt-1">
-                                          <p className="font-semibold text-gray-900 dark:text-white">?{Math.round(item.price)}</p>
+                                          <p className="font-semibold text-gray-900 dark:text-white">{RUPEE_SYMBOL}{Math.round(item.price)}</p>
                                           {/* Preparation Time - Show if available */}
                                           {item.preparationTime && String(item.preparationTime).trim() && (
                                             <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
@@ -3058,11 +3059,11 @@ function RestaurantDetailsContent() {
                         <div className="flex items-center gap-1">
                           {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
                             <span className="text-sm line-through text-red-200">
-                              ?{Math.round(selectedItem.originalPrice)}
+                              {RUPEE_SYMBOL}{Math.round(selectedItem.originalPrice)}
                             </span>
                           )}
                           <span className="text-base font-bold">
-                            ?{Math.round(selectedItem.price)}
+                            {RUPEE_SYMBOL}{Math.round(selectedItem.price)}
                           </span>
                         </div>
                       </Button>

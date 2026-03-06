@@ -60,6 +60,8 @@ const formatFullAddress = (address) => {
   return ""
 }
 
+const RUPEE_SYMBOL = "\u20B9"
+
 export default function Cart() {
   const navigate = useNavigate()
   const orderSuccessAudioRef = useRef(null)
@@ -1510,7 +1512,7 @@ export default function Cart() {
           <div className="bg-blue-100 dark:bg-blue-900/20 px-4 md:px-6 py-2 md:py-3 flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <p className="text-sm md:text-base font-medium text-blue-800 dark:text-blue-200">
-                ðŸŽ‰ You saved â‚¹{savings} on this order
+                Saved {RUPEE_SYMBOL}{savings} on this order
               </p>
             </div>
           </div>
@@ -1961,10 +1963,12 @@ export default function Cart() {
                     <div className="text-left">
                       <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                         <span className="text-sm md:text-base text-gray-800 dark:text-gray-200">Total Bill</span>
-                        <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">â‚¹{totalBeforeDiscount.toFixed(0)}</span>
-                        <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">â‚¹{total.toFixed(0)}</span>
+                        <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">{RUPEE_SYMBOL}{totalBeforeDiscount.toFixed(0)}</span>
+                        <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
                         {savings > 0 && (
-                          <span className="text-xs md:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 md:px-2 py-0.5 rounded font-medium">You saved â‚¹{savings}</span>
+                          <span className="text-xs md:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 md:px-2 py-0.5 rounded font-medium">
+                            Saved {RUPEE_SYMBOL}{savings}
+                          </span>
                         )}
                       </div>
                       <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Incl. taxes and charges</p>
@@ -1977,12 +1981,12 @@ export default function Cart() {
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700 space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{subtotal.toFixed(0)}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `â‚¹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${deliveryFee}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -1992,21 +1996,21 @@ export default function Cart() {
                     )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{platformFee}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{platformFee}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST and Restaurant Charges</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{gstCharges}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
                         <span>Coupon Discount</span>
-                        <span>-â‚¹{discount}</span>
+                        <span>-{RUPEE_SYMBOL}{discount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm md:text-base font-semibold pt-2 md:pt-3 border-t dark:border-gray-700">
                       <span>To Pay</span>
-                      <span>â‚¹{total.toFixed(0)}</span>
+                      <span>{RUPEE_SYMBOL}{total.toFixed(0)}</span>
                     </div>
                   </div>
                 )}
@@ -2023,12 +2027,12 @@ export default function Cart() {
                   <div className="space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{subtotal.toFixed(0)}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `â‚¹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${deliveryFee}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -2038,21 +2042,21 @@ export default function Cart() {
                     )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{platformFee}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{platformFee}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST</span>
-                      <span className="text-gray-800 dark:text-gray-200">â‚¹{gstCharges}</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
                         <span>Discount</span>
-                        <span>-â‚¹{discount}</span>
+                        <span>-{RUPEE_SYMBOL}{discount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base md:text-lg font-bold pt-3 md:pt-4 pb-6 border-t dark:border-gray-700">
                       <span>Total</span>
-                      <span className="text-green-600 dark:text-green-400">â‚¹{total.toFixed(0)}</span>
+                      <span className="text-green-600 dark:text-green-400">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
                     </div>
                   </div>
                 </div>

@@ -17,6 +17,50 @@ const formatDisplayText = (value, fallback = "N/A") => {
   return normalized || fallback
 }
 
+const formatOrderAddress = (address) => {
+  if (!address || typeof address !== "object") return "Not available"
+
+  const formattedAddress = String(address.formattedAddress || "").trim()
+  const rawAddress = String(address.address || "").trim()
+
+  const primaryParts = [
+    address.label,
+    address.street,
+    address.additionalDetails,
+    address.landmark,
+    address.addressLine1,
+    address.addressLine2,
+    address.area,
+    address.city,
+    address.state,
+    address.zipCode,
+    address.postalCode,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+
+  const orderedParts = []
+  const pushPart = (value) => {
+    const normalized = String(value || "").trim()
+    if (!normalized) return
+    const key = normalized.toLowerCase()
+
+    const isContained = orderedParts.some((existingPart) => {
+      const existingKey = existingPart.toLowerCase()
+      return existingKey === key || existingKey.includes(key) || key.includes(existingKey)
+    })
+    if (isContained) return
+
+    orderedParts.push(normalized)
+  }
+
+  if (formattedAddress) pushPart(formattedAddress)
+  if (rawAddress && rawAddress.toLowerCase() !== formattedAddress.toLowerCase()) pushPart(rawAddress)
+  primaryParts.forEach(pushPart)
+
+  return orderedParts.join(", ") || "Not available"
+}
+
 const blobToDataUrl = (blob) =>
   new Promise((resolve, reject) => {
     const reader = new FileReader()
@@ -253,16 +297,7 @@ export function useOrdersManagement(orders, statusKey, title) {
       const customerPhone = formatDisplayText(order.customerPhone)
       const restaurantName = formatDisplayText(order.restaurant)
       const deliveryType = formatDisplayText(order.deliveryType)
-      const addressParts = [
-        order.address?.label,
-        order.address?.street,
-        order.address?.additionalDetails,
-        order.address?.formattedAddress,
-        order.address?.city,
-        order.address?.state,
-        order.address?.zipCode,
-      ].filter(Boolean)
-      const deliveryAddress = formatDisplayText(addressParts.join(", "), "Not available")
+      const deliveryAddress = formatOrderAddress(order.address || order.customerAddress || order.deliveryAddress)
       const itemCount = items.reduce((sum, item) => sum + toNumber(item?.quantity || 1), 0) || items.length
 
       doc.setFillColor(15, 118, 110)
@@ -302,48 +337,68 @@ export function useOrdersManagement(orders, statusKey, title) {
       doc.setFillColor(248, 250, 252)
 
       const drawInfoCard = (titleText, x, y, width, rows, accentColor = [15, 118, 110]) => {
+        const cardPaddingX = 4
+        const titleBarHeight = 8
+        const contentStartY = y + 14
+        const labelX = x + cardPaddingX
+        const valueX = x + 18
+        const valueWidth = width - 26
+
+        let measuredHeight = contentStartY
+        const measuredRows = rows.map((row) => {
+          const label = `${row.label}:`
+          const valueLines = doc.splitTextToSize(formatDisplayText(row.value), valueWidth)
+          const rowHeight = Math.max(5, valueLines.length * 4)
+          measuredHeight += rowHeight
+          return { label, valueLines, rowHeight }
+        })
+
+        const cardHeight = Math.max(39, measuredHeight - y + 4)
+
         doc.setFillColor(255, 255, 255)
-        doc.roundedRect(x, y, width, 39, 3, 3, "FD")
+        doc.roundedRect(x, y, width, cardHeight, 3, 3, "FD")
         doc.setFillColor(...accentColor)
-        doc.roundedRect(x, y, width, 8, 3, 3, "F")
+        doc.roundedRect(x, y, width, titleBarHeight, 3, 3, "F")
         doc.setTextColor(255, 255, 255)
         doc.setFontSize(9)
         doc.setFont(undefined, "bold")
-        doc.text(titleText, x + 4, y + 5.5)
+        doc.text(titleText, labelX, y + 5.5)
         doc.setTextColor(71, 85, 105)
         doc.setFont(undefined, "normal")
         doc.setFontSize(8.5)
 
-        let currentY = y + 14
-        rows.forEach((row) => {
-          const label = `${row.label}:`
-          const valueLines = doc.splitTextToSize(formatDisplayText(row.value), width - 26)
+        let currentY = contentStartY
+        measuredRows.forEach((row) => {
           doc.setFont(undefined, "bold")
-          doc.text(label, x + 4, currentY)
+          doc.text(row.label, labelX, currentY)
           doc.setFont(undefined, "normal")
-          doc.text(valueLines, x + 18, currentY)
-          currentY += Math.max(5, valueLines.length * 4)
+          doc.text(row.valueLines, valueX, currentY)
+          currentY += row.rowHeight
         })
+
+        return cardHeight
       }
 
-      drawInfoCard("Customer", 14, 53, 58, [
+      const customerCardHeight = drawInfoCard("Customer", 14, 53, 58, [
         { label: "Name", value: customerName },
         { label: "Phone", value: customerPhone },
         { label: "Address", value: deliveryAddress },
       ])
-      drawInfoCard("Restaurant", 76, 53, 58, [
+      const restaurantCardHeight = drawInfoCard("Restaurant", 76, 53, 58, [
         { label: "Name", value: restaurantName },
         { label: "Delivery", value: deliveryType },
         { label: "Items", value: `${itemCount} item${itemCount === 1 ? "" : "s"}` },
       ], [37, 99, 235])
-      drawInfoCard("Delivery Partner", 138, 53, 58, [
+      const deliveryCardHeight = drawInfoCard("Delivery Partner", 138, 53, 58, [
         { label: "Name", value: deliveryPartnerName },
         { label: "Phone", value: deliveryPartnerPhone },
         { label: "Payment", value: paymentType },
       ], [249, 115, 22])
 
+      const infoCardsBottomY = 53 + Math.max(customerCardHeight, restaurantCardHeight, deliveryCardHeight)
+
       autoTable(doc, {
-        startY: 100,
+        startY: infoCardsBottomY + 8,
         body: [[
           `Order ID: ${orderId}`,
           `Status: ${orderStatus}`,
