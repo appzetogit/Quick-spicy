@@ -19,7 +19,7 @@ const debugError = (...args) => {}
 export default function PocketDetails() {
   const navigate = useNavigate()
 
-  // Current week range (Sundayâ€“Saturday)
+  // Current week range (Sunday–Saturday)
   const getInitialWeekRange = () => {
     const now = new Date()
     const start = new Date(now)

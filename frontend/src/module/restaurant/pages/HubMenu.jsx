@@ -317,8 +317,8 @@ export default function HubMenu() {
               nameArabic: item.nameArabic || "",
               image: item.image || "",
               category: item.category || section.name,
-              rating: item.rating ?? 0.0,
-              reviews: item.reviews ?? 0,
+              rating: item.rating || 0.0,
+              reviews: item.reviews || 0,
               price: item.price || 0,
               stock: item.stock || "Unlimited",
               discount: item.discount || null,
@@ -328,7 +328,7 @@ export default function HubMenu() {
               availabilityTimeEnd: item.availabilityTimeEnd || "11:57 PM",
               description: item.description || "",
               discountType: item.discountType || "Percent",
-              discountAmount: item.discountAmount ?? 0.0,
+              discountAmount: item.discountAmount || 0.0,
               isAvailable: item.isAvailable !== undefined ? item.isAvailable : true,
               isRecommended: item.isRecommended || false,
               variations: Array.isArray(item.variations) ? item.variations.map(v => ({
@@ -340,7 +340,7 @@ export default function HubMenu() {
               tags: Array.isArray(item.tags) ? item.tags : [],
               nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
               allergies: Array.isArray(item.allergies) ? item.allergies : [],
-              photoCount: item.photoCount ?? 1,
+              photoCount: item.photoCount || 1,
               // Approval status fields
               approvalStatus: item.approvalStatus || 'pending',
               rejectionReason: item.rejectionReason || '',
@@ -356,8 +356,8 @@ export default function HubMenu() {
                 nameArabic: item.nameArabic || "",
                 image: item.image || "",
                 category: item.category || section.name,
-                rating: item.rating ?? 0.0,
-                reviews: item.reviews ?? 0,
+                rating: item.rating || 0.0,
+                reviews: item.reviews || 0,
                 price: item.price || 0,
                 stock: item.stock || "Unlimited",
                 discount: item.discount || null,
@@ -367,7 +367,7 @@ export default function HubMenu() {
                 availabilityTimeEnd: item.availabilityTimeEnd || "11:57 PM",
                 description: item.description || "",
                 discountType: item.discountType || "Percent",
-                discountAmount: item.discountAmount ?? 0.0,
+                discountAmount: item.discountAmount || 0.0,
                 isAvailable: item.isAvailable !== undefined ? item.isAvailable : true,
                 isRecommended: item.isRecommended || false,
                 variations: Array.isArray(item.variations) ? item.variations.map(v => ({
@@ -379,7 +379,7 @@ export default function HubMenu() {
                 tags: Array.isArray(item.tags) ? item.tags : [],
                 nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
                 allergies: Array.isArray(item.allergies) ? item.allergies : [],
-                photoCount: item.photoCount ?? 1,
+                photoCount: item.photoCount || 1,
                 // Approval status fields
                 approvalStatus: item.approvalStatus || 'pending',
                 rejectionReason: item.rejectionReason || '',
@@ -393,7 +393,7 @@ export default function HubMenu() {
           
           await restaurantAPI.updateMenu({ sections: normalizedSections })
           lastSyncedMenuRef.current = serializeMenuSections(normalizedSections)
-          debugLog('âœ… Menu saved successfully with', normalizedSections.length, 'sections')
+          debugLog('✅ Menu saved successfully with', normalizedSections.length, 'sections')
         } catch (error) {
           debugError('Error saving menu:', error)
           // Check if it's a network error (backend not running)
@@ -1265,7 +1265,7 @@ export default function HubMenu() {
                         {addon.description && (
                           <p className="text-sm text-gray-600 mb-2">{addon.description}</p>
                         )}
-                        <p className="text-base font-bold text-gray-900">â‚¹{addon.price}</p>
+                        <p className="text-base font-bold text-gray-900">₹{addon.price}</p>
                         {isRejectedApproval(addon.approvalStatus) && addon.rejectionReason && (
                           <p className="text-xs text-red-600 mt-1">Reason: {addon.rejectionReason}</p>
                         )}
@@ -1404,7 +1404,7 @@ export default function HubMenu() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm font-medium text-gray-700 mb-3">â‚¹{item.price}</p>
+                            <p className="text-sm font-medium text-gray-700 mb-3">₹{item.price}</p>
                             {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
                               <p className="text-xs text-red-600 -mt-2 mb-3">Reason: {item.rejectionReason}</p>
                             )}
@@ -2164,7 +2164,7 @@ export default function HubMenu() {
                                       {item.name}
                                     </h4>
                                   </div>
-                                  <p className="text-sm font-medium text-gray-700">â‚¹{item.price}</p>
+                                  <p className="text-sm font-medium text-gray-700">₹{item.price}</p>
                                   {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
                                     <p className="text-xs text-red-600 mt-1">Reason: {item.rejectionReason}</p>
                                   )}
@@ -2278,7 +2278,7 @@ export default function HubMenu() {
                 {/* Price Field */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (â‚¹) <span className="text-red-500">*</span>
+                    Price (₹) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"

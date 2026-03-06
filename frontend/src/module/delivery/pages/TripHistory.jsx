@@ -371,7 +371,7 @@ export default function TripHistory() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Amount</p>
-                    <p className="text-sm font-semibold text-black mt-1">â‚¹{trip.amount}</p>
+                    <p className="text-sm font-semibold text-black mt-1">₹{trip.amount}</p>
                   </div>
                 </div>
               </div>
@@ -444,7 +444,7 @@ export default function TripHistory() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <p className="text-lg font-bold text-black">
-                              â‚¹{transaction.amount?.toFixed(2) || '0.00'}
+                              ₹{transaction.amount?.toFixed(2) || '0.00'}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
                               {transaction.description || transaction.metadata?.reference || 'Bonus'}

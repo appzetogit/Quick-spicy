@@ -50,7 +50,7 @@ export default function DiningCategory() {
               location: r.location?.addressLine1 || r.address || "Indore",
               distance: "2.5 km", // Placeholder as we don't have user geo-coords to calc
               cuisine: Array.isArray(r.cuisines) ? r.cuisines[0] : (r.cuisine || "Multi-cuisine"),
-              price: r.costForTwo ? `â‚¹${r.costForTwo} for two` : "Price not available",
+              price: r.costForTwo ? `₹${r.costForTwo} for two` : "Price not available",
               image: r.coverImage || r.profileImage?.url || r.logo || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop",
               offer: r.discount ? `Flat ${r.discount}% OFF` : "Great Offers",
               deliveryTime: r.deliveryTime ? `${r.deliveryTime} mins` : "30-40 mins",
@@ -305,7 +305,7 @@ export default function DiningCategory() {
                         {/* Featured Dish Badge - Top Left */}
                         <div className="absolute top-3 left-3">
                           <div className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium">
-                            {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
+                            {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
                           </div>
                         </div>
 
@@ -570,7 +570,7 @@ export default function DiningCategory() {
                           : 'border-gray-200 hover:border-[#EB590E]'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under â‚¹200</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under ₹200</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('price-under-500')}
@@ -579,7 +579,7 @@ export default function DiningCategory() {
                           : 'border-gray-200 hover:border-[#EB590E]'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under â‚¹500</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under ₹500</span>
                       </button>
                     </div>
                   </div>

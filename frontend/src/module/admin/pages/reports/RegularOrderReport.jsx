@@ -272,7 +272,7 @@ export default function RegularOrderReport() {
           </div>
           <span className="text-[11px] font-medium text-slate-800">{meta.label}</span>
         </div>
-        <span className={`text-xs font-semibold ${meta.color}`}>{statusCounts[statusKey] ?? 0}</span>
+          <span className={`text-xs font-semibold ${meta.color}`}>{statusCounts[statusKey] || 0}</span>
       </div>
     )
   }

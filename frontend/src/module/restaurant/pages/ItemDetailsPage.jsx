@@ -1082,7 +1082,7 @@ export default function ItemDetailsPage() {
                     value={basePrice}
                     onChange={(e) => {
                       // Remove rupee symbol and any non-numeric characters except decimal point
-                      const value = e.target.value.replace(/[â‚¹\s,]/g, '').replace(/[^0-9.]/g, '')
+                      const value = e.target.value.replace(/[₹\s,]/g, '').replace(/[^0-9.]/g, '')
                       // Allow only one decimal point
                       const parts = value.split('.')
                       const cleanedValue = parts.length > 2
@@ -1092,14 +1092,14 @@ export default function ItemDetailsPage() {
                     }}
                     onFocus={(e) => {
                       // Remove rupee symbol when focused for easier editing
-                      if (e.target.value.startsWith('â‚¹')) {
-                        e.target.value = e.target.value.replace(/â‚¹\s*/g, '')
+                      if (e.target.value.startsWith('₹')) {
+                        e.target.value = e.target.value.replace(/₹\s*/g, '')
                       }
                     }}
                     placeholder="Enter price"
                     className="w-full pl-8 pr-12 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">â‚¹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">₹</span>
                   <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100">
                     <EditIcon className="w-4 h-4 text-gray-500" />
                   </button>

@@ -164,7 +164,7 @@ export default function Under250() {
     fetchBanners()
   }, [])
 
-  // Fetch restaurants with dishes under â‚¹250 from backend
+  // Fetch restaurants with dishes under ₹250 from backend
   useEffect(() => {
     const fetchRestaurantsUnder250 = async () => {
       try {

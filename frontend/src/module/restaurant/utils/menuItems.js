@@ -13,7 +13,7 @@ const normalizeItem = (item = {}, sectionName = "", subsectionName = "") => ({
   price: Number(item?.price || 0),
   rating: Number(item?.rating || 0),
   reviews: Number(item?.reviews || 0),
-  stock: item?.stock ?? "Unlimited",
+  stock: item?.stock || "Unlimited",
   approvalStatus: item?.approvalStatus || "pending",
   isAvailable: item?.isAvailable !== false,
   variations: Array.isArray(item?.variations) ? item.variations : [],

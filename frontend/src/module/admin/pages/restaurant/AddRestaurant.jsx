@@ -135,7 +135,7 @@ export default function AddRestaurant() {
     { key: "en", label: "English(EN)" },
     { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
     { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
-    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
+    { key: "es", label: "Spanish - español(ES)" },
   ]
 
   // Upload handler for images
@@ -799,7 +799,7 @@ export default function AddRestaurant() {
           <Input value={step4.featuredDish || ""} onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value.replace(/[^A-Za-z ]/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., Butter Chicken Special" />
         </div>
         <div>
-          <Label className="text-xs text-gray-700">Featured Dish Price (â‚¹)*</Label>
+          <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
           <Input type="text" inputMode="numeric" value={step4.featuredPrice || ""} onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value.replace(/\D/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., 249" />
         </div>
         <div>

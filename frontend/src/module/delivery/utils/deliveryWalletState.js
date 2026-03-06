@@ -26,47 +26,47 @@ const EMPTY_WALLET_STATE = {
  */
 export const fetchDeliveryWallet = async () => {
   try {
-    debugLog('ðŸš€ Starting wallet fetch...')
+    debugLog('🚀 Starting wallet fetch...')
     const response = await deliveryAPI.getWallet()
-    debugLog('ðŸ” Full API Response:', JSON.stringify(response, null, 2))
-    debugLog('ðŸ” Response Status:', response?.status)
-    debugLog('ðŸ” Response Data:', response?.data)
-    debugLog('ðŸ” Response Data Type:', typeof response?.data)
+    debugLog('🔍 Full API Response:', JSON.stringify(response, null, 2))
+    debugLog('🔍 Response Status:', response?.status)
+    debugLog('🔍 Response Data:', response?.data)
+    debugLog('🔍 Response Data Type:', typeof response?.data)
     
     // Check multiple possible response structures
     let walletData = null
     
     if (response?.data?.success && response?.data?.data?.wallet) {
       walletData = response.data.data.wallet
-      debugLog('âœ… Found wallet in: response.data.data.wallet')
+      debugLog('✅ Found wallet in: response.data.data.wallet')
     } else if (response?.data?.wallet) {
       walletData = response.data.wallet
-      debugLog('âœ… Found wallet in: response.data.wallet')
+      debugLog('✅ Found wallet in: response.data.wallet')
     } else if (response?.data?.data) {
       walletData = response.data.data
-      debugLog('âœ… Found wallet in: response.data.data')
+      debugLog('✅ Found wallet in: response.data.data')
     } else if (response?.data) {
       walletData = response.data
-      debugLog('âœ… Found wallet in: response.data')
+      debugLog('✅ Found wallet in: response.data')
     }
     
     if (walletData) {
-      debugLog('ðŸ’° Wallet Data from API:', JSON.stringify(walletData, null, 2))
-      debugLog('ðŸ’° Total Balance:', walletData.totalBalance)
-      debugLog('ðŸ’° Cash In Hand:', walletData.cashInHand)
-      debugLog('ðŸ’° Total Earned:', walletData.totalEarned)
-      debugLog('ðŸ’° Transactions Count:', walletData.transactions?.length || walletData.recentTransactions?.length || 0)
-      debugLog('ðŸ’° Transactions:', walletData.transactions || walletData.recentTransactions || [])
+      debugLog('💰 Wallet Data from API:', JSON.stringify(walletData, null, 2))
+      debugLog('💰 Total Balance:', walletData.totalBalance)
+      debugLog('💰 Cash In Hand:', walletData.cashInHand)
+      debugLog('💰 Total Earned:', walletData.totalEarned)
+      debugLog('💰 Transactions Count:', walletData.transactions?.length || walletData.recentTransactions?.length || 0)
+      debugLog('💰 Transactions:', walletData.transactions || walletData.recentTransactions || [])
       
       // Transform API response to match expected format (support both camelCase and snake_case)
       const transformedData = {
         totalBalance: Number(walletData.totalBalance) || 0,
-        cashInHand: Number(walletData.cashInHand ?? walletData.cash_in_hand) || 0,
+        cashInHand: Number(walletData.cashInHand ? walletData.cash_in_hand) || 0,
         totalWithdrawn: Number(walletData.totalWithdrawn) || 0,
         totalEarned: Number(walletData.totalEarned) || 0,
         totalCashLimit: Number(walletData.totalCashLimit) || 0,
         availableCashLimit: Number(walletData.availableCashLimit) || 0,
-        deliveryWithdrawalLimit: Number(walletData.deliveryWithdrawalLimit ?? walletData.delivery_withdrawal_limit) || 100,
+        deliveryWithdrawalLimit: Number(walletData.deliveryWithdrawalLimit ? walletData.delivery_withdrawal_limit) || 100,
         // Pocket balance = total balance (includes bonus)
         pocketBalance: walletData.pocketBalance !== undefined ? Number(walletData.pocketBalance) : (Number(walletData.totalBalance) || 0),
         pendingWithdrawals: walletData.pendingWithdrawals || 0,
@@ -77,24 +77,24 @@ export const fetchDeliveryWallet = async () => {
         totalTransactions: walletData.totalTransactions || 0
       }
       
-      debugLog('âœ… Transformed Wallet Data:', JSON.stringify(transformedData, null, 2))
+      debugLog('✅ Transformed Wallet Data:', JSON.stringify(transformedData, null, 2))
       return transformedData
     } else {
-      debugWarn('âš ï¸ No wallet data found in response')
-      debugWarn('âš ï¸ Response structure:', Object.keys(response?.data || {}))
-      debugWarn('âš ï¸ Full response:', response)
+      debugWarn('⚠️ No wallet data found in response')
+      debugWarn('⚠️ Response structure:', Object.keys(response?.data || {}))
+      debugWarn('⚠️ Full response:', response)
     }
     
-    debugLog('âš ï¸ Returning empty wallet state')
+    debugLog('⚠️ Returning empty wallet state')
     return EMPTY_WALLET_STATE
   } catch (error) {
     // Skip logging network errors - they're handled by axios interceptor
     // Network errors mean backend is not running, which is expected in some scenarios
     if (error.code !== 'ERR_NETWORK' && error.message !== 'Network Error') {
-      debugError('âŒ Error fetching wallet data:', error)
-      debugError('âŒ Error response:', error.response)
-      debugError('âŒ Error response data:', error.response?.data)
-      debugError('âŒ Error message:', error.message)
+      debugError('❌ Error fetching wallet data:', error)
+      debugError('❌ Error response:', error.response)
+      debugError('❌ Error response data:', error.response?.data)
+      debugError('❌ Error message:', error.message)
     }
     return EMPTY_WALLET_STATE
   }
@@ -126,10 +126,10 @@ export const setDeliveryWalletState = (state) => {
  * @returns {Object} - Calculated balances
  */
 export const calculateDeliveryBalances = (state) => {
-  debugLog('ðŸ“Š calculateDeliveryBalances called with state:', state)
+  debugLog('📊 calculateDeliveryBalances called with state:', state)
   
   if (!state) {
-    debugWarn('âš ï¸ No state provided to calculateDeliveryBalances')
+    debugWarn('⚠️ No state provided to calculateDeliveryBalances')
     return {
       totalBalance: 0,
       cashInHand: 0,
@@ -146,7 +146,7 @@ export const calculateDeliveryBalances = (state) => {
   const totalWithdrawn = state.totalWithdrawn || 0
   const totalEarned = state.totalEarned || 0
   
-  debugLog('ðŸ“Š Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned })
+  debugLog('📊 Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned })
   
   // Calculate pending withdrawals from transactions if available
   let pendingWithdrawals = state.pendingWithdrawals || 0
@@ -178,7 +178,7 @@ export const calculateDeliveryBalances = (state) => {
     totalEarnings: totalEarningsFromTransactions || totalEarned || totalBalance || 0
   }
   
-  debugLog('ðŸ“Š Calculated balances:', balances)
+  debugLog('📊 Calculated balances:', balances)
   return balances
 }
 

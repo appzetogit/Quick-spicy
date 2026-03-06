@@ -42,7 +42,7 @@ export const useDeliveryNotifications = () => {
           audioRef.current.pause();
           audioRef.current.src = newSrc;
           audioRef.current.load();
-          debugLog('ðŸ”Š Audio source updated to:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
+          debugLog('🔊 Audio source updated to:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
         }
       } else {
         // Initialize audio if not exists
@@ -53,7 +53,7 @@ export const useDeliveryNotifications = () => {
       if (audioRef.current) {
         // Only play if user has interacted with the page (browser autoplay policy)
         if (!userInteractedRef.current) {
-          debugLog('ðŸ”‡ Audio playback skipped - user has not interacted with page yet');
+          debugLog('🔇 Audio playback skipped - user has not interacted with page yet');
           return;
         }
         
@@ -105,7 +105,7 @@ export const useDeliveryNotifications = () => {
     if (!audioRef.current) {
       audioRef.current = new Audio(soundFile);
       audioRef.current.volume = 0.7;
-      debugLog('ðŸ”Š Audio initialized with:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
+      debugLog('🔊 Audio initialized with:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
     } else {
       // Update audio source if preference changed
       const currentSrc = audioRef.current.src;
@@ -114,7 +114,7 @@ export const useDeliveryNotifications = () => {
         audioRef.current.pause();
         audioRef.current.src = newSrc;
         audioRef.current.load();
-        debugLog('ðŸ”Š Audio updated to:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
+        debugLog('🔊 Audio updated to:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
       }
     }
     
@@ -139,15 +139,15 @@ export const useDeliveryNotifications = () => {
                       deliveryPartner.deliveryId;
             if (id) {
               setDeliveryPartnerId(id);
-              debugLog('âœ… Delivery Partner ID fetched:', id);
+              debugLog('✅ Delivery Partner ID fetched:', id);
             } else {
-              debugWarn('âš ï¸ Could not extract delivery partner ID from response');
+              debugWarn('⚠️ Could not extract delivery partner ID from response');
             }
           } else {
-            debugWarn('âš ï¸ No delivery partner data in API response');
+            debugWarn('⚠️ No delivery partner data in API response');
           }
         } else {
-          debugWarn('âš ï¸ Could not fetch delivery partner ID from API');
+          debugWarn('⚠️ Could not fetch delivery partner ID from API');
         }
       } catch (error) {
         debugError('Error fetching delivery partner:', error);
@@ -159,7 +159,7 @@ export const useDeliveryNotifications = () => {
   // Socket connection effect
   useEffect(() => {
     if (!deliveryPartnerId) {
-      debugLog('â³ Waiting for deliveryPartnerId...');
+      debugLog('⏳ Waiting for deliveryPartnerId...');
       return;
     }
 
@@ -202,21 +202,21 @@ export const useDeliveryNotifications = () => {
     
     const socketUrl = `${backendUrl}/delivery`;
     
-    debugLog('ðŸ”Œ Attempting to connect to Delivery Socket.IO:', socketUrl);
-    debugLog('ðŸ”Œ Backend URL:', backendUrl);
-    debugLog('ðŸ”Œ API_BASE_URL:', API_BASE_URL);
-    debugLog('ðŸ”Œ Delivery Partner ID:', deliveryPartnerId);
-    debugLog('ðŸ”Œ Environment:', import.meta.env.MODE);
+    debugLog('🔌 Attempting to connect to Delivery Socket.IO:', socketUrl);
+    debugLog('🔌 Backend URL:', backendUrl);
+    debugLog('🔌 API_BASE_URL:', API_BASE_URL);
+    debugLog('🔌 Delivery Partner ID:', deliveryPartnerId);
+    debugLog('🔌 Environment:', import.meta.env.MODE);
     
     // Warn if trying to connect to localhost in production
     if (import.meta.env.MODE === 'production' && backendUrl.includes('localhost')) {
-      debugError('âŒ CRITICAL: Trying to connect Socket.IO to localhost in production!');
-      debugError('ðŸ’¡ This means VITE_API_BASE_URL was not set during build time');
-      debugError('ðŸ’¡ Current socketUrl:', socketUrl);
-      debugError('ðŸ’¡ Current API_BASE_URL:', API_BASE_URL);
-      debugError('ðŸ’¡ Fix: Rebuild frontend with: VITE_API_BASE_URL=https://your-backend-domain.com/api npm run build');
-      debugError('ðŸ’¡ Note: Vite environment variables are embedded at BUILD TIME, not runtime');
-      debugError('ðŸ’¡ You must rebuild and redeploy the frontend with correct VITE_API_BASE_URL');
+      debugError('❌ CRITICAL: Trying to connect Socket.IO to localhost in production!');
+      debugError('💡 This means VITE_API_BASE_URL was not set during build time');
+      debugError('💡 Current socketUrl:', socketUrl);
+      debugError('💡 Current API_BASE_URL:', API_BASE_URL);
+      debugError('💡 Fix: Rebuild frontend with: VITE_API_BASE_URL=https://your-backend-domain.com/api npm run build');
+      debugError('💡 Note: Vite environment variables are embedded at BUILD TIME, not runtime');
+      debugError('💡 You must rebuild and redeploy the frontend with correct VITE_API_BASE_URL');
       
       // Don't try to connect to localhost in production - it will fail
       setIsConnected(false);
@@ -225,9 +225,9 @@ export const useDeliveryNotifications = () => {
     
     // Validate backend URL format
     if (!backendUrl || !backendUrl.startsWith('http')) {
-      debugError('âŒ CRITICAL: Invalid backend URL format:', backendUrl);
-      debugError('ðŸ’¡ API_BASE_URL:', API_BASE_URL);
-      debugError('ðŸ’¡ Expected format: https://your-domain.com or http://localhost:5000');
+      debugError('❌ CRITICAL: Invalid backend URL format:', backendUrl);
+      debugError('💡 API_BASE_URL:', API_BASE_URL);
+      debugError('💡 Expected format: https://your-domain.com or http://localhost:5000');
       return; // Don't try to connect with invalid URL
     }
     
@@ -235,10 +235,10 @@ export const useDeliveryNotifications = () => {
     try {
       new URL(socketUrl); // This will throw if URL is invalid
     } catch (urlError) {
-      debugError('âŒ CRITICAL: Invalid Socket.IO URL:', socketUrl);
-      debugError('ðŸ’¡ URL validation error:', urlError.message);
-      debugError('ðŸ’¡ Backend URL:', backendUrl);
-      debugError('ðŸ’¡ API_BASE_URL:', API_BASE_URL);
+      debugError('❌ CRITICAL: Invalid Socket.IO URL:', socketUrl);
+      debugError('💡 URL validation error:', urlError.message);
+      debugError('💡 Backend URL:', backendUrl);
+      debugError('💡 API_BASE_URL:', API_BASE_URL);
       return; // Don't try to connect with invalid URL
     }
 
@@ -259,17 +259,17 @@ export const useDeliveryNotifications = () => {
     });
 
     socketRef.current.on('connect', () => {
-      debugLog('âœ… Delivery Socket connected, deliveryPartnerId:', deliveryPartnerId);
+      debugLog('✅ Delivery Socket connected, deliveryPartnerId:', deliveryPartnerId);
       setIsConnected(true);
       
       if (deliveryPartnerId) {
-        debugLog('ðŸ“¢ Joining delivery room with ID:', deliveryPartnerId);
+        debugLog('📢 Joining delivery room with ID:', deliveryPartnerId);
         socketRef.current.emit('join-delivery', deliveryPartnerId);
       }
     });
 
     socketRef.current.on('delivery-room-joined', (data) => {
-      debugLog('âœ… Delivery room joined successfully:', data);
+      debugLog('✅ Delivery room joined successfully:', data);
     });
 
     socketRef.current.on('connect_error', (error) => {
@@ -282,20 +282,20 @@ export const useDeliveryNotifications = () => {
                                error.description === 0; // WebSocket upgrade failures
       
       if (!isTransportError) {
-        debugError('âŒ Delivery Socket connection error:', error);
+        debugError('❌ Delivery Socket connection error:', error);
       } else {
         // Silently handle transport errors - backend might not be running or WebSocket not available
         // Socket.IO will automatically retry with exponential backoff and fall back to polling
         // Only log in development for debugging
         if (process.env.NODE_ENV === 'development') {
-          debugLog('â³ Delivery Socket: WebSocket upgrade failed, using polling fallback');
+          debugLog('⏳ Delivery Socket: WebSocket upgrade failed, using polling fallback');
         }
       }
       setIsConnected(false);
     });
 
     socketRef.current.on('disconnect', (reason) => {
-      debugLog('âŒ Delivery Socket disconnected:', reason);
+      debugLog('❌ Delivery Socket disconnected:', reason);
       setIsConnected(false);
       
       if (reason === 'io server disconnect') {
@@ -304,11 +304,11 @@ export const useDeliveryNotifications = () => {
     });
 
     socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-      debugLog(`ðŸ”„ Reconnection attempt ${attemptNumber}...`);
+      debugLog(`🔄 Reconnection attempt ${attemptNumber}...`);
     });
 
     socketRef.current.on('reconnect', (attemptNumber) => {
-      debugLog(`âœ… Reconnected after ${attemptNumber} attempts`);
+      debugLog(`✅ Reconnected after ${attemptNumber} attempts`);
       setIsConnected(true);
       
       if (deliveryPartnerId) {
@@ -317,27 +317,27 @@ export const useDeliveryNotifications = () => {
     });
 
     socketRef.current.on('new_order', (orderData) => {
-      debugLog('ðŸ“¦ New order received via socket:', orderData);
+      debugLog('📦 New order received via socket:', orderData);
       setNewOrder(orderData);
       playNotificationSound();
     });
 
     // Listen for priority-based order notifications (new_order_available)
     socketRef.current.on('new_order_available', (orderData) => {
-      debugLog('ðŸ“¦ New order available (priority notification):', orderData);
-      debugLog('ðŸ“¦ Notification phase:', orderData.phase || 'unknown');
+      debugLog('📦 New order available (priority notification):', orderData);
+      debugLog('📦 Notification phase:', orderData.phase || 'unknown');
       // Treat it the same as new_order for now - delivery boy can accept it
       setNewOrder(orderData);
       playNotificationSound();
     });
 
     socketRef.current.on('play_notification_sound', (data) => {
-      debugLog('ðŸ”” Sound notification:', data);
+      debugLog('🔔 Sound notification:', data);
       playNotificationSound();
     });
 
     socketRef.current.on('order_ready', (orderData) => {
-      debugLog('âœ… Order ready notification received via socket:', orderData);
+      debugLog('✅ Order ready notification received via socket:', orderData);
       setOrderReady(orderData);
       playNotificationSound();
     });

@@ -346,7 +346,7 @@ export default function AddonsList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-slate-900">
-                        â‚¹{addon.price.toFixed(2)}
+                        ₹{addon.price.toFixed(2)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -403,7 +403,7 @@ export default function AddonsList() {
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 border border-slate-200 rounded-lg p-4">
                 <p><span className="font-semibold text-slate-700">Restaurant:</span> <span className="text-slate-900">{selectedAddon.restaurantName || "-"}</span></p>
-                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">â‚¹{selectedAddon.price?.toFixed(2)}</span></p>
+                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">₹{selectedAddon.price?.toFixed(2)}</span></p>
                 <p><span className="font-semibold text-slate-700">Status:</span> <span className="text-slate-900">{selectedAddon.isAvailable ? "Available" : "Unavailable"}</span></p>
                 <p><span className="font-semibold text-slate-700">Approval:</span> <span className="text-slate-900 capitalize">{selectedAddon.approvalStatus || "-"}</span></p>
               </div>

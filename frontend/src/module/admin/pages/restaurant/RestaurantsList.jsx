@@ -297,7 +297,7 @@ export default function RestaurantsList() {
   }
 
   const renderStars = (rating) => {
-    return "â˜…".repeat(rating) + "â˜†".repeat(5 - rating)
+    return "★".repeat(rating) + "☆".repeat(5 - rating)
   }
 
   const getLocationFromRestaurant = (restaurant) => {
@@ -326,12 +326,12 @@ export default function RestaurantsList() {
 
   const normalizeLocationFormFromRestaurant = (restaurant) => {
     const loc = getLocationFromRestaurant(restaurant)
-    const latitude = loc.latitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[1] : "")
-    const longitude = loc.longitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[0] : "")
+    const latitude = loc.latitude || (Array.isArray(loc.coordinates) ? loc.coordinates[1] : "")
+    const longitude = loc.longitude || (Array.isArray(loc.coordinates) ? loc.coordinates[0] : "")
 
     return {
-      latitude: latitude ?? "",
-      longitude: longitude ?? "",
+      latitude: latitude || "",
+      longitude: longitude || "",
       formattedAddress: loc.formattedAddress || loc.address || "",
       addressLine1: loc.addressLine1 || "",
       addressLine2: loc.addressLine2 || "",
@@ -2211,4 +2211,3 @@ export default function RestaurantsList() {
     </div>
   )
 }
-

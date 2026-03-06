@@ -30,7 +30,7 @@ export default function PromotionalBanner() {
     { key: "en", label: "English(EN)" },
     { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
     { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
-    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
+    { key: "es", label: "Spanish - español(ES)" },
   ]
 
   const handleSubmit = (e) => {

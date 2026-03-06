@@ -112,17 +112,17 @@ export const useProgressStore = create(
         
         set({
           todayProgress: {
-            earnings: data.earnings ?? state.todayProgress.earnings,
-            trips: data.trips ?? state.todayProgress.trips,
-            timeOnOrders: data.timeOnOrders ?? state.todayProgress.timeOnOrders,
+            earnings: data.earnings ? state.todayProgress.earnings,
+            trips: data.trips ? state.todayProgress.trips,
+            timeOnOrders: data.timeOnOrders ? state.todayProgress.timeOnOrders,
             lastUpdated: new Date().toISOString()
           },
           dailyData: {
             ...state.dailyData,
             [todayKey]: {
-              earnings: data.earnings ?? todayData.earnings,
-              trips: data.trips ?? todayData.trips,
-              timeOnOrders: data.timeOnOrders ?? todayData.timeOnOrders
+              earnings: data.earnings ? todayData.earnings,
+              trips: data.trips ? todayData.trips,
+              timeOnOrders: data.timeOnOrders ? todayData.timeOnOrders
             }
           }
         })

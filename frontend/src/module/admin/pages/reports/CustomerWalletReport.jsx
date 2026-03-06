@@ -20,9 +20,9 @@ export default function CustomerWalletReport() {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [walletStats, setWalletStats] = useState({
-    debit: "â‚¹ 0.00",
-    credit: "â‚¹ 0.00",
-    balance: "â‚¹ 0.00"
+    debit: "₹ 0.00",
+    credit: "₹ 0.00",
+    balance: "₹ 0.00"
   })
   const [customers, setCustomers] = useState([])
   const [filters, setFilters] = useState({
@@ -53,9 +53,9 @@ export default function CustomerWalletReport() {
         if (response?.data?.success && response.data.data) {
           setTransactions(response.data.data.transactions || [])
           setWalletStats(response.data.data.stats || {
-            debit: "â‚¹ 0.00",
-            credit: "â‚¹ 0.00",
-            balance: "â‚¹ 0.00"
+            debit: "₹ 0.00",
+            credit: "₹ 0.00",
+            balance: "₹ 0.00"
           })
           setCustomers(response.data.data.customers || [])
         } else {

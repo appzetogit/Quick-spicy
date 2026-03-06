@@ -60,11 +60,11 @@ export default function CreatePercentageDiscount() {
     
     if (discountType === "flat") {
       // Format: FLATOFF{amount}ON{roundedPrice}
-      // Example: FLATOFF50ON250 (â‚¹50 off on â‚¹250)
+      // Example: FLATOFF50ON250 (₹50 off on ₹250)
       return `FLATOFF${discountValue}ON${roundedPrice}`
     } else {
       // Format: GETOFF{percentage}ON{roundedPrice}
-      // Example: GETOFF10ON250 (10% off on â‚¹250)
+      // Example: GETOFF10ON250 (10% off on ₹250)
       return `GETOFF${discountValue}ON${roundedPrice}`
     }
   }
@@ -146,32 +146,32 @@ export default function CreatePercentageDiscount() {
       
       for (const item of menuItems) {
         if (!item.id) {
-          debugLog(`[COUPONS] âš ï¸ Skipping item without id:`, item)
+          debugLog(`[COUPONS] ⚠️ Skipping item without id:`, item)
           continue
         }
         
-        debugLog(`[COUPONS] ðŸ” Fetching coupons for itemId: "${item.id}", name: "${item.name}"`)
+        debugLog(`[COUPONS] 🔍 Fetching coupons for itemId: "${item.id}", name: "${item.name}"`)
         
         try {
           const url = `/restaurant/offers/item/${item.id}/coupons`
           debugLog(`[COUPONS] API URL: ${url}`)
           
           const response = await restaurantAPI.getCouponsByItemId(item.id)
-          debugLog(`[COUPONS] ðŸ“¦ Full response:`, response)
-          debugLog(`[COUPONS] ðŸ“¦ Response.data:`, response?.data)
-          debugLog(`[COUPONS] ðŸ“¦ Response.data.data:`, response?.data?.data)
-          debugLog(`[COUPONS] ðŸ“¦ Response.data.data.coupons:`, response?.data?.data?.coupons)
+          debugLog(`[COUPONS] 📦 Full response:`, response)
+          debugLog(`[COUPONS] 📦 Response.data:`, response?.data)
+          debugLog(`[COUPONS] 📦 Response.data.data:`, response?.data?.data)
+          debugLog(`[COUPONS] 📦 Response.data.data.coupons:`, response?.data?.data?.coupons)
           
           if (response?.data?.success) {
             const coupons = response?.data?.data?.coupons || []
             couponsMap[item.id] = coupons
-            debugLog(`[COUPONS] âœ… Found ${coupons.length} coupons for itemId "${item.id}":`, coupons)
+            debugLog(`[COUPONS] ✅ Found ${coupons.length} coupons for itemId "${item.id}":`, coupons)
       } else {
             couponsMap[item.id] = []
-            debugLog(`[COUPONS] âŒ No coupons found for itemId "${item.id}". Response:`, response?.data)
+            debugLog(`[COUPONS] ❌ No coupons found for itemId "${item.id}". Response:`, response?.data)
           }
         } catch (error) {
-          debugError(`[COUPONS] âŒ Error fetching coupons for item "${item.id}":`, error)
+          debugError(`[COUPONS] ❌ Error fetching coupons for item "${item.id}":`, error)
           debugError(`[COUPONS] Error response:`, error?.response)
           debugError(`[COUPONS] Error response.data:`, error?.response?.data)
           debugError(`[COUPONS] Error message:`, error?.message)
@@ -179,8 +179,8 @@ export default function CreatePercentageDiscount() {
         }
       }
       
-      debugLog(`[COUPONS] ðŸŽ¯ Final coupons map:`, couponsMap)
-      debugLog(`[COUPONS] ðŸŽ¯ Setting itemCoupons state with ${Object.keys(couponsMap).length} items`)
+      debugLog(`[COUPONS] 🎯 Final coupons map:`, couponsMap)
+      debugLog(`[COUPONS] 🎯 Setting itemCoupons state with ${Object.keys(couponsMap).length} items`)
       setItemCoupons(couponsMap)
     }
     
@@ -201,7 +201,7 @@ export default function CreatePercentageDiscount() {
           
           if (response?.data?.success) {
             const offers = response.data.data.offers || []
-            debugLog(`[RUNNING-OFFERS] âœ… Fetched ${offers.length} offers`)
+            debugLog(`[RUNNING-OFFERS] ✅ Fetched ${offers.length} offers`)
             debugLog(`[RUNNING-OFFERS] Offer details:`, offers.map(o => ({
               id: o._id,
               discountType: o.discountType,
@@ -211,11 +211,11 @@ export default function CreatePercentageDiscount() {
             })))
             setRunningOffers(offers)
           } else {
-            debugError(`[RUNNING-OFFERS] âŒ API Error:`, response?.data)
+            debugError(`[RUNNING-OFFERS] ❌ API Error:`, response?.data)
             setRunningOffers([])
           }
         } catch (error) {
-          debugError("[RUNNING-OFFERS] âŒ Error fetching running offers:", error)
+          debugError("[RUNNING-OFFERS] ❌ Error fetching running offers:", error)
           debugError("[RUNNING-OFFERS] Error details:", error?.response?.data || error?.message)
           setRunningOffers([])
         } finally {
@@ -513,7 +513,7 @@ export default function CreatePercentageDiscount() {
       }
 
       if (response?.data?.success) {
-        debugLog(`[OFFER-CREATE] âœ… Offer created successfully:`, response?.data?.data?.offer)
+        debugLog(`[OFFER-CREATE] ✅ Offer created successfully:`, response?.data?.data?.offer)
         debugLog(`[OFFER-CREATE] Offer discountType:`, response?.data?.data?.offer?.discountType)
         alert(makeOfferModal.editingOffer ? "Offer updated successfully!" : "Offer activated successfully!")
         closeMakeOfferModal()
@@ -525,7 +525,7 @@ export default function CreatePercentageDiscount() {
           debugLog(`[OFFER-CREATE] Refresh response:`, refreshResponse?.data)
           if (refreshResponse?.data?.success) {
             const refreshedOffers = refreshResponse.data.data.offers || []
-            debugLog(`[OFFER-CREATE] âœ… Updated running offers: ${refreshedOffers.length} offers`)
+            debugLog(`[OFFER-CREATE] ✅ Updated running offers: ${refreshedOffers.length} offers`)
             debugLog(`[OFFER-CREATE] Offer types in refresh:`, refreshedOffers.map(o => o.discountType))
             setRunningOffers(refreshedOffers)
           }
@@ -776,7 +776,7 @@ export default function CreatePercentageDiscount() {
                           )}
               <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold text-gray-900">
-                              â‚¹{item.price || 0}
+                              ₹{item.price || 0}
                             </span>
                 </div>
               </div>
@@ -920,11 +920,11 @@ export default function CreatePercentageDiscount() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">{item.itemName}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-gray-400 line-through">â‚¹{item.originalPrice}</span>
-                                <span className="text-xs font-semibold text-green-600">â‚¹{item.discountedPrice}</span>
+                                <span className="text-xs text-gray-400 line-through">₹{item.originalPrice}</span>
+                                <span className="text-xs font-semibold text-green-600">₹{item.discountedPrice}</span>
                                 <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                                   {offer.discountType === "flat-price" 
-                                    ? `â‚¹${item.originalPrice - item.discountedPrice} OFF`
+                                    ? `₹${item.originalPrice - item.discountedPrice} OFF`
                                     : `${item.discountPercentage}% OFF`}
                                 </span>
                   </div>
@@ -1127,7 +1127,7 @@ export default function CreatePercentageDiscount() {
                     </div>
                     {offerFormData.percentage && makeOfferModal.item && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Original: â‚¹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} â†’ Discounted: â‚¹{getDiscountedPrice(makeOfferModal.item, offerFormData.percentage)}
+                        Original: ₹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} → Discounted: ₹{getDiscountedPrice(makeOfferModal.item, offerFormData.percentage)}
                       </p>
                     )}
                   </div>
@@ -1137,10 +1137,10 @@ export default function CreatePercentageDiscount() {
                 {offerFormData.discountType === "flat" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Flat Discount Amount (â‚¹)
+                      Flat Discount Amount (₹)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">â‚¹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">₹</span>
                       <input
                         type="number"
                         min="0"
@@ -1153,7 +1153,7 @@ export default function CreatePercentageDiscount() {
                     </div>
                     {offerFormData.flatAmount && makeOfferModal.item && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Original: â‚¹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} â†’ Discounted: â‚¹{getFlatDiscountedPrice(makeOfferModal.item, offerFormData.flatAmount)}
+                        Original: ₹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} → Discounted: ₹{getFlatDiscountedPrice(makeOfferModal.item, offerFormData.flatAmount)}
                       </p>
                     )}
                   </div>

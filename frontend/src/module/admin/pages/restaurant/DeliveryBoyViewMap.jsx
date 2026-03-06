@@ -371,7 +371,7 @@ export default function DeliveryBoyViewMap() {
           rotatedIconCacheRef.current.set(cacheKey, dataUrl)
           resolve(dataUrl)
         } catch (error) {
-          debugWarn('âš ï¸ Error rotating bike icon:', error)
+          debugWarn('⚠️ Error rotating bike icon:', error)
           // Fallback to original image if rotation fails
           resolve(bikeLogo)
         }
@@ -411,7 +411,7 @@ export default function DeliveryBoyViewMap() {
       const boyId = boy._id || boy.id || boy.deliveryId || fullData?._id || fullData?.id || fullData?.deliveryId
       
       if (!boyId) {
-        debugWarn("âš ï¸ Skipping delivery boy without ID:", fullData.name || "Unknown")
+        debugWarn("⚠️ Skipping delivery boy without ID:", fullData.name || "Unknown")
         continue
       }
       
@@ -419,7 +419,7 @@ export default function DeliveryBoyViewMap() {
       
       // Skip if we've already processed this delivery boy
       if (processedIds.has(idString)) {
-        debugWarn("âš ï¸ Duplicate delivery boy detected, skipping:", fullData.name || "Unknown", idString)
+        debugWarn("⚠️ Duplicate delivery boy detected, skipping:", fullData.name || "Unknown", idString)
         continue
       }
       
@@ -430,7 +430,7 @@ export default function DeliveryBoyViewMap() {
       const currentLocation = availability?.currentLocation
       
       if (!currentLocation?.coordinates) {
-        debugWarn("âš ï¸ No coordinates for delivery boy:", fullData.name || "Unknown")
+        debugWarn("⚠️ No coordinates for delivery boy:", fullData.name || "Unknown")
         continue
       }
 
@@ -448,17 +448,17 @@ export default function DeliveryBoyViewMap() {
           lng = coords[1]
         }
       } else {
-        debugWarn("âš ï¸ Invalid coordinates format:", coords)
+        debugWarn("⚠️ Invalid coordinates format:", coords)
         continue
       }
 
       if (!lat || !lng || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-        debugWarn("âš ï¸ Invalid lat/lng values:", { lat, lng })
+        debugWarn("⚠️ Invalid lat/lng values:", { lat, lng })
         continue
       }
 
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        debugWarn("âš ï¸ Coordinates out of range:", { lat, lng })
+        debugWarn("⚠️ Coordinates out of range:", { lat, lng })
         continue
       }
 
@@ -469,7 +469,7 @@ export default function DeliveryBoyViewMap() {
       const boyName = fullData.name || "Delivery Boy"
       const boyPhone = fullData.phone || "N/A"
       
-      debugLog("ðŸš´ Creating bike marker for:", {
+      debugLog("🚴 Creating bike marker for:", {
         name: boyName,
         lat,
         lng,

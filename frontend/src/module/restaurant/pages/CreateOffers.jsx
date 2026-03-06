@@ -254,9 +254,9 @@ export default function CreateOffers() {
               {/* Metrics */}
               <div className="space-y-0 divide-y divide-gray-100">
                 {[
-                  { label: "Gross sales from offers", value: "â‚¹0", change: "0%" },
+                  { label: "Gross sales from offers", value: "₹0", change: "0%" },
                   { label: "Orders from offers", value: "0", change: "0%" },
-                  { label: "Discount given", value: "â‚¹0", change: "0%" },
+                  { label: "Discount given", value: "₹0", change: "0%" },
                   { label: "Effective discount", value: "0.0%", change: "0%" },
                   { label: "Menu to order", value: "0.0%", change: "0%" },
                 ].map((metric, index) => (

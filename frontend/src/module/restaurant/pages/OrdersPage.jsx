@@ -191,7 +191,7 @@ export default function OrdersPage() {
   // Refresh orders when new order notification is received
   useEffect(() => {
     if (newOrder) {
-      debugLog('ðŸ”„ New order notification received, refreshing orders list')
+      debugLog('🔄 New order notification received, refreshing orders list')
       const fetchOrders = async () => {
         try {
           const response = await restaurantAPI.getOrders()
@@ -497,7 +497,7 @@ export default function OrdersPage() {
                         Order #{order.id}
                       </p>
                       <p className="text-gray-500 text-xs md:text-sm mb-1.5">
-                        {order.items} Item{order.items !== 1 ? 's' : ''} â€¢ {order.customerName}
+                        {order.items} Item{order.items !== 1 ? 's' : ''} • {order.customerName}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`inline-flex items-center gap-1 ${getStatusBadgeColor(order.status)} text-[10px] md:text-xs font-medium px-2 py-0.5 rounded-full`}>
@@ -519,7 +519,7 @@ export default function OrdersPage() {
                     <div className="text-right">
                       <p className="text-gray-500 text-[10px] md:text-xs mb-0.5">Amount</p>
                       <p className="text-gray-900 font-bold text-sm md:text-base">
-                        â‚¹{order.amount?.toFixed(2) || '0.00'}
+                        ₹{order.amount?.toFixed(2) || '0.00'}
                       </p>
                     </div>
                   </div>

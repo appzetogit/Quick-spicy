@@ -18,7 +18,7 @@ const debugError = (...args) => {}
 export default function PocketStatement() {
   const navigate = useNavigate()
 
-  // Current week range (Sundayâ€“Saturday)
+  // Current week range (Sunday–Saturday)
   const getInitialWeekRange = () => {
     const now = new Date()
     const start = new Date(now)
@@ -244,7 +244,7 @@ export default function PocketStatement() {
                     }`}></div>
                     <div>
                       <p className="text-gray-900 text-sm font-medium">
-                        Order #{orderId || "â€”"}
+                        Order #{orderId || "—"}
                       </p>
                       <p className="text-gray-500 text-xs">{dateText}</p>
                       {trip.restaurantName && (

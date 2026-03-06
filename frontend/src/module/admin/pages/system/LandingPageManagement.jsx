@@ -2009,7 +2009,7 @@ export default function LandingPageManagement() {
                               </div>
                               <div className="flex-1">
                                 <h3 className="font-semibold text-slate-900">{item.restaurant?.name || 'N/A'}</h3>
-                                <p className="text-xs text-slate-500">Rating: {item.restaurant?.rating || 0}â˜…</p>
+                                <p className="text-xs text-slate-500">Rating: {item.restaurant?.rating || 0}★</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Label className="text-xs">Rank:</Label>
@@ -2126,7 +2126,7 @@ export default function LandingPageManagement() {
                               </div>
                               <div className="p-2">
                                 <h3 className="font-semibold text-slate-900 mb-0.5 text-sm line-clamp-1">{item.restaurant?.name || 'N/A'}</h3>
-                                <p className="text-[10px] text-slate-500 mb-2">Rating: {item.restaurant?.rating || 0}â˜…</p>
+                                <p className="text-[10px] text-slate-500 mb-2">Rating: {item.restaurant?.rating || 0}★</p>
                                 <div className="flex items-center justify-between gap-1">
                                   <div className="flex items-center gap-0.5">
                                     <button onClick={() => handleGourmetOrderChange(item._id, 'up')} disabled={index === 0} className="p-1 rounded hover:bg-slate-100 disabled:opacity-50">
@@ -2267,7 +2267,7 @@ export default function LandingPageManagement() {
                               </p>
                               {restaurant.rating && (
                                 <div className="flex items-center gap-1 mt-1">
-                                  <span className="text-xs text-slate-400">â˜…</span>
+                                  <span className="text-xs text-slate-400">★</span>
                                   <span className="text-xs text-slate-600">{restaurant.rating}</span>
                                 </div>
                               )}

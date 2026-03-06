@@ -126,7 +126,7 @@ export default function DiningList() {
     }
 
     const renderStars = (rating) => {
-        return "â˜…".repeat(Math.floor(rating)) + "â˜†".repeat(5 - Math.floor(rating))
+        return "★".repeat(Math.floor(rating)) + "☆".repeat(5 - Math.floor(rating))
     }
 
     const handleDiningToggle = async (restaurant) => {

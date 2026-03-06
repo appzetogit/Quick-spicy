@@ -266,7 +266,7 @@ export default function PointOfSale() {
   }
 
   const formatCurrency = (amount) => {
-    return `â‚¹ ${amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
+    return `₹ ${amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
   }
 
   const formatNumber = (num) => {
@@ -346,7 +346,7 @@ export default function PointOfSale() {
                   </div>
               {selectedRestaurant && (
                 <p className="text-xs text-green-600 mt-2">
-                  âœ“ Selected: {getSelectedRestaurantName()}
+                  ✓ Selected: {getSelectedRestaurantName()}
                 </p>
               )}
         </div>
@@ -376,7 +376,7 @@ export default function PointOfSale() {
                         ))}
                       </select>
                       <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">
-                        â–¼
+                        ▼
                       </span>
                     </div>
                   </div>

@@ -829,7 +829,7 @@ export default function JoiningRequest() {
                             <p className="text-xs text-slate-500 mb-1">Featured Dish</p>
                             <p className="text-sm font-medium text-slate-900">{restaurantDetails.featuredDish}</p>
                             {restaurantDetails.featuredPrice && (
-                              <p className="text-xs text-green-600 mt-1">â‚¹{restaurantDetails.featuredPrice}</p>
+                              <p className="text-xs text-green-600 mt-1">₹{restaurantDetails.featuredPrice}</p>
                             )}
                           </div>
                         )}

@@ -104,29 +104,29 @@ export default function DeliverymanReviews() {
     const fetchReviews = async () => {
       try {
         setIsLoading(true)
-        debugLog('ðŸ” Fetching deliveryman reviews...')
+        debugLog('🔍 Fetching deliveryman reviews...')
         const response = await adminAPI.getDeliverymanReviews({ limit: 1000 })
         
-        debugLog('âœ… Deliveryman reviews response:', response?.data)
+        debugLog('✅ Deliveryman reviews response:', response?.data)
         
         if (response?.data?.success && response?.data?.data?.reviews) {
           setReviews(response.data.data.reviews)
-          debugLog(`âœ… Loaded ${response.data.data.reviews.length} reviews`)
+          debugLog(`✅ Loaded ${response.data.data.reviews.length} reviews`)
         } else {
-          debugError('âŒ Unexpected response structure:', response?.data)
+          debugError('❌ Unexpected response structure:', response?.data)
           setReviews([])
           toast.error('Failed to load reviews: Unexpected response format')
         }
       } catch (error) {
-        debugError('âŒ Error fetching deliveryman reviews:', {
+        debugError('❌ Error fetching deliveryman reviews:', {
           message: error?.message,
           response: error?.response?.data,
           status: error?.response?.status,
           url: error?.config?.url,
           method: error?.config?.method
         })
-        debugError('âŒ Full error response data:', JSON.stringify(error?.response?.data, null, 2))
-        debugError('âŒ Error stack:', error?.stack)
+        debugError('❌ Full error response data:', JSON.stringify(error?.response?.data, null, 2))
+        debugError('❌ Error stack:', error?.stack)
         setReviews([])
         const errorMessage = error?.response?.data?.message || 
                            error?.response?.data?.error ||

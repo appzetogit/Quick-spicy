@@ -62,9 +62,8 @@ function CompletedOrders({ onSelectOrder }) {
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
-            amount: order.pricing?.total || order.total || 0
-            ,
-            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
+            amount: order.pricing?.total || order.total || 0,
+            paymentMethod: order.paymentMethod || order.payment?.method || null,
           }))
 
           transformedOrders.sort((a, b) => {
@@ -220,7 +219,7 @@ function CompletedOrders({ onSelectOrder }) {
                       <div className="flex items-baseline gap-1">
                         <span className="text-[11px] text-gray-500">Amount</span>
                         <span className="text-xs font-medium text-black">
-                          â‚¹{order.amount.toFixed(2)}
+                          ₹{order.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -270,9 +269,8 @@ function CancelledOrders({ onSelectOrder }) {
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
-            amount: order.pricing?.total || order.total || 0
-            ,
-            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
+            amount: order.pricing?.total || order.total || 0,
+            paymentMethod: order.paymentMethod || order.payment?.method || null
           }))
 
           transformedOrders.sort((a, b) => {
@@ -443,7 +441,7 @@ function CancelledOrders({ onSelectOrder }) {
                       <div className="flex items-baseline gap-1">
                         <span className="text-[11px] text-gray-500">Amount</span>
                         <span className="text-xs font-medium text-black">
-                          â‚¹{order.amount.toFixed(2)}
+                          ₹{order.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -732,7 +730,7 @@ export default function OrdersMain() {
   // Show new order popup when real order notification arrives from Socket.IO
   useEffect(() => {
     if (newOrder) {
-      debugLog('ðŸ“¦ New order received via Socket.IO:', newOrder)
+      debugLog('📦 New order received via Socket.IO:', newOrder)
       const orderId = newOrder.orderId || newOrder.orderMongoId
       if (orderId && !shownOrdersRef.current.has(orderId)) {
         shownOrdersRef.current.add(orderId)
@@ -789,11 +787,11 @@ export default function OrdersMain() {
               estimatedDeliveryTime: latestConfirmedOrder.estimatedDeliveryTime || 30,
               note: latestConfirmedOrder.note || '',
               sendCutlery: latestConfirmedOrder.sendCutlery,
-              paymentMethod: latestConfirmedOrder.paymentMethod ?? latestConfirmedOrder.payment?.method,
+              paymentMethod: latestConfirmedOrder.paymentMethod || latestConfirmedOrder.payment?.method || null,
               payment: latestConfirmedOrder.payment
             }
 
-            debugLog('ðŸ“¦ Found confirmed order (fallback):', orderForPopup)
+            debugLog('📦 Found confirmed order (fallback):', orderForPopup)
             shownOrdersRef.current.add(orderId)
             setPopupOrder(orderForPopup)
             setShowNewOrderPopup(true)
@@ -950,10 +948,10 @@ export default function OrdersMain() {
       try {
         const orderId = orderToAccept.orderMongoId || orderToAccept.orderId
         const response = await restaurantAPI.acceptOrder(orderId, prepTime)
-        debugLog('âœ… Order accepted:', orderId)
+        debugLog('✅ Order accepted:', orderId)
         toast.success('Order accepted successfully')
       } catch (error) {
-        debugError('âŒ Error accepting order:', error)
+        debugError('❌ Error accepting order:', error)
         const errorMessage = error.response?.data?.message ||
           error.message ||
           'Failed to accept order. Please try again.'
@@ -1000,9 +998,9 @@ export default function OrdersMain() {
       try {
         const orderId = orderToReject.orderMongoId || orderToReject.orderId
         await restaurantAPI.rejectOrder(orderId, rejectReason)
-        debugLog('âœ… Order rejected:', orderId)
+        debugLog('✅ Order rejected:', orderId)
       } catch (error) {
-        debugError('âŒ Error rejecting order:', error)
+        debugError('❌ Error rejecting order:', error)
         alert('Failed to reject order. Please try again.')
         return
       }
@@ -1047,7 +1045,7 @@ export default function OrdersMain() {
       setOrderToCancel(null)
       setCancelReason("")
     } catch (error) {
-      debugError('âŒ Error cancelling order:', error)
+      debugError('❌ Error cancelling order:', error)
       toast.error(error.response?.data?.message || 'Failed to cancel order')
     }
   }
@@ -1136,8 +1134,8 @@ export default function OrdersMain() {
         const tableData = orderToPrint.items.map(item => [
           item.name || 'Item',
           item.quantity || 1,
-          `â‚¹${(item.price || 0).toFixed(2)}`,
-          `â‚¹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}`
+          `₹${(item.price || 0).toFixed(2)}`,
+          `₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}`
         ])
 
         autoTable(doc, {
@@ -1161,7 +1159,7 @@ export default function OrdersMain() {
       // Total
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(12)
-      doc.text(`Total: â‚¹${(orderToPrint.total || 0).toFixed(2)}`, 20, yPos)
+      doc.text(`Total: ₹${(orderToPrint.total || 0).toFixed(2)}`, 20, yPos)
 
       // Payment status
       yPos += 10
@@ -1189,7 +1187,7 @@ export default function OrdersMain() {
       if (orderToPrint.sendCutlery) {
         yPos += 15
         doc.setFont('helvetica', 'normal')
-        doc.text('âœ“ Send cutlery requested', 20, yPos)
+        doc.text('✓ Send cutlery requested', 20, yPos)
       }
 
       // Footer
@@ -1207,9 +1205,9 @@ export default function OrdersMain() {
       const fileName = `Order-${orderToPrint.orderId || 'Receipt'}-${Date.now()}.pdf`
       doc.save(fileName)
 
-      debugLog('âœ… PDF generated successfully:', fileName)
+      debugLog('✅ PDF generated successfully:', fileName)
     } catch (error) {
-      debugError('âŒ Error generating PDF:', error)
+      debugError('❌ Error generating PDF:', error)
       alert('Failed to generate PDF. Please try again.')
     }
   }
@@ -1671,7 +1669,7 @@ export default function OrdersMain() {
                                       {item.quantity} x {item.name}
                                     </p>
                                     <p className="text-xs text-gray-600 ml-2">
-                                      â‚¹{item.price * item.quantity}
+                                      ₹{item.price * item.quantity}
                                     </p>
                                   </div>
                                 </div>
@@ -1704,13 +1702,13 @@ export default function OrdersMain() {
                       <span className="text-sm font-semibold text-gray-900">Total bill</span>
                     </div>
                     <span className="text-base font-bold text-gray-900">
-                      â‚¹{(popupOrder || newOrder)?.total || 0}
+                      ₹{(popupOrder || newOrder)?.total || 0}
                     </span>
                   </div>
 
                   {/* Payment method: treat cash/cod (any case) as COD */}
                   {(() => {
-                    const raw = (popupOrder || newOrder)?.paymentMethod ?? (popupOrder || newOrder)?.payment?.method;
+                    const raw = (popupOrder || newOrder)?.paymentMethod || (popupOrder || newOrder)?.payment?.method;
                     const m = raw != null ? String(raw).toLowerCase().trim() : '';
                     const isCod = m === 'cash' || m === 'cod';
                     return (
@@ -1788,7 +1786,7 @@ export default function OrdersMain() {
                         onTouchCancel={handleAcceptSwipeEnd}
                         disabled={isAcceptingOrder}
                       >
-                        <span className="text-lg font-bold">â€º</span>
+                        <span className="text-lg font-bold">›</span>
                       </motion.button>
                     </div>
 
@@ -2013,7 +2011,7 @@ export default function OrdersMain() {
                   <p className="text-[11px] text-gray-500 mt-1">
                     {selectedOrder.type}
                     {selectedOrder.tableOrToken
-                      ? ` â€¢ ${selectedOrder.tableOrToken}`
+                      ? ` • ${selectedOrder.tableOrToken}`
                       : ""}
                   </p>
                 </div>
@@ -2262,7 +2260,7 @@ function OrderCard({
             <div className="flex flex-col gap-1">
               <p className="text-[11px] text-gray-500">
                 {type}
-                {tableOrToken ? ` â€¢ ${tableOrToken}` : ""}
+                {tableOrToken ? ` • ${tableOrToken}` : ""}
               </p>
               {/* Delivery Assignment Status - Only show for preparing orders */}
               {isPreparing && (
@@ -2359,7 +2357,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
               photoUrl: order.items?.[0]?.image || null,
               photoAlt: order.items?.[0]?.name || 'Order',
               deliveryPartnerId: order.deliveryPartnerId || null, // Track if delivery partner is assigned
-              paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
+              paymentMethod: order.paymentMethod || order.payment?.method || null
             }
           })
 
@@ -2447,10 +2445,10 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
           // Mark as ready when ETA time has elapsed (with 2 second buffer)
           if (elapsedSeconds >= totalETASeconds - 2) {
             try {
-              debugLog(`ðŸ”„ Auto-marking order ${order.orderId} as ready (ETA reached 0)`)
+              debugLog(`🔄 Auto-marking order ${order.orderId} as ready (ETA reached 0)`)
               markedReadyOrdersRef.current.add(orderKey) // Mark as processing
               await restaurantAPI.markOrderReady(order.mongoId || order.orderId)
-              debugLog(`âœ… Order ${order.orderId} marked as ready`)
+              debugLog(`✅ Order ${order.orderId} marked as ready`)
               // Order will be removed from preparing list on next fetch
             } catch (error) {
               const status = error.response?.status
@@ -2460,7 +2458,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
               if (status === 400 && (msg.includes('cannot be marked as ready') || msg.includes('current status'))) {
                 // Keep in markedReadyOrdersRef so we don't retry; order will disappear on next fetch
               } else {
-                debugError(`âŒ Failed to auto-mark order ${order.orderId} as ready:`, error)
+                debugError(`❌ Failed to auto-mark order ${order.orderId} as ready:`, error)
                 markedReadyOrdersRef.current.delete(orderKey)
               }
               // Don't show error toast - it will retry on next check (for non-idempotent errors)
@@ -2624,7 +2622,7 @@ function ReadyOrders({ onSelectOrder }) {
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
-            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
+            paymentMethod: order.paymentMethod || order.payment?.method || null
           }))
 
           if (isMounted) {
@@ -2742,7 +2740,7 @@ const OutForDeliveryOrders = ({ onSelectOrder }) => {
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
-            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
+            paymentMethod: order.paymentMethod || order.payment?.method || null
           }))
 
           if (isMounted) {

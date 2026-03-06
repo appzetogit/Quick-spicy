@@ -132,7 +132,7 @@ export default function RestaurantNavbar({
     }
     // Priority 2: Check restaurantData location
     else if (restaurantData) {
-      debugLog('ðŸ” Checking restaurant data for address:', {
+      debugLog('🔍 Checking restaurant data for address:', {
         hasLocation: !!restaurantData.location,
         locationKeys: restaurantData.location ? Object.keys(restaurantData.location) : [],
         formattedAddress: restaurantData.location?.formattedAddress,
@@ -150,7 +150,7 @@ export default function RestaurantNavbar({
           const isCoordinates = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(restaurantData.location.formattedAddress.trim())
           if (!isCoordinates) {
             newLocation = restaurantData.location.formattedAddress.trim()
-            debugLog('âœ… Using formattedAddress:', newLocation)
+            debugLog('✅ Using formattedAddress:', newLocation)
           }
         }
         
@@ -159,21 +159,21 @@ export default function RestaurantNavbar({
           const formatted = formatAddress(restaurantData.location)
           if (formatted && formatted.trim() !== "") {
             newLocation = formatted.trim()
-            debugLog('âœ… Using formatAddress result:', newLocation)
+            debugLog('✅ Using formatAddress result:', newLocation)
           }
         }
         
         // Additional fallback: check if address is directly on location
         if (!newLocation && restaurantData.location.address && restaurantData.location.address.trim() !== "") {
           newLocation = restaurantData.location.address.trim()
-          debugLog('âœ… Using location.address:', newLocation)
+          debugLog('✅ Using location.address:', newLocation)
         }
       }
       
       // Priority 3: Fallback - check if address is directly on restaurantData (not in location object)
       if (!newLocation && restaurantData.address && restaurantData.address.trim() !== "") {
         newLocation = restaurantData.address.trim()
-        debugLog('âœ… Using restaurantData.address:', newLocation)
+        debugLog('✅ Using restaurantData.address:', newLocation)
       }
     }
     
@@ -181,9 +181,9 @@ export default function RestaurantNavbar({
     
     // Debug log
     if (newLocation) {
-      debugLog('ðŸ“ Restaurant address displayed:', newLocation)
+      debugLog('📍 Restaurant address displayed:', newLocation)
     } else if (restaurantData) {
-      debugLog('âš ï¸ Restaurant data available but no address found')
+      debugLog('⚠️ Restaurant data available but no address found')
     }
   }, [restaurantData, propLocation])
 
@@ -209,10 +209,10 @@ export default function RestaurantNavbar({
     updateStatus()
 
     // Listen for status changes from RestaurantStatus page
-    const handleStatusChange = (event) => {
-      const isOnline = event.detail?.isOnline ?? false
+  const handleStatusChange = (event) => {
+      const isOnline = event.detail?.isOnline || false
       setStatus(isOnline ? "Online" : "Offline")
-    }
+  }
 
     window.addEventListener('restaurantStatusChanged', handleStatusChange)
     

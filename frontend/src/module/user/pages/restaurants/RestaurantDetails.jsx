@@ -142,7 +142,7 @@ function RestaurantDetailsContent() {
         } catch (diningError) {
           // If dining API fails with 404, try restaurant API
           if (diningError.response?.status === 404) {
-            debugLog('?? Restaurant not found in dining API, trying restaurant API...')
+            debugLog('? Restaurant not found in dining API, trying restaurant API...')
             try {
               // First, try to get restaurant directly by slug (getRestaurantById supports both ID and slug)
               // This doesn't require zoneId, so it works even if zone is not detected
@@ -155,7 +155,7 @@ function RestaurantDetailsContent() {
               } catch (directLookupError) {
                 // If direct lookup fails, try searching by name.
                 // Fallback without zoneId so missing live location never blocks this page.
-                debugLog('?? Direct lookup failed, trying search by name...')
+                debugLog('? Direct lookup failed, trying search by name...')
 
                 const searchVariants = zoneId
                   ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
@@ -184,7 +184,7 @@ function RestaurantDetailsContent() {
                       }
                     }
                   } catch (searchError) {
-                    debugWarn('?? Search fallback failed for params:', searchParams, searchError?.message)
+                    debugWarn('? Search fallback failed for params:', searchParams, searchError?.message)
                   }
                 }
               }
@@ -202,11 +202,11 @@ function RestaurantDetailsContent() {
 
         if (apiRestaurant) {
           debugLog('? Fetched restaurant from API:', apiRestaurant)
-          debugLog('?? Restaurant data keys:', Object.keys(apiRestaurant))
-          debugLog('?? Restaurant name field:', apiRestaurant?.name)
-          debugLog('?? Restaurant restaurantId:', apiRestaurant?.restaurantId)
-          debugLog('?? Restaurant _id:', apiRestaurant?._id)
-          debugLog('?? Restaurant.restaurant:', apiRestaurant?.restaurant)
+          debugLog('? Restaurant data keys:', Object.keys(apiRestaurant))
+          debugLog('? Restaurant name field:', apiRestaurant?.name)
+          debugLog('? Restaurant restaurantId:', apiRestaurant?.restaurantId)
+          debugLog('? Restaurant _id:', apiRestaurant?._id)
+          debugLog('? Restaurant.restaurant:', apiRestaurant?.restaurant)
 
           // Check if this is a dining restaurant with nested restaurant data
           const actualRestaurant = apiRestaurant?.restaurant || apiRestaurant
@@ -307,10 +307,10 @@ function RestaurantDetailsContent() {
 
           // Get location object for address formatting
           const locationObj = actualRestaurant?.location || apiRestaurant?.location
-          debugLog('?? Location Object for formatting:', locationObj)
-          debugLog('?? formattedAddress field:', locationObj?.formattedAddress)
+          debugLog('? Location Object for formatting:', locationObj)
+          debugLog('? formattedAddress field:', locationObj?.formattedAddress)
           const formattedAddress = formatRestaurantAddress(locationObj)
-          debugLog('?? Final Formatted Address:', formattedAddress)
+          debugLog('? Final Formatted Address:', formattedAddress)
 
           // Calculate distance from user to restaurant
           const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -330,13 +330,13 @@ function RestaurantDetailsContent() {
           const restaurantLat = locationObj?.latitude || (locationObj?.coordinates && Array.isArray(locationObj.coordinates) ? locationObj.coordinates[1] : null)
           const restaurantLng = locationObj?.longitude || (locationObj?.coordinates && Array.isArray(locationObj.coordinates) ? locationObj.coordinates[0] : null)
 
-          debugLog('?? Restaurant coordinates:', { restaurantLat, restaurantLng, locationObj })
+          debugLog('? Restaurant coordinates:', { restaurantLat, restaurantLng, locationObj })
 
           // Get user coordinates
           const userLat = userLocation?.latitude
           const userLng = userLocation?.longitude
 
-          debugLog('?? User location:', { userLat, userLng, userLocation })
+          debugLog('? User location:', { userLat, userLng, userLocation })
 
           // Calculate distance if both coordinates are available
           let calculatedDistance = null
@@ -352,7 +352,7 @@ function RestaurantDetailsContent() {
             }
             debugLog('? Calculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
           } else {
-            debugWarn('?? Cannot calculate distance - missing coordinates:', {
+            debugWarn('? Cannot calculate distance - missing coordinates:', {
               hasUserLocation: !!(userLat && userLng),
               hasRestaurantLocation: !!(restaurantLat && restaurantLng),
               userLat,
@@ -409,8 +409,8 @@ function RestaurantDetailsContent() {
             name: actualRestaurant?.name || apiRestaurant?.name || apiRestaurant?.restaurantName || "Unknown Restaurant",
             cuisine: resolvedTopCategory,
             topCategory: resolvedTopCategory,
-            rating: actualRestaurant?.rating ?? apiRestaurant?.rating ?? actualRestaurant?.averageRating ?? apiRestaurant?.averageRating ?? 4.5,
-            reviews: actualRestaurant?.totalRatings ?? apiRestaurant?.totalRatings ?? actualRestaurant?.reviewCount ?? apiRestaurant?.reviewCount ?? actualRestaurant?.reviews?.length ?? apiRestaurant?.reviews?.length ?? 0,
+            rating: actualRestaurant?.rating || apiRestaurant?.rating || actualRestaurant?.averageRating || apiRestaurant?.averageRating || 4.5,
+            reviews: actualRestaurant?.totalRatings || apiRestaurant?.totalRatings || actualRestaurant?.reviewCount || apiRestaurant?.reviewCount || actualRestaurant?.reviews?.length || apiRestaurant?.reviews?.length || 0,
             deliveryTime: actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || "25-30 mins",
             distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "1.2 km",
             location: formattedAddress,
@@ -426,7 +426,7 @@ function RestaurantDetailsContent() {
             priceRange: actualRestaurant?.priceRange || apiRestaurant?.priceRange || onboardingStep4?.priceRange || "$$",
             offers: Array.isArray(actualRestaurant?.offers) ? actualRestaurant.offers : (Array.isArray(apiRestaurant?.offers) ? apiRestaurant.offers : []), // Will be populated from menu/offers API later
             offerText: actualRestaurant?.offer || apiRestaurant?.offer || onboardingStep4?.offer || "FLAT 50% OFF",
-            offerCount: actualRestaurant?.offerCount ?? apiRestaurant?.offerCount ?? 0,
+            offerCount: actualRestaurant?.offerCount || apiRestaurant?.offerCount || 0,
             restaurantOffers: {
               goldOffer: {
                 title: normalizedRestaurantOffers?.goldOffer?.title || "Gold exclusive offer",
@@ -445,7 +445,7 @@ function RestaurantDetailsContent() {
             restaurantId: actualRestaurant?.restaurantId || actualRestaurant?._id || actualRestaurant?.id || apiRestaurant?.restaurantId || apiRestaurant?._id || apiRestaurant?.id || null,
             // Add other fields with defaults
             featuredDish: actualRestaurant?.featuredDish || apiRestaurant?.featuredDish || onboardingStep4?.featuredDish || "Special Dish",
-            featuredPrice: actualRestaurant?.featuredPrice ?? apiRestaurant?.featuredPrice ?? onboardingStep4?.featuredPrice ?? 249,
+            featuredPrice: actualRestaurant?.featuredPrice || apiRestaurant?.featuredPrice || onboardingStep4?.featuredPrice || 249,
             // Additional safety fields
             openDays: Array.isArray(actualRestaurant?.openDays)
               ? actualRestaurant.openDays
@@ -497,7 +497,7 @@ function RestaurantDetailsContent() {
           let restaurantIdForMenu = transformedRestaurant.id
 
           if (!restaurantIdForMenu) {
-            debugWarn('?? No restaurant ID available, searching for restaurant by name...')
+            debugWarn('? No restaurant ID available, searching for restaurant by name...')
             try {
               const searchVariants = zoneId
                 ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
@@ -527,7 +527,7 @@ function RestaurantDetailsContent() {
               }
 
               if (!restaurantIdForMenu) {
-                debugWarn('?? No matching restaurant found by name')
+                debugWarn('? No matching restaurant found by name')
               }
             } catch (searchError) {
               debugError('? Error searching for restaurant:', searchError)
@@ -629,12 +629,12 @@ function RestaurantDetailsContent() {
             }
 
             try {
-              debugLog('?? Fetching menu for restaurant ID:', restaurantIdForMenu)
+              debugLog('? Fetching menu for restaurant ID:', restaurantIdForMenu)
               let menuResponse = null
               let resolvedMenuLookupId = null
               for (const lookupId of normalizedLookupIds) {
                 try {
-                  debugLog('?? Fetching menu for restaurant lookup ID:', lookupId)
+                  debugLog('? Fetching menu for restaurant lookup ID:', lookupId)
                   const response = await restaurantAPI.getMenuByRestaurantId(lookupId, { noCache: true })
                   if (response?.data?.success) {
                     menuResponse = response
@@ -747,7 +747,7 @@ function RestaurantDetailsContent() {
               }
             } catch (menuError) {
               if (menuError.response && menuError.response.status === 404) {
-                debugLog('?? Menu not found for this restaurant (might be a dining-only listing).')
+                debugLog('? Menu not found for this restaurant (might be a dining-only listing).')
               } else {
                 debugError('? Error fetching menu:', menuError)
               }
@@ -756,12 +756,12 @@ function RestaurantDetailsContent() {
             }
 
             try {
-              debugLog('?? Fetching inventory for restaurant ID:', restaurantIdForMenu)
+              debugLog('? Fetching inventory for restaurant ID:', restaurantIdForMenu)
               let inventoryResponse = null
               let resolvedInventoryLookupId = null
               for (const lookupId of normalizedLookupIds) {
                 try {
-                  debugLog('?? Fetching inventory for restaurant lookup ID:', lookupId)
+                  debugLog('? Fetching inventory for restaurant lookup ID:', lookupId)
                   const response = await restaurantAPI.getInventoryByRestaurantId(lookupId)
                   if (response?.data?.success) {
                     inventoryResponse = response
@@ -786,7 +786,7 @@ function RestaurantDetailsContent() {
                   id: category.id || `category-${index}`,
                   name: category.name || "Unnamed Category",
                   description: category.description || "",
-                  itemCount: category.itemCount ?? (category.items?.length || 0),
+                  itemCount: category.itemCount || (category.items?.length || 0),
                   inStock: category.inStock !== undefined ? category.inStock : true,
                   items: Array.isArray(category.items) ? category.items.map(item => ({
                     id: String(item.id || Date.now() + Math.random()),
@@ -809,7 +809,7 @@ function RestaurantDetailsContent() {
               }
             } catch (inventoryError) {
               if (inventoryError.response && inventoryError.response.status === 404) {
-                debugLog('?? Inventory not found for this restaurant (might be a dining-only listing).')
+                debugLog('? Inventory not found for this restaurant (might be a dining-only listing).')
               } else {
                 debugError('? Error fetching inventory:', inventoryError)
               }
@@ -941,7 +941,7 @@ function RestaurantDetailsContent() {
 
       // Only update if distance actually changed
       if (calculatedDistance !== prevDistanceRef.current) {
-        debugLog('?? Recalculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
+        debugLog('? Recalculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
         prevDistanceRef.current = calculatedDistance
 
         // Update restaurant distance
@@ -1021,7 +1021,7 @@ function RestaurantDetailsContent() {
     }
 
     // Log for debugging
-    debugLog('?? Adding item to cart:', {
+    debugLog('? Adding item to cart:', {
       itemName: item.name,
       restaurantName: restaurant.name,
       restaurantId: validRestaurantId,
@@ -1717,7 +1717,7 @@ function RestaurantDetailsContent() {
             <div className="flex flex-col items-end">
               <Badge className="bg-green-600 text-white mb-1 flex items-center gap-1 px-2 py-1">
                 <Star className="h-3 w-3 fill-white" />
-                {restaurant?.rating ?? 4.5}
+                {restaurant?.rating || 4.5}
               </Badge>
               <span className="text-xs text-gray-500">By {(restaurant.reviews || 0).toLocaleString()}+</span>
             </div>
@@ -2738,7 +2738,7 @@ function RestaurantDetailsContent() {
                                 <div className="flex items-center gap-1">
                                   <Star className="h-3.5 w-3.5 text-green-600 dark:text-green-500 fill-green-600 dark:fill-green-500" />
                                   <span className="text-xs font-medium text-gray-900 dark:text-white">
-                                    {outlet?.rating ?? 4.5}
+                                    {outlet?.rating || 4.5}
                                   </span>
                                 </div>
                                 <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -3589,8 +3589,3 @@ export default function RestaurantDetails() {
     </RestaurantDetailsErrorBoundary>
   )
 }
-
-
-
-
-

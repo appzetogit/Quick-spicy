@@ -132,10 +132,10 @@ export async function writeOrderTracking(orderId, payload = {}) {
     ...payload,
     lat: toFiniteNumber(payload.lat),
     lng: toFiniteNumber(payload.lng),
-    heading: toFiniteNumber(payload.heading ?? payload.bearing) ?? 0,
+heading: toFiniteNumber(payload.heading ? payload.bearing) || 0,
     last_updated: Date.now(),
   };
-  if (payload.timestamp != null) toWrite.timestamp = toFiniteNumber(payload.timestamp) ?? Date.now();
+  if (payload.timestamp != null) toWrite.timestamp = toFiniteNumber(payload.timestamp) ? Date.now();
   await update(ref(firebaseRealtimeDb, getOrderTrackingPath(orderId)), toWrite);
   return true;
 }

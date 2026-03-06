@@ -173,10 +173,10 @@ export default function EditRestaurantAddress() {
               
               if (data.status === 'OK' && data.results && data.results.length > 0) {
                 formattedAddress = data.results[0].formatted_address
-                debugLog("âœ… Fetched formattedAddress from coordinates:", formattedAddress)
+                debugLog("✅ Fetched formattedAddress from coordinates:", formattedAddress)
               }
             } catch (error) {
-              debugWarn("âš ï¸ Failed to fetch formattedAddress, using existing:", error)
+              debugWarn("⚠️ Failed to fetch formattedAddress, using existing:", error)
             }
           }
           

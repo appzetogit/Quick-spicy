@@ -138,20 +138,20 @@ export default function PocketPage() {
 
   // Debug: Log wallet state and balances
   useEffect(() => {
-    debugLog('ðŸ’° Wallet State:', walletState)
-    debugLog('ðŸ’° Calculated Balances:', balances)
+    debugLog('💰 Wallet State:', walletState)
+    debugLog('💰 Calculated Balances:', balances)
     // Pocket balance = total balance (includes bonus)
     const calculatedPocketBalance = walletState?.totalBalance || balances.totalBalance || 0
-    debugLog('ðŸ’° Pocket Balance (same as Total Balance):', calculatedPocketBalance)
-    debugLog('ðŸ’° Total Balance (includes bonus):', walletState?.totalBalance || balances.totalBalance)
-    debugLog('ðŸ’° Cash In Hand:', walletState?.cashInHand || balances.cashInHand)
+    debugLog('💰 Pocket Balance (same as Total Balance):', calculatedPocketBalance)
+    debugLog('💰 Total Balance (includes bonus):', walletState?.totalBalance || balances.totalBalance)
+    debugLog('💰 Cash In Hand:', walletState?.cashInHand || balances.cashInHand)
     // Check for bonus transactions
     const bonusTransactions = walletState?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed') || []
-    debugLog('ðŸ’° Bonus Transactions:', bonusTransactions)
+    debugLog('💰 Bonus Transactions:', bonusTransactions)
     if (bonusTransactions.length > 0) {
       const totalBonus = bonusTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-      debugLog('ðŸ’° Total Bonus Amount:', totalBonus)
-      debugLog('ðŸ’° Pocket Balance should include this bonus:', totalBonus)
+      debugLog('💰 Total Bonus Amount:', totalBonus)
+      debugLog('💰 Pocket Balance should include this bonus:', totalBonus)
     }
   }, [walletState, balances])
 
@@ -237,13 +237,13 @@ export default function PocketPage() {
     const fetchActiveEarningAddons = async () => {
       try {
         setEarningAddonLoading(true)
-        debugLog('ðŸ”„ Fetching active earning addons...')
+        debugLog('🔄 Fetching active earning addons...')
         const response = await deliveryAPI.getActiveEarningAddons()
-        debugLog('âœ… Active earning addons response:', response?.data)
+        debugLog('✅ Active earning addons response:', response?.data)
 
         if (response?.data?.success && response?.data?.data?.activeOffers) {
           const offers = response.data.data.activeOffers
-          debugLog('ðŸ“¦ Active offers found:', offers.length, offers)
+          debugLog('📦 Active offers found:', offers.length, offers)
 
           // Get the first valid active offer (prioritize isValid, then isUpcoming, then any active status)
           const activeOffer = offers.find(offer => offer.isValid) ||
@@ -252,10 +252,10 @@ export default function PocketPage() {
             offers[0] ||
             null
 
-          debugLog('ðŸŽ¯ Selected active offer:', activeOffer)
+          debugLog('🎯 Selected active offer:', activeOffer)
           setActiveEarningAddon(activeOffer)
         } else {
-          debugLog('â„¹ï¸ No active offers found in response')
+          debugLog('ℹ️ No active offers found in response')
           setActiveEarningAddon(null)
         }
       } catch (error) {
@@ -338,7 +338,7 @@ export default function PocketPage() {
   }
 
   // Earnings Guarantee - Use active earning addon if available, otherwise show 0
-  // When no offer is active, show 0 of 0 and â‚¹0
+  // When no offer is active, show 0 of 0 and ₹0
   const earningsGuaranteeTarget = activeEarningAddon?.earningAmount || 0
   const earningsGuaranteeOrdersTarget = activeEarningAddon?.requiredOrders || 0
   // Only show current orders/earnings if there's an active offer
@@ -346,7 +346,7 @@ export default function PocketPage() {
   const earningsGuaranteeCurrentOrders = activeEarningAddon ? Math.max(addonCurrentOrders, weeklyOrders) : 0
   // Show only bonus earnings from the offer, not total weekly earnings
   const addonCurrentEarnings =
-    Number(activeEarningAddon?.currentEarning ?? activeEarningAddon?.currentEarnings) || 0
+    Number(activeEarningAddon?.currentEarning || activeEarningAddon?.currentEarnings) || 0
   const earningsGuaranteeCurrentEarnings = activeEarningAddon
     ? Math.max(addonCurrentEarnings, calculateBonusEarnings())
     : 0
@@ -412,7 +412,7 @@ export default function PocketPage() {
     const bonusTransactions = walletState?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed') || []
     const calculatedTotalBonus = bonusTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
-    debugLog('ðŸ’° FINAL Pocket Balance Display:', {
+    debugLog('💰 FINAL Pocket Balance Display:', {
       pocketBalance: pocketBalance,
       walletStatePocketBalance: walletState?.pocketBalance,
       walletStateTotalBalance: walletState?.totalBalance,
@@ -487,13 +487,13 @@ export default function PocketPage() {
         setWalletLoading(true)
         const walletData = await fetchDeliveryWallet()
         setWalletState(walletData)
-        debugLog('ðŸ’° Wallet data fetched:', walletData)
-        debugLog('ðŸ’° Total Balance from API:', walletData?.totalBalance)
-        debugLog('ðŸ’° Pocket Balance from API:', walletData?.pocketBalance)
-        debugLog('ðŸ’° Bonus Transactions:', walletData?.transactions?.filter(t => t.type === 'bonus'))
+        debugLog('💰 Wallet data fetched:', walletData)
+        debugLog('💰 Total Balance from API:', walletData?.totalBalance)
+        debugLog('💰 Pocket Balance from API:', walletData?.pocketBalance)
+        debugLog('💰 Bonus Transactions:', walletData?.transactions?.filter(t => t.type === 'bonus'))
         const totalBonus = walletData?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed')
           .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
-        debugLog('ðŸ’° Total Bonus Amount:', totalBonus)
+        debugLog('💰 Total Bonus Amount:', totalBonus)
       } catch (error) {
         debugError('Error fetching wallet data:', error)
         // Keep empty state on error
@@ -845,7 +845,7 @@ export default function PocketPage() {
 
             {/* Earnings number */}
             <div className="text-black text-3xl font-bold text-center">
-              â‚¹{weeklyEarnings.toFixed(0)}
+              ₹{weeklyEarnings.toFixed(0)}
             </div>
 
           </CardContent>
@@ -875,7 +875,7 @@ export default function PocketPage() {
               </div>
               {/* Summary Box */}
               <div className="bg-black text-white px-4 py-3 rounded-lg text-center min-w-[80px]">
-                <div className="text-2xl font-bold">â‚¹{earningsGuaranteeTarget.toFixed(0)}</div>
+                <div className="text-2xl font-bold">₹{earningsGuaranteeTarget.toFixed(0)}</div>
                 <div className="text-xs text-white/80 mt-1">{earningsGuaranteeOrdersTarget} orders</div>
               </div>
             </div>
@@ -961,7 +961,7 @@ export default function PocketPage() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold text-gray-900">â‚¹{earningsGuaranteeCurrentEarnings.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-gray-900">₹{earningsGuaranteeCurrentEarnings.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -988,7 +988,7 @@ export default function PocketPage() {
               <div onClick={() => navigate("/delivery/pocket-balance")} className="flex items-center justify-between">
                 <span className="text-black text-sm">Pocket balance</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-black text-sm font-medium">â‚¹{pocketBalance.toFixed(2)}</span>
+                  <span className="text-black text-sm font-medium">₹{pocketBalance.toFixed(2)}</span>
                   <ArrowRight className="w-4 h-4 text-gray-600" />
                 </div>
               </div>
@@ -999,7 +999,7 @@ export default function PocketPage() {
               <div onClick={() => setShowCashLimitPopup(true)} className="flex items-center justify-between">
                 <span className="text-black text-sm">Available cash limit</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-black text-sm font-medium">â‚¹{availableCashLimit.toFixed(2)}</span>
+                  <span className="text-black text-sm font-medium">₹{availableCashLimit.toFixed(2)}</span>
                   <ArrowRight className="w-4 h-4 text-gray-600" />
                 </div>
               </div>
@@ -1010,7 +1010,7 @@ export default function PocketPage() {
                   <span className="text-yellow-500 text-xs font-bold leading-none">!</span>
                 </div>
                 <p className="text-black text-sm font-medium flex-1">
-                  Deposit â‚¹{depositAmount.toFixed(2)} to avoid getting blocked
+                  Deposit ₹{depositAmount.toFixed(2)} to avoid getting blocked
                 </p>
               </div> */}
 
@@ -1044,7 +1044,7 @@ export default function PocketPage() {
               onClick={() => navigate("/delivery/payout")}
             >
               <CardContent className="p-4 flex flex-col items-start text-start">
-                <div className="text-black text-2xl font-bold mb-2">â‚¹{payoutAmount}</div>
+                <div className="text-black text-2xl font-bold mb-2">₹{payoutAmount}</div>
                 <div className="text-black text-sm font-medium mb-1">Payout</div>
                 <div className="text-gray-600 text-xs">{payoutPeriod}</div>
               </CardContent>
@@ -1107,9 +1107,9 @@ export default function PocketPage() {
           onClose={() => setShowCashLimitPopup(false)}
           walletData={{
             totalCashLimit: totalCashLimit,
-            cashInHand: balances.cashInHand ?? 0,
+            cashInHand: balances.cashInHand || 0,
             deductions: 0,
-            pocketWithdrawals: balances.totalWithdrawn ?? 0,
+            pocketWithdrawals: balances.totalWithdrawn || 0,
             settlementAdjustment: 0
           }}
         />
@@ -1124,11 +1124,10 @@ export default function PocketPage() {
         maxHeight="50vh"
       >
         <DepositPopup
-          cashInHand={balances.cashInHand ?? walletState?.cashInHand ?? 0}
+          cashInHand={balances.cashInHand || walletState?.cashInHand || 0}
           onSuccess={() => setShowDepositPopup(false)}
         />
       </BottomPopup>
     </div>
   )
 }
-

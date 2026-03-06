@@ -21,9 +21,9 @@ export default function DeliveryCashLimit() {
         setLoading(true)
       }
       const response = await adminAPI.getDeliveryCashLimit()
-      const data = response?.data?.data ?? response?.data ?? {}
+      const data = response?.data?.data || response?.data || {}
       const limit = data.deliveryCashLimit
-      const wl = data.deliveryWithdrawalLimit ?? 100
+      const wl = data.deliveryWithdrawalLimit || 100
       if (!isMountedRef.current) return
       setDeliveryCashLimit(limit !== undefined && limit !== null ? String(limit) : "")
       setDeliveryWithdrawalLimit(wl !== undefined && wl !== null ? String(wl) : "100")
@@ -164,7 +164,7 @@ export default function DeliveryCashLimit() {
                     {loading && (
                       <p className="text-xs text-emerald-700/80 mt-1 flex items-center gap-2">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Loading current limitâ€¦
+                        Loading current limit…
                       </p>
                     )}
                   </div>
@@ -208,7 +208,7 @@ export default function DeliveryCashLimit() {
                     {loading && (
                       <p className="text-xs text-amber-700/80 mt-1 flex items-center gap-2">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Loadingâ€¦
+                        Loading…
                       </p>
                     )}
                   </div>

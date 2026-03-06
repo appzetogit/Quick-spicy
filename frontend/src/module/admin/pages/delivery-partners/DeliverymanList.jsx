@@ -11,8 +11,8 @@ const debugError = (...args) => {}
 
 const formatCurrency = (amount) => {
   const numericAmount = Number(amount)
-  if (!Number.isFinite(numericAmount)) return "â‚¹0.00"
-  return `â‚¹${numericAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (!Number.isFinite(numericAmount)) return "₹0.00"
+  return `₹${numericAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export default function DeliverymanList() {
@@ -100,13 +100,13 @@ export default function DeliverymanList() {
           return {
             ...partner,
             walletSummary: wallet || null,
-            pocketBalance: wallet?.pocketBalance ?? 0,
-            cashInHand: wallet?.cashCollected ?? 0,
-            remainingCashLimit: wallet?.remainingCashLimit ?? 0,
-            totalEarning: wallet?.totalEarning ?? 0,
-            bonus: wallet?.bonus ?? 0,
-            totalWithdrawn: wallet?.totalWithdrawn ?? 0,
-            availableCashLimit: wallet?.availableCashLimit ?? 0,
+pocketBalance: wallet?.pocketBalance || 0,
+cashInHand: wallet?.cashCollected || 0,
+remainingCashLimit: wallet?.remainingCashLimit || 0,
+totalEarning: wallet?.totalEarning || 0,
+bonus: wallet?.bonus || 0,
+totalWithdrawn: wallet?.totalWithdrawn || 0,
+availableCashLimit: wallet?.availableCashLimit || 0,
           }
         })
 
@@ -169,13 +169,13 @@ export default function DeliverymanList() {
         setViewDetails({
           ...response.data.data.delivery,
           walletSummary: deliveryman.walletSummary || null,
-          pocketBalance: deliveryman.pocketBalance ?? 0,
-          cashInHand: deliveryman.cashInHand ?? 0,
-          remainingCashLimit: deliveryman.remainingCashLimit ?? 0,
-          totalEarning: deliveryman.totalEarning ?? 0,
-          bonus: deliveryman.bonus ?? 0,
-          totalWithdrawn: deliveryman.totalWithdrawn ?? 0,
-          availableCashLimit: deliveryman.availableCashLimit ?? 0,
+pocketBalance: deliveryman.pocketBalance || 0,
+cashInHand: deliveryman.cashInHand || 0,
+remainingCashLimit: deliveryman.remainingCashLimit || 0,
+totalEarning: deliveryman.totalEarning || 0,
+bonus: deliveryman.bonus || 0,
+totalWithdrawn: deliveryman.totalWithdrawn || 0,
+availableCashLimit: deliveryman.availableCashLimit || 0,
         })
         setIsViewOpen(true)
       } else {
@@ -448,7 +448,7 @@ export default function DeliverymanList() {
                                 />
                               ) : (
                                 <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-sm">ðŸ‘¤</span>
+                                  <span className="text-sm">👤</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -743,37 +743,37 @@ export default function DeliverymanList() {
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Pocket Balance</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.pocketBalance ?? viewDetails.walletSummary?.pocketBalance)}
+                        {formatCurrency(viewDetails.pocketBalance || viewDetails.walletSummary?.pocketBalance)}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Cash In Hand</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.cashInHand ?? viewDetails.walletSummary?.cashCollected)}
+                        {formatCurrency(viewDetails.cashInHand || viewDetails.walletSummary?.cashCollected)}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Remaining Cash Limit</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.remainingCashLimit ?? viewDetails.walletSummary?.remainingCashLimit)}
+                        {formatCurrency(viewDetails.remainingCashLimit || viewDetails.walletSummary?.remainingCashLimit)}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Total Earning</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.totalEarning ?? viewDetails.walletSummary?.totalEarning)}
+                        {formatCurrency(viewDetails.totalEarning || viewDetails.walletSummary?.totalEarning)}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Bonus</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.bonus ?? viewDetails.walletSummary?.bonus)}
+                        {formatCurrency(viewDetails.bonus || viewDetails.walletSummary?.bonus)}
                       </p>
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-500 uppercase">Total Withdrawn</label>
                       <p className="text-sm font-medium text-slate-900 mt-1">
-                        {formatCurrency(viewDetails.totalWithdrawn ?? viewDetails.walletSummary?.totalWithdrawn)}
+                        {formatCurrency(viewDetails.totalWithdrawn || viewDetails.walletSummary?.totalWithdrawn)}
                       </p>
                     </div>
                   </div>
@@ -1017,4 +1017,3 @@ export default function DeliverymanList() {
     </div>
   )
 }
-

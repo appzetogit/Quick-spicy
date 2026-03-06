@@ -161,7 +161,7 @@ export default function DiningRestaurantDetails() {
                         <span>{formattedDistance}</span>
                         <span className="w-1 h-1 rounded-full bg-gray-400"></span>
                         {/* Cost For Two */}
-                        <span>{restaurant.costForTwo ? `â‚¹${restaurant.costForTwo} for two` : "â‚¹1400 for two"}</span>
+                        <span>{restaurant.costForTwo ? `₹${restaurant.costForTwo} for two` : "₹1400 for two"}</span>
                     </div>
 
                     <div className="flex items-center justify-between">

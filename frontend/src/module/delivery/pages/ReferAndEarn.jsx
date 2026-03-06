@@ -123,7 +123,7 @@ export default function ReferAndEarn() {
         {/* Earning Potential */}
         <div>
           <p className="text-2xl font-bold text-gray-900 mb-6">
-            Earn upto â‚¹6,000 extra per referral
+            Earn upto ₹6,000 extra per referral
           </p>
 
           {/* Friend's Name Input */}
@@ -166,10 +166,10 @@ export default function ReferAndEarn() {
         {/* Success Story Banner */}
         <div className="bg-yellow-100 rounded-lg p-4 flex items-center gap-3">
           <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl font-bold text-white">â‚¹</span>
+            <span className="text-2xl font-bold text-white">₹</span>
           </div>
           <p className="text-sm text-gray-900 flex-1">
-            Vijay Mourya from Indore has earned â‚¹6000 through referrals
+            Vijay Mourya from Indore has earned ₹6000 through referrals
           </p>
         </div>
 
@@ -206,7 +206,7 @@ export default function ReferAndEarn() {
                 <div className="w-6 h-6 rounded-full border-6 border-black bg-white flex-shrink-0"></div>
               </div>
               <div className="flex-1 pt-1">
-                <p className="text-base text-gray-900 font-medium">You earn upto â‚¹6,000 bonus</p>
+                <p className="text-base text-gray-900 font-medium">You earn upto ₹6,000 bonus</p>
               </div>
             </div>
           </div>

@@ -34,7 +34,7 @@ export const exportToCSV = (orders, filename = "orders") => {
       order.customerName,
       order.customerPhone,
       order.restaurant,
-      order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}`,
+      order.total || `₹${(order.totalAmount || 0).toFixed(2)}`,
       order.paymentStatus || "",
       order.orderStatus || "",
       order.deliveryType || ""
@@ -103,7 +103,7 @@ export const exportToExcel = (orders, filename = "orders") => {
         order.deliveryBoyName || 'N/A',
         order.deliveryBoyNumber || 'N/A',
         order.status || 'N/A',
-        totalAmount > 0 ? `â‚¹${totalAmount.toFixed(2)}` : 'N/A',
+        totalAmount > 0 ? `₹${totalAmount.toFixed(2)}` : 'N/A',
         paymentStatus
       ]
     })
@@ -116,7 +116,7 @@ export const exportToExcel = (orders, filename = "orders") => {
       order.customerName || 'N/A',
       order.customerPhone || 'N/A',
       order.restaurant || 'N/A',
-      order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}`,
+      order.total || `₹${(order.totalAmount || 0).toFixed(2)}`,
       order.paymentStatus || 'N/A',
       order.orderStatus || 'N/A',
       order.deliveryType || 'N/A'
@@ -270,7 +270,7 @@ export const exportToPDF = async (orders, filename = "orders") => {
           order.deliveryBoyName || 'N/A',
           order.deliveryBoyNumber || 'N/A',
           order.status || 'N/A',
-          totalAmount > 0 ? `â‚¹${totalAmount.toFixed(2)}` : 'N/A',
+          totalAmount > 0 ? `₹${totalAmount.toFixed(2)}` : 'N/A',
           paymentStatus
         ]
       })
@@ -283,7 +283,7 @@ export const exportToPDF = async (orders, filename = "orders") => {
         order.customerName || 'N/A',
         order.customerPhone || 'N/A',
         order.restaurant || 'N/A',
-        order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}` || 'N/A',
+        order.total || `₹${(order.totalAmount || 0).toFixed(2)}` || 'N/A',
         order.paymentStatus || 'N/A',
         order.orderStatus || 'N/A',
         order.deliveryType || 'N/A'

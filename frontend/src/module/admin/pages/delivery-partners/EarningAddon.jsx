@@ -48,13 +48,13 @@ export default function EarningAddon() {
       const response = await adminAPI.getEarningAddons()
       if (response.data.success) {
         const addons = response.data.data.earningAddons || []
-        debugLog('ðŸ“¦ Fetched earning addons:', addons)
+        debugLog('📦 Fetched earning addons:', addons)
         // Log redemption counts for debugging
         addons.forEach(addon => {
-          debugLog(`ðŸ“Š Addon "${addon.title}":`, {
+          debugLog(`📊 Addon "${addon.title}":`, {
             currentRedemptions: addon.currentRedemptions,
             maxRedemptions: addon.maxRedemptions,
-            display: `${addon.currentRedemptions || 0} / ${addon.maxRedemptions || 'âˆž'}`
+            display: `${addon.currentRedemptions || 0} / ${addon.maxRedemptions || '∞'}`
           })
         })
         setEarningAddons(addons)
@@ -280,7 +280,7 @@ export default function EarningAddon() {
     const config = statusConfig[status] || statusConfig.inactive
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-        {config.label} {isValid && status === 'active' && "âœ“"}
+        {config.label} {isValid && status === 'active' && "✓"}
       </span>
     )
   }
@@ -422,7 +422,7 @@ export default function EarningAddon() {
                         {visibleColumns.earningAmount && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                              <span className="text-sm font-semibold text-emerald-500">â‚¹</span>
+                              <span className="text-sm font-semibold text-emerald-500">₹</span>
                               <span className="text-sm font-medium text-slate-900">{addon.earningAmount?.toFixed(2)}</span>
                             </div>
                           </td>
@@ -449,7 +449,7 @@ export default function EarningAddon() {
                         {visibleColumns.redemptions && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-700">
-                              {addon.currentRedemptions || 0} / {addon.maxRedemptions || 'âˆž'}
+                              {addon.currentRedemptions || 0} / {addon.maxRedemptions || '∞'}
                             </span>
                           </td>
                         )}
@@ -517,7 +517,7 @@ export default function EarningAddon() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm"
-                placeholder="e.g., Complete 50 orders and earn â‚¹500"
+                placeholder="e.g., Complete 50 orders and earn ₹500"
               />
             </div>
 
@@ -542,10 +542,10 @@ export default function EarningAddon() {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-semibold text-slate-700">
-                  Earning Amount (â‚¹) <span className="text-red-500">*</span>
+                  Earning Amount (₹) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-emerald-500">â‚¹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-emerald-500">₹</span>
                   <input
                     type="number"
                     required

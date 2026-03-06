@@ -250,9 +250,9 @@ export default function FeeSettings() {
                     <table className="w-full border border-slate-200 rounded-lg">
                       <thead className="bg-slate-50">
                         <tr>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Min (â‚¹)</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Max (â‚¹)</th>
-                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Delivery Fee (â‚¹)</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Min (₹)</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Max (₹)</th>
+                          <th className="px-4 py-3 text-left text-sm font-semibold text-slate-700 border-b border-slate-200">Delivery Fee (₹)</th>
                           <th className="px-4 py-3 text-center text-sm font-semibold text-slate-700 border-b border-slate-200">Actions</th>
                         </tr>
                       </thead>
@@ -262,9 +262,9 @@ export default function FeeSettings() {
                           .sort((a, b) => a.range.min - b.range.min)
                           .map(({ range, originalIndex }) => (
                             <tr key={originalIndex} className="hover:bg-slate-50">
-                              <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">â‚¹{range.min}</td>
-                              <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">â‚¹{range.max}</td>
-                              <td className="px-4 py-3 text-sm font-medium text-green-600 border-b border-slate-100">â‚¹{range.fee}</td>
+                              <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">₹{range.min}</td>
+                              <td className="px-4 py-3 text-sm text-slate-900 border-b border-slate-100">₹{range.max}</td>
+                              <td className="px-4 py-3 text-sm font-medium text-green-600 border-b border-slate-100">₹{range.fee}</td>
                               <td className="px-4 py-3 text-center border-b border-slate-100">
                                 <div className="flex items-center justify-center gap-2">
                                   <button
@@ -297,7 +297,7 @@ export default function FeeSettings() {
                   </h4>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Min Value (â‚¹)</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Min Value (₹)</label>
                       <input
                         type="number"
                         value={newRange.min}
@@ -309,7 +309,7 @@ export default function FeeSettings() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Max Value (â‚¹)</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Max Value (₹)</label>
                       <input
                         type="number"
                         value={newRange.max}
@@ -321,7 +321,7 @@ export default function FeeSettings() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-slate-600 mb-1">Delivery Fee (â‚¹)</label>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Delivery Fee (₹)</label>
                       <input
                         type="number"
                         value={newRange.fee}
@@ -361,7 +361,7 @@ export default function FeeSettings() {
                     </div>
                   </div>
                   <p className="text-xs text-slate-500 mt-2">
-                    Example: If order value is â‚¹50-â‚¹150, delivery fee will be â‚¹25
+                    Example: If order value is ₹50-₹150, delivery fee will be ₹25
                   </p>
                 </div>
               </div>
@@ -371,7 +371,7 @@ export default function FeeSettings() {
                 {/* Platform Fee */}
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-slate-700">
-                    Platform Fee (â‚¹)
+                    Platform Fee (₹)
                   </label>
                   <input
                     type="number"

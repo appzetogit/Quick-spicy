@@ -239,8 +239,8 @@ export const saveFood = (foodData) => {
         ...foodData,
         id: newId,
         // Set defaults for missing fields
-        rating: foodData.rating ?? 0.0,
-        reviews: foodData.reviews ?? 0,
+rating: foodData.rating || 0.0,
+reviews: foodData.reviews || 0,
         variations: foodData.variations || [],
         tags: foodData.tags || [],
         nutrition: foodData.nutrition || [],

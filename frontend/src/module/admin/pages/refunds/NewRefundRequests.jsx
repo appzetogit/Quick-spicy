@@ -228,7 +228,7 @@ export default function NewRefundRequests() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-slate-900">
-                          â‚¹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          ₹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="text-xs text-emerald-600 mt-0.5">{order.paymentStatus}</div>
                       </td>
@@ -268,7 +268,7 @@ export default function NewRefundRequests() {
                               {processingRefund === order.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <span className="text-sm">â‚¹</span>
+                                <span className="text-sm">₹</span>
                               )}
                             </button>
                           )}

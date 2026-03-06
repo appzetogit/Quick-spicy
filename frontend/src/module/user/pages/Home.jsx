@@ -715,12 +715,12 @@ export default function Home() {
           setLandingCategories(
             apiCategories
               .filter((c) => c.isActive !== false)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
           )
           setLandingExploreMore(
             apiExploreMore
               .filter((e) => e.isActive !== false)
-              .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
           )
           setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
           setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
@@ -994,8 +994,8 @@ export default function Home() {
       }
     }
 
-    const lat = parseFloat(defaultSavedAddress?.latitude ?? defaultSavedAddress?.lat)
-    const lng = parseFloat(defaultSavedAddress?.longitude ?? defaultSavedAddress?.lng)
+    const lat = parseFloat(defaultSavedAddress?.latitude || defaultSavedAddress?.lat)
+    const lng = parseFloat(defaultSavedAddress?.longitude || defaultSavedAddress?.lng)
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
       return { latitude: lat, longitude: lng }
     }

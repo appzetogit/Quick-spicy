@@ -240,7 +240,7 @@ export default function DesktopNavbar() {
                                                 onClick={() => setHeroSearch("")}
                                             >
                                                 <span className="sr-only">Clear</span>
-                                                <span aria-hidden="true">Ã—</span>
+                                                <span aria-hidden="true">×</span>
                                             </Button>
                                         )}
                                     </div>

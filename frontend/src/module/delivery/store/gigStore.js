@@ -12,10 +12,10 @@ import { persist } from 'zustand/middleware'
 
 // User level configuration
 export const USER_LEVELS = {
-  Blue: { days: 1, color: '#3b82f6', icon: 'ðŸ’™' },
-  Brown: { days: 2, color: '#92400e', icon: 'ðŸ¤Ž' },
-  Silver: { days: 3, color: '#6b7280', icon: 'ðŸ’¿' },
-  Diamond: { days: 4, color: '#60a5fa', icon: 'ðŸ’Ž' }
+  Blue: { days: 1, color: '#3b82f6', icon: '💙' },
+  Brown: { days: 2, color: '#92400e', icon: '🤎' },
+  Silver: { days: 3, color: '#6b7280', icon: '💿' },
+  Diamond: { days: 4, color: '#60a5fa', icon: '💎' }
 }
 
 // Default state

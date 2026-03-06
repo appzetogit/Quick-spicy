@@ -314,7 +314,7 @@ export default function ProfilePage() {
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-medium mb-1">â‚¹2000 referral bonus</h3>
+                <h3 className="text-base font-medium mb-1">₹2000 referral bonus</h3>
                 <p className="text-gray-600 text-sm">Refer your friend and earn</p>
               </div>
               <div className="flex items-center justify-center w-12 h-12">
@@ -409,21 +409,21 @@ export default function ProfilePage() {
                       localStorage.setItem('delivery_alert_sound', e.target.value)
                       // Play preview sound
                       try {
-                        debugLog('ðŸ”Š Playing preview sound: Original', { originalSoundPath: originalSound })
+                        debugLog('🔊 Playing preview sound: Original', { originalSoundPath: originalSound })
                         const audio = new Audio(originalSound)
                         audio.volume = 0.7
                         const playPromise = audio.play()
                         if (playPromise !== undefined) {
                           playPromise
                             .then(() => {
-                              debugLog('âœ… Preview sound playing: Original')
+                              debugLog('✅ Preview sound playing: Original')
                             })
                             .catch(err => {
-                              debugError('âŒ Preview audio error:', err)
+                              debugError('❌ Preview audio error:', err)
                             })
                         }
                       } catch (err) {
-                        debugError('âŒ Could not create preview audio:', err)
+                        debugError('❌ Could not create preview audio:', err)
                       }
                     }}
                     className="w-5 h-5 text-black focus:ring-2 focus:ring-black"
@@ -443,21 +443,21 @@ export default function ProfilePage() {
                       localStorage.setItem('delivery_alert_sound', e.target.value)
                       // Play preview sound
                       try {
-                        debugLog('ðŸ”Š Playing preview sound: Zomato Tone', { alertSoundPath: alertSound })
+                        debugLog('🔊 Playing preview sound: Zomato Tone', { alertSoundPath: alertSound })
                         const audio = new Audio(alertSound)
                         audio.volume = 0.7
                         const playPromise = audio.play()
                         if (playPromise !== undefined) {
                           playPromise
                             .then(() => {
-                              debugLog('âœ… Preview sound playing: Zomato Tone')
+                              debugLog('✅ Preview sound playing: Zomato Tone')
                             })
                             .catch(err => {
-                              debugError('âŒ Preview audio error:', err)
+                              debugError('❌ Preview audio error:', err)
                             })
                         }
                       } catch (err) {
-                        debugError('âŒ Could not create preview audio:', err)
+                        debugError('❌ Could not create preview audio:', err)
                       }
                     }}
                     className="w-5 h-5 text-black focus:ring-2 focus:ring-black"

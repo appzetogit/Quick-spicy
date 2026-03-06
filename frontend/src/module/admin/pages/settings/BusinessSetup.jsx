@@ -461,7 +461,7 @@ export default function BusinessSetup() {
                     </select>
                     <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
-                      â–¾
+                      ▾
                     </span>
                   </div>
                   <input

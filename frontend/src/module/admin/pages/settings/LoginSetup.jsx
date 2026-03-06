@@ -209,9 +209,9 @@ export default function LoginSetup() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { key: "manualLogin", label: "Manual Login", icon: "ðŸ‘¤" },
-                  { key: "otpLogin", label: "OTP Login", icon: "ðŸ“±" },
-                  { key: "socialMediaLogin", label: "Social Media Login", icon: "ðŸŒ" }
+                  { key: "manualLogin", label: "Manual Login", icon: "👤" },
+                  { key: "otpLogin", label: "OTP Login", icon: "📱" },
+                  { key: "socialMediaLogin", label: "Social Media Login", icon: "🌐" }
                 ].map((option) => (
                   <div
                     key={option.key}
@@ -264,9 +264,9 @@ export default function LoginSetup() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Choose social media</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { key: "google", label: "Google", icon: "ðŸ”µ", color: "blue" },
-                    { key: "facebook", label: "Facebook", icon: "ðŸ”µ", color: "blue" },
-                    { key: "apple", label: "Apple", icon: "âš«", color: "black" }
+                    { key: "google", label: "Google", icon: "🔵", color: "blue" },
+                    { key: "facebook", label: "Facebook", icon: "🔵", color: "blue" },
+                    { key: "apple", label: "Apple", icon: "⚫", color: "black" }
                   ].map((platform) => (
                     <div
                       key={platform.key}
@@ -315,8 +315,8 @@ export default function LoginSetup() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { key: "emailVerification", label: "Email Verification", icon: "ðŸ“§" },
-                  { key: "phoneVerification", label: "Phone Number Verification", icon: "ðŸ“±" }
+                  { key: "emailVerification", label: "Email Verification", icon: "📧" },
+                  { key: "phoneVerification", label: "Phone Number Verification", icon: "📱" }
                 ].map((verify) => (
                   <div
                     key={verify.key}

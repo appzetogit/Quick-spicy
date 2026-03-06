@@ -358,12 +358,12 @@ export default function OrdersPage({ statusKey = "all" }) {
     const orderIdToUse = order.id || order._id || order.orderId
     
     if (!orderIdToUse) {
-      debugError('âŒ No orderId found in order object:', order)
+      debugError('❌ No orderId found in order object:', order)
       toast.error('Order ID not found. Please refresh the page and try again.')
       return
     }
     
-    debugLog('ðŸ” Order details for refund:', {
+    debugLog('🔍 Order details for refund:', {
       orderIdString: order.orderId,
       mongoId: order.id,
       orderIdToUse,
@@ -374,7 +374,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       setProcessingRefund(orderIdToUse)
       
-      debugLog('ðŸ” Processing refund for order:', {
+      debugLog('🔍 Processing refund for order:', {
         orderId: order.orderId,
         id: order.id,
         _id: order._id,
@@ -385,13 +385,13 @@ export default function OrdersPage({ statusKey = "all" }) {
       
       // Include refundAmount in request body if provided (ensure it's a number)
       const requestData = refundAmount !== null ? { refundAmount: parseFloat(refundAmount) } : {}
-      debugLog('ðŸ“¤ Request data being sent:', requestData)
+      debugLog('📤 Request data being sent:', requestData)
       const response = await adminAPI.processRefund(orderIdToUse, requestData)
       
       if (response.data?.success) {
         const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
         toast.success(response.data?.message || (isWalletPayment 
-          ? `Wallet refund of â‚¹${refundAmount || order.totalAmount} processed successfully for order ${order.orderId}`
+          ? `Wallet refund of ₹${refundAmount || order.totalAmount} processed successfully for order ${order.orderId}`
           : `Refund initiated successfully for order ${order.orderId}`))
         // Update the order in the local state immediately to show "Refunded" status
         setOrders(prevOrders => 
@@ -407,7 +407,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         toast.error(response.data?.message || "Failed to process refund")
       }
     } catch (error) {
-      debugError("âŒ Error processing refund:", error)
+      debugError("❌ Error processing refund:", error)
       
       // Log full error details for debugging
       const errorDetails = {
@@ -427,7 +427,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         },
         stack: error.stack
       }
-      debugError("âŒ Error details:", JSON.stringify(errorDetails, null, 2))
+      debugError("❌ Error details:", JSON.stringify(errorDetails, null, 2))
       
       // Show more specific error message
       let errorMessage = "Failed to process refund"
@@ -453,7 +453,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         errorMessage = error.message || "Failed to process refund"
       }
       
-      debugError("âŒ Final error message:", errorMessage)
+      debugError("❌ Final error message:", errorMessage)
       toast.error(errorMessage)
     } finally {
       setProcessingRefund(null)

@@ -122,11 +122,11 @@ export default function RestaurantReport() {
 
   const renderStars = (rating, reviews) => {
     if (rating === 0) {
-      return "â˜…0"
+      return "★0"
     }
     const fullStars = Math.floor(rating)
     const hasHalfStar = rating % 1 !== 0
-    return "â˜…".repeat(fullStars) + (hasHalfStar ? "Â½" : "") + "â˜†".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
+    return "★".repeat(fullStars) + (hasHalfStar ? "½" : "") + "☆".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
   }
 
   if (loading) {
@@ -419,7 +419,7 @@ export default function RestaurantReport() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${
-                          restaurant.totalAdminCommission.startsWith('â‚¹-') || restaurant.totalAdminCommission.startsWith('-â‚¹')
+                          restaurant.totalAdminCommission.startsWith('₹-') || restaurant.totalAdminCommission.startsWith('-₹')
                             ? 'text-red-600'
                             : 'text-slate-900'
                         }`}>

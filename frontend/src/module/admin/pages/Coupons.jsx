@@ -389,14 +389,14 @@ export default function Coupons() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">
                           {offer.discountType === 'flat-price' 
-                            ? `â‚¹${offer.originalPrice - offer.discountedPrice} OFF`
+                            ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
                             : `${offer.discountPercentage}% OFF`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400 line-through">â‚¹{offer.originalPrice}</span>
-                          <span className="text-sm font-semibold text-green-600">â‚¹{offer.discountedPrice}</span>
+                          <span className="text-xs text-slate-400 line-through">₹{offer.originalPrice}</span>
+                          <span className="text-sm font-semibold text-green-600">₹{offer.discountedPrice}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

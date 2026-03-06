@@ -112,22 +112,22 @@ export default function ZoneSetup() {
 
   const loadGoogleMaps = async () => {
     try {
-      debugLog("ðŸ“ Starting Google Maps load...")
+      debugLog("📍 Starting Google Maps load...")
       
       // Fetch API key from database
       let apiKey = null
       try {
         apiKey = await getGoogleMapsApiKey()
-        debugLog("ðŸ“ API Key received:", apiKey ? `Yes (${apiKey.substring(0, 10)}...)` : "No")
+        debugLog("📍 API Key received:", apiKey ? `Yes (${apiKey.substring(0, 10)}...)` : "No")
         
         if (!apiKey || apiKey.trim() === "") {
-          debugError("âŒ API key is empty or not found in database")
+          debugError("❌ API key is empty or not found in database")
           setMapLoading(false)
           alert("Google Maps API key not found in database. Please contact administrator to add the API key in admin panel.")
           return
         }
       } catch (apiKeyError) {
-        debugError("âŒ Error fetching API key from database:", apiKeyError)
+        debugError("❌ Error fetching API key from database:", apiKeyError)
         setMapLoading(false)
         alert("Failed to fetch Google Maps API key from database. Please check your connection or contact administrator.")
         return
@@ -139,7 +139,7 @@ export default function ZoneSetup() {
       let retries = 0
       const maxRetries = 100 // Wait up to 10 seconds
       
-      debugLog("ðŸ“ Waiting for Google Maps to load from main.jsx...")
+      debugLog("📍 Waiting for Google Maps to load from main.jsx...")
       while (!window.google && retries < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 100))
         retries++
@@ -154,7 +154,7 @@ export default function ZoneSetup() {
       }
 
       if (!mapRef.current) {
-        debugError("âŒ mapRef.current is still null after waiting")
+        debugError("❌ mapRef.current is still null after waiting")
         setMapLoading(false)
         alert("Failed to initialize map container. Please refresh the page.")
         return
@@ -162,14 +162,14 @@ export default function ZoneSetup() {
 
       // If Google Maps is already loaded, use it directly
       if (window.google && window.google.maps) {
-        debugLog("âœ… Google Maps already loaded from main.jsx, initializing map...")
+        debugLog("✅ Google Maps already loaded from main.jsx, initializing map...")
         initializeMap(window.google)
         return
       }
 
       // If Google Maps is not loaded yet and we have an API key, use Loader as fallback
       if (apiKey) {
-        debugLog("ðŸ“ Google Maps not loaded from main.jsx, loading with Loader...")
+        debugLog("📍 Google Maps not loaded from main.jsx, loading with Loader...")
         const loader = new Loader({
           apiKey: apiKey,
           version: "weekly",
@@ -177,15 +177,15 @@ export default function ZoneSetup() {
         })
 
         const google = await loader.load()
-        debugLog("âœ… Google Maps loaded via Loader, initializing map...")
+        debugLog("✅ Google Maps loaded via Loader, initializing map...")
         initializeMap(google)
       } else {
-        debugError("âŒ No API key available")
+        debugError("❌ No API key available")
         setMapLoading(false)
         alert("Google Maps API key not found. Please contact administrator.")
       }
     } catch (error) {
-      debugError("âŒ Error loading Google Maps:", error)
+      debugError("❌ Error loading Google Maps:", error)
       setMapLoading(false)
       alert(`Failed to load Google Maps: ${error.message}. Please refresh the page or contact administrator.`)
     }
@@ -194,12 +194,12 @@ export default function ZoneSetup() {
   const initializeMap = (google) => {
     try {
       if (!mapRef.current) {
-        debugError("âŒ mapRef.current is null in initializeMap")
+        debugError("❌ mapRef.current is null in initializeMap")
         setMapLoading(false)
         return
       }
 
-      debugLog("ðŸ“ Initializing map...")
+      debugLog("📍 Initializing map...")
       // Initial location (India center)
       const initialLocation = { lat: 20.5937, lng: 78.9629 }
 
@@ -222,7 +222,7 @@ export default function ZoneSetup() {
       })
 
       mapInstanceRef.current = map
-      debugLog("âœ… Map initialized successfully")
+      debugLog("✅ Map initialized successfully")
 
       // Add click listener to place marker
       map.addListener('click', (event) => {
@@ -250,9 +250,9 @@ export default function ZoneSetup() {
       })
 
       setMapLoading(false)
-      debugLog("âœ… Map loading complete")
+      debugLog("✅ Map loading complete")
     } catch (error) {
-      debugError("âŒ Error in initializeMap:", error)
+      debugError("❌ Error in initializeMap:", error)
       setMapLoading(false)
       alert("Failed to initialize map. Please refresh the page.")
     }

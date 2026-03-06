@@ -39,14 +39,14 @@ export default function HubFinance() {
         const response = await restaurantAPI.getFinance()
         if (response.data?.success && response.data?.data) {
           setFinanceData(response.data.data)
-          debugLog('âœ… Finance data fetched:', response.data.data)
-          debugLog('ðŸ“¦ Current cycle orders:', response.data.data?.currentCycle?.orders)
-          debugLog('ðŸ“Š Current cycle totalOrders:', response.data.data?.currentCycle?.totalOrders)
+          debugLog('✅ Finance data fetched:', response.data.data)
+          debugLog('📦 Current cycle orders:', response.data.data?.currentCycle?.orders)
+          debugLog('📊 Current cycle totalOrders:', response.data.data?.currentCycle?.totalOrders)
         }
       } catch (error) {
         // Suppress 401 errors as they're handled by axios interceptor (token refresh/redirect)
         if (error.response?.status !== 401) {
-          debugError('âŒ Error fetching finance data:', error)
+          debugError('❌ Error fetching finance data:', error)
         }
       } finally {
         setLoading(false)
@@ -76,7 +76,7 @@ export default function HubFinance() {
         } catch (error) {
           // Suppress 401 errors as they're handled by axios interceptor
           if (error.response?.status !== 401) {
-            debugError('âŒ Error fetching restaurant data:', error)
+            debugError('❌ Error fetching restaurant data:', error)
           }
         }
       }
@@ -221,16 +221,16 @@ export default function HubFinance() {
       })
       if (response.data?.success && response.data?.data?.pastCycles) {
         setPastCyclesData(response.data.data.pastCycles)
-        debugLog('âœ… Past cycles data fetched:', response.data.data.pastCycles)
-        debugLog('ðŸ“¦ Orders array:', response.data.data.pastCycles?.orders)
-        debugLog('ðŸ“Š Total orders:', response.data.data.pastCycles?.totalOrders)
+        debugLog('✅ Past cycles data fetched:', response.data.data.pastCycles)
+        debugLog('📦 Orders array:', response.data.data.pastCycles?.orders)
+        debugLog('📊 Total orders:', response.data.data.pastCycles?.totalOrders)
       } else {
         setPastCyclesData(null)
       }
     } catch (error) {
       // Suppress 401 errors as they're handled by axios interceptor (token refresh/redirect)
       if (error.response?.status !== 401) {
-        debugError('âŒ Error fetching past cycles data:', error)
+        debugError('❌ Error fetching past cycles data:', error)
       }
       setPastCyclesData(null)
     } finally {
@@ -288,7 +288,7 @@ export default function HubFinance() {
         end: currentCycleDates.end,
         month: currentCycleDates.month,
         year: currentCycleDates.year,
-        estimatedPayout: `â‚¹${(currentCycle.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+        estimatedPayout: `₹${(currentCycle.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
         orders: currentCycle.totalOrders || 0,
         payoutDate: currentCycle.payoutDate ? new Date(currentCycle.payoutDate).toLocaleDateString('en-IN') : "-"
       },
@@ -458,8 +458,8 @@ export default function HubFinance() {
                       <td>${orderDate}</td>
                       <td>${foodItems}</td>
                       <td>${itemQuantities}</td>
-                      <td>â‚¹${orderAmount.toFixed(2)}</td>
-                      <td>â‚¹${earning.toFixed(2)}</td>
+                      <td>₹${orderAmount.toFixed(2)}</td>
+                      <td>₹${earning.toFixed(2)}</td>
                     </tr>
                   `
                 }).join('')}
@@ -467,7 +467,7 @@ export default function HubFinance() {
               <tfoot>
                 <tr style="background-color: #e8f5e9; font-weight: bold;">
                   <td colspan="5" style="text-align: right;">Total Earnings:</td>
-                  <td colspan="2">â‚¹${reportData.allOrders.reduce((sum, order) => sum + (order.payout || order.restaurantEarning || 0), 0).toFixed(2)}</td>
+                  <td colspan="2">₹${reportData.allOrders.reduce((sum, order) => sum + (order.payout || order.restaurantEarning || 0), 0).toFixed(2)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -481,7 +481,7 @@ export default function HubFinance() {
 
         <div class="footer">
           <p>This is an auto-generated report. For detailed information, please visit the Finance section.</p>
-          <p>Total Orders: ${reportData.allOrders?.length || 0} | Total Earnings: â‚¹${reportData.allOrders?.reduce((sum, order) => sum + (order.payout || order.restaurantEarning || 0), 0).toFixed(2) || '0.00'}</p>
+          <p>Total Orders: ${reportData.allOrders?.length || 0} | Total Earnings: ₹${reportData.allOrders?.reduce((sum, order) => sum + (order.payout || order.restaurantEarning || 0), 0).toFixed(2) || '0.00'}</p>
         </div>
       </body>
       </html>
@@ -496,7 +496,7 @@ export default function HubFinance() {
     const reportData = getReportData()
     const htmlContent = generateHTMLContent(reportData)
     
-      debugLog('ðŸ“„ Generating PDF...')
+      debugLog('📄 Generating PDF...')
       
       // Create a temporary hidden iframe to render HTML properly
       const iframe = document.createElement('iframe')
@@ -527,14 +527,14 @@ export default function HubFinance() {
       await new Promise(resolve => setTimeout(resolve, 500))
       
       // Import html2canvas and jsPDF dynamically
-      debugLog('ðŸ“¦ Loading libraries...')
+      debugLog('📦 Loading libraries...')
       const html2canvas = (await import('html2canvas')).default
       const { default: jsPDF } = await import('jspdf')
     
       // Get the body element from iframe
       const iframeBody = iframe.contentDocument.body
       
-      debugLog('ðŸŽ¨ Converting to canvas...')
+      debugLog('🎨 Converting to canvas...')
       // Convert HTML to canvas
       const canvas = await html2canvas(iframeBody, {
         scale: 2,
@@ -546,7 +546,7 @@ export default function HubFinance() {
         height: iframeBody.scrollHeight
       })
       
-      debugLog('âœ… Canvas created:', canvas.width, 'x', canvas.height)
+      debugLog('✅ Canvas created:', canvas.width, 'x', canvas.height)
       
       // Remove temporary iframe
       document.body.removeChild(iframe)
@@ -556,7 +556,7 @@ export default function HubFinance() {
       const pageHeight = 297 // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width
       
-      debugLog('ðŸ“ PDF dimensions:', imgWidth, 'x', imgHeight, 'mm')
+      debugLog('📐 PDF dimensions:', imgWidth, 'x', imgHeight, 'mm')
       
       // Create PDF
       const pdf = new jsPDF('p', 'mm', 'a4')
@@ -577,11 +577,11 @@ export default function HubFinance() {
       
       // Download PDF
       const fileName = `finance-report-${reportData.dateRange.replace(/\s+/g, '-').replace(/'/g, '')}_${new Date().toISOString().split("T")[0]}.pdf`
-      debugLog('ðŸ’¾ Downloading PDF:', fileName)
+      debugLog('💾 Downloading PDF:', fileName)
       pdf.save(fileName)
-      debugLog('âœ… PDF downloaded successfully!')
+      debugLog('✅ PDF downloaded successfully!')
     } catch (error) {
-      debugError('âŒ Error downloading PDF:', error)
+      debugError('❌ Error downloading PDF:', error)
       debugError('Error details:', error.stack)
       alert(`Failed to download PDF: ${error.message}. Please check console for details.`)
     setShowDownloadMenu(false)
@@ -631,7 +631,7 @@ export default function HubFinance() {
                     const shortAddress = address.length > 40 ? address.substring(0, 40) + '...' : address
                     parts.push(shortAddress)
                   }
-                  return parts.length > 0 ? parts.join(' â€¢ ') : 'Loading...'
+                  return parts.length > 0 ? parts.join(' • ') : 'Loading...'
                 })()}
               </p>
             </div>
@@ -699,7 +699,7 @@ export default function HubFinance() {
                 ) : (
                   <>
                     <p className="text-4xl font-bold text-gray-900 mb-2">
-                      â‚¹{(financeData?.currentCycle?.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      ₹{(financeData?.currentCycle?.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
                     <p className="text-sm text-gray-600 mb-4">
                       {financeData?.currentCycle?.totalOrders || 0} {financeData?.currentCycle?.totalOrders === 1 ? 'order' : 'orders'}
@@ -929,7 +929,7 @@ export default function HubFinance() {
                               </div>
                               <div className="text-right ml-4">
                                 <p className="text-sm font-bold text-gray-900">
-                                  â‚¹{(order.payout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ₹{(order.payout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   Earning
@@ -956,7 +956,7 @@ export default function HubFinance() {
                               </div>
                               <div className="text-right ml-4">
                                 <p className="text-sm font-bold text-gray-900">
-                                  â‚¹{(order.payout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                  ₹{(order.payout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   Earning
@@ -985,15 +985,15 @@ export default function HubFinance() {
                 </div>
                 <div className="rounded-md bg-gray-50 p-3">
                   <p className="text-xs text-gray-600">Taxable subtotal</p>
-                  <p className="text-base font-semibold text-gray-900">â‚¹{invoiceSummary.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-base font-semibold text-gray-900">₹{invoiceSummary.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="rounded-md bg-gray-50 p-3">
                   <p className="text-xs text-gray-600">Taxes</p>
-                  <p className="text-base font-semibold text-gray-900">â‚¹{invoiceSummary.taxes.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-base font-semibold text-gray-900">₹{invoiceSummary.taxes.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
                 <div className="rounded-md bg-gray-50 p-3">
                   <p className="text-xs text-gray-600">Gross amount</p>
-                  <p className="text-base font-semibold text-gray-900">â‚¹{invoiceSummary.gross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                  <p className="text-base font-semibold text-gray-900">₹{invoiceSummary.gross.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                 </div>
               </div>
             </div>
@@ -1017,7 +1017,7 @@ export default function HubFinance() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-semibold text-gray-900">
-                            â‚¹{(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            ₹{(order.totalAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </p>
                           <p className="text-xs text-gray-500">Total</p>
                         </div>
@@ -1065,7 +1065,7 @@ export default function HubFinance() {
                 
                 <div className="mb-4">
                   <p className="text-sm text-gray-600 mb-2">
-                    Available Balance: <span className="font-semibold text-gray-900">â‚¹{(financeData?.currentCycle?.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    Available Balance: <span className="font-semibold text-gray-900">₹{(financeData?.currentCycle?.estimatedPayout || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </p>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Enter Amount to Withdraw

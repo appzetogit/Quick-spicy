@@ -55,9 +55,9 @@ export default function EarningAddonHistory() {
   const fetchHistory = async () => {
     try {
       setIsLoading(true)
-      debugLog('ðŸ”„ Fetching earning addon history...')
+      debugLog('🔄 Fetching earning addon history...')
       const response = await adminAPI.getEarningAddonHistory()
-      debugLog('ðŸ“¦ API Response:', {
+      debugLog('📦 API Response:', {
         success: response.data.success,
         message: response.data.message,
         dataKeys: response.data.data ? Object.keys(response.data.data) : [],
@@ -67,11 +67,11 @@ export default function EarningAddonHistory() {
       
       if (response.data.success) {
         const historyData = response.data.data.history || []
-        debugLog('âœ… Earning Addon History fetched:', historyData.length, 'records')
+        debugLog('✅ Earning Addon History fetched:', historyData.length, 'records')
         
         // Log sample data for debugging
         if (historyData.length > 0) {
-          debugLog('ðŸ“‹ Sample history record:', {
+          debugLog('📋 Sample history record:', {
             deliveryman: historyData[0].deliveryman,
             offerTitle: historyData[0].offerTitle,
             status: historyData[0].status,
@@ -82,17 +82,17 @@ export default function EarningAddonHistory() {
         
         setHistory(historyData)
         if (historyData.length === 0) {
-          debugLog('â„¹ï¸ No history records found in database')
+          debugLog('ℹ️ No history records found in database')
           toast.info("No earning addon history found. History will appear when delivery boys complete offers.")
         } else {
-          debugLog(`âœ… Successfully loaded ${historyData.length} history records`)
+          debugLog(`✅ Successfully loaded ${historyData.length} history records`)
         }
       } else {
-        debugError('âŒ API returned unsuccessful response:', response.data)
+        debugError('❌ API returned unsuccessful response:', response.data)
         toast.error(response.data.message || "Failed to fetch earning addon history")
       }
     } catch (error) {
-      debugError("âŒ Error fetching earning addon history:", error)
+      debugError("❌ Error fetching earning addon history:", error)
       debugError("Error details:", {
         message: error.message,
         response: error.response?.data,
@@ -231,13 +231,13 @@ export default function EarningAddonHistory() {
   const handleCheckAllCompletions = async () => {
     try {
       setIsCheckingCompletions(true)
-      debugLog('ðŸ”„ Checking completions for all delivery partners...')
+      debugLog('🔄 Checking completions for all delivery partners...')
       
       // Get all delivery partners
       const partnersResponse = await adminAPI.getDeliveryPartners({ limit: 1000 })
       const partners = partnersResponse.data?.data?.deliveryPartners || []
       
-      debugLog(`ðŸ“‹ Found ${partners.length} delivery partners to check`)
+      debugLog(`📋 Found ${partners.length} delivery partners to check`)
       
       let totalCompletions = 0
       let checkedCount = 0
@@ -250,7 +250,7 @@ export default function EarningAddonHistory() {
             const completions = response.data.data.completionsFound || 0
             if (completions > 0) {
               totalCompletions += completions
-              debugLog(`âœ… Found ${completions} completions for ${partner.name}`)
+              debugLog(`✅ Found ${completions} completions for ${partner.name}`)
             }
           }
           checkedCount++
@@ -259,7 +259,7 @@ export default function EarningAddonHistory() {
         }
       }
       
-      debugLog(`âœ… Checked ${checkedCount} delivery partners, found ${totalCompletions} new completions`)
+      debugLog(`✅ Checked ${checkedCount} delivery partners, found ${totalCompletions} new completions`)
       
       if (totalCompletions > 0) {
         toast.success(`Found ${totalCompletions} new completion(s)! Refreshing history...`)
@@ -421,7 +421,7 @@ export default function EarningAddonHistory() {
                     <tr>
                       <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center gap-2">
-                          <div className="text-slate-400 text-4xl mb-2">ðŸ“‹</div>
+                          <div className="text-slate-400 text-4xl mb-2">📋</div>
                           <p className="text-slate-500 font-medium">No earning addon history found</p>
                           <p className="text-sm text-slate-400 mt-1">
                             {searchQuery ? 'Try adjusting your search query' : 'History will appear when delivery boys complete earning addon offers'}
@@ -475,7 +475,7 @@ export default function EarningAddonHistory() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
                               <DollarSign className="w-4 h-4 text-emerald-500" />
-                              <span className="text-sm font-medium text-slate-900">â‚¹{item.totalEarning?.toFixed(2) || item.earningAmount?.toFixed(2) || '0.00'}</span>
+                              <span className="text-sm font-medium text-slate-900">₹{item.totalEarning?.toFixed(2) || item.earningAmount?.toFixed(2) || '0.00'}</span>
                             </div>
                           </td>
                         )}
@@ -585,7 +585,7 @@ export default function EarningAddonHistory() {
                   <div className="flex-1">
                     <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Amount to Credit</p>
                     <p className="text-2xl font-bold text-emerald-600">
-                      â‚¹{selectedHistory.totalEarning?.toFixed(2) || selectedHistory.earningAmount?.toFixed(2) || '0.00'}
+                      ₹{selectedHistory.totalEarning?.toFixed(2) || selectedHistory.earningAmount?.toFixed(2) || '0.00'}
                     </p>
                   </div>
                 </div>

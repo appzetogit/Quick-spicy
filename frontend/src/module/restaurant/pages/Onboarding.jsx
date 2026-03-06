@@ -1070,7 +1070,7 @@ export default function RestaurantOnboarding() {
       validationErrors = validateStep3()
     } else if (step === 4) {
       validationErrors = validateStep4()
-      debugLog('ðŸ” Step 4 validation:', {
+      debugLog('🔍 Step 4 validation:', {
         step4,
         errors: validationErrors,
         estimatedDeliveryTime: step4.estimatedDeliveryTime,
@@ -1089,7 +1089,7 @@ export default function RestaurantOnboarding() {
           })
         }, index * 100)
       })
-      debugLog('âŒ Validation failed:', validationErrors)
+      debugLog('❌ Validation failed:', validationErrors)
       return
     }
 
@@ -1166,7 +1166,7 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 2,
         }
-        debugLog('ðŸ“¤ Step2 payload:', {
+        debugLog('📤 Step2 payload:', {
           menuImageUrlsCount: payload.step2.menuImageUrls.length,
           hasProfileImage: !!payload.step2.profileImageUrl,
           cuisines: payload.step2.cuisines,
@@ -1175,7 +1175,7 @@ export default function RestaurantOnboarding() {
         })
 
         const response = await api.put("/restaurant/onboarding", payload)
-        debugLog('âœ… Step2 response:', response?.data)
+        debugLog('✅ Step2 response:', response?.data)
 
         // Verify response is successful
         if (!response || !response.data) {
@@ -1185,12 +1185,12 @@ export default function RestaurantOnboarding() {
         // After step2, also update restaurant schema with step2 data
         // This ensures data is saved immediately, not just in onboarding subdocument
         if (response?.data?.data?.restaurant) {
-          debugLog('âœ… Step2 data saved and restaurant updated')
+          debugLog('✅ Step2 data saved and restaurant updated')
         }
 
         // Only proceed to step 3 if save was successful
         if (response?.data?.data?.onboarding || response?.data?.data) {
-          debugLog('âœ… Step2 completed successfully, moving to step 3')
+          debugLog('✅ Step2 completed successfully, moving to step 3')
           setStep(3)
         } else {
           throw new Error('Failed to save step2 data')
@@ -1304,7 +1304,7 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 3,
         }
-        debugLog('ðŸ“¤ Step3 payload:', {
+        debugLog('📤 Step3 payload:', {
           hasPan: !!payload.step3.pan.panNumber,
           hasGst: payload.step3.gst.isRegistered,
           hasFssai: !!payload.step3.fssai.registrationNumber,
@@ -1312,14 +1312,14 @@ export default function RestaurantOnboarding() {
         })
 
         const response = await api.put("/restaurant/onboarding", payload)
-        debugLog('âœ… Step3 response:', response?.data)
+        debugLog('✅ Step3 response:', response?.data)
 
         if (response?.data?.data?.onboarding) {
-          debugLog('âœ… Step3 data saved successfully')
+          debugLog('✅ Step3 data saved successfully')
         }
         setStep(4)
       } else if (step === 4) {
-        debugLog('ðŸ“¤ Submitting Step 4:', step4)
+        debugLog('📤 Submitting Step 4:', step4)
         const payload = {
           step4: {
             estimatedDeliveryTime: step4.estimatedDeliveryTime,
@@ -1329,9 +1329,9 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 4,
         }
-        debugLog('ðŸ“¤ Step 4 payload:', payload)
+        debugLog('📤 Step 4 payload:', payload)
         const response = await api.put("/restaurant/onboarding", payload)
-        debugLog('âœ… Step4 completed, response:', response?.data)
+        debugLog('✅ Step4 completed, response:', response?.data)
 
         // Verify response is successful
         if (!response || !response.data) {
@@ -1343,12 +1343,12 @@ export default function RestaurantOnboarding() {
         clearOnboardingFileCache()
 
         // Show success message briefly, then navigate
-        debugLog('âœ… Onboarding completed successfully, redirecting to restaurant home...')
+        debugLog('✅ Onboarding completed successfully, redirecting to restaurant home...')
 
         // Wait a moment to ensure data is saved, then navigate
         setTimeout(() => {
           // Navigate to restaurant home page after onboarding completion
-          debugLog('ðŸš€ Navigating to restaurant home page...')
+          debugLog('🚀 Navigating to restaurant home page...')
           navigate("/restaurant", { replace: true })
         }, 800)
       }
@@ -1547,7 +1547,7 @@ export default function RestaurantOnboarding() {
               <div className="flex flex-col">
                 <span className="text-xs font-medium text-gray-900">Upload menu images</span>
                 <span className="text-[11px] text-gray-500">
-                  JPG, PNG, WebP â€¢ You can select multiple files
+                  JPG, PNG, WebP • You can select multiple files
                 </span>
               </div>
             </div>
@@ -1581,7 +1581,7 @@ export default function RestaurantOnboarding() {
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
                 if (!files.length) return
-                debugLog('ðŸ“¸ Menu images selected:', files.length, 'files')
+                debugLog('📸 Menu images selected:', files.length, 'files')
                 setStep2((prev) => ({
                   ...prev,
                   menuImages: [...(prev.menuImages || []), ...files], // Append new files to existing ones
@@ -1737,7 +1737,7 @@ export default function RestaurantOnboarding() {
             onChange={(e) => {
               const file = e.target.files?.[0] || null
               if (file) {
-                debugLog('ðŸ“¸ Profile image selected:', file.name)
+                debugLog('📸 Profile image selected:', file.name)
                 setStep2((prev) => ({
                   ...prev,
                   profileImage: file,
@@ -2237,7 +2237,7 @@ export default function RestaurantOnboarding() {
         </div>
 
         <div>
-          <Label className="text-xs text-gray-700">Featured Dish Price (â‚¹)*</Label>
+          <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
           <Input
             type="text"
             inputMode="numeric"

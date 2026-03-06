@@ -82,7 +82,7 @@ export default function LandingPageSettings({ type = "admin" }) {
     { id: "en", label: "English(EN)" },
     { id: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
     { id: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
-    { id: "es", label: "Spanish - espaÃ±ol(ES)" },
+    { id: "es", label: "Spanish - español(ES)" },
   ];
 
   const handleImageUpload = (e, setter, field) => {

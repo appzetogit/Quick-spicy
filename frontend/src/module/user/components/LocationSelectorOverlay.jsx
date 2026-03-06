@@ -90,9 +90,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   // Debug: Log API key status (only first few characters for security)
   useEffect(() => {
     if (GOOGLE_MAPS_API_KEY) {
-      debugLog("âœ… Google Maps API Key loaded:", GOOGLE_MAPS_API_KEY.substring(0, 10) + "...")
+      debugLog("✅ Google Maps API Key loaded:", GOOGLE_MAPS_API_KEY.substring(0, 10) + "...")
     } else {
-      debugWarn("âš ï¸ Google Maps API Key NOT found! Please set it in ENV Setup.")
+      debugWarn("⚠️ Google Maps API Key NOT found! Please set it in ENV Setup.")
     }
   }, [GOOGLE_MAPS_API_KEY])
 
@@ -275,7 +275,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       const accuracyRadius = Math.max(location.accuracy || 50, 20)
 
-      debugLog("ðŸ”µ Updating blue dot from location hook:", {
+      debugLog("🔵 Updating blue dot from location hook:", {
         position: userPos,
         accuracy: location.accuracy,
         radius: accuracyRadius
@@ -293,7 +293,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             userLocationMarkerRef.current.setMap(googleMapRef.current)
           }
           userLocationMarkerRef.current.setVisible(true)
-          debugLog("âœ… Updated existing blue dot marker")
+          debugLog("✅ Updated existing blue dot marker")
         } catch (e) {
           debugError("Error updating blue dot marker:", e)
           // Recreate if update fails
@@ -321,7 +321,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             title: "Your location"
           })
           userLocationMarkerRef.current = blueDotMarker
-          debugLog("âœ… Created blue dot marker from location hook")
+          debugLog("✅ Created blue dot marker from location hook")
         } catch (e) {
           debugError("Error creating blue dot marker:", e)
         }
@@ -338,7 +338,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             blueDotCircleRef.current.setMap(googleMapRef.current)
           }
           blueDotCircleRef.current.setVisible(true)
-          debugLog("âœ… Updated existing accuracy circle")
+          debugLog("✅ Updated existing accuracy circle")
         } catch (e) {
           debugError("Error updating accuracy circle:", e)
           // Recreate if update fails
@@ -362,7 +362,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             visible: true
           })
           blueDotCircleRef.current = blueDot
-          debugLog("âœ… Created accuracy circle from location hook")
+          debugLog("✅ Created accuracy circle from location hook")
         } catch (e) {
           debugError("Error creating accuracy circle:", e)
         }
@@ -375,7 +375,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         const markerOnMap = userLocationMarkerRef.current?.getMap() === googleMapRef.current
         const circleOnMap = blueDotCircleRef.current?.getMap() === googleMapRef.current
 
-        debugLog("ðŸ” Final Blue Dot Status:", {
+        debugLog("🔍 Final Blue Dot Status:", {
           markerExists: !!userLocationMarkerRef.current,
           circleExists: !!blueDotCircleRef.current,
           markerVisible,
@@ -386,9 +386,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       }, 500)
     }
   }, [
-    location?.latitude ?? null,
-    location?.longitude ?? null,
-    location?.accuracy ?? null
+location?.latitude || null,
+location?.longitude || null,
+    location?.accuracy ? null
   ])
 
   // Initialize Google Maps with Loader (ZOMATO-STYLE)
@@ -464,7 +464,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
           const accuracyRadius = Math.max(accuracyValue || 50, 20) // Minimum 20m
 
-          debugLog("ðŸ”µ Creating/updating blue dot:", {
+          debugLog("🔵 Creating/updating blue dot:", {
             position: userPos,
             accuracy: accuracyValue,
             radius: accuracyRadius
@@ -521,7 +521,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           blueDotCircleRef.current = accuracyCircle
           userLocationMarkerRef.current = blueDotMarker
 
-          debugLog("âœ…âœ…âœ… Blue dot and accuracy circle created successfully:", {
+          debugLog("✅✅✅ Blue dot and accuracy circle created successfully:", {
             marker: blueDotMarker,
             circle: accuracyCircle,
             radius: accuracyRadius,
@@ -543,7 +543,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               try {
                 userLocationMarkerRef.current.setMap(map)
                 userLocationMarkerRef.current.setVisible(true)
-                debugLog("âœ… Blue dot marker visibility fixed")
+                debugLog("✅ Blue dot marker visibility fixed")
               } catch (e) {
                 // Silently handle - marker might not be ready yet
               }
@@ -554,7 +554,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               try {
                 blueDotCircleRef.current.setMap(map)
                 blueDotCircleRef.current.setVisible(true)
-                debugLog("âœ… Accuracy circle visibility fixed")
+                debugLog("✅ Accuracy circle visibility fixed")
               } catch (e) {
                 // Silently handle - circle might not be ready yet
               }
@@ -564,7 +564,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
         // Wait for map to be fully ready before getting location
         google.maps.event.addListenerOnce(map, 'idle', () => {
-          debugLog("ðŸ—ºï¸ Map is ready, requesting user location...")
+          debugLog("🗺️ Map is ready, requesting user location...")
 
           // Get user's current location and show Blue Dot
           if (navigator.geolocation) {
@@ -590,7 +590,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             const watchId = navigator.geolocation.watchPosition(
               (position) => {
                 if (!isMounted) return
-                debugLog("ðŸ“ Live location update:", {
+                debugLog("📍 Live location update:", {
                   lat: position.coords.latitude,
                   lng: position.coords.longitude,
                   accuracy: position.coords.accuracy
@@ -697,7 +697,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       // Request location - this will automatically prompt for permission if needed
       // Clear any cached location first to ensure fresh coordinates
-      debugLog("ðŸ”„ Requesting fresh location (clearing cache and forcing fresh GPS)...")
+      debugLog("🔄 Requesting fresh location (clearing cache and forcing fresh GPS)...")
 
       // Increase timeout to 15 seconds to allow GPS to get accurate fix
       // The getLocation function already has a 15-second timeout, so we match it
@@ -715,7 +715,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           throw new Error("Invalid location data received")
         }
       } catch (raceError) {
-        debugWarn("âš ï¸ Location request failed or timed out:", raceError.message)
+        debugWarn("⚠️ Location request failed or timed out:", raceError.message)
 
         // If timeout or error, try to use cached location as fallback
         const stored = localStorage.getItem("userLocation")
@@ -723,7 +723,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           try {
             const cachedLocation = JSON.parse(stored)
             if (cachedLocation?.latitude && cachedLocation?.longitude) {
-              debugLog("ðŸ“ Using cached location as fallback:", cachedLocation)
+              debugLog("📍 Using cached location as fallback:", cachedLocation)
               locationData = cachedLocation
 
               // Show info toast that we're using cached location
@@ -735,7 +735,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               throw new Error("Invalid cached location")
             }
           } catch (cacheErr) {
-            debugError("âŒ Failed to parse cached location:", cacheErr)
+            debugError("❌ Failed to parse cached location:", cacheErr)
             // Determine specific error message
             let errorMessage = "Could not get location. Please try again."
             if (raceError.message.includes("permission") || raceError.message.includes("denied")) {
@@ -782,7 +782,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         return
       }
 
-      debugLog("âœ… Fresh location received:", {
+      debugLog("✅ Fresh location received:", {
         formattedAddress: locationData?.formattedAddress,
         address: locationData?.address,
         city: locationData?.city,
@@ -798,14 +798,14 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       if (!locationData?.formattedAddress ||
         locationData.formattedAddress === "Select location" ||
         locationData.formattedAddress.split(',').length < 4) {
-        debugWarn("âš ï¸ Location received but address is incomplete. Will try to get better address from map...")
+        debugWarn("⚠️ Location received but address is incomplete. Will try to get better address from map...")
         // Don't retry immediately - let the map handle address fetching
         // The address will be fetched when map moves to the location
       }
 
       // CRITICAL: Ensure location state is updated in the hook
       // The requestLocation function already updates the state, but we verify here
-      debugLog("âœ…âœ…âœ… Final location data to be saved:", {
+      debugLog("✅✅✅ Final location data to be saved:", {
         formattedAddress: locationData?.formattedAddress,
         address: locationData?.address,
         mainTitle: locationData?.mainTitle,
@@ -829,7 +829,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             street: locationData.street,
             streetNumber: locationData.streetNumber
           })
-          debugLog("âœ… Location saved to backend successfully")
+          debugLog("✅ Location saved to backend successfully")
         } catch (backendError) {
           // Only log non-network errors (network errors are handled by axios interceptor)
           if (backendError.code !== 'ERR_NETWORK' && backendError.message !== 'Network Error') {
@@ -965,10 +965,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         try {
           if (googleMapRef.current && typeof window.google !== 'undefined' && window.google.maps) {
             window.google.maps.event.trigger(googleMapRef.current, 'resize');
-            debugLog("âœ… Google Map resized (container change)");
+            debugLog("✅ Google Map resized (container change)");
           }
         } catch (error) {
-          debugWarn("âš ï¸ Error resizing map:", error);
+          debugWarn("⚠️ Error resizing map:", error);
         }
       };
 
@@ -988,17 +988,17 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   // Track user's live location with blue dot indicator
   const trackUserLocation = (mapInstance, sdkInstance) => {
     if (!navigator.geolocation) {
-      debugWarn("âš ï¸ Geolocation is not supported by this browser")
+      debugWarn("⚠️ Geolocation is not supported by this browser")
       return
     }
 
-    debugLog("ðŸ”µðŸ”µðŸ”µ STARTING USER LOCATION TRACKING...")
-    debugLog("ðŸ”µ Map instance:", mapInstance)
-    debugLog("ðŸ”µ SDK instance:", sdkInstance)
-    debugLog("ðŸ”µ SDK instance type:", typeof sdkInstance)
-    debugLog("ðŸ”µ SDK instance keys:", sdkInstance ? Object.keys(sdkInstance).slice(0, 20) : 'null')
-    debugLog("ðŸ”µ Has addMarker:", !!(sdkInstance && sdkInstance.addMarker))
-    debugLog("ðŸ”µ Has Marker:", !!(sdkInstance && sdkInstance.Marker))
+    debugLog("🔵🔵🔵 STARTING USER LOCATION TRACKING...")
+    debugLog("🔵 Map instance:", mapInstance)
+    debugLog("🔵 SDK instance:", sdkInstance)
+    debugLog("🔵 SDK instance type:", typeof sdkInstance)
+    debugLog("🔵 SDK instance keys:", sdkInstance ? Object.keys(sdkInstance).slice(0, 20) : 'null')
+    debugLog("🔵 Has addMarker:", !!(sdkInstance && sdkInstance.addMarker))
+    debugLog("🔵 Has Marker:", !!(sdkInstance && sdkInstance.Marker))
 
     // Clear any existing watchPosition
     if (watchPositionIdRef.current !== null) {
@@ -1037,12 +1037,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         if (distance < 10) {
           // Only log occasionally to avoid console spam
           if (Math.random() < 0.1) { // Log 10% of skipped updates
-            debugLog(`â­ï¸ Skipping location update - only moved ${distance.toFixed(2)}m (threshold: 10m)`)
+            debugLog(`⏭️ Skipping location update - only moved ${distance.toFixed(2)}m (threshold: 10m)`)
           }
           return
         }
 
-        debugLog(`ðŸ“ Location changed by ${distance.toFixed(2)}m - updating marker`)
+        debugLog(`📍 Location changed by ${distance.toFixed(2)}m - updating marker`)
       }
 
       // Update last location
@@ -1075,7 +1075,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           opacity: 1;
           cursor: default;
         `
-        debugLog("âœ… Created blue dot element with styles")
+        debugLog("✅ Created blue dot element with styles")
       } else {
         // Ensure existing element styles are correct
         el.style.display = 'block'
@@ -1089,10 +1089,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         try {
           if (userLocationAccuracyCircleRef.current.update) {
             userLocationAccuracyCircleRef.current.update(latitude, longitude, accuracy)
-            debugLog("âœ… Updated accuracy circle position and radius")
+            debugLog("✅ Updated accuracy circle position and radius")
           }
         } catch (circleError) {
-          debugWarn("âš ï¸ Error updating accuracy circle:", circleError.message)
+          debugWarn("⚠️ Error updating accuracy circle:", circleError.message)
         }
       }
 
@@ -1101,22 +1101,22 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         try {
           if (userLocationMarkerRef.current.setLngLat) {
             userLocationMarkerRef.current.setLngLat([longitude, latitude])
-            debugLog("âœ… Updated existing marker position")
+            debugLog("✅ Updated existing marker position")
           } else if (userLocationMarkerRef.current.setPosition) {
             userLocationMarkerRef.current.setPosition([longitude, latitude])
-            debugLog("âœ… Updated existing marker position (setPosition)")
+            debugLog("✅ Updated existing marker position (setPosition)")
           } else {
-            debugWarn("âš ï¸ Marker exists but no update method found")
+            debugWarn("⚠️ Marker exists but no update method found")
           }
         } catch (error) {
-          debugError("âŒ Error updating user location marker:", error)
+          debugError("❌ Error updating user location marker:", error)
         }
       } else {
         try {
           // Try different marker creation methods - EXACT SAME PATTERN AS GREEN PIN
           let newMarker = null
 
-          debugLog("ðŸ”µ Creating blue dot marker with:", {
+          debugLog("🔵 Creating blue dot marker with:", {
             hasSdkInstance: !!sdkInstance,
             hasMapInstance: !!mapInstance,
             sdkAddMarker: !!(sdkInstance && sdkInstance.addMarker),
@@ -1126,47 +1126,47 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
           // Method 1: Try SDK's addMarker method (EXACT SAME AS GREEN PIN)
           if (sdkInstance && sdkInstance.addMarker) {
-            debugLog("ðŸ”µ Method 1: Using sdkInstance.addMarker (same as green pin)")
+            debugLog("🔵 Method 1: Using sdkInstance.addMarker (same as green pin)")
             try {
               newMarker = sdkInstance.addMarker({
                 element: el,
                 anchor: 'center',
                 draggable: false
               }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("âœ…âœ…âœ… Blue dot created using addMarker method:", newMarker)
+              debugLog("✅✅✅ Blue dot created using addMarker method:", newMarker)
             } catch (err) {
-              debugError("âŒ Error in addMarker:", err)
+              debugError("❌ Error in addMarker:", err)
             }
           }
           // Method 2: Try SDK's Marker class (EXACT SAME AS GREEN PIN)
           else if (sdkInstance && sdkInstance.Marker) {
-            debugLog("ðŸ”µ Method 2: Using sdkInstance.Marker (same as green pin)")
+            debugLog("🔵 Method 2: Using sdkInstance.Marker (same as green pin)")
             try {
               newMarker = new sdkInstance.Marker({
                 element: el,
                 anchor: 'center',
                 draggable: false
               }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("âœ…âœ…âœ… Blue dot created using Marker class:", newMarker)
+              debugLog("✅✅✅ Blue dot created using Marker class:", newMarker)
             } catch (err) {
-              debugError("âŒ Error in Marker constructor:", err)
+              debugError("❌ Error in Marker constructor:", err)
             }
           }
           // Method 3: Try using MapLibre Marker (fallback - same as green pin)
           else if (window.maplibregl && window.maplibregl.Marker) {
-            debugLog("ðŸ”µ Method 3: Using maplibregl.Marker (fallback)")
+            debugLog("🔵 Method 3: Using maplibregl.Marker (fallback)")
             try {
               newMarker = new window.maplibregl.Marker({
                 element: el,
                 anchor: 'center'
               }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("âœ… Blue dot created using maplibregl.Marker")
+              debugLog("✅ Blue dot created using maplibregl.Marker")
             } catch (err) {
-              debugError("âŒ Error in maplibregl.Marker:", err)
+              debugError("❌ Error in maplibregl.Marker:", err)
             }
           }
           else {
-            debugError("âŒâŒâŒ NO MARKER API FOUND for blue dot. Available:", {
+            debugError("❌❌❌ NO MARKER API FOUND for blue dot. Available:", {
               sdkInstance: !!sdkInstance,
               sdkAddMarker: !!(sdkInstance && sdkInstance.addMarker),
               sdkMarker: !!(sdkInstance && sdkInstance.Marker),
@@ -1178,19 +1178,19 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
           if (newMarker) {
             userLocationMarkerRef.current = newMarker
-            debugLog("âœ… User location marker (blue dot) added successfully:", newMarker)
+            debugLog("✅ User location marker (blue dot) added successfully:", newMarker)
 
             // Verify blue dot is visible (same pattern as green pin)
             setTimeout(() => {
               const markerEl = newMarker.getElement?.() || newMarker._element
               if (markerEl) {
-                debugLog("âœ… Blue dot element found on map:", markerEl)
+                debugLog("✅ Blue dot element found on map:", markerEl)
                 // Ensure element is visible (same as green pin)
                 markerEl.style.display = 'block'
                 markerEl.style.visibility = 'visible'
                 markerEl.style.opacity = '1'
                 markerEl.style.zIndex = '1001'
-                debugLog("âœ… Blue dot visibility ensured")
+                debugLog("✅ Blue dot visibility ensured")
 
                 // Also check the inner element (the actual blue dot div)
                 const innerEl = markerEl.querySelector('.user-location-marker') || markerEl
@@ -1198,10 +1198,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                   innerEl.style.display = 'block'
                   innerEl.style.visibility = 'visible'
                   innerEl.style.opacity = '1'
-                  debugLog("âœ… Blue dot inner element styles ensured")
+                  debugLog("✅ Blue dot inner element styles ensured")
                 }
               } else {
-                debugWarn("âš ï¸ Blue dot element not found in DOM")
+                debugWarn("⚠️ Blue dot element not found in DOM")
               }
             }, 500)
 
@@ -1210,7 +1210,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               const markerEl = newMarker.getElement?.() || newMarker._element
               if (markerEl) {
                 const computedStyle = window.getComputedStyle(markerEl)
-                debugLog("ðŸ” Blue dot computed styles:", {
+                debugLog("🔍 Blue dot computed styles:", {
                   display: computedStyle.display,
                   visibility: computedStyle.visibility,
                   opacity: computedStyle.opacity,
@@ -1311,17 +1311,17 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                   }
                 }
 
-                debugLog("âœ… Accuracy circle created around blue dot:", { radius: accuracyRadius })
+                debugLog("✅ Accuracy circle created around blue dot:", { radius: accuracyRadius })
               }
             } catch (circleError) {
-              debugWarn("âš ï¸ Could not create accuracy circle (non-critical):", circleError.message)
+              debugWarn("⚠️ Could not create accuracy circle (non-critical):", circleError.message)
             }
 
             // Don't auto-fly to user location - let green pin stay at center
             // User can use "Use current location" button if needed
           } else {
-            debugError("âŒ Failed to create blue dot marker - all methods failed")
-            debugError("ðŸ” Debug info:", {
+            debugError("❌ Failed to create blue dot marker - all methods failed")
+            debugError("🔍 Debug info:", {
               sdkInstance: !!sdkInstance,
               mapInstance: !!mapInstance,
               element: !!el,
@@ -1330,7 +1330,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             })
           }
         } catch (markerError) {
-          debugError("âŒ Could not create user location marker:", markerError)
+          debugError("❌ Could not create user location marker:", markerError)
           debugError("Error details:", {
             message: markerError.message,
             stack: markerError.stack,
@@ -1351,14 +1351,14 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
     // First, try to get current position immediately
     // Use a small delay to ensure map is fully ready
-    debugLog("ðŸ”µ About to request geolocation...")
+    debugLog("🔵 About to request geolocation...")
     setTimeout(() => {
-      debugLog("ðŸ”µ Requesting geolocation with getCurrentPosition...")
+      debugLog("🔵 Requesting geolocation with getCurrentPosition...")
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude, heading } = position.coords
-          debugLog("ðŸ“ðŸ“ðŸ“ Initial location received:", { latitude, longitude, heading })
-          debugLog("ðŸ”µ Calling createOrUpdateMarker with:", { latitude, longitude, heading })
+          debugLog("📍📍📍 Initial location received:", { latitude, longitude, heading })
+          debugLog("🔵 Calling createOrUpdateMarker with:", { latitude, longitude, heading })
           createOrUpdateMarker(latitude, longitude, heading, position.coords.accuracy)
 
           // Then start watching for updates (with throttling)
@@ -1381,7 +1381,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                     latitude,
                     longitude
                   ) >= 10) {
-                  debugLog("ðŸ“ Location update (throttled):", { latitude, longitude, heading })
+                  debugLog("📍 Location update (throttled):", { latitude, longitude, heading })
                 }
                 createOrUpdateMarker(latitude, longitude, heading, accuracy)
               }, 2000) // Wait 2 seconds before processing update
@@ -1392,9 +1392,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                 // Timeout - silently ignore, will retry automatically
                 return
               } else if (error.code === 1) {
-                debugWarn("âš ï¸ Location permission denied by user")
+                debugWarn("⚠️ Location permission denied by user")
               } else if (error.code === 2) {
-                debugWarn("âš ï¸ Location unavailable")
+                debugWarn("⚠️ Location unavailable")
               }
               // Don't log timeout errors repeatedly
             },
@@ -1404,13 +1404,13 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               maximumAge: 60000 // Allow cached location up to 1 minute old
             }
           )
-          debugLog("âœ… watchPosition started, ID:", watchPositionIdRef.current)
+          debugLog("✅ watchPosition started, ID:", watchPositionIdRef.current)
         },
         (error) => {
           // Suppress timeout errors - they're non-critical
           if (error.code === 3) {
             // Timeout - try to use cached location or continue without location
-            debugWarn("âš ï¸ Location request timeout - will retry or use cached location")
+            debugWarn("⚠️ Location request timeout - will retry or use cached location")
 
             // Try to get cached location from localStorage
             try {
@@ -1418,7 +1418,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               if (cachedLocation) {
                 const location = JSON.parse(cachedLocation)
                 if (location.latitude && location.longitude) {
-                  debugLog("ðŸ“ Using cached location due to timeout:", location)
+                  debugLog("📍 Using cached location due to timeout:", location)
                   createOrUpdateMarker(location.latitude, location.longitude, null, location.accuracy)
                 }
               }
@@ -1426,12 +1426,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               // Ignore cache errors
             }
           } else if (error.code === 1) {
-            debugWarn("âš ï¸ Location permission denied")
+            debugWarn("⚠️ Location permission denied")
           } else if (error.code === 2) {
-            debugWarn("âš ï¸ Location unavailable")
+            debugWarn("⚠️ Location unavailable")
           } else {
             // Only log non-timeout errors
-            debugWarn("âš ï¸ Location error (code:", error.code + "):", error.message)
+            debugWarn("⚠️ Location error (code:", error.code + "):", error.message)
           }
 
           // Even if initial location fails, try watchPosition with less strict options
@@ -1454,7 +1454,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                     latitude,
                     longitude
                   ) >= 10) {
-                  debugLog("ðŸ“ Location update (after initial error, throttled):", { latitude, longitude, heading })
+                  debugLog("📍 Location update (after initial error, throttled):", { latitude, longitude, heading })
                 }
                 createOrUpdateMarker(latitude, longitude, heading, accuracy)
               }, 2000) // Wait 2 seconds before processing update
@@ -1465,7 +1465,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                 // Timeout - silently ignore, will retry
                 return
               } else if (error.code === 1) {
-                debugWarn("âš ï¸ Please enable location permission in browser settings")
+                debugWarn("⚠️ Please enable location permission in browser settings")
               }
               // Don't log other errors repeatedly
             },
@@ -1475,7 +1475,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               maximumAge: 60000 // Allow cached location up to 1 minute old
             }
           )
-          debugLog("âœ… watchPosition started (fallback), ID:", watchPositionIdRef.current)
+          debugLog("✅ watchPosition started (fallback), ID:", watchPositionIdRef.current)
         },
         {
           enableHighAccuracy: false, // Less strict for better compatibility
@@ -1485,7 +1485,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       )
     }, 500) // Small delay to ensure map is ready
 
-    debugLog("âœ… watchPosition started, ID:", watchPositionIdRef.current)
+    debugLog("✅ watchPosition started, ID:", watchPositionIdRef.current)
   }
 
   const handleMapMoveEnd = async (lat, lng) => {
@@ -1498,7 +1498,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       const lastLat = parseFloat(lastReverseGeocodeCoordsRef.current.lat.toFixed(6))
       const lastLng = parseFloat(lastReverseGeocodeCoordsRef.current.lng.toFixed(6))
       if (lastLat === roundedLat && lastLng === roundedLng) {
-        debugLog("â­ï¸ Skipping reverse geocode - same coordinates as last call")
+        debugLog("⏭️ Skipping reverse geocode - same coordinates as last call")
         return
       }
     }
@@ -1515,8 +1515,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       setLoadingAddress(true)
       try {
-        debugLog("ðŸ” Reverse geocoding for coordinates:", { lat: roundedLat, lng: roundedLng })
-        debugLog("ðŸ” Coordinates precision:", {
+        debugLog("🔍 Reverse geocoding for coordinates:", { lat: roundedLat, lng: roundedLng })
+        debugLog("🔍 Coordinates precision:", {
           lat: roundedLat.toFixed(8),
           lng: roundedLng.toFixed(8)
         })
@@ -1615,11 +1615,11 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                     }
                   }
                 } catch (placesError) {
-                  debugWarn("âš ï¸ Places API error (non-critical):", placesError.message)
+                  debugWarn("⚠️ Places API error (non-critical):", placesError.message)
                 }
               }
 
-              debugLog("âœ…âœ…âœ… Google Maps - Complete Address Details:", {
+              debugLog("✅✅✅ Google Maps - Complete Address Details:", {
                 formattedAddress,
                 pointOfInterest,
                 premise,
@@ -1632,7 +1632,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               })
             }
           } catch (googleError) {
-            debugWarn("âš ï¸ Google Maps API error, trying backend fallback:", googleError.message)
+            debugWarn("⚠️ Google Maps API error, trying backend fallback:", googleError.message)
             // Fallback to backend API
             try {
               const response = await locationAPI.reverseGeocode(roundedLat, roundedLng)
@@ -1647,7 +1647,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                 area = addressComponents.area || ""
               }
             } catch (backendError) {
-              debugError("âŒ Backend fallback also failed:", backendError)
+              debugError("❌ Backend fallback also failed:", backendError)
             }
           }
         } else {
@@ -1701,7 +1701,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             formattedAddress = formattedAddress.replace(', India', '').trim()
           }
 
-          debugLog("âœ… Final extracted address components:", {
+          debugLog("✅ Final extracted address components:", {
             formattedAddress,
             street,
             city,
@@ -1735,11 +1735,11 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             additionalDetails: fullAddressForField || prev.additionalDetails, // Store FULL address in Address details field
           }))
         } else {
-          debugWarn("âš ï¸ No address data found from Google Maps or backend")
+          debugWarn("⚠️ No address data found from Google Maps or backend")
           setCurrentAddress(`${roundedLat.toFixed(6)}, ${roundedLng.toFixed(6)}`)
         }
       } catch (error) {
-        debugError("âŒ Error reverse geocoding:", error)
+        debugError("❌ Error reverse geocoding:", error)
         debugError("Error details:", {
           message: error.message,
           response: error.response?.data,
@@ -1778,7 +1778,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           try {
             const cachedLocation = JSON.parse(stored)
             if (cachedLocation?.latitude && cachedLocation?.longitude) {
-              debugLog("ðŸ“ Using cached location (2s timeout):", cachedLocation)
+              debugLog("📍 Using cached location (2s timeout):", cachedLocation)
               locationData = cachedLocation
             } else {
               throw new Error("Invalid cached location")
@@ -1793,7 +1793,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         }
       }
 
-      debugLog("ðŸ“ Current location data received:", locationData)
+      debugLog("📍 Current location data received:", locationData)
 
       if (!locationData?.latitude || !locationData?.longitude) {
         toast.error("Could not get your location. Please try again.", { id: "current-location" })
@@ -1808,15 +1808,15 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         return
       }
 
-      debugLog("ðŸ“ Setting map position to:", [lat, lng])
-      debugLog("ðŸ“ Location accuracy:", locationData.accuracy ? `${locationData.accuracy}m` : "unknown")
-      debugLog("ðŸ“ Location timestamp:", locationData.timestamp || new Date().toISOString())
+      debugLog("📍 Setting map position to:", [lat, lng])
+      debugLog("📍 Location accuracy:", locationData.accuracy ? `${locationData.accuracy}m` : "unknown")
+      debugLog("📍 Location timestamp:", locationData.timestamp || new Date().toISOString())
       setMapPosition([lat, lng])
 
       // Update Google Maps to new location
       if (googleMapRef.current && window.google && window.google.maps) {
         try {
-          debugLog("ðŸ—ºï¸ Updating Google Map to:", { lat, lng })
+          debugLog("🗺️ Updating Google Map to:", { lat, lng })
 
           // Pan to current location
           googleMapRef.current.panTo({ lat, lng })
@@ -1825,14 +1825,14 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           // Update green marker position
           if (greenMarkerRef.current) {
             greenMarkerRef.current.setPosition({ lat, lng })
-            debugLog("âœ… Updated green marker position")
+            debugLog("✅ Updated green marker position")
           }
 
           // Update blue dot marker position
           if (userLocationMarkerRef.current) {
             if (userLocationMarkerRef.current.setPosition) {
               userLocationMarkerRef.current.setPosition({ lat, lng })
-              debugLog("âœ… Updated blue dot marker position")
+              debugLog("✅ Updated blue dot marker position")
             } else if (userLocationMarkerRef.current.setMap) {
               // Marker exists but might not be on map, ensure it's visible
               userLocationMarkerRef.current.setMap(googleMapRef.current)
@@ -1858,7 +1858,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               visible: true
             })
             userLocationMarkerRef.current = blueDotMarker
-            debugLog("âœ… Created blue dot marker")
+            debugLog("✅ Created blue dot marker")
           }
 
           // Update blue dot accuracy circle position
@@ -1867,7 +1867,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             // Update radius if accuracy is available
             const accuracyRadius = Math.max(locationData?.accuracy || 50, 20)
             blueDotCircleRef.current.setRadius(accuracyRadius)
-            debugLog("âœ… Updated blue dot accuracy circle position and radius:", accuracyRadius)
+            debugLog("✅ Updated blue dot accuracy circle position and radius:", accuracyRadius)
           } else if (googleMapRef.current && window.google) {
             // Create accuracy circle if it doesn't exist
             const accuracyRadius = Math.max(locationData?.accuracy || 50, 20)
@@ -1884,7 +1884,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               visible: true
             })
             blueDotCircleRef.current = blueDot
-            debugLog("âœ… Created blue dot accuracy circle")
+            debugLog("✅ Created blue dot accuracy circle")
           }
 
           // Wait for map to finish moving, then fetch address (reduced delay for faster response)
@@ -1894,7 +1894,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           }, 200)
 
         } catch (mapError) {
-          debugError("âŒ Error updating map location:", mapError)
+          debugError("❌ Error updating map location:", mapError)
           toast.error("Failed to update map location", { id: "current-location" })
         }
       } else {
@@ -1905,7 +1905,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         }, 200)
       }
     } catch (error) {
-      debugError("âŒ Error getting current location:", error)
+      debugError("❌ Error getting current location:", error)
 
       // Check if it's a timeout error
       if (error.message && (error.message.includes("timeout") || error.message.includes("Timeout"))) {
@@ -1915,7 +1915,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           if (stored) {
             const cachedLocation = JSON.parse(stored)
             if (cachedLocation?.latitude && cachedLocation?.longitude) {
-              debugLog("ðŸ“ Using cached location due to timeout:", cachedLocation)
+              debugLog("📍 Using cached location due to timeout:", cachedLocation)
               setMapPosition([cachedLocation.latitude, cachedLocation.longitude])
 
               // Update Google Maps with cached location
@@ -2021,12 +2021,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       let savedAddress = null
       if (existingAddressWithSameLabel && existingAddressId) {
         // Update existing address instead of creating a new one
-        debugLog("ðŸ”„ Updating existing address with label:", normalizedLabel)
+        debugLog("🔄 Updating existing address with label:", normalizedLabel)
         savedAddress = await updateAddress(existingAddressId, addressToSave)
         toast.success(`Address updated for ${normalizedLabel}!`)
       } else {
         // Create new address
-        debugLog("ðŸ’¾ Saving new address:", addressToSave)
+        debugLog("💾 Saving new address:", addressToSave)
         savedAddress = await addAddress(addressToSave)
         toast.success(`Address saved as ${normalizedLabel}!`)
       }
@@ -2052,8 +2052,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       // Close overlay and keep user in current flow
       onClose()
     } catch (error) {
-      debugError("âŒ Error saving address:", error)
-      debugError("âŒ Error details:", {
+      debugError("❌ Error saving address:", error)
+      debugError("❌ Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,

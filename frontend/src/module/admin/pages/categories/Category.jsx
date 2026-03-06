@@ -942,7 +942,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under â‚¹200</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹200</span>
                           </button>
                           <button 
                             onClick={() => toggleFilter('price-under-500')}
@@ -952,7 +952,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under â‚¹500</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹500</span>
                           </button>
                         </div>
                       </div>

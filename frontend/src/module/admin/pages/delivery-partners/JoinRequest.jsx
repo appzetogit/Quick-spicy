@@ -406,7 +406,7 @@ export default function JoinRequest() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-sm">ðŸ‘¤</span>
+                              <span className="text-sm">👤</span>
                             </div>
                             <span className="text-sm font-medium text-slate-900">{request.name}</span>
                           </div>

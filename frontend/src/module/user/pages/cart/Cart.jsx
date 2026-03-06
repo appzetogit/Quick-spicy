@@ -71,7 +71,7 @@ export default function Cart() {
   try {
     cartContext = useCart();
   } catch (error) {
-    debugError('âŒ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
+    debugError('❌ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
     // Return early with error message
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-[#0a0a0a]">
@@ -296,7 +296,7 @@ export default function Cart() {
           const cartRestaurantId = cart[0].restaurantId;
           const cartRestaurantName = cart[0].restaurant;
 
-          debugLog("ðŸ”„ Fetching restaurant data by restaurantId from cart:", cartRestaurantId)
+          debugLog("🔄 Fetching restaurant data by restaurantId from cart:", cartRestaurantId)
           const response = await restaurantAPI.getRestaurantById(cartRestaurantId)
           const data = response?.data?.data?.restaurant || response?.data?.restaurant
 
@@ -317,7 +317,7 @@ export default function Cart() {
               fetchedRestaurantName?.toLowerCase().trim() === cartRestaurantName.toLowerCase().trim();
 
             if (!restaurantIdMatches) {
-              debugError('âŒ CRITICAL: Fetched restaurant ID does not match cart restaurantId!', {
+              debugError('❌ CRITICAL: Fetched restaurant ID does not match cart restaurantId!', {
                 cartRestaurantId: cartRestaurantId,
                 fetchedRestaurantId: fetchedRestaurantId,
                 fetched_id: data._id?.toString(),
@@ -331,14 +331,14 @@ export default function Cart() {
             }
 
             if (!restaurantNameMatches) {
-              debugWarn('âš ï¸ WARNING: Restaurant name mismatch:', {
+              debugWarn('⚠️ WARNING: Restaurant name mismatch:', {
                 cartRestaurantName: cartRestaurantName,
                 fetchedRestaurantName: fetchedRestaurantName
               });
               // Still proceed but log warning
             }
 
-            debugLog("âœ… Restaurant data loaded from cart restaurantId:", {
+            debugLog("✅ Restaurant data loaded from cart restaurantId:", {
               _id: data._id,
               restaurantId: data.restaurantId,
               name: data.name,
@@ -350,17 +350,17 @@ export default function Cart() {
             return
           }
         } catch (error) {
-          debugWarn("âš ï¸ Failed to fetch by cart restaurantId, trying fallback...", error)
+          debugWarn("⚠️ Failed to fetch by cart restaurantId, trying fallback...", error)
         }
       }
 
       // Strategy 2: If no restaurantId in cart, search by restaurant name
       if (cart[0]?.restaurant && !restaurantData) {
         try {
-          debugLog("ðŸ” Searching restaurant by name:", cart[0].restaurant)
+          debugLog("🔍 Searching restaurant by name:", cart[0].restaurant)
           const searchResponse = await restaurantAPI.getRestaurants({ limit: 100 })
           const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
-          debugLog("ðŸ“‹ Fetched", restaurants.length, "restaurants for name search")
+          debugLog("📋 Fetched", restaurants.length, "restaurants for name search")
 
           // Try exact match first
           let matchingRestaurant = restaurants.find(r =>
@@ -369,7 +369,7 @@ export default function Cart() {
 
           // If no exact match, try partial match
           if (!matchingRestaurant) {
-            debugLog("ðŸ” No exact match, trying partial match...")
+            debugLog("🔍 No exact match, trying partial match...")
             matchingRestaurant = restaurants.find(r =>
               r.name?.toLowerCase().includes(cart[0].restaurant?.toLowerCase().trim()) ||
               cart[0].restaurant?.toLowerCase().trim().includes(r.name?.toLowerCase())
@@ -382,7 +382,7 @@ export default function Cart() {
             const foundRestaurantName = matchingRestaurant.name?.toLowerCase().trim();
 
             if (cartRestaurantName && foundRestaurantName && cartRestaurantName !== foundRestaurantName) {
-              debugError("âŒ CRITICAL: Restaurant name mismatch!", {
+              debugError("❌ CRITICAL: Restaurant name mismatch!", {
                 cartRestaurantName: cart[0]?.restaurant,
                 foundRestaurantName: matchingRestaurant.name,
                 cartRestaurantId: cart[0]?.restaurantId,
@@ -393,7 +393,7 @@ export default function Cart() {
               return;
             }
 
-            debugLog("âœ… Found restaurant by name:", {
+            debugLog("✅ Found restaurant by name:", {
               name: matchingRestaurant.name,
               _id: matchingRestaurant._id,
               restaurantId: matchingRestaurant.restaurantId,
@@ -404,13 +404,13 @@ export default function Cart() {
             setLoadingRestaurant(false)
             return
           } else {
-            debugWarn("âš ï¸ Restaurant not found even by name search. Searched in", restaurants.length, "restaurants")
+            debugWarn("⚠️ Restaurant not found even by name search. Searched in", restaurants.length, "restaurants")
             if (restaurants.length > 0) {
-              debugLog("ðŸ“‹ Available restaurant names:", restaurants.map(r => r.name).slice(0, 10))
+              debugLog("📋 Available restaurant names:", restaurants.map(r => r.name).slice(0, 10))
             }
           }
         } catch (searchError) {
-          debugWarn("âš ï¸ Error searching restaurants by name:", searchError)
+          debugWarn("⚠️ Error searching restaurants by name:", searchError)
         }
       }
 
@@ -426,7 +426,7 @@ export default function Cart() {
   useEffect(() => {
     const fetchAddonsWithId = async (idToUse) => {
 
-      debugLog("ðŸ” Addons fetch - Using ID:", {
+      debugLog("🔍 Addons fetch - Using ID:", {
         restaurantData: restaurantData ? {
           _id: restaurantData._id,
           restaurantId: restaurantData.restaurantId,
@@ -438,23 +438,23 @@ export default function Cart() {
 
       // Convert to string for validation
       const idString = String(idToUse)
-      debugLog("ðŸ” Restaurant ID string:", idString, "Type:", typeof idString, "Length:", idString.length)
+      debugLog("🔍 Restaurant ID string:", idString, "Type:", typeof idString, "Length:", idString.length)
 
       // Validate ID format (should be ObjectId or restaurantId format)
       const isValidIdFormat = /^[a-zA-Z0-9\-_]+$/.test(idString) && idString.length >= 3
 
       if (!isValidIdFormat) {
-        debugWarn("âš ï¸ Restaurant ID format invalid:", idString)
+        debugWarn("⚠️ Restaurant ID format invalid:", idString)
         setAddons([])
         return
       }
 
       try {
         setLoadingAddons(true)
-        debugLog("ðŸš€ Fetching addons for restaurant ID:", idString)
+        debugLog("🚀 Fetching addons for restaurant ID:", idString)
         const response = await restaurantAPI.getAddonsByRestaurantId(idString)
-        debugLog("âœ… Addons API response received:", response?.data)
-        debugLog("ðŸ“¦ Response structure:", {
+        debugLog("✅ Addons API response received:", response?.data)
+        debugLog("📦 Response structure:", {
           success: response?.data?.success,
           data: response?.data?.data,
           addons: response?.data?.data?.addons,
@@ -462,19 +462,19 @@ export default function Cart() {
         })
 
         const data = response?.data?.data?.addons || response?.data?.addons || []
-        debugLog("ðŸ“Š Fetched addons count:", data.length)
-        debugLog("ðŸ“‹ Fetched addons data:", JSON.stringify(data, null, 2))
+        debugLog("📊 Fetched addons count:", data.length)
+        debugLog("📋 Fetched addons data:", JSON.stringify(data, null, 2))
 
         if (data.length === 0) {
-          debugWarn("âš ï¸ No addons returned from API. Response:", response?.data)
+          debugWarn("⚠️ No addons returned from API. Response:", response?.data)
         } else {
-          debugLog("âœ… Successfully fetched", data.length, "addons:", data.map(a => a.name))
+          debugLog("✅ Successfully fetched", data.length, "addons:", data.map(a => a.name))
         }
 
         setAddons(data)
       } catch (error) {
         // Log error for debugging
-        debugError("âŒ Addons fetch error:", {
+        debugError("❌ Addons fetch error:", {
           code: error.code,
           status: error.response?.status,
           message: error.message,
@@ -502,13 +502,13 @@ export default function Cart() {
 
       // Wait for restaurantData to be loaded (including fallback search)
       if (loadingRestaurant) {
-        debugLog("â³ Waiting for restaurantData to load (including fallback search)...")
+        debugLog("⏳ Waiting for restaurantData to load (including fallback search)...")
         return
       }
 
       // Must have restaurantData to fetch addons
       if (!restaurantData) {
-        debugWarn("âš ï¸ No restaurantData available for addons fetch")
+        debugWarn("⚠️ No restaurantData available for addons fetch")
         setAddons([])
         return
       }
@@ -516,12 +516,12 @@ export default function Cart() {
       // Use restaurantData ID (most reliable)
       const idToUse = restaurantData._id || restaurantData.restaurantId
       if (!idToUse) {
-        debugWarn("âš ï¸ No valid restaurant ID in restaurantData")
+        debugWarn("⚠️ No valid restaurant ID in restaurantData")
         setAddons([])
         return
       }
 
-      debugLog("âœ… Using restaurantData ID for addons:", idToUse)
+      debugLog("✅ Using restaurantData ID for addons:", idToUse)
       fetchAddonsWithId(idToUse)
     }
 
@@ -753,7 +753,7 @@ export default function Cart() {
 
     return Number(feeSettings.deliveryFee || 0)
   })()
-  const deliveryFee = pricing?.deliveryFee ?? fallbackDeliveryFee
+  const deliveryFee = pricing?.deliveryFee || fallbackDeliveryFee
   const deliveryFeeBreakdown = pricing?.deliveryFeeBreakdown || null
   const hasDistanceDeliveryBreakdown =
     deliveryFeeBreakdown?.source === "distance" &&
@@ -1011,10 +1011,10 @@ export default function Cart() {
     // Use API_BASE_URL from config (supports both dev and production)
 
     try {
-      debugLog("ðŸ›’ Starting order placement process...")
-      debugLog("ðŸ“¦ Cart items:", cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })))
-      debugLog("ðŸ’° Applied coupon:", appliedCoupon?.code || "None")
-      debugLog("ðŸ“ Delivery address:", defaultAddress?.label || defaultAddress?.city)
+      debugLog("🛒 Starting order placement process...")
+      debugLog("📦 Cart items:", cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })))
+      debugLog("💰 Applied coupon:", appliedCoupon?.code || "None")
+      debugLog("📍 Delivery address:", defaultAddress?.label || defaultAddress?.city)
 
       // Ensure couponCode is included in pricing
       const orderPricing = pricing || {
@@ -1044,13 +1044,13 @@ export default function Cart() {
         isVeg: item.isVeg !== false
       }))
 
-      debugLog("ðŸ“‹ Order items to send:", orderItems)
-      debugLog("ðŸ’µ Order pricing:", orderPricing)
+      debugLog("📋 Order items to send:", orderItems)
+      debugLog("💵 Order pricing:", orderPricing)
 
       // Check API base URL before making request (for debugging)
       const fullUrl = `${API_BASE_URL}${API_ENDPOINTS.ORDER.CREATE}`;
-      debugLog("ðŸŒ Making request to:", fullUrl)
-      debugLog("ðŸ”‘ Authentication token present:", !!localStorage.getItem('accessToken') || !!localStorage.getItem('user_accessToken'))
+      debugLog("🌐 Making request to:", fullUrl)
+      debugLog("🔑 Authentication token present:", !!localStorage.getItem('accessToken') || !!localStorage.getItem('user_accessToken'))
 
       // CRITICAL: Validate restaurant ID before placing order
       // Ensure we're using the correct restaurant from restaurantData (most reliable)
@@ -1058,8 +1058,8 @@ export default function Cart() {
       const finalRestaurantName = restaurantData?.name || null;
 
       if (!finalRestaurantId) {
-        debugError('âŒ CRITICAL: Cannot place order - Restaurant ID is missing!');
-        debugError('ðŸ“‹ Debug info:', {
+        debugError('❌ CRITICAL: Cannot place order - Restaurant ID is missing!');
+        debugError('📋 Debug info:', {
           restaurantData: restaurantData ? {
             _id: restaurantData._id,
             restaurantId: restaurantData.restaurantId,
@@ -1098,7 +1098,7 @@ export default function Cart() {
       // Note: If restaurant names match, allow even if IDs differ (same restaurant, different ID format)
       if (uniqueRestaurantNames.length > 1) {
         // Different restaurant names = definitely different restaurants
-        debugError('âŒ CRITICAL ERROR: Cart contains items from multiple restaurants!', {
+        debugError('❌ CRITICAL ERROR: Cart contains items from multiple restaurants!', {
           restaurantIds: uniqueRestaurantIds,
           restaurantNames: uniqueRestaurantNames,
           cartItems: cart.map(item => ({
@@ -1111,7 +1111,7 @@ export default function Cart() {
 
         // Automatically clean cart to keep items from the restaurant matching restaurantData
         if (finalRestaurantId && finalRestaurantName) {
-          debugLog('ðŸ§¹ Auto-cleaning cart to keep items from:', finalRestaurantName);
+          debugLog('🧹 Auto-cleaning cart to keep items from:', finalRestaurantName);
           cleanCartForRestaurant(finalRestaurantId, finalRestaurantName);
           toast.error('Cart contained items from different restaurants. Items from other restaurants have been removed.');
         } else {
@@ -1119,7 +1119,7 @@ export default function Cart() {
           const firstRestaurantId = cart[0]?.restaurantId;
           const firstRestaurantName = cart[0]?.restaurant;
           if (firstRestaurantId && firstRestaurantName) {
-            debugLog('ðŸ§¹ Auto-cleaning cart to keep items from first restaurant:', firstRestaurantName);
+            debugLog('🧹 Auto-cleaning cart to keep items from first restaurant:', firstRestaurantName);
             cleanCartForRestaurant(firstRestaurantId, firstRestaurantName);
             toast.error('Cart contained items from different restaurants. Items from other restaurants have been removed.');
           } else {
@@ -1135,7 +1135,7 @@ export default function Cart() {
       // But log a warning in development
       if (uniqueRestaurantIds.length > 1 && uniqueRestaurantNames.length === 1) {
         if (process.env.NODE_ENV === 'development') {
-          debugWarn('âš ï¸ Cart items have different restaurant IDs but same name. This is OK if IDs are in different formats.', {
+          debugWarn('⚠️ Cart items have different restaurant IDs but same name. This is OK if IDs are in different formats.', {
             restaurantIds: uniqueRestaurantIds,
             restaurantName: uniqueRestaurantNames[0]
           });
@@ -1153,7 +1153,7 @@ export default function Cart() {
           cartRestaurantId === restaurantData?.restaurantId;
 
         if (!restaurantIdMatches) {
-          debugError('âŒ CRITICAL ERROR: Cart restaurantId does not match restaurantData!', {
+          debugError('❌ CRITICAL ERROR: Cart restaurantId does not match restaurantData!', {
             cartRestaurantId: cartRestaurantId,
             finalRestaurantId: finalRestaurantId,
             restaurantDataId: restaurantData?._id?.toString(),
@@ -1171,7 +1171,7 @@ export default function Cart() {
       if (cartRestaurantNames.length > 0 && finalRestaurantName) {
         const cartRestaurantName = cartRestaurantNames[0];
         if (cartRestaurantName.toLowerCase().trim() !== finalRestaurantName.toLowerCase().trim()) {
-          debugError('âŒ CRITICAL ERROR: Restaurant name mismatch!', {
+          debugError('❌ CRITICAL ERROR: Restaurant name mismatch!', {
             cartRestaurantName: cartRestaurantName,
             finalRestaurantName: finalRestaurantName
           });
@@ -1182,7 +1182,7 @@ export default function Cart() {
       }
 
       // Log order details for debugging
-      debugLog('âœ… Order validation passed - Placing order with restaurant:', {
+      debugLog('✅ Order validation passed - Placing order with restaurant:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         restaurantDataId: restaurantData?._id,
@@ -1197,7 +1197,7 @@ export default function Cart() {
       if (cartRestaurantId && cartRestaurantId !== finalRestaurantId &&
         cartRestaurantId !== restaurantData?._id?.toString() &&
         cartRestaurantId !== restaurantData?.restaurantId) {
-        debugError('âŒ CRITICAL: Final validation failed - restaurantId mismatch!', {
+        debugError('❌ CRITICAL: Final validation failed - restaurantId mismatch!', {
           cartRestaurantId: cartRestaurantId,
           finalRestaurantId: finalRestaurantId,
           restaurantDataId: restaurantData?._id?.toString(),
@@ -1223,7 +1223,7 @@ export default function Cart() {
         zoneId: zoneId // CRITICAL: Pass zoneId for strict zone validation
       };
       // Log final order details (including paymentMethod for COD debugging)
-      debugLog('ðŸ“¤ FINAL: Sending order to backend with:', {
+      debugLog('📤 FINAL: Sending order to backend with:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         itemCount: orderItems.length,
@@ -1241,7 +1241,7 @@ export default function Cart() {
       // Create order in backend
       const orderResponse = await orderAPI.createOrder(orderPayload)
 
-      debugLog("âœ… Order created successfully:", orderResponse.data)
+      debugLog("✅ Order created successfully:", orderResponse.data)
 
       const { order, razorpay } = orderResponse.data.data
 
@@ -1275,11 +1275,11 @@ export default function Cart() {
       }
 
       if (!razorpay || !razorpay.orderId || !razorpay.key) {
-        debugError("âŒ Razorpay initialization failed:", { razorpay, order })
+        debugError("❌ Razorpay initialization failed:", { razorpay, order })
         throw new Error(razorpay ? "Razorpay payment gateway is not configured. Please contact support." : "Failed to initialize payment")
       }
 
-      debugLog("ðŸ’³ Razorpay order created:", {
+      debugLog("💳 Razorpay order created:", {
         orderId: razorpay.orderId,
         amount: razorpay.amount,
         currency: razorpay.currency,
@@ -1295,7 +1295,7 @@ export default function Cart() {
       // Format phone number (remove non-digits, take last 10 digits)
       const formattedPhone = userPhone.replace(/\D/g, "").slice(-10)
 
-      debugLog("ðŸ‘¤ User info for payment:", {
+      debugLog("👤 User info for payment:", {
         name: userName,
         email: userEmail,
         phone: formattedPhone
@@ -1324,7 +1324,7 @@ export default function Cart() {
         },
         handler: async (response) => {
           try {
-            debugLog("âœ… Payment successful, verifying...", {
+            debugLog("✅ Payment successful, verifying...", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id
             })
@@ -1337,11 +1337,11 @@ export default function Cart() {
               razorpaySignature: response.razorpay_signature
             })
 
-            debugLog("âœ… Payment verification response:", verifyResponse.data)
+            debugLog("✅ Payment verification response:", verifyResponse.data)
 
             if (verifyResponse.data.success) {
               // Payment successful
-              debugLog("ðŸŽ‰ Order placed successfully:", {
+              debugLog("🎉 Order placed successfully:", {
                 orderId: order.orderId,
                 paymentId: verifyResponse.data.data?.payment?.paymentId
               })
@@ -1353,14 +1353,14 @@ export default function Cart() {
               throw new Error(verifyResponse.data.message || "Payment verification failed")
             }
           } catch (error) {
-            debugError("âŒ Payment verification error:", error)
+            debugError("❌ Payment verification error:", error)
             const errorMessage = error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
             alert(errorMessage)
             setIsPlacingOrder(false)
           }
         },
         onError: (error) => {
-          debugError("âŒ Razorpay payment error:", error)
+          debugError("❌ Razorpay payment error:", error)
           // Don't show alert for user cancellation
           if (error?.code !== 'PAYMENT_CANCELLED' && error?.message !== 'PAYMENT_CANCELLED') {
             const errorMessage = error?.description || error?.message || "Payment failed. Please try again."
@@ -1369,12 +1369,12 @@ export default function Cart() {
           setIsPlacingOrder(false)
         },
         onClose: () => {
-          debugLog("âš ï¸ Payment modal closed by user")
+          debugLog("⚠️ Payment modal closed by user")
           setIsPlacingOrder(false)
         }
       })
     } catch (error) {
-      debugError("âŒ Order creation error:", error)
+      debugError("❌ Order creation error:", error)
 
       let errorMessage = "Failed to create order. Please try again."
 
@@ -1390,7 +1390,7 @@ export default function Cart() {
           `If backend is not running, start it with:\n` +
           `cd appzetofood/backend && npm start`
 
-        debugError("ðŸ”´ Network Error Details:", {
+        debugError("🔴 Network Error Details:", {
           code: error.code,
           message: error.message,
           config: {
@@ -1408,17 +1408,17 @@ export default function Cart() {
           fetch(backendUrl + '/health', { method: 'GET', signal: AbortSignal.timeout(5000) })
             .then(response => {
               if (response.ok) {
-                debugLog("âœ… Backend health check passed - server is running")
+                debugLog("✅ Backend health check passed - server is running")
               } else {
-                debugWarn("âš ï¸ Backend health check returned:", response.status)
+                debugWarn("⚠️ Backend health check returned:", response.status)
               }
             })
             .catch(fetchError => {
-              debugError("âŒ Backend health check failed:", fetchError.message)
-              debugError("ðŸ’¡ Make sure backend server is running at:", backendUrl)
+              debugError("❌ Backend health check failed:", fetchError.message)
+              debugError("💡 Make sure backend server is running at:", backendUrl)
             })
         } catch (fetchTestError) {
-          debugError("âŒ Could not test backend connectivity:", fetchTestError.message)
+          debugError("❌ Could not test backend connectivity:", fetchTestError.message)
         }
       }
       // Handle timeout errors
@@ -1610,7 +1610,7 @@ export default function Cart() {
                 <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
                   <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
                     <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                      <span className="text-xs md:text-base">ðŸ½ï¸</span>
+                      <span className="text-xs md:text-base">🍽️</span>
                     </div>
                     <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">Complete your meal with</span>
                   </div>
@@ -1650,7 +1650,7 @@ export default function Cart() {
                                 const cartRestaurantName = cart[0]?.restaurant || restaurantName;
 
                                 if (!cartRestaurantId || !cartRestaurantName) {
-                                  debugError('âŒ Cannot add addon: Missing restaurant information', {
+                                  debugError('❌ Cannot add addon: Missing restaurant information', {
                                     cartRestaurantId,
                                     cartRestaurantName,
                                     restaurantId,
@@ -1738,7 +1738,7 @@ export default function Cart() {
                           )}
                           {availableCoupons.length > 1 && (
                             <button onClick={() => setShowCoupons(!showCoupons)} className="text-xs md:text-sm text-blue-600 dark:text-blue-400 font-medium">
-                              View all coupons â†’
+                              View all coupons →
                             </button>
                           )}
                         </div>

@@ -22,8 +22,8 @@ export default function ViewZone() {
   const [loading, setLoading] = useState(true)
 
   // Memoize zone dependencies to keep dependency array stable
-  const zoneId = useMemo(() => zone?._id ?? null, [zone?._id])
-  const coordinatesLength = useMemo(() => zone?.coordinates?.length ?? 0, [zone?.coordinates?.length])
+const zoneId = useMemo(() => zone?._id || null, [zone?._id])
+const coordinatesLength = useMemo(() => zone?.coordinates?.length || 0, [zone?.coordinates?.length])
 
   useEffect(() => {
     fetchZone()

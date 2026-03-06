@@ -74,9 +74,9 @@ export default function EditProfile() {
   const initialProfile = storedProfile || userProfile || {}
 
   const initialFormData = {
-    name: initialProfile.name ?? "",
-    mobile: normalizePhoneToTenDigits(initialProfile.mobile ?? initialProfile.phone ?? ""),
-    email: initialProfile.email ?? "",
+    name: initialProfile.name || "",
+    mobile: normalizePhoneToTenDigits(initialProfile.mobile || initialProfile.phone || ""),
+    email: initialProfile.email || "",
     dateOfBirth: initialProfile.dateOfBirth
       ? (typeof initialProfile.dateOfBirth === 'string'
         ? dayjs(initialProfile.dateOfBirth)
@@ -87,7 +87,7 @@ export default function EditProfile() {
         ? dayjs(initialProfile.anniversary)
         : dayjs(initialProfile.anniversary))
       : null,
-    gender: initialProfile.gender ?? "",
+    gender: initialProfile.gender || "",
   }
 
   const [formData, setFormData] = useState(initialFormData)
@@ -110,9 +110,9 @@ export default function EditProfile() {
     const storedProfile = loadProfileFromStorage()
     const profile = storedProfile || userProfile || {}
     const newFormData = {
-      name: profile.name ?? "",
-      mobile: normalizePhoneToTenDigits(profile.mobile ?? profile.phone ?? ""),
-      email: profile.email ?? "",
+      name: profile.name || "",
+      mobile: normalizePhoneToTenDigits(profile.mobile || profile.phone || ""),
+      email: profile.email || "",
       dateOfBirth: profile.dateOfBirth
         ? (typeof profile.dateOfBirth === 'string'
           ? dayjs(profile.dateOfBirth)
@@ -123,7 +123,7 @@ export default function EditProfile() {
           ? dayjs(profile.anniversary)
           : dayjs(profile.anniversary))
         : null,
-      gender: profile.gender ?? "",
+      gender: profile.gender || "",
     }
     setFormData(newFormData)
 
@@ -693,4 +693,3 @@ export default function EditProfile() {
     </div>
   )
 }
-

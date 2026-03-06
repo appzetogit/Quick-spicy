@@ -92,7 +92,7 @@ export default function Wallet() {
   }, [selectedFilter, transactions])
 
   const formatAmount = (amount) => {
-    return `â‚¹${amount.toLocaleString('en-IN')}`
+    return `₹${amount.toLocaleString('en-IN')}`
   }
 
   const formatDate = (dateString) => {
@@ -108,7 +108,7 @@ export default function Wallet() {
       minute: '2-digit',
       hour12: true
     })
-    return `${formattedDate} â€¢ ${formattedTime}`
+    return `${formattedDate} • ${formattedTime}`
   }
 
   const getTransactionIcon = (type) => {

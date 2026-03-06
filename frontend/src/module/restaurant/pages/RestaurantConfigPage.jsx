@@ -223,7 +223,7 @@ export default function RestaurantConfigPage() {
                 <ToggleSwitch enabled={subscriptionOrder} onChange={setSubscriptionOrder} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Minimum Order Amount (â‚¹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Minimum Order Amount (₹):</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -416,7 +416,7 @@ export default function RestaurantConfigPage() {
                 <ToggleSwitch enabled={activeGST} onChange={setActiveGST} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">GST Amount (â‚¹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">GST Amount (₹):</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -472,7 +472,7 @@ export default function RestaurantConfigPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Extra Packaging Amount (â‚¹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Extra Packaging Amount (₹):</span>
                 <Input
                   type="number"
                   step="0.1"

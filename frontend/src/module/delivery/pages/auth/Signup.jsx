@@ -23,26 +23,26 @@ const debugError = (...args) => {}
 
 // Common country codes
 const countryCodes = [
-  { code: "+1", country: "US/CA", flag: "ðŸ‡ºðŸ‡¸" },
-  { code: "+44", country: "UK", flag: "ðŸ‡¬ðŸ‡§" },
-  { code: "+91", country: "IN", flag: "ðŸ‡®ðŸ‡³" },
-  { code: "+86", country: "CN", flag: "ðŸ‡¨ðŸ‡³" },
-  { code: "+81", country: "JP", flag: "ðŸ‡¯ðŸ‡µ" },
-  { code: "+49", country: "DE", flag: "ðŸ‡©ðŸ‡ª" },
-  { code: "+33", country: "FR", flag: "ðŸ‡«ðŸ‡·" },
-  { code: "+39", country: "IT", flag: "ðŸ‡®ðŸ‡¹" },
-  { code: "+34", country: "ES", flag: "ðŸ‡ªðŸ‡¸" },
-  { code: "+61", country: "AU", flag: "ðŸ‡¦ðŸ‡º" },
-  { code: "+7", country: "RU", flag: "ðŸ‡·ðŸ‡º" },
-  { code: "+55", country: "BR", flag: "ðŸ‡§ðŸ‡·" },
-  { code: "+52", country: "MX", flag: "ðŸ‡²ðŸ‡½" },
-  { code: "+82", country: "KR", flag: "ðŸ‡°ðŸ‡·" },
-  { code: "+65", country: "SG", flag: "ðŸ‡¸ðŸ‡¬" },
-  { code: "+971", country: "AE", flag: "ðŸ‡¦ðŸ‡ª" },
-  { code: "+966", country: "SA", flag: "ðŸ‡¸ðŸ‡¦" },
-  { code: "+27", country: "ZA", flag: "ðŸ‡¿ðŸ‡¦" },
-  { code: "+31", country: "NL", flag: "ðŸ‡³ðŸ‡±" },
-  { code: "+46", country: "SE", flag: "ðŸ‡¸ðŸ‡ª" },
+  { code: "+1", country: "US/CA", flag: "🇺🇸" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+91", country: "IN", flag: "🇮🇳" },
+  { code: "+86", country: "CN", flag: "🇨🇳" },
+  { code: "+81", country: "JP", flag: "🇯🇵" },
+  { code: "+49", country: "DE", flag: "🇩🇪" },
+  { code: "+33", country: "FR", flag: "🇫🇷" },
+  { code: "+39", country: "IT", flag: "🇮🇹" },
+  { code: "+34", country: "ES", flag: "🇪🇸" },
+  { code: "+61", country: "AU", flag: "🇦🇺" },
+  { code: "+7", country: "RU", flag: "🇷🇺" },
+  { code: "+55", country: "BR", flag: "🇧🇷" },
+  { code: "+52", country: "MX", flag: "🇲🇽" },
+  { code: "+82", country: "KR", flag: "🇰🇷" },
+  { code: "+65", country: "SG", flag: "🇸🇬" },
+  { code: "+971", country: "AE", flag: "🇦🇪" },
+  { code: "+966", country: "SA", flag: "🇸🇦" },
+  { code: "+27", country: "ZA", flag: "🇿🇦" },
+  { code: "+31", country: "NL", flag: "🇳🇱" },
+  { code: "+46", country: "SE", flag: "🇸🇪" },
 ]
 
 export default function DeliverySignup() {
@@ -315,7 +315,7 @@ export default function DeliverySignup() {
               <div className="flex gap-2">
                 <div className="flex items-center px-4 h-11 border border-gray-300 bg-gray-50 text-gray-700 rounded-md shrink-0">
                   <span className="flex items-center gap-2 text-sm font-medium">
-                    <span>ðŸ‡®ðŸ‡³</span>
+                    <span>🇮🇳</span>
                     <span>+91</span>
                   </span>
                 </div>

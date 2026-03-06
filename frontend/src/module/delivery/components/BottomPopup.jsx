@@ -62,7 +62,7 @@ export default function BottomPopup({
     }
     setIsCollapsed(prev => {
       const newState = !prev
-      debugLog('ðŸ”„ Collapse toggle:', prev, '->', newState)
+      debugLog('🔄 Collapse toggle:', prev, '->', newState)
       return newState
     })
   }
@@ -306,7 +306,7 @@ export default function BottomPopup({
                 type="button"
                 className="flex flex-col items-center pt-3 pb-2 cursor-pointer select-none bg-white sticky top-0 z-10 w-full border-0 outline-none p-0"
                 onClick={(e) => {
-                  debugLog('ðŸ–±ï¸ Handle clicked, current collapsed:', isCollapsed)
+                  debugLog('🖱️ Handle clicked, current collapsed:', isCollapsed)
                   e.stopPropagation()
                   e.preventDefault()
                   handleCollapseToggle(e)
@@ -317,7 +317,7 @@ export default function BottomPopup({
                 }}
                 onTouchEnd={(e) => {
                   // Handle touch end for mobile collapse toggle
-                  debugLog('ðŸ‘† Handle touched, current collapsed:', isCollapsed)
+                  debugLog('👆 Handle touched, current collapsed:', isCollapsed)
                   e.stopPropagation()
                   e.preventDefault()
                   handleCollapseToggle(e)

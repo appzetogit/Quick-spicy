@@ -210,6 +210,17 @@ export default function Customers() {
     }
   }
 
+  const getInitials = (name) => {
+    if (!name) return "NA"
+    return name
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() || "")
+      .join("") || "NA"
+  }
+
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -409,8 +420,8 @@ export default function Customers() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm">ðŸ‘¤</span>
+                          <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center flex-shrink-0">
+                            <span className="text-xs font-semibold">{getInitials(customer.name)}</span>
                           </div>
                           <span className="text-sm font-medium text-slate-900">{customer.name}</span>
                         </div>
@@ -425,7 +436,7 @@ export default function Customers() {
                         <span className="text-sm text-slate-700">{customer.totalOrder || 0}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-slate-900">â‚¹ {(customer.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-medium text-slate-900">₹ {(customer.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">{customer.joiningDate}</span>
@@ -537,7 +548,7 @@ export default function Customers() {
                     <span className="text-xs font-semibold text-slate-700">Total Spent</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">
-                    â‚¹{(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    ₹{(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-3">
@@ -595,7 +606,7 @@ export default function Customers() {
                           <p className="text-xs text-slate-600">{order.restaurantName}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900">â‚¹{(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="text-sm font-semibold text-slate-900">₹{(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           <p className="text-xs text-slate-600 capitalize">{order.status}</p>
                         </div>
                       </div>

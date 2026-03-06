@@ -140,7 +140,7 @@ export default function PocketBalancePage() {
   const canWithdraw = withdrawableAmount >= withdrawalLimit && withdrawableAmount > 0
   
   // Debug logging (cashInHand = Cash collected from backend)
-  debugLog('ðŸ’° PocketBalance Page Calculations:', {
+  debugLog('💰 PocketBalance Page Calculations:', {
     walletStateCashInHand: walletState?.cashInHand,
     balancesCashInHand: balances.cashInHand,
     cashCollected,
@@ -196,7 +196,7 @@ export default function PocketBalancePage() {
     let profile
     try {
       const res = await deliveryAPI.getProfile()
-      profile = res?.data?.data?.profile ?? res?.data?.profile
+      profile = res?.data?.data?.profile || res?.data?.profile
     } catch (e) {
       toast.error("Failed to load profile")
       return
@@ -252,7 +252,7 @@ export default function PocketBalancePage() {
         <h1 className="text-lg font-semibold">Pocket balance</h1>
       </div>
 
-      {/* Warning Banner â€“ when withdraw disabled */}
+      {/* Warning Banner – when withdraw disabled */}
       {!canWithdraw && (
         <div className="bg-yellow-400 p-4 flex items-start gap-3 text-black">
           <AlertTriangle size={20} />
@@ -260,7 +260,7 @@ export default function PocketBalancePage() {
             <p className="font-semibold">Withdraw currently disabled</p>
             <p className="text-xs">
               {withdrawableAmount <= 0
-                ? "Withdrawable amount is â‚¹0"
+                ? "Withdrawable amount is ₹0"
                 : `Withdrawable amount is minimum (${formatCurrency(withdrawalLimit)}).`}
             </p>
           </div>
@@ -293,7 +293,7 @@ export default function PocketBalancePage() {
           </DialogHeader>
           <div className="px-5 pb-5 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (â‚¹)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹)</label>
               <input
                 type="number"
                 min={withdrawalLimit}
@@ -305,7 +305,7 @@ export default function PocketBalancePage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-black focus:border-black"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Min {formatCurrency(withdrawalLimit)} Â· Max {formatCurrency(withdrawableAmount)}
+                Min {formatCurrency(withdrawalLimit)} · Max {formatCurrency(withdrawableAmount)}
               </p>
             </div>
             <button
@@ -329,7 +329,7 @@ export default function PocketBalancePage() {
               className="flex-1 py-2.5 text-sm font-medium rounded-lg bg-black text-white hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {withdrawSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {withdrawSubmitting ? "Submittingâ€¦" : "Withdraw"}
+              {withdrawSubmitting ? "Submitting…" : "Withdraw"}
             </button>
           </DialogFooter>
         </DialogContent>
@@ -337,7 +337,7 @@ export default function PocketBalancePage() {
 
       {/* Section Header */}
       <div className=" bg-gray-100 py-2 pt-4 text-center text-xs font-semibold text-gray-600">
-        POCKET DETAILS â€¢ {getCurrentWeekRange()}
+        POCKET DETAILS • {getCurrentWeekRange()}
       </div>
 
       {/* Detail Rows */}
@@ -355,7 +355,7 @@ export default function PocketBalancePage() {
             <div>
               Min. withdrawal amount
               <p className="text-xs text-gray-500">
-                Withdrawal allowed only when withdrawable amount â‰¥ this
+                Withdrawal allowed only when withdrawable amount ≥ this
               </p>
             </div>
           }

@@ -186,7 +186,7 @@ export default function OutletTimings() {
 
   const handleTimeChange = (day, timeType, newTime) => {
     if (!newTime) {
-      debugWarn('âš ï¸ No time value received in handleTimeChange')
+      debugWarn('⚠️ No time value received in handleTimeChange')
       return
     }
     
@@ -195,11 +195,11 @@ export default function OutletTimings() {
     
     // Validate time string format
     if (!timeString || !timeString.includes(":")) {
-      debugWarn('âš ï¸ Invalid time string generated:', timeString)
+      debugWarn('⚠️ Invalid time string generated:', timeString)
       return
     }
     
-    debugLog(`ðŸ• Time changed for ${day} - ${timeType}: ${timeString}`)
+    debugLog(`🕐 Time changed for ${day} - ${timeType}: ${timeString}`)
     
     setDays(prev => ({
       ...prev,
@@ -303,13 +303,13 @@ export default function OutletTimings() {
                                   <MobileTimePicker
                                     value={stringToTime(dayData.openingTime)}
                                     onChange={(newValue) => {
-                                      debugLog('ðŸ• Opening time picker onChange:', newValue)
+                                      debugLog('🕐 Opening time picker onChange:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "openingTime", newValue)
                                       }
                                     }}
                                     onAccept={(newValue) => {
-                                      debugLog('âœ… Opening time picker onAccept:', newValue)
+                                      debugLog('✅ Opening time picker onAccept:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "openingTime", newValue)
                                       }
@@ -359,13 +359,13 @@ export default function OutletTimings() {
                                   <MobileTimePicker
                                     value={stringToTime(dayData.closingTime)}
                                     onChange={(newValue) => {
-                                      debugLog('ðŸ• Closing time picker onChange:', newValue)
+                                      debugLog('🕐 Closing time picker onChange:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "closingTime", newValue)
                                       }
                                     }}
                                     onAccept={(newValue) => {
-                                      debugLog('âœ… Closing time picker onAccept:', newValue)
+                                      debugLog('✅ Closing time picker onAccept:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "closingTime", newValue)
                                       }

@@ -279,7 +279,7 @@ export default function FoodsList() {
       restaurantId: String(food.restaurantId || ""),
       sectionName: String(food.sectionName || ""),
       name: String(food.originalItem?.name || ""),
-      price: String(food.originalItem?.price ?? ""),
+        price: String(food.originalItem?.price || ""),
       description: String(food.originalItem?.description || ""),
       image: String(food.originalItem?.image || food.originalItem?.images?.[0] || ""),
       foodType: String(food.originalItem?.foodType || "Non-Veg"),
@@ -827,7 +827,7 @@ export default function FoodsList() {
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 border border-slate-200 rounded-lg p-4">
                 <p><span className="font-semibold text-slate-700">Restaurant:</span> <span className="text-slate-900">{selectedFood.restaurantName || "-"}</span></p>
-                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">â‚¹{selectedFood.price}</span></p>
+                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">₹{selectedFood.price}</span></p>
                 <p><span className="font-semibold text-slate-700">Category:</span> <span className="text-slate-900">{selectedFood.sectionName || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Food Type:</span> <span className="text-slate-900">{selectedFood.foodType || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Approval:</span> <span className="text-slate-900 capitalize">{selectedFood.approvalStatus || "-"}</span></p>

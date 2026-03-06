@@ -41,7 +41,7 @@ export const useRestaurantNotifications = () => {
 
   useEffect(() => {
     if (!restaurantId) {
-      debugLog('â³ Waiting for restaurantId...');
+      debugLog('⏳ Waiting for restaurantId...');
       return;
     }
 
@@ -115,29 +115,29 @@ export const useRestaurantNotifications = () => {
         suggestedBackendUrl = `${frontendProtocol}//api.${frontendHost}/api`;
       }
       
-      debugError('âŒ CRITICAL: BLOCKING Socket.IO connection to localhost!');
-      debugError('ðŸ’¡ This means VITE_API_BASE_URL was not set during build time');
-      debugError('ðŸ’¡ Current backendUrl:', backendUrl);
-      debugError('ðŸ’¡ Current API_BASE_URL:', API_BASE_URL);
-      debugError('ðŸ’¡ VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL || 'NOT SET');
-      debugError('ðŸ’¡ Environment mode:', import.meta.env.MODE);
-      debugError('ðŸ’¡ Frontend hostname:', frontendHost);
-      debugError('ðŸ’¡ Frontend protocol:', frontendProtocol);
-      debugError('ðŸ’¡ Is production build:', isProductionBuild);
-      debugError('ðŸ’¡ Is production deployment:', isProductionDeployment);
-      debugError('ðŸ’¡ Backend is localhost:', backendIsLocalhost);
+      debugError('❌ CRITICAL: BLOCKING Socket.IO connection to localhost!');
+      debugError('💡 This means VITE_API_BASE_URL was not set during build time');
+      debugError('💡 Current backendUrl:', backendUrl);
+      debugError('💡 Current API_BASE_URL:', API_BASE_URL);
+      debugError('💡 VITE_API_BASE_URL:', import.meta.env.VITE_API_BASE_URL || 'NOT SET');
+      debugError('💡 Environment mode:', import.meta.env.MODE);
+      debugError('💡 Frontend hostname:', frontendHost);
+      debugError('💡 Frontend protocol:', frontendProtocol);
+      debugError('💡 Is production build:', isProductionBuild);
+      debugError('💡 Is production deployment:', isProductionDeployment);
+      debugError('💡 Backend is localhost:', backendIsLocalhost);
       if (suggestedBackendUrl) {
-        debugError('ðŸ’¡ Suggested backend URL:', suggestedBackendUrl);
-        debugError('ðŸ’¡ Fix: Rebuild frontend with: VITE_API_BASE_URL=' + suggestedBackendUrl + ' npm run build');
+        debugError('💡 Suggested backend URL:', suggestedBackendUrl);
+        debugError('💡 Fix: Rebuild frontend with: VITE_API_BASE_URL=' + suggestedBackendUrl + ' npm run build');
       } else {
-        debugError('ðŸ’¡ Fix: Rebuild frontend with: VITE_API_BASE_URL=https://your-backend-domain.com/api npm run build');
+        debugError('💡 Fix: Rebuild frontend with: VITE_API_BASE_URL=https://your-backend-domain.com/api npm run build');
       }
-      debugError('ðŸ’¡ Note: Vite environment variables are embedded at BUILD TIME, not runtime');
-      debugError('ðŸ’¡ You must rebuild and redeploy the frontend with correct VITE_API_BASE_URL');
+      debugError('💡 Note: Vite environment variables are embedded at BUILD TIME, not runtime');
+      debugError('💡 You must rebuild and redeploy the frontend with correct VITE_API_BASE_URL');
       
       // Clean up any existing socket connection
       if (socketRef.current) {
-        debugLog('ðŸ§¹ Cleaning up existing socket connection...');
+        debugLog('🧹 Cleaning up existing socket connection...');
         socketRef.current.disconnect();
         socketRef.current = null;
       }
@@ -149,9 +149,9 @@ export const useRestaurantNotifications = () => {
     
     // Validate backend URL format
     if (!backendUrl || !backendUrl.startsWith('http')) {
-      debugError('âŒ CRITICAL: Invalid backend URL format:', backendUrl);
-      debugError('ðŸ’¡ API_BASE_URL:', API_BASE_URL);
-      debugError('ðŸ’¡ Expected format: https://your-domain.com or http://localhost:5000');
+      debugError('❌ CRITICAL: Invalid backend URL format:', backendUrl);
+      debugError('💡 API_BASE_URL:', API_BASE_URL);
+      debugError('💡 Expected format: https://your-domain.com or http://localhost:5000');
       setIsConnected(false);
       return; // Don't try to connect with invalid URL
     }
@@ -164,28 +164,28 @@ export const useRestaurantNotifications = () => {
       const urlTest = new URL(socketUrl); // This will throw if URL is invalid
       // Additional validation: ensure it's not localhost in production
       if ((isProductionBuild || isProductionDeployment) && (urlTest.hostname === 'localhost' || urlTest.hostname === '127.0.0.1')) {
-        debugError('âŒ CRITICAL: Socket URL contains localhost in production!');
-        debugError('ðŸ’¡ Socket URL:', socketUrl);
-        debugError('ðŸ’¡ This should have been caught earlier, but blocking anyway');
+        debugError('❌ CRITICAL: Socket URL contains localhost in production!');
+        debugError('💡 Socket URL:', socketUrl);
+        debugError('💡 This should have been caught earlier, but blocking anyway');
         setIsConnected(false);
         return;
       }
     } catch (urlError) {
-      debugError('âŒ CRITICAL: Invalid Socket.IO URL:', socketUrl);
-      debugError('ðŸ’¡ URL validation error:', urlError.message);
-      debugError('ðŸ’¡ Backend URL:', backendUrl);
-      debugError('ðŸ’¡ API_BASE_URL:', API_BASE_URL);
+      debugError('❌ CRITICAL: Invalid Socket.IO URL:', socketUrl);
+      debugError('💡 URL validation error:', urlError.message);
+      debugError('💡 Backend URL:', backendUrl);
+      debugError('💡 API_BASE_URL:', API_BASE_URL);
       setIsConnected(false);
       return; // Don't try to connect with invalid URL
     }
     
-    debugLog('ðŸ”Œ Attempting to connect to Socket.IO:', socketUrl);
-    debugLog('ðŸ”Œ Backend URL:', backendUrl);
-    debugLog('ðŸ”Œ API_BASE_URL:', API_BASE_URL);
-    debugLog('ðŸ”Œ Restaurant ID:', restaurantId);
-    debugLog('ðŸ”Œ Environment:', import.meta.env.MODE);
-    debugLog('ðŸ”Œ Is Production Build:', isProductionBuild);
-    debugLog('ðŸ”Œ Is Production Deployment:', isProductionDeployment);
+    debugLog('🔌 Attempting to connect to Socket.IO:', socketUrl);
+    debugLog('🔌 Backend URL:', backendUrl);
+    debugLog('🔌 API_BASE_URL:', API_BASE_URL);
+    debugLog('🔌 Restaurant ID:', restaurantId);
+    debugLog('🔌 Environment:', import.meta.env.MODE);
+    debugLog('🔌 Is Production Build:', isProductionBuild);
+    debugLog('🔌 Is Production Deployment:', isProductionDeployment);
 
     // Initialize socket connection to restaurant namespace
     // Use polling only to avoid repeated "WebSocket connection failed" when backend is down
@@ -205,21 +205,21 @@ export const useRestaurantNotifications = () => {
     });
 
     socketRef.current.on('connect', () => {
-      debugLog('âœ… Restaurant Socket connected, restaurantId:', restaurantId);
-      debugLog('âœ… Socket ID:', socketRef.current.id);
-      debugLog('âœ… Socket URL:', socketUrl);
+      debugLog('✅ Restaurant Socket connected, restaurantId:', restaurantId);
+      debugLog('✅ Socket ID:', socketRef.current.id);
+      debugLog('✅ Socket URL:', socketUrl);
       setIsConnected(true);
       
       // Join restaurant room immediately after connection with retry
       if (restaurantId) {
         const joinRoom = () => {
-          debugLog('ðŸ“¢ Joining restaurant room with ID:', restaurantId);
+          debugLog('📢 Joining restaurant room with ID:', restaurantId);
           socketRef.current.emit('join-restaurant', restaurantId);
           
           // Retry join after 2 seconds if no confirmation received
           setTimeout(() => {
             if (socketRef.current?.connected) {
-              debugLog('ðŸ”„ Retrying restaurant room join...');
+              debugLog('🔄 Retrying restaurant room join...');
               socketRef.current.emit('join-restaurant', restaurantId);
             }
           }, 2000);
@@ -227,15 +227,15 @@ export const useRestaurantNotifications = () => {
         
         joinRoom();
       } else {
-        debugWarn('âš ï¸ Cannot join restaurant room: restaurantId is missing');
+        debugWarn('⚠️ Cannot join restaurant room: restaurantId is missing');
       }
     });
 
     // Listen for room join confirmation
     socketRef.current.on('restaurant-room-joined', (data) => {
-      debugLog('âœ… Restaurant room joined successfully:', data);
-      debugLog('âœ… Room:', data?.room);
-      debugLog('âœ… Restaurant ID in room:', data?.restaurantId);
+      debugLog('✅ Restaurant room joined successfully:', data);
+      debugLog('✅ Room:', data?.room);
+      debugLog('✅ Restaurant ID in room:', data?.restaurantId);
     });
 
     // Listen for connection errors (throttle logs to avoid console spam on reconnect loops)
@@ -256,14 +256,14 @@ export const useRestaurantNotifications = () => {
         }
       }
       if (error.message?.includes('CORS') || error.message?.includes('Not allowed')) {
-        debugWarn('ðŸ’¡ Add frontend URL to CORS_ORIGIN in backend .env');
+        debugWarn('💡 Add frontend URL to CORS_ORIGIN in backend .env');
       }
       setIsConnected(false);
     });
 
     // Listen for disconnection
     socketRef.current.on('disconnect', (reason) => {
-      debugLog('âŒ Restaurant Socket disconnected:', reason);
+      debugLog('❌ Restaurant Socket disconnected:', reason);
       setIsConnected(false);
       
       if (reason === 'io server disconnect') {
@@ -274,12 +274,12 @@ export const useRestaurantNotifications = () => {
 
     // Listen for reconnection attempts
     socketRef.current.on('reconnect_attempt', (attemptNumber) => {
-      debugLog(`ðŸ”„ Reconnection attempt ${attemptNumber}...`);
+      debugLog(`🔄 Reconnection attempt ${attemptNumber}...`);
     });
 
     // Listen for successful reconnection
     socketRef.current.on('reconnect', (attemptNumber) => {
-      debugLog(`âœ… Reconnected after ${attemptNumber} attempts`);
+      debugLog(`✅ Reconnected after ${attemptNumber} attempts`);
       setIsConnected(true);
       
       // Rejoin restaurant room after reconnection
@@ -290,7 +290,7 @@ export const useRestaurantNotifications = () => {
 
     // Listen for new order notifications
     socketRef.current.on('new_order', (orderData) => {
-      debugLog('ðŸ“¦ New order received:', orderData);
+      debugLog('📦 New order received:', orderData);
       setNewOrder(orderData);
       
       // Play notification sound
@@ -299,13 +299,13 @@ export const useRestaurantNotifications = () => {
 
     // Listen for sound notification event
     socketRef.current.on('play_notification_sound', (data) => {
-      debugLog('ðŸ”” Sound notification:', data);
+      debugLog('🔔 Sound notification:', data);
       playNotificationSound();
     });
 
     // Listen for order status updates
     socketRef.current.on('order_status_update', (data) => {
-      debugLog('ðŸ“Š Order status update:', data);
+      debugLog('📊 Order status update:', data);
       // You can handle status updates here if needed
     });
 
@@ -352,7 +352,7 @@ export const useRestaurantNotifications = () => {
       if (audioRef.current) {
         // Only play if user has interacted with the page (browser autoplay policy)
         if (!userInteractedRef.current) {
-          debugLog('ðŸ”‡ Audio playback skipped - user has not interacted with page yet');
+          debugLog('🔇 Audio playback skipped - user has not interacted with page yet');
           return;
         }
         

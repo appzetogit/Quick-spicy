@@ -294,7 +294,7 @@ export default function About() {
           className="text-center mt-8 mb-4"
         >
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            Â© {new Date().getFullYear()} {companyName}. All rights reserved.
+            © {new Date().getFullYear()} {companyName}. All rights reserved.
           </p>
         </motion.div>
       </div>

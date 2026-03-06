@@ -54,17 +54,17 @@ export default function AdminHome() {
         const response = await adminAPI.getDashboardStats()
         if (response.data?.success && response.data?.data) {
           setDashboardData(response.data.data)
-          debugLog('âœ… Dashboard stats fetched:', response.data.data)
-          debugLog('ðŸ’° Commission:', response.data.data.commission)
-          debugLog('ðŸ’³ Platform Fee:', response.data.data.platformFee)
-          debugLog('ðŸšš Delivery Fee:', response.data.data.deliveryFee)
-          debugLog('ðŸ§¾ GST:', response.data.data.gst)
-          debugLog('ðŸ’µ Total Admin Earnings:', response.data.data.totalAdminEarnings)
+          debugLog('✅ Dashboard stats fetched:', response.data.data)
+          debugLog('💰 Commission:', response.data.data.commission)
+          debugLog('💳 Platform Fee:', response.data.data.platformFee)
+          debugLog('🚚 Delivery Fee:', response.data.data.deliveryFee)
+          debugLog('🧾 GST:', response.data.data.gst)
+          debugLog('💵 Total Admin Earnings:', response.data.data.totalAdminEarnings)
         } else {
-          debugError('âŒ Invalid response format:', response.data)
+          debugError('❌ Invalid response format:', response.data)
         }
       } catch (error) {
-        debugError('âŒ Error fetching dashboard stats:', error)
+        debugError('❌ Error fetching dashboard stats:', error)
       } finally {
         setIsLoading(false)
       }

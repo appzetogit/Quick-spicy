@@ -322,7 +322,7 @@ export default function Feedback() {
                              order.review?.text ||
                              order.feedback?.comment ||
                              order.feedback?.text ||
-                             (rating ? `${rating}â˜… rating` : 'No review text')
+                             (rating ? `${rating}★ rating` : 'No review text')
 
             // Count user's orders with this restaurant
             const userOrdersCount = allOrders.filter(o => 
@@ -887,7 +887,7 @@ export default function Feedback() {
                     Reviews ({displayedReviews.length})
                   </h2>
                   <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                    <span>â“˜</span>
+                    <span>ⓘ</span>
                     <span>Delivery reviews are only visible to you</span>
                   </div>
                 </div>
@@ -922,7 +922,7 @@ export default function Feedback() {
                     {/* Order & outlet */}
                     <div className="text-[11px] text-gray-500 flex items-center justify-between gap-2">
                       <span className="truncate">
-                        Order #{review.orderNumber} Â· {review.outlet}
+                        Order #{review.orderNumber} · {review.outlet}
                       </span>
                     </div>
 
@@ -949,7 +949,7 @@ export default function Feedback() {
                       <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-100"></div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                          {review.rating}â˜…
+                          {review.rating}★
                         </span>
                         <span className="text-[11px] text-gray-500">
                           {review.date}
@@ -1062,7 +1062,7 @@ export default function Feedback() {
                   <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-50"></div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                      {selectedReview.rating}â˜…
+                      {selectedReview.rating}★
                     </span>
                     <span className="text-[11px] text-gray-500">
                       {selectedReview.date}

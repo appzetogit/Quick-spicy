@@ -144,7 +144,7 @@ export default function FeedNavbar({ className = "" }) {
               const mightBeSwapped = (lat >= 68 && lat <= 98 && lng >= 8 && lng <= 38);
               
               if (mightBeSwapped) {
-                debugWarn('âš ï¸ Saved coordinates might be swapped in FeedNavbar - correcting:', {
+                debugWarn('⚠️ Saved coordinates might be swapped in FeedNavbar - correcting:', {
                   original: [lat, lng],
                   corrected: [lng, lat]
                 });
@@ -175,7 +175,7 @@ export default function FeedNavbar({ className = "" }) {
           // Validate coordinates
           if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
               latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-            debugWarn('âš ï¸ Invalid coordinates from geolocation:', { latitude, longitude });
+            debugWarn('⚠️ Invalid coordinates from geolocation:', { latitude, longitude });
             latitude = null;
             longitude = null;
           }
@@ -189,7 +189,7 @@ export default function FeedNavbar({ className = "" }) {
           latitude >= -90 && latitude <= 90 && 
           longitude >= -180 && longitude <= 180) {
         await deliveryAPI.updateLocation(latitude, longitude, next);
-        debugLog('âœ… Online status and location updated in backend:', { 
+        debugLog('✅ Online status and location updated in backend:', { 
           isOnline: next, 
           latitude, 
           longitude,
@@ -197,10 +197,10 @@ export default function FeedNavbar({ className = "" }) {
         });
       } else {
         await deliveryAPI.updateOnlineStatus(next);
-        debugLog('âœ… Online status updated in backend (location not available):', next);
+        debugLog('✅ Online status updated in backend (location not available):', next);
       }
     } catch (error) {
-      debugError('âŒ Error updating online status in backend:', error);
+      debugError('❌ Error updating online status in backend:', error);
       // Revert state if backend update fails
       setIsOnline(!next);
       toast.error('Failed to update status. Please try again.');

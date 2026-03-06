@@ -100,7 +100,7 @@ export default function RestaurantCommission() {
       // Handle network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         toast.error(`Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`)
-        debugError('ðŸ’¡ Backend connection issue. Check:')
+        debugError('💡 Backend connection issue. Check:')
         debugError('   1. Is backend server running? (npm start in backend folder)')
         debugError(`   2. Is backend running on ${API_BASE_URL.replace('/api', '')}?`)
         debugError('   3. Check browser console for CORS errors')
@@ -557,7 +557,7 @@ export default function RestaurantCommission() {
                     className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="percentage">Percentage (%)</option>
-                    <option value="amount">Fixed Amount (â‚¹)</option>
+                    <option value="amount">Fixed Amount (₹)</option>
                   </select>
                 </div>
                 <div>

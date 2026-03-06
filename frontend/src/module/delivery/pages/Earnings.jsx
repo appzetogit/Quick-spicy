@@ -405,7 +405,7 @@ export default function Earnings() {
         const seed = dateStr.split('-').join('')
         const seedNum = parseInt(seed) % 10000
         
-        earnings = (seedNum % 200) // Random earnings up to â‚¹200
+        earnings = (seedNum % 200) // Random earnings up to ₹200
         orders = earnings > 0 ? (seedNum % 5) + 1 : 0
         hours = earnings > 0 ? Math.floor((seedNum % 2)) : 0
         minutes = earnings > 0 ? (seedNum % 60) : 0
@@ -464,7 +464,7 @@ export default function Earnings() {
           const seed = dateStr.split('-').join('')
           const seedNum = parseInt(seed) % 10000
           
-          earnings = (seedNum % 1500) + 100 // Random earnings up to â‚¹1600
+          earnings = (seedNum % 1500) + 100 // Random earnings up to ₹1600
           orders = earnings > 0 ? (seedNum % 20) + 1 : 0
           hours = earnings > 0 ? Math.floor((seedNum % 10)) : 0
           minutes = earnings > 0 ? (seedNum % 60) : 0
@@ -718,7 +718,7 @@ export default function Earnings() {
           {/* Total Earnings */}
           <div className="px-4 pb-4 text-center">
             <p className="text-5xl font-bold text-gray-900">
-              {earningsData.totalEarnings === 0 ? 'â‚¹0' : `â‚¹${Math.round(earningsData.totalEarnings)}`}
+              {earningsData.totalEarnings === 0 ? '₹0' : `₹${Math.round(earningsData.totalEarnings)}`}
             </p>
           </div>
 
@@ -762,7 +762,7 @@ export default function Earnings() {
                       {/* Earnings Label - Above bar */}
                       {hasEarnings && (
                         <span className="text-xs font-semibold text-gray-900">
-                          â‚¹{Math.round(day.earnings)}
+                          ₹{Math.round(day.earnings)}
                         </span>
                       )}
                       
@@ -828,7 +828,7 @@ export default function Earnings() {
                       {/* Earnings Label - Above bar */}
                       {hasEarnings && (
                         <span className="text-xs font-semibold text-gray-900">
-                          â‚¹{Math.round(week.earnings)}
+                          ₹{Math.round(week.earnings)}
                         </span>
                       )}
                       
@@ -878,21 +878,21 @@ export default function Earnings() {
           <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
             <span className="text-base text-gray-900">Order earning</span>
             <span className="text-base font-semibold text-gray-900">
-              {earningsData.orderEarning === 0 ? 'â‚¹0' : `â‚¹${Math.round(earningsData.orderEarning)}`}
+              {earningsData.orderEarning === 0 ? '₹0' : `₹${Math.round(earningsData.orderEarning)}`}
             </span>
           </div>
           
           <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
             <span className="text-base text-gray-900">Incentive</span>
             <span className="text-base font-semibold text-gray-900">
-              {earningsData.incentive === 0 ? 'â‚¹0' : `â‚¹${Math.round(earningsData.incentive)}`}
+              {earningsData.incentive === 0 ? '₹0' : `₹${Math.round(earningsData.incentive)}`}
             </span>
           </div>
           
           <div className="bg-white rounded-lg shadow-sm px-4 py-4 flex items-center justify-between">
             <span className="text-base text-gray-900">Other earnings</span>
             <span className="text-base font-semibold text-gray-900">
-              {earningsData.otherEarnings === 0 ? 'â‚¹0' : `â‚¹${Math.round(earningsData.otherEarnings)}`}
+              {earningsData.otherEarnings === 0 ? '₹0' : `₹${Math.round(earningsData.otherEarnings)}`}
             </span>
           </div>
         </div>

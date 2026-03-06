@@ -728,7 +728,7 @@ export default function Dining() {
                             transition={{ duration: 0.3 }}
                           >
                             <div className="bg-gray-800/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium shadow-lg">
-                              {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
+                              {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
                             </div>
                           </motion.div>
 
@@ -939,7 +939,7 @@ export default function Dining() {
                           {/* Featured Dish Badge - Top Left */}
                           <div className="absolute top-3 left-3">
                             <div className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium">
-                              {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
+                              {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
                             </div>
                           </div>
 
@@ -1205,7 +1205,7 @@ export default function Dining() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹200</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹200</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('price-under-500')}
@@ -1214,7 +1214,7 @@ export default function Dining() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹500</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹500</span>
                       </button>
                     </div>
                   </div>

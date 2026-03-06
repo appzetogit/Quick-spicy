@@ -87,7 +87,7 @@ const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null,
 
   // Get coordinates from order payload (actual saved locations)
   const getRestaurantCoords = () => {
-    debugLog('ðŸ” Getting restaurant coordinates from order:', {
+    debugLog('🔍 Getting restaurant coordinates from order:', {
       hasOrder: !!order,
       restaurantLocation: order?.restaurantLocation,
       coordinates: order?.restaurantLocation?.coordinates,
@@ -104,35 +104,35 @@ const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null,
       Array.isArray(order.restaurantLocation.coordinates) &&
       order.restaurantLocation.coordinates.length >= 2) {
       coords = order.restaurantLocation.coordinates;
-      debugLog('âœ… Using restaurantLocation.coordinates:', coords);
+      debugLog('✅ Using restaurantLocation.coordinates:', coords);
     }
     // Priority 2: restaurantId.location.coordinates (if restaurantId is populated)
     else if (order?.restaurantId?.location?.coordinates &&
       Array.isArray(order.restaurantId.location.coordinates) &&
       order.restaurantId.location.coordinates.length >= 2) {
       coords = order.restaurantId.location.coordinates;
-      debugLog('âœ… Using restaurantId.location.coordinates:', coords);
+      debugLog('✅ Using restaurantId.location.coordinates:', coords);
     }
     // Priority 3: restaurantId.location with latitude/longitude
     else if (order?.restaurantId?.location?.latitude && order?.restaurantId?.location?.longitude) {
       coords = [order.restaurantId.location.longitude, order.restaurantId.location.latitude];
-      debugLog('âœ… Using restaurantId.location (lat/lng):', coords);
+      debugLog('✅ Using restaurantId.location (lat/lng):', coords);
     }
 
     const fromCoords = toPointFromGeoJSON(coords);
     if (fromCoords) {
       const result = fromCoords;
-      debugLog('âœ… Final restaurant coordinates (lat, lng):', result, 'from GeoJSON:', coords);
+      debugLog('✅ Final restaurant coordinates (lat, lng):', result, 'from GeoJSON:', coords);
       return result;
     }
 
-    const fallbackLat = Number(order?.restaurantId?.location?.latitude ?? order?.restaurant?.location?.latitude);
-    const fallbackLng = Number(order?.restaurantId?.location?.longitude ?? order?.restaurant?.location?.longitude);
+    const fallbackLat = Number(order?.restaurantId?.location?.latitude || order?.restaurant?.location?.latitude);
+    const fallbackLng = Number(order?.restaurantId?.location?.longitude || order?.restaurant?.location?.longitude);
     if (Number.isFinite(fallbackLat) && Number.isFinite(fallbackLng)) {
       return { lat: fallbackLat, lng: fallbackLng };
     }
 
-    debugWarn('âš ï¸ Restaurant coordinates not found in order payload');
+    debugWarn('⚠️ Restaurant coordinates not found in order payload');
     return null;
   };
 
@@ -270,7 +270,7 @@ const getRestaurantAddressFromOrder = (apiOrder, previousOrder = null, explicitR
 }
 
 const transformOrderForTracking = (apiOrder, previousOrder = null, explicitRestaurantCoords = null, explicitRestaurantAddress = null) => {
-  const restaurantCoords = explicitRestaurantCoords ?? getRestaurantCoordsFromOrder(apiOrder, previousOrder?.restaurantLocation?.coordinates)
+  const restaurantCoords = explicitRestaurantCoords || getRestaurantCoordsFromOrder(apiOrder, previousOrder?.restaurantLocation?.coordinates)
   const restaurantAddress = getRestaurantAddressFromOrder(apiOrder, previousOrder, explicitRestaurantAddress)
 
   return {
@@ -494,7 +494,7 @@ export default function OrderTracking() {
             setOrderStatus('cancelled');
           }
 
-          debugLog('ðŸ”„ Polling order sync:', {
+          debugLog('🔄 Polling order sync:', {
             oldStatus: currentDeliveryStatus,
             newStatus: newDeliveryStatus,
             oldPhase: currentPhase,
@@ -559,7 +559,7 @@ export default function OrderTracking() {
         // Also ensure restaurantId is present
         if (!contextOrder.restaurantId && contextOrder.restaurant) {
           // Try to preserve restaurantId if it exists
-          debugLog('âš ï¸ Context order missing restaurantId, will fetch from API');
+          debugLog('⚠️ Context order missing restaurantId, will fetch from API');
         }
         const hasRestaurantCoords =
           Array.isArray(contextOrder?.restaurantLocation?.coordinates) &&
@@ -585,7 +585,7 @@ export default function OrderTracking() {
           const apiOrder = response.data.data.order
 
           // Log full API response structure for debugging
-          debugLog('ðŸ” Full API Order Response:', {
+          debugLog('🔍 Full API Order Response:', {
             orderId: apiOrder.orderId || apiOrder._id,
             hasRestaurantId: !!apiOrder.restaurantId,
             restaurantIdType: typeof apiOrder.restaurantId,
@@ -605,23 +605,23 @@ export default function OrderTracking() {
             Array.isArray(apiOrder.restaurantId.location.coordinates) &&
             apiOrder.restaurantId.location.coordinates.length >= 2) {
             restaurantCoords = apiOrder.restaurantId.location.coordinates;
-            debugLog('âœ… Found coordinates in restaurantId.location.coordinates:', restaurantCoords);
+            debugLog('✅ Found coordinates in restaurantId.location.coordinates:', restaurantCoords);
           }
           // Priority 2: restaurantId.location with latitude/longitude properties
           else if (apiOrder.restaurantId?.location?.latitude && apiOrder.restaurantId?.location?.longitude) {
             restaurantCoords = [apiOrder.restaurantId.location.longitude, apiOrder.restaurantId.location.latitude];
-            debugLog('âœ… Found coordinates in restaurantId.location (lat/lng):', restaurantCoords);
+            debugLog('✅ Found coordinates in restaurantId.location (lat/lng):', restaurantCoords);
           }
           // Priority 3: Check if restaurantId is a string ID and fetch restaurant details
           else if (typeof apiOrder.restaurantId === 'string') {
-            debugLog('âš ï¸ restaurantId is a string ID, fetching restaurant details...', apiOrder.restaurantId);
+            debugLog('⚠️ restaurantId is a string ID, fetching restaurant details...', apiOrder.restaurantId);
             try {
               const restaurantResponse = await restaurantAPI.getRestaurantById(apiOrder.restaurantId);
               if (restaurantResponse?.data?.success && restaurantResponse.data.data?.restaurant) {
                 const restaurant = restaurantResponse.data.data.restaurant;
                 if (restaurant.location?.coordinates && Array.isArray(restaurant.location.coordinates) && restaurant.location.coordinates.length >= 2) {
                   restaurantCoords = restaurant.location.coordinates;
-                  debugLog('âœ… Fetched restaurant coordinates from API:', restaurantCoords);
+                  debugLog('✅ Fetched restaurant coordinates from API:', restaurantCoords);
                 }
                 restaurantAddress =
                   restaurant?.location?.formattedAddress ||
@@ -630,17 +630,17 @@ export default function OrderTracking() {
                   null;
               }
             } catch (err) {
-              debugError('âŒ Error fetching restaurant details:', err);
+              debugError('❌ Error fetching restaurant details:', err);
             }
           }
           // Priority 4: Check nested restaurant data
           else if (apiOrder.restaurant?.location?.coordinates) {
             restaurantCoords = apiOrder.restaurant.location.coordinates;
-            debugLog('âœ… Found coordinates in restaurant.location.coordinates:', restaurantCoords);
+            debugLog('✅ Found coordinates in restaurant.location.coordinates:', restaurantCoords);
           }
 
-          debugLog('ðŸ“ Final restaurant coordinates:', restaurantCoords);
-          debugLog('ðŸ“ Customer coordinates:', apiOrder.address?.location?.coordinates);
+          debugLog('📍 Final restaurant coordinates:', restaurantCoords);
+          debugLog('📍 Customer coordinates:', apiOrder.address?.location?.coordinates);
 
           // Transform API order to match component structure
           setOrder(transformOrderForTracking(apiOrder, null, restaurantCoords, restaurantAddress))
@@ -698,7 +698,7 @@ export default function OrderTracking() {
       const payload = event?.detail || {};
       const { message, status, estimatedDeliveryTime } = payload;
 
-      debugLog('ðŸ“¢ Order status notification received:', { message, status });
+      debugLog('📢 Order status notification received:', { message, status });
 
       // Update order status in UI
       if (status === 'out_for_delivery') {
@@ -722,7 +722,7 @@ export default function OrderTracking() {
       if (message) {
         toast.success(message, {
           duration: 5000,
-          icon: 'ðŸï¸',
+          icon: '🏍️',
           position: 'top-center',
           description: estimatedDeliveryTime
             ? `Estimated delivery in ${Math.round(estimatedDeliveryTime / 60)} minutes`
@@ -855,14 +855,14 @@ export default function OrderTracking() {
         }
         // Priority 4: Check if restaurantId is a string ID and fetch restaurant details
         else if (typeof apiOrder.restaurantId === 'string') {
-          debugLog('âš ï¸ restaurantId is a string ID, fetching restaurant details...', apiOrder.restaurantId);
+          debugLog('⚠️ restaurantId is a string ID, fetching restaurant details...', apiOrder.restaurantId);
           try {
             const restaurantResponse = await restaurantAPI.getRestaurantById(apiOrder.restaurantId);
             if (restaurantResponse?.data?.success && restaurantResponse.data.data?.restaurant) {
               const restaurant = restaurantResponse.data.data.restaurant;
               if (restaurant.location?.coordinates && Array.isArray(restaurant.location.coordinates) && restaurant.location.coordinates.length >= 2) {
                 restaurantCoords = restaurant.location.coordinates;
-                debugLog('âœ… Fetched restaurant coordinates from API:', restaurantCoords);
+                debugLog('✅ Fetched restaurant coordinates from API:', restaurantCoords);
               }
               restaurantAddress =
                 restaurant?.location?.formattedAddress ||
@@ -871,7 +871,7 @@ export default function OrderTracking() {
                 null;
             }
           } catch (err) {
-            debugError('âŒ Error fetching restaurant details:', err);
+            debugError('❌ Error fetching restaurant details:', err);
           }
         }
 
@@ -1077,7 +1077,7 @@ export default function OrderTracking() {
         isVisible={!showConfirmation && order !== null}
         fallbackCustomerCoords={fallbackCustomerCoords}
         userLiveCoords={userLiveCoords}
-        userLocationAccuracy={userLiveLocation?.accuracy ?? null}
+          userLocationAccuracy={userLiveLocation?.accuracy ?? null}
       />
 
       {/* Scrollable Content */}
@@ -1186,7 +1186,7 @@ export default function OrderTracking() {
           transition={{ delay: 0.65 }}
         >
           <p className="text-yellow-800 font-medium">
-            All your delivery details in one place ðŸ‘‡
+            All your delivery details in one place 👇
           </p>
         </motion.div>
 
@@ -1274,7 +1274,7 @@ export default function OrderTracking() {
         >
           <div className="flex items-center gap-3 p-4 border-b border-dashed border-gray-200">
             <div className="w-12 h-12 rounded-full bg-orange-100 overflow-visible flex items-center justify-center flex-shrink-0">
-              <span className="text-2xl">ðŸ”</span>
+              <span className="text-2xl">🍔</span>
             </div>
             <div className="flex-1">
               <p className="font-semibold text-gray-900">{order.restaurant}</p>
@@ -1439,7 +1439,7 @@ export default function OrderTracking() {
                         <p className="text-sm text-gray-500 mt-0.5">Quantity: {item.quantity}</p>
                       </div>
                     </div>
-                    <p className="font-semibold text-gray-900">â‚¹{item.price * item.quantity}</p>
+                    <p className="font-semibold text-gray-900">₹{item.price * item.quantity}</p>
                   </div>
                 ))}
               </div>
@@ -1450,19 +1450,19 @@ export default function OrderTracking() {
               <p className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">Bill Summary</p>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Item Total</span>
-                <span className="text-gray-900 font-medium">â‚¹{order?.totalAmount - (order?.deliveryFee || 0) - (order?.gst || 0)}</span>
+                <span className="text-gray-900 font-medium">₹{order?.totalAmount - (order?.deliveryFee || 0) - (order?.gst || 0)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Delivery Fee</span>
-                <span className="text-gray-900 font-medium">â‚¹{order?.deliveryFee || 0}</span>
+                <span className="text-gray-900 font-medium">₹{order?.deliveryFee || 0}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Taxes & Charges</span>
-                <span className="text-gray-900 font-medium">â‚¹{order?.gst || 0}</span>
+                <span className="text-gray-900 font-medium">₹{order?.gst || 0}</span>
               </div>
               <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                 <span className="text-base font-bold text-gray-900">Total Amount</span>
-                <span className="text-lg font-bold text-gray-900">â‚¹{order?.totalAmount}</span>
+                <span className="text-lg font-bold text-gray-900">₹{order?.totalAmount}</span>
               </div>
             </div>
 

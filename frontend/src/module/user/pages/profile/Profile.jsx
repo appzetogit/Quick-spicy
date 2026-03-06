@@ -175,17 +175,17 @@ export default function Profile() {
     const percentage = Math.round((completedRequiredFields / totalRequiredFields) * 100)
 
     // Always log for debugging (remove in production if needed)
-    debugLog('ðŸ” Profile completion check:', {
+    debugLog('🔍 Profile completion check:', {
       requiredFields,
       completedRequiredFields,
       totalRequiredFields,
       percentage,
       fieldStatus: {
-        name: hasName ? 'âœ…' : 'âŒ',
-        contact: hasContact ? 'âœ…' : 'âŒ',
-        profileImage: hasImage ? 'âœ…' : 'âŒ',
-        dateOfBirth: hasDateOfBirth ? 'âœ…' : 'âŒ',
-        gender: hasGender ? 'âœ…' : 'âŒ',
+        name: hasName ? '✅' : '❌',
+        contact: hasContact ? '✅' : '❌',
+        profileImage: hasImage ? '✅' : '❌',
+        dateOfBirth: hasDateOfBirth ? '✅' : '❌',
+        gender: hasGender ? '✅' : '❌',
       },
       rawData: {
         name: userProfile.name || 'missing',
@@ -220,7 +220,7 @@ export default function Profile() {
 
   const handleShareReferral = async () => {
     if (!referralCode) return
-    const shareText = `Use my referral code ${referralCode} on signup and I get â‚¹50 in wallet.`
+    const shareText = `Use my referral code ${referralCode} on signup and I get ₹50 in wallet.`
     try {
       if (navigator.share) {
         await navigator.share({
@@ -378,7 +378,7 @@ export default function Profile() {
                     <span className="text-base font-medium text-gray-900 dark:text-white">{companyName} Money</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-semibold text-green-600 dark:text-green-400">â‚¹{userProfile?.wallet?.balance?.toFixed(0) || '0'}</span>
+                    <span className="text-base font-semibold text-green-600 dark:text-green-400">₹{userProfile?.wallet?.balance?.toFixed(0) || '0'}</span>
                     <motion.div
                       whileHover={{ x: 4 }}
                       transition={{ duration: 0.2 }}
@@ -465,7 +465,7 @@ export default function Profile() {
                     <span className="text-base font-medium text-gray-900 dark:text-white">Referral</span>
                   </div>
                   <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-                    Earn â‚¹50
+                    Earn ₹50
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2 mb-2">
@@ -488,7 +488,7 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    When someone signs up using your code, you get â‚¹50 in wallet.
+                    When someone signs up using your code, you get ₹50 in wallet.
                   </p>
                   <button
                     type="button"

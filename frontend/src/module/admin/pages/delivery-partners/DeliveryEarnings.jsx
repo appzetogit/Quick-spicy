@@ -9,7 +9,7 @@ const debugError = (...args) => {}
 
 
 const formatCurrency = (amount) => {
-  return `â‚¹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `₹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const formatDate = (dateString) => {

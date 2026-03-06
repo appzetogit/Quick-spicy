@@ -36,9 +36,9 @@ export default function MyOrders() {
         
         // Check authentication token
         const deliveryToken = localStorage.getItem('delivery_accessToken') || localStorage.getItem('accessToken')
-        debugLog('ðŸ” Delivery Token exists:', !!deliveryToken)
+        debugLog('🔐 Delivery Token exists:', !!deliveryToken)
         
-        debugLog('ðŸ”„ Fetching orders using Trip History API (includes all completed orders)...')
+        debugLog('🔄 Fetching orders using Trip History API (includes all completed orders)...')
         
         // Use Trip History API which includes all orders including delivered/completed
         // Fetch from last 1 year to get all orders
@@ -52,7 +52,7 @@ export default function MyOrders() {
           limit: 1000 // Get more orders
         })
         
-        debugLog('ðŸ“¦ Trip History API Response:', response?.data)
+        debugLog('📦 Trip History API Response:', response?.data)
         
         // Trip History API returns: { success: true, data: { trips: [...] } }
         let ordersData = []
@@ -60,25 +60,25 @@ export default function MyOrders() {
         if (response?.data?.success && response?.data?.data?.trips) {
           // Trip History returns trips array
           ordersData = response.data.data.trips || []
-          debugLog('âœ… Using Trip History API, found orders:', ordersData.length)
+          debugLog('✅ Using Trip History API, found orders:', ordersData.length)
         } else if (response?.data?.data?.orders) {
           // Fallback to orders structure
           ordersData = response.data.data.orders || []
-          debugLog('âœ… Using orders structure, found orders:', ordersData.length)
+          debugLog('✅ Using orders structure, found orders:', ordersData.length)
         } else if (Array.isArray(response?.data?.data)) {
           // Direct array
           ordersData = response.data.data
-          debugLog('âœ… Using direct array, found orders:', ordersData.length)
+          debugLog('✅ Using direct array, found orders:', ordersData.length)
         }
         
-        debugLog('âœ… Final orders to set:', ordersData.length)
-        debugLog('âœ… Orders sample:', ordersData.slice(0, 2))
+        debugLog('✅ Final orders to set:', ordersData.length)
+        debugLog('✅ Orders sample:', ordersData.slice(0, 2))
         
         if (ordersData && ordersData.length > 0) {
           setOrders(ordersData)
-          debugLog('âœ… Orders state updated successfully')
+          debugLog('✅ Orders state updated successfully')
         } else {
-          debugWarn('âš ï¸ No orders found - trying getOrders API as fallback...')
+          debugWarn('⚠️ No orders found - trying getOrders API as fallback...')
           // Fallback to getOrders API
           try {
             const fallbackResponse = await deliveryAPI.getOrders({ 
@@ -87,35 +87,35 @@ export default function MyOrders() {
             })
             if (fallbackResponse?.data?.success && fallbackResponse?.data?.data?.orders) {
               const fallbackOrders = fallbackResponse.data.data.orders || []
-              debugLog('âœ… Fallback API found orders:', fallbackOrders.length)
+              debugLog('✅ Fallback API found orders:', fallbackOrders.length)
               setOrders(fallbackOrders)
     } else {
               setOrders([])
             }
           } catch (fallbackError) {
-            debugError('âŒ Fallback API also failed:', fallbackError)
+            debugError('❌ Fallback API also failed:', fallbackError)
             setOrders([])
           }
         }
       } catch (error) {
-        debugError('âŒ ========== ERROR DETAILS ==========')
-        debugError('âŒ Error fetching orders:', error)
-        debugError('âŒ Error name:', error?.name)
-        debugError('âŒ Error message:', error?.message)
-        debugError('âŒ Error stack:', error?.stack)
-        debugError('âŒ Error response:', error?.response)
-        debugError('âŒ Error response data:', error?.response?.data)
-        debugError('âŒ Error response status:', error?.response?.status)
-        debugError('âŒ Error response statusText:', error?.response?.statusText)
-        debugError('âŒ Error response headers:', error?.response?.headers)
-        debugError('âŒ Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
-        debugError('âŒ ========== END ERROR DETAILS ==========')
+        debugError('❌ ========== ERROR DETAILS ==========')
+        debugError('❌ Error fetching orders:', error)
+        debugError('❌ Error name:', error?.name)
+        debugError('❌ Error message:', error?.message)
+        debugError('❌ Error stack:', error?.stack)
+        debugError('❌ Error response:', error?.response)
+        debugError('❌ Error response data:', error?.response?.data)
+        debugError('❌ Error response status:', error?.response?.status)
+        debugError('❌ Error response statusText:', error?.response?.statusText)
+        debugError('❌ Error response headers:', error?.response?.headers)
+        debugError('❌ Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2))
+        debugError('❌ ========== END ERROR DETAILS ==========')
         
         const errorMessage = error?.response?.data?.message || error?.message || 'Failed to load orders'
         toast.error(errorMessage)
         setOrders([])
       } finally {
-        debugLog('ðŸ Setting loading to false')
+        debugLog('🏁 Setting loading to false')
         setLoading(false)
       }
     }
@@ -210,7 +210,7 @@ export default function MyOrders() {
 
   // Debug: Log orders state changes
   useEffect(() => {
-    debugLog('ðŸ“Š Orders state changed:', {
+    debugLog('📊 Orders state changed:', {
       ordersCount: orders.length,
       orders: orders,
       isArray: Array.isArray(orders),
@@ -229,7 +229,7 @@ export default function MyOrders() {
 
   // Debug: Log filtered orders
   useEffect(() => {
-    debugLog('ðŸ” Filtered orders changed:', {
+    debugLog('🔍 Filtered orders changed:', {
       searchQuery,
       filteredCount: filteredOrders.length,
       filteredOrders: filteredOrders
@@ -254,7 +254,7 @@ export default function MyOrders() {
             {import.meta.env.DEV && (
         <button
                 onClick={() => {
-                  debugLog('ðŸ” Current State:', {
+                  debugLog('🔍 Current State:', {
                     orders,
                     filteredOrders,
                     loading,
@@ -346,7 +346,7 @@ export default function MyOrders() {
                           onClick={() => navigate(`/restaurant/${order.restaurantId?.slug || order.restaurantId?._id || order.restaurantId}`)}
                           className="text-xs text-red-500 font-medium flex items-center mt-1 hover:text-red-600"
                         >
-                          View menu <span className="ml-0.5">â–¸</span>
+                          View menu <span className="ml-0.5">▸</span>
                         </button>
         </div>
       </div>
@@ -383,7 +383,7 @@ export default function MyOrders() {
                       )}
         </div>
                     <div className="flex items-center">
-                      <span className="text-sm font-semibold text-gray-800">â‚¹{orderPrice.toFixed(2)}</span>
+                      <span className="text-sm font-semibold text-gray-800">₹{orderPrice.toFixed(2)}</span>
                       <ChevronRight className="w-4 h-4 text-gray-400 ml-1" />
         </div>
       </div>
@@ -410,7 +410,7 @@ export default function MyOrders() {
                     </div>
                   </div>
                         <button className="text-xs text-red-500 font-medium mt-0.5 flex items-center hover:text-red-600">
-                          View your feedback <span className="ml-0.5">â–¸</span>
+                          View your feedback <span className="ml-0.5">▸</span>
                         </button>
                 </div>
                     ) : isDelivered ? (
@@ -419,7 +419,7 @@ export default function MyOrders() {
                           <span className="text-sm text-gray-800">Order {orderStatus}</span>
           </div>
                         <button className="text-xs text-red-500 font-medium mt-0.5 flex items-center hover:text-red-600">
-                          View details <span className="ml-0.5">â–¸</span>
+                          View details <span className="ml-0.5">▸</span>
                         </button>
         </div>
                     ) : (

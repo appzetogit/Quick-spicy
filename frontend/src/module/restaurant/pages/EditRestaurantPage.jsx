@@ -224,7 +224,7 @@ export default function EditRestaurantPage() {
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50">
-                    <span className="text-lg">ðŸ‡ºðŸ‡¸</span>
+                    <span className="text-lg">🇺🇸</span>
                     <span className="text-sm text-gray-700">+1</span>
                   </div>
                   <input
@@ -275,7 +275,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, logo: null }))}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                     >
-                      Ã—
+                      ×
                     </button>
                   </div>
                 ) : (
@@ -320,7 +320,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, cover: null }))}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                     >
-                      Ã—
+                      ×
                     </button>
                   </div>
                 ) : (
@@ -393,7 +393,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, metaImage: null }))}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                     >
-                      Ã—
+                      ×
                     </button>
                   </div>
                 ) : (

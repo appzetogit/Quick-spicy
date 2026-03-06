@@ -43,9 +43,9 @@ export default function ProfileDetails() {
         data
 
       const possibleBalance =
-        wallet?.totalBalance ??
-        wallet?.balance ??
-        wallet?.pocketBalance ??
+        wallet?.totalBalance ||
+        wallet?.balance ||
+        wallet?.pocketBalance ||
         0
 
       return Number(possibleBalance) || 0
@@ -122,7 +122,7 @@ export default function ProfileDetails() {
           data?.data ||
           data
         const balance = Number(
-          wallet?.totalBalance ?? wallet?.balance ?? wallet?.pocketBalance ?? 0
+          wallet?.totalBalance || wallet?.balance || wallet?.pocketBalance || 0
         ) || 0
         setWalletBalance(balance)
       } catch (error) {
@@ -373,7 +373,7 @@ export default function ProfileDetails() {
               <div className="w-full align-center flex content-center justify-between">
                 <p className="text-sm text-gray-900 mb-1">Wallet Balance</p>
                 <p className="text-base text-gray-900">
-                  â‚¹{(walletBalance ?? profile?.wallet?.balance ?? 0).toFixed(2)}
+                  ₹{Number(walletBalance || profile?.wallet?.balance || 0).toFixed(2)}
                 </p>
               </div>
             </div>

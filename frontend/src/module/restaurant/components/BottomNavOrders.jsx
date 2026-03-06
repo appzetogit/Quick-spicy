@@ -57,7 +57,7 @@ export default function BottomNavOrders() {
 
   const activeTab = useMemo(() => {
     const match = findActiveTab(tabs, pathname)
-    return match?.id ?? (isHubMode ? "hub" : "orders")
+    return match?.id || (isHubMode ? "hub" : "orders")
   }, [tabs, pathname, isHubMode])
 
  

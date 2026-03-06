@@ -63,7 +63,7 @@ export default function DeliveryBoyCommission() {
     if (distance < commission.minDistance) return 0
     if (commission.maxDistance !== null && distance > commission.maxDistance) return 0
     
-    // Calculate commission: base payout + (extra distance beyond minDistance Ã— commission per km)
+    // Calculate commission: base payout + (extra distance beyond minDistance × commission per km)
     const extraDistance = Math.max(0, distance - commission.minDistance)
     const distanceCommission = extraDistance * commission.commissionPerKm
     return commission.basePayout + distanceCommission
@@ -126,7 +126,7 @@ export default function DeliveryBoyCommission() {
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const errorMessage = `Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`
         toast.error(errorMessage)
-        debugError('ðŸ’¡ Backend connection issue. Check:')
+        debugError('💡 Backend connection issue. Check:')
         debugError('   1. Is backend server running? (npm start in backend folder)')
         debugError(`   2. Is backend running on ${API_BASE_URL.replace('/api', '')}?`)
         debugError('   3. Check browser console for CORS errors')
@@ -171,7 +171,7 @@ export default function DeliveryBoyCommission() {
     setSelectedCommission(commission)
     setFormData({
       name: commission.name,
-      minDistance: commission.minDistance?.toString?.() ?? "",
+minDistance: commission.minDistance?.toString?.() || "",
       commissionPerKm: commission.commissionPerKm.toString(),
       basePayout: commission.basePayout.toString(),
     })
@@ -316,7 +316,7 @@ export default function DeliveryBoyCommission() {
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         const errorMessage = `Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`
         toast.error(errorMessage)
-        debugError('ðŸ’¡ Backend connection issue. Check:')
+        debugError('💡 Backend connection issue. Check:')
         debugError('   1. Is backend server running? (npm start in backend folder)')
         debugError(`   2. Is backend running on ${API_BASE_URL.replace('/api', '')}?`)
         debugError('   3. Check browser console for CORS errors')
@@ -438,7 +438,7 @@ export default function DeliveryBoyCommission() {
                 <p className="font-semibold text-blue-900 mb-1">Fixed + Extra Distance Commission</p>
                 <p className="text-slate-600">
                   Commission is calculated as: <strong>Base payout for 0-{formulaMinDistance} km + Extra per km after {formulaMinDistance} km</strong>.
-                  Example: if base is â‚¹25 and extra is â‚¹5/km, then 6 km earns â‚¹25 + (2 Ã— â‚¹5) = â‚¹35.
+                  Example: if base is ₹25 and extra is ₹5/km, then 6 km earns ₹25 + (2 × ₹5) = ₹35.
                 </p>
               </div>
             </div>
@@ -472,10 +472,10 @@ export default function DeliveryBoyCommission() {
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Distance Slab (km)</th>
                   )}
                   {visibleColumns.commissionPerKm && (
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Amount Per/Km (â‚¹)</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Amount Per/Km (₹)</th>
                   )}
                   {visibleColumns.basePayout && (
-                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Base Payout (â‚¹)</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Base Payout (₹)</th>
                   )}
                   {visibleColumns.status && (
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Status</th>
@@ -524,12 +524,12 @@ export default function DeliveryBoyCommission() {
                       )}
                       {visibleColumns.commissionPerKm && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-semibold text-green-700">â‚¹{commission.commissionPerKm}</span>
+                          <span className="text-sm font-semibold text-green-700">₹{commission.commissionPerKm}</span>
                         </td>
                       )}
                       {visibleColumns.basePayout && (
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-semibold text-blue-700">â‚¹{commission.basePayout}</span>
+                          <span className="text-sm font-semibold text-blue-700">₹{commission.basePayout}</span>
                         </td>
                       )}
                       {visibleColumns.status && (
@@ -624,7 +624,7 @@ export default function DeliveryBoyCommission() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Extra Per Kilometer after {formulaMinDistance} km (â‚¹) <span className="text-red-500">*</span>
+                Extra Per Kilometer after {formulaMinDistance} km (₹) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -641,7 +641,7 @@ export default function DeliveryBoyCommission() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Fixed Payout for 0-{formulaMinDistance} km (â‚¹) <span className="text-red-500">*</span>
+                Fixed Payout for 0-{formulaMinDistance} km (₹) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -656,7 +656,7 @@ export default function DeliveryBoyCommission() {
               />
               {formErrors.basePayout && <p className="text-xs text-red-500 mt-1">{formErrors.basePayout}</p>}
               <p className="text-xs text-slate-500 mt-1">
-                Formula: Base payout + (max(0, distance - {formulaMinDistance}) Ã— extra per km)
+                Formula: Base payout + (max(0, distance - {formulaMinDistance}) × extra per km)
               </p>
             </div>
           </div>
