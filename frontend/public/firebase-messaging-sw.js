@@ -76,6 +76,8 @@ async function loadFirebaseWebConfig() {
       tag: notificationKey,
       renotify: false,
       silent: false,
+      requireInteraction: false,
+      vibrate: [200, 100, 200, 100, 300],
       data: payload?.data || {},
     });
   });

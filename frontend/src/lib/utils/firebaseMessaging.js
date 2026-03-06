@@ -1,7 +1,7 @@
 import { toast } from "sonner";
 import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
-import alertSound from "@/assets/audio/alert.mp3";
+import pushNotificationSound from "@/assets/audio/zomato_sms.mp3";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "",
@@ -79,15 +79,61 @@ function wasRecentlyHandled(notificationKey) {
 function ensurePushSoundAudio() {
   if (typeof window === "undefined") return null;
   if (!pushSoundAudio) {
-    pushSoundAudio = new Audio(alertSound);
+    pushSoundAudio = new Audio(pushNotificationSound);
     pushSoundAudio.preload = "auto";
     pushSoundAudio.volume = 1;
   }
   return pushSoundAudio;
 }
 
-async function playPushSound() {
+async function triggerWebViewNativeNotification(payload = {}) {
+  if (typeof window === "undefined") return false;
+
+  const bridgePayload = {
+    title: payload?.notification?.title || payload?.data?.title || "New notification",
+    body: payload?.notification?.body || payload?.data?.body || "",
+    notificationId: payload?.data?.notificationId || payload?.messageId || "",
+    targetUrl: payload?.data?.targetUrl || payload?.data?.link || "",
+    imageUrl: payload?.notification?.image || payload?.data?.image || payload?.data?.imageUrl || "",
+  };
+
   try {
+    if (
+      window.flutter_inappwebview &&
+      typeof window.flutter_inappwebview.callHandler === "function"
+    ) {
+      const handlerNames = [
+        "playNotificationSound",
+        "triggerNotificationFeedback",
+        "onPushNotification",
+      ];
+
+      for (const handlerName of handlerNames) {
+        try {
+          await window.flutter_inappwebview.callHandler(handlerName, bridgePayload);
+          return true;
+        } catch {
+          // Try the next available handler name.
+        }
+      }
+    }
+  } catch {
+    // Ignore bridge failures.
+  }
+
+  return false;
+}
+
+async function playPushSound(payload = {}) {
+  try {
+    const usedNativeBridge = await triggerWebViewNativeNotification(payload);
+
+    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      navigator.vibrate([200, 100, 200, 100, 300]);
+    }
+
+    if (usedNativeBridge) return;
+
     const audio = ensurePushSoundAudio();
     if (!audio || !pushSoundUnlocked) return;
     audio.currentTime = 0;
@@ -231,7 +277,7 @@ async function attachForegroundListener(firebaseAppInstance) {
       payload?.data?.imageUrl ||
       undefined;
 
-    playPushSound();
+    playPushSound(payload);
 
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {

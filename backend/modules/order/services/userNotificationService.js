@@ -15,15 +15,22 @@ async function getIOInstance() {
 }
 
 function extractUserTokens(userRecord = null) {
-  const tokens = [];
+  const webTokens = [];
+  const mobileTokens = [];
   const addToken = (token) => {
     const normalized = String(token || '').trim();
-    if (normalized.length >= 10) tokens.push(normalized);
+    return normalized.length >= 10 ? normalized : null;
   };
 
-  addToken(userRecord?.fcmtokenweb);
-  addToken(userRecord?.fcmtokenmobile);
-  return [...new Set(tokens)];
+  const webToken = addToken(userRecord?.fcmtokenweb);
+  const mobileToken = addToken(userRecord?.fcmtokenmobile);
+  if (webToken) webTokens.push(webToken);
+  if (mobileToken) mobileTokens.push(mobileToken);
+
+  return {
+    webTokens: [...new Set(webTokens)],
+    mobileTokens: [...new Set(mobileTokens)],
+  };
 }
 
 function getUserStatusMessage(status, orderRef) {
@@ -45,51 +52,107 @@ function getUserStatusMessage(status, orderRef) {
   return statusMessages[normalizedStatus] || `${orderLabel} status updated to ${normalizedStatus || 'updated'}.`;
 }
 
-async function sendUserPushNotifications(tokens = [], payload = {}) {
+async function sendEachMulticast(tokens = [], message = {}) {
   const uniqueTokens = [...new Set((tokens || []).map((t) => String(t || '').trim()).filter((t) => t.length >= 10))];
   if (uniqueTokens.length === 0) {
     return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
   }
 
+  const response = await admin.messaging().sendEachForMulticast({
+    ...message,
+    tokens: uniqueTokens,
+  });
+
+  return {
+    success: (response.successCount || 0) > 0,
+    sentCount: response.successCount || 0,
+    failedCount: response.failureCount || 0
+  };
+}
+
+async function sendUserPushNotifications(tokenGroups = {}, payload = {}) {
+  const webTokens = Array.isArray(tokenGroups?.webTokens) ? tokenGroups.webTokens : [];
+  const mobileTokens = Array.isArray(tokenGroups?.mobileTokens) ? tokenGroups.mobileTokens : [];
+  if (webTokens.length === 0 && mobileTokens.length === 0) {
+    return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
+  }
+
   await firebaseAuthService.init();
   if (!firebaseAuthService.isEnabled()) {
-    return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
+    return { success: false, sentCount: 0, failedCount: webTokens.length + mobileTokens.length, reason: 'Firebase not configured' };
   }
 
   const targetUrl = payload?.targetUrl || '/orders';
   const notificationId = String(payload?.notificationId || `order-update:${payload?.orderMongoId || payload?.orderId || "unknown"}:${payload?.status || "updated"}:${Date.now()}`);
-  const message = {
-    notification: {
-      title: String(payload?.title || 'Order Update'),
-      body: String(payload?.body || 'Your order has an update')
-    },
+  const baseData = {
+    notificationId,
+    type: String(payload?.type || 'order_status_update'),
+    orderId: String(payload?.orderId || ''),
+    orderMongoId: String(payload?.orderMongoId || ''),
+    status: String(payload?.status || ''),
+    targetUrl: String(targetUrl),
+    sentAt: new Date().toISOString()
+  };
+  const title = String(payload?.title || 'Order Update');
+  const body = String(payload?.body || 'Your order has an update');
+
+  const webMessage = {
     data: {
-      notificationId,
-      type: String(payload?.type || 'order_status_update'),
-      orderId: String(payload?.orderId || ''),
-      orderMongoId: String(payload?.orderMongoId || ''),
-      status: String(payload?.status || ''),
-      targetUrl: String(targetUrl),
-      sentAt: new Date().toISOString()
+      ...baseData,
+      title,
+      body,
     },
     webpush: {
       notification: {
+        title,
+        body,
         tag: notificationId,
         renotify: false,
         silent: false,
+        requireInteraction: false,
+        vibrate: [200, 100, 200, 100, 300],
       },
       fcmOptions: {
         link: String(targetUrl)
       }
     },
-    tokens: uniqueTokens
   };
 
-  const response = await admin.messaging().sendEachForMulticast(message);
+  const mobileMessage = {
+    notification: {
+      title,
+      body,
+    },
+    data: baseData,
+    android: {
+      notification: {
+        sound: "default",
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        vibrateTimingsMillis: [200, 100, 200, 100, 300],
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: "default",
+        },
+      },
+    },
+  };
+
+  const results = await Promise.all([
+    sendEachMulticast(webTokens, webMessage),
+    sendEachMulticast(mobileTokens, mobileMessage),
+  ]);
+
+  const sentCount = results.reduce((sum, result) => sum + (result.sentCount || 0), 0);
+  const failedCount = results.reduce((sum, result) => sum + (result.failedCount || 0), 0);
+
   return {
-    success: (response.successCount || 0) > 0,
-    sentCount: response.successCount || 0,
-    failedCount: response.failureCount || 0
+    success: sentCount > 0,
+    sentCount,
+    failedCount
   };
 }
 
