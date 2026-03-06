@@ -4,10 +4,8 @@ import {
   Menu,
   Search,
   User,
-  MessageCircle,
   ChevronDown,
   UtensilsCrossed,
-  Mail,
   LogOut,
   Settings,
   FileText,
@@ -27,7 +25,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -141,19 +138,6 @@ export default function AdminNavbar({ onMenuClick }) {
     item.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Mock data for dropdowns
-  const messages = [
-    { id: 1, sender: "Sarah Johnson", message: "Order #12345 needs attention", time: "2m ago", unread: true },
-    { id: 2, sender: "Mike Chen", message: "New restaurant registration", time: "15m ago", unread: true },
-    { id: 3, sender: "Emma Wilson", message: "Payment issue resolved", time: "1h ago", unread: false },
-  ];
-
-  const emails = [
-    { id: 1, subject: "Weekly Report Ready", from: "reports@appzeto.com", time: "5m ago", unread: true },
-    { id: 2, subject: "New Order Notification", from: "orders@appzeto.com", time: "1h ago", unread: true },
-    { id: 3, subject: "System Update", from: "admin@appzeto.com", time: "2h ago", unread: false },
-  ];
-
   // Handle logout
   const handleLogout = async () => {
     try {
@@ -250,115 +234,8 @@ export default function AdminNavbar({ onMenuClick }) {
             </button>
           </div>
 
-          {/* Right: Notifications and User Profile */}
+          {/* Right: User Profile */}
           <div className="flex items-center gap-3">
-            {/* Chat/MessageCircle */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-md text-neutral-700 hover:bg-neutral-100 hover:text-black transition-colors">
-                  <MessageCircle className="w-5 h-5" />
-                  {messages.filter((m) => m.unread).length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-black text-white text-[10px] rounded-full flex items-center justify-center font-semibold px-1">
-                      {messages.filter((m) => m.unread).length}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-80 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 text-neutral-900 animate-in fade-in-0 zoom-in-95 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-              >
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Messages</span>
-                  <span className="text-xs text-neutral-500 font-normal">
-                    {messages.filter((m) => m.unread).length} new
-                  </span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="max-h-96 overflow-y-auto">
-                  {messages.map((msg) => (
-                    <DropdownMenuItem
-                      key={msg.id}
-                      className="flex flex-col items-start p-3 cursor-pointer hover:bg-neutral-50"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900">{msg.sender}</p>
-                            {msg.unread && (
-                              <span className="w-2 h-2 bg-black rounded-full"></span>
-                            )}
-                          </div>
-                          <p className="text-xs text-neutral-600 mt-1">{msg.message}</p>
-                          <p className="text-xs text-neutral-400 mt-1">{msg.time}</p>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  className="justify-center cursor-pointer text-neutral-900 hover:text-black"
-                  onClick={() => navigate("/admin/chattings")}
-                >
-                  View all conversations
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            {/* Messages/Mail */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="relative p-2 rounded-md text-neutral-700 hover:bg-neutral-100 hover:text-black transition-colors">
-                  <Mail className="w-5 h-5" />
-                  {emails.filter((e) => e.unread).length > 0 && (
-                    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-black text-white text-[10px] rounded-full flex items-center justify-center font-semibold px-1">
-                      {emails.filter((e) => e.unread).length}
-                    </span>
-                  )}
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="w-80 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 text-neutral-900 animate-in fade-in-0 zoom-in-95 duration-200 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
-              >
-                <DropdownMenuLabel className="flex items-center justify-between">
-                  <span>Emails</span>
-                  <span className="text-xs text-neutral-500 font-normal">
-                    {emails.filter((e) => e.unread).length} new
-                  </span>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <div className="max-h-96 overflow-y-auto">
-                  {emails.map((email) => (
-                    <DropdownMenuItem
-                      key={email.id}
-                      className="flex flex-col items-start p-3 cursor-pointer hover:bg-neutral-50"
-                    >
-                      <div className="flex items-start justify-between w-full">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="text-sm font-medium text-neutral-900">{email.subject}</p>
-                            {email.unread && (
-                              <span className="w-2 h-2 bg-black rounded-full"></span>
-                            )}
-                          </div>
-                          <p className="text-xs text-neutral-600 mt-1">{email.from}</p>
-                          <p className="text-xs text-neutral-400 mt-1">{email.time}</p>
-                        </div>
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="justify-center cursor-pointer text-neutral-900 hover:text-black">
-                  View all emails
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
             {/* User Profile */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

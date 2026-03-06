@@ -11,13 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { User, Mail, Phone, Save, Loader2, Upload, X } from "lucide-react";
+import { User, Mail, Phone, Save, Loader2, Upload, X, Pencil } from "lucide-react";
 
 export default function AdminProfile() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const fileInputRef = useRef(null);
@@ -157,6 +158,7 @@ export default function AdminProfile() {
         // Dispatch event to notify other components
         window.dispatchEvent(new Event('adminAuthChanged'));
         toast.success("Profile updated successfully");
+        setIsEditMode(false);
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -166,6 +168,36 @@ export default function AdminProfile() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleStartEditing = () => {
+    setFormData({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      profileImage: profile?.profileImage || "",
+    });
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setIsEditMode(true);
+  };
+
+  const handleCancelEditing = () => {
+    setFormData({
+      name: profile?.name || "",
+      email: profile?.email || "",
+      phone: profile?.phone || "",
+      profileImage: profile?.profileImage || "",
+    });
+    setSelectedFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+    setIsEditMode(false);
   };
 
   if (loading) {
@@ -216,11 +248,62 @@ export default function AdminProfile() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Profile Information</CardTitle>
-          <CardDescription>Update your profile details below</CardDescription>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>
+                {isEditMode ? "Update your profile details below" : "View your admin profile details"}
+              </CardDescription>
+            </div>
+            {!isEditMode ? (
+              <Button
+                type="button"
+                onClick={handleStartEditing}
+                className="bg-black text-white hover:bg-neutral-900"
+              >
+                <Pencil className="w-4 h-4 mr-2" />
+                Edit
+              </Button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancelEditing}
+                  disabled={saving || uploading}
+                  className="h-10 px-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="admin-profile-form"
+                  disabled={saving || uploading}
+                  className="bg-black text-white hover:bg-neutral-900 h-10 px-6"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Uploading image...
+                    </>
+                  ) : saving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4 mr-2" />
+                      Save Changes
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form id="admin-profile-form" onSubmit={handleSubmit} className="space-y-6">
             {/* Profile Picture Section */}
             <div className="flex items-center gap-6 pb-6 border-b border-neutral-200">
               <div className="w-20 h-20 rounded-full bg-neutral-100 flex items-center justify-center overflow-hidden border-2 border-neutral-300">
@@ -259,7 +342,8 @@ export default function AdminProfile() {
                   onChange={(e) => handleInputChange("name", e.target.value)}
                   placeholder="Enter your full name"
                   required
-                  className="h-11"
+                  disabled={!isEditMode || saving || uploading}
+                  className={`h-11 ${!isEditMode ? "bg-neutral-50 cursor-not-allowed" : ""}`}
                 />
               </div>
 
@@ -289,7 +373,8 @@ export default function AdminProfile() {
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
                   placeholder="Enter phone number (optional)"
-                  className="h-11"
+                  disabled={!isEditMode || saving || uploading}
+                  className={`h-11 ${!isEditMode ? "bg-neutral-50 cursor-not-allowed" : ""}`}
                 />
               </div>
 
@@ -301,6 +386,7 @@ export default function AdminProfile() {
                   id="profileImage"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   onChange={handleFileSelect}
+                  disabled={!isEditMode || saving || uploading}
                   className="hidden"
                 />
                 {imagePreview || profile.profileImage ? (
@@ -310,39 +396,47 @@ export default function AdminProfile() {
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
-                      <label
-                        htmlFor="profileImage"
-                        className="cursor-pointer bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors"
-                      >
-                        Change Image
-                      </label>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemoveImage}
-                      className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
-                      title="Remove image"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+                    {isEditMode && (
+                      <>
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <label
+                            htmlFor="profileImage"
+                            className="cursor-pointer bg-white text-black px-4 py-2 rounded-lg text-sm font-medium hover:bg-neutral-100 transition-colors"
+                          >
+                            Change Image
+                          </label>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveImage}
+                          className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg z-10"
+                          title="Remove image"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 ) : (
                   <label
                     htmlFor="profileImage"
-                    className="flex flex-col items-center justify-center w-48 h-48 border-2 border-dashed border-neutral-300 rounded-lg cursor-pointer hover:border-neutral-400 transition-colors bg-neutral-50"
+                    className={`flex flex-col items-center justify-center w-48 h-48 border-2 border-dashed border-neutral-300 rounded-lg transition-colors bg-neutral-50 ${
+                      isEditMode ? "cursor-pointer hover:border-neutral-400" : "cursor-not-allowed opacity-70"
+                    }`}
                   >
                     <Upload className="w-8 h-8 text-neutral-400 mb-2" />
-                    <p className="text-sm text-neutral-600">Click to upload</p>
+                    <p className="text-sm text-neutral-600">
+                      {isEditMode ? "Click to upload" : "No profile image"}
+                    </p>
                     <p className="text-xs text-neutral-500 mt-1">PNG, JPG, WEBP (max 5MB)</p>
                   </label>
                 )}
-                {imagePreview && (
+                {isEditMode && imagePreview && (
                   <p className="text-xs text-green-600 mt-1">
                     New image selected. Click "Save Changes" to upload.
                   </p>
                 )}
-                {profile.profileImage && !imagePreview && (
+                {isEditMode && profile.profileImage && !imagePreview && (
                   <p className="text-xs text-neutral-500 mt-1">
                     Hover over the image to change it
                   </p>
@@ -382,35 +476,9 @@ export default function AdminProfile() {
               )}
             </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end pt-4">
-              <Button
-                type="submit"
-                disabled={saving || uploading}
-                className="bg-black text-white hover:bg-neutral-900 h-11 px-8"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Uploading image...
-                  </>
-                ) : saving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </div>
           </form>
         </CardContent>
       </Card>
     </div>
   );
 }
-

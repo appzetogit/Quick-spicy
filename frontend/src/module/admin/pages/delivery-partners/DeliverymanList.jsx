@@ -5,6 +5,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDeliverymenToExcel, exportDeliverymenToPDF } from "../../components/deliveryman/deliverymanExportUtils"
 
+const formatCurrency = (amount) => {
+  const numericAmount = Number(amount)
+  if (!Number.isFinite(numericAmount)) return "₹0.00"
+  return `₹${numericAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
 export default function DeliverymanList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [deliverymen, setDeliverymen] = useState([])
@@ -22,9 +28,39 @@ export default function DeliverymanList() {
     contact: true,
     zone: true,
     totalOrders: true,
+    pocketBalance: true,
+    cashInHand: true,
+    remainingCashLimit: true,
     availabilityStatus: true,
     actions: true,
   })
+
+  const fetchAllWalletRows = async (search = "") => {
+    const walletLimit = 100
+    let currentPage = 1
+    let totalPages = 1
+    const allRows = []
+
+    do {
+      const response = await adminAPI.getDeliveryBoyWallets({
+        search: search || undefined,
+        page: currentPage,
+        limit: walletLimit,
+      })
+
+      if (!response?.data?.success) {
+        break
+      }
+
+      const data = response.data.data || {}
+      const rows = data.wallets || []
+      allRows.push(...rows)
+      totalPages = Number(data.pagination?.pages) || 1
+      currentPage += 1
+    } while (currentPage <= totalPages)
+
+    return allRows
+  }
 
   // Fetch delivery partners from API
   const fetchDeliverymen = async () => {
@@ -42,10 +78,35 @@ export default function DeliverymanList() {
         params.search = searchQuery.trim()
       }
 
-      const response = await adminAPI.getDeliveryPartners(params)
-      
-      if (response.data && response.data.success) {
-        setDeliverymen(response.data.data.deliveryPartners || [])
+      const [partnersResponse, walletRowsResult] = await Promise.allSettled([
+        adminAPI.getDeliveryPartners(params),
+        fetchAllWalletRows(searchQuery.trim()),
+      ])
+
+      if (partnersResponse.status === "fulfilled" && partnersResponse.value?.data?.success) {
+        const partners = partnersResponse.value.data.data.deliveryPartners || []
+        const walletRows = walletRowsResult.status === "fulfilled" ? walletRowsResult.value || [] : []
+
+        const walletMap = new Map(
+          walletRows.map((wallet) => [String(wallet.deliveryId), wallet]),
+        )
+
+        const mergedPartners = partners.map((partner) => {
+          const wallet = walletMap.get(String(partner._id))
+          return {
+            ...partner,
+            walletSummary: wallet || null,
+            pocketBalance: wallet?.pocketBalance ?? 0,
+            cashInHand: wallet?.cashCollected ?? 0,
+            remainingCashLimit: wallet?.remainingCashLimit ?? 0,
+            totalEarning: wallet?.totalEarning ?? 0,
+            bonus: wallet?.bonus ?? 0,
+            totalWithdrawn: wallet?.totalWithdrawn ?? 0,
+            availableCashLimit: wallet?.availableCashLimit ?? 0,
+          }
+        })
+
+        setDeliverymen(mergedPartners)
       } else {
         setError("Failed to fetch delivery partners")
         setDeliverymen([])
@@ -101,7 +162,17 @@ export default function DeliverymanList() {
       const response = await adminAPI.getDeliveryPartnerById(deliveryman._id)
       
       if (response.data && response.data.success) {
-        setViewDetails(response.data.data.delivery)
+        setViewDetails({
+          ...response.data.data.delivery,
+          walletSummary: deliveryman.walletSummary || null,
+          pocketBalance: deliveryman.pocketBalance ?? 0,
+          cashInHand: deliveryman.cashInHand ?? 0,
+          remainingCashLimit: deliveryman.remainingCashLimit ?? 0,
+          totalEarning: deliveryman.totalEarning ?? 0,
+          bonus: deliveryman.bonus ?? 0,
+          totalWithdrawn: deliveryman.totalWithdrawn ?? 0,
+          availableCashLimit: deliveryman.availableCashLimit ?? 0,
+        })
         setIsViewOpen(true)
       } else {
         alert("Failed to load details")
@@ -169,6 +240,9 @@ export default function DeliverymanList() {
       contact: true,
       zone: true,
       totalOrders: true,
+      pocketBalance: true,
+      cashInHand: true,
+      remainingCashLimit: true,
       availabilityStatus: true,
       actions: true,
     })
@@ -180,6 +254,9 @@ export default function DeliverymanList() {
     contact: "Contact",
     zone: "Zone",
     totalOrders: "Total Orders",
+    pocketBalance: "Pocket Balance",
+    cashInHand: "Cash In Hand",
+    remainingCashLimit: "Remaining Cash Limit",
     availabilityStatus: "Availability Status",
     actions: "Actions",
   }
@@ -304,6 +381,30 @@ export default function DeliverymanList() {
                         </div>
                       </th>
                     )}
+                    {visibleColumns.pocketBalance && (
+                      <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <span>Pocket Balance</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                        </div>
+                      </th>
+                    )}
+                    {visibleColumns.cashInHand && (
+                      <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <span>Cash In Hand</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                        </div>
+                      </th>
+                    )}
+                    {visibleColumns.remainingCashLimit && (
+                      <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                        <div className="flex items-center gap-2">
+                          <span>Remaining Cash Limit</span>
+                          <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                        </div>
+                      </th>
+                    )}
                     {visibleColumns.availabilityStatus && (
                       <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                         <div className="flex items-center gap-2">
@@ -374,6 +475,21 @@ export default function DeliverymanList() {
                         {visibleColumns.totalOrders && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-700">{dm.totalOrders || 0}</span>
+                          </td>
+                        )}
+                        {visibleColumns.pocketBalance && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-slate-700">{formatCurrency(dm.pocketBalance)}</span>
+                          </td>
+                        )}
+                        {visibleColumns.cashInHand && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-slate-700">{formatCurrency(dm.cashInHand)}</span>
+                          </td>
+                        )}
+                        {visibleColumns.remainingCashLimit && (
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm text-slate-700">{formatCurrency(dm.remainingCashLimit)}</span>
                           </td>
                         )}
                         {visibleColumns.availabilityStatus && (
@@ -613,6 +729,51 @@ export default function DeliverymanList() {
                     </div>
                   </div>
                 )}
+
+                {/* Pocket Details */}
+                <div className="pb-6 border-b border-slate-200">
+                  <h3 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" /> Pocket Details
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Pocket Balance</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.pocketBalance ?? viewDetails.walletSummary?.pocketBalance)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Cash In Hand</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.cashInHand ?? viewDetails.walletSummary?.cashCollected)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Remaining Cash Limit</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.remainingCashLimit ?? viewDetails.walletSummary?.remainingCashLimit)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Total Earning</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.totalEarning ?? viewDetails.walletSummary?.totalEarning)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Bonus</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.bonus ?? viewDetails.walletSummary?.bonus)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-500 uppercase">Total Withdrawn</label>
+                      <p className="text-sm font-medium text-slate-900 mt-1">
+                        {formatCurrency(viewDetails.totalWithdrawn ?? viewDetails.walletSummary?.totalWithdrawn)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 {/* Documents */}
                 {viewDetails.documents && (

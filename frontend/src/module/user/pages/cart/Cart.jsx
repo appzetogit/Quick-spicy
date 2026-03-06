@@ -1459,7 +1459,7 @@ export default function Cart() {
           </div>
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-1">Your cart is empty</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 text-center">Add items from a restaurant to start a new order</p>
-          <Link>
+          <Link to="/restaurants">
             <Button className="bg-primary-orange hover:opacity-90 text-white">Browse Restaurants</Button>
           </Link>
         </div>
