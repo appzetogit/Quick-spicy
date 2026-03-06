@@ -144,7 +144,7 @@ export default function SignIn() {
             </div>
           </form>
 
-          <div className="mt-auto pb-2">
+          <div className="mt-auto pt-4 md:pt-5 pb-2">
             <div className="rounded-2xl border border-[#f4d7c6] bg-gradient-to-b from-[#fff7f3] to-white dark:from-[#1f1f1f] dark:to-[#171717] dark:border-[#333] p-4 md:p-5 shadow-sm">
               <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 text-center mb-3">
                 You will receive a one-time password on this number
