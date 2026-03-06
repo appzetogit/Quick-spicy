@@ -2,6 +2,7 @@ import { toast } from "sonner";
 import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import pushNotificationSound from "@/assets/audio/zomato_sms.mp3";
+import fallbackNotificationSound from "@/assets/audio/alert.mp3";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "",
@@ -21,6 +22,7 @@ const MESSAGING_APP_NAME = "web-push-app";
 const recentForegroundNotifications = new Map();
 let pushSoundAudio = null;
 let pushSoundUnlocked = false;
+let pushSoundContext = null;
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -89,13 +91,57 @@ function ensurePushSoundAudio() {
 }
 
 function createPushPlaybackAudio() {
-  const baseAudio = ensurePushSoundAudio();
-  if (!baseAudio) return null;
+  const audioSources = [pushNotificationSound, fallbackNotificationSound];
+  return audioSources.map((source) => {
+    const playbackAudio = new Audio(source);
+    playbackAudio.preload = "auto";
+    playbackAudio.volume = 1;
+    return playbackAudio;
+  });
+}
 
-  const playbackAudio = new Audio(pushNotificationSound);
-  playbackAudio.preload = "auto";
-  playbackAudio.volume = 1;
-  return playbackAudio;
+function getAudioContext() {
+  if (typeof window === "undefined") return null;
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContextClass) return null;
+
+  if (!pushSoundContext) {
+    pushSoundContext = new AudioContextClass();
+  }
+
+  return pushSoundContext;
+}
+
+async function playSynthNotificationBeep() {
+  const ctx = getAudioContext();
+  if (!ctx) return false;
+
+  if (ctx.state === "suspended") {
+    await ctx.resume();
+  }
+
+  const now = ctx.currentTime;
+  const pulses = [
+    { start: 0, duration: 0.11, frequency: 880 },
+    { start: 0.16, duration: 0.11, frequency: 988 },
+    { start: 0.34, duration: 0.18, frequency: 1046 },
+  ];
+
+  pulses.forEach(({ start, duration, frequency }) => {
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, now + start);
+    gain.gain.setValueAtTime(0.0001, now + start);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(now + start);
+    oscillator.stop(now + start + duration);
+  });
+
+  return true;
 }
 
 export function isPushSoundEnabled() {
@@ -151,10 +197,20 @@ async function playPushSound(payload = {}) {
 
     if (usedNativeBridge) return;
 
-    const audio = createPushPlaybackAudio();
-    if (!audio || !pushSoundUnlocked) return;
-    audio.currentTime = 0;
-    await audio.play();
+    if (!pushSoundUnlocked) return;
+
+    const players = createPushPlaybackAudio();
+    for (const audio of players) {
+      try {
+        audio.currentTime = 0;
+        await audio.play();
+        return;
+      } catch {
+        // Try next fallback sound source.
+      }
+    }
+
+    await playSynthNotificationBeep();
   } catch {
     // Ignore autoplay/playback failures.
   }
@@ -206,15 +262,30 @@ export async function enablePushNotificationSound() {
     localStorage.setItem(pushSoundEnabledStorageKey, "true");
     window.dispatchEvent(new CustomEvent("push-sound-enabled"));
 
-    const previewAudio = createPushPlaybackAudio();
-    if (previewAudio) {
-      previewAudio.currentTime = 0;
-      await previewAudio.play();
+    const players = createPushPlaybackAudio();
+    for (const previewAudio of players) {
+      try {
+        previewAudio.currentTime = 0;
+        await previewAudio.play();
+        return true;
+      } catch {
+        // Try next preview source.
+      }
     }
 
+    await playSynthNotificationBeep();
     return true;
   } catch {
-    return false;
+    try {
+      await playSynthNotificationBeep();
+      pushSoundUnlocked = true;
+      localStorage.setItem(pushSoundEnabledStorageKey, "true");
+      window.dispatchEvent(new CustomEvent("push-sound-enabled"));
+      }
+    catch {
+      return false;
+    }
+    return true;
   }
 }
 
