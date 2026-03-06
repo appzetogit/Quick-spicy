@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
+import alertSound from "@/assets/audio/alert.mp3";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "",
@@ -15,6 +16,9 @@ let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
 const MESSAGING_APP_NAME = "web-push-app";
+const recentForegroundNotifications = new Map();
+let pushSoundAudio = null;
+let pushSoundUnlocked = false;
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -38,6 +42,88 @@ function isSecureContextForPush() {
 
 function sanitize(value) {
   return String(value || "").trim().replace(/^['"]|['"]$/g, "");
+}
+
+function getNotificationKey(payload = {}) {
+  return (
+    payload?.data?.notificationId ||
+    payload?.data?.messageId ||
+    payload?.messageId ||
+    [
+      payload?.notification?.title || "",
+      payload?.notification?.body || "",
+      payload?.data?.orderId || "",
+      payload?.data?.targetUrl || "",
+    ].join("::")
+  );
+}
+
+function wasRecentlyHandled(notificationKey) {
+  if (!notificationKey) return false;
+  const now = Date.now();
+
+  for (const [key, timestamp] of recentForegroundNotifications.entries()) {
+    if (now - timestamp > 15000) {
+      recentForegroundNotifications.delete(key);
+    }
+  }
+
+  if (recentForegroundNotifications.has(notificationKey)) {
+    return true;
+  }
+
+  recentForegroundNotifications.set(notificationKey, now);
+  return false;
+}
+
+function ensurePushSoundAudio() {
+  if (typeof window === "undefined") return null;
+  if (!pushSoundAudio) {
+    pushSoundAudio = new Audio(alertSound);
+    pushSoundAudio.preload = "auto";
+    pushSoundAudio.volume = 1;
+  }
+  return pushSoundAudio;
+}
+
+async function playPushSound() {
+  try {
+    const audio = ensurePushSoundAudio();
+    if (!audio || !pushSoundUnlocked) return;
+    audio.currentTime = 0;
+    await audio.play();
+  } catch {
+    // Ignore autoplay/playback failures.
+  }
+}
+
+function setupPushSoundUnlock() {
+  if (typeof window === "undefined" || pushSoundUnlocked) return;
+
+  const unlock = async () => {
+    try {
+      const audio = ensurePushSoundAudio();
+      if (!audio) return;
+      audio.muted = true;
+      await audio.play();
+      audio.pause();
+      audio.currentTime = 0;
+      audio.muted = false;
+      pushSoundUnlocked = true;
+    } catch {
+      // Will retry on next gesture.
+    }
+
+    if (pushSoundUnlocked) {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      window.removeEventListener("touchstart", unlock);
+    }
+  };
+
+  window.addEventListener("pointerdown", unlock, { passive: true });
+  window.addEventListener("keydown", unlock, { passive: true });
+  window.addEventListener("touchstart", unlock, { passive: true });
 }
 
 async function getFirebasePublicEnv() {
@@ -128,7 +214,14 @@ async function attachForegroundListener(firebaseAppInstance) {
   if (!supported) return;
 
   const messaging = getMessaging(firebaseAppInstance);
+  setupPushSoundUnlock();
+
   onMessage(messaging, (payload) => {
+    const notificationKey = getNotificationKey(payload);
+    if (wasRecentlyHandled(notificationKey)) {
+      return;
+    }
+
     const title = payload?.notification?.title || "New notification";
     const body = payload?.notification?.body || "";
     const image =
@@ -138,12 +231,15 @@ async function attachForegroundListener(firebaseAppInstance) {
       payload?.data?.imageUrl ||
       undefined;
 
+    playPushSound();
+
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       try {
         new Notification(title, {
           body,
           icon: "/favicon.ico",
           image,
+          tag: notificationKey || undefined,
         });
       } catch {
         // Ignore Notification API errors and fallback to toast.

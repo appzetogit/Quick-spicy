@@ -57,12 +57,14 @@ async function sendUserPushNotifications(tokens = [], payload = {}) {
   }
 
   const targetUrl = payload?.targetUrl || '/orders';
+  const notificationId = String(payload?.notificationId || `order-update:${payload?.orderMongoId || payload?.orderId || "unknown"}:${payload?.status || "updated"}:${Date.now()}`);
   const message = {
     notification: {
       title: String(payload?.title || 'Order Update'),
       body: String(payload?.body || 'Your order has an update')
     },
     data: {
+      notificationId,
       type: String(payload?.type || 'order_status_update'),
       orderId: String(payload?.orderId || ''),
       orderMongoId: String(payload?.orderMongoId || ''),
@@ -71,6 +73,11 @@ async function sendUserPushNotifications(tokens = [], payload = {}) {
       sentAt: new Date().toISOString()
     },
     webpush: {
+      notification: {
+        tag: notificationId,
+        renotify: false,
+        silent: false,
+      },
       fcmOptions: {
         link: String(targetUrl)
       }
@@ -142,6 +149,7 @@ export async function notifyUserOrderUpdate(orderId, status, extra = {}) {
     try {
       const pushTokens = extractUserTokens(user);
       pushResult = await sendUserPushNotifications(pushTokens, {
+        notificationId: `order-update:${payload.orderMongoId || payload.orderId}:${payload.status}`,
         type: 'order_status_update',
         title: payload.title,
         body: payload.message,

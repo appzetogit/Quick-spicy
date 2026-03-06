@@ -128,6 +128,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   const normalizedPlatform = normalizePlatform(platform);
   const normalizedZone = normalizeZone(zone);
   const targetLink = resolveTargetLink(normalizedTarget);
+  const notificationId = `admin-push:${normalizedTarget}:${normalizedPlatform}:${Date.now()}`;
 
   if (!normalizedTitle || !normalizedDescription) {
     return errorResponse(res, 400, "Title and description are required");
@@ -172,6 +173,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
       ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
     },
     data: {
+      notificationId,
       type: "admin_push_notification",
       target: normalizedTarget,
       platform: normalizedPlatform,
@@ -182,6 +184,9 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     },
     webpush: {
       notification: {
+        tag: notificationId,
+        renotify: false,
+        silent: false,
         ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
       },
       fcmOptions: {

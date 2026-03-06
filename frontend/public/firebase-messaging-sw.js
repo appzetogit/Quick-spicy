@@ -3,6 +3,16 @@ importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js");
 
 const sanitize = (value) => String(value || "").trim().replace(/^['"]|['"]$/g, "");
+const getNotificationKey = (payload) =>
+  payload?.data?.notificationId ||
+  payload?.data?.messageId ||
+  payload?.messageId ||
+  [
+    payload?.notification?.title || payload?.data?.title || "",
+    payload?.notification?.body || payload?.data?.body || "",
+    payload?.data?.orderId || "",
+    payload?.data?.targetUrl || payload?.data?.link || "",
+  ].join("::");
 
 async function loadFirebaseWebConfig() {
   const candidates = ["/api/env/public"];
@@ -47,19 +57,25 @@ async function loadFirebaseWebConfig() {
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
-    const title = payload?.notification?.title || "New Notification";
-    const body = payload?.notification?.body || "";
+    if (payload?.notification?.title || payload?.notification?.body) {
+      return;
+    }
+
+    const title = payload?.data?.title || "New Notification";
+    const body = payload?.data?.body || "";
     const image =
-      payload?.notification?.image ||
-      payload?.notification?.imageUrl ||
       payload?.data?.image ||
       payload?.data?.imageUrl ||
       undefined;
+    const notificationKey = getNotificationKey(payload);
 
     self.registration.showNotification(title, {
       body,
       icon: "/favicon.ico",
       image,
+      tag: notificationKey,
+      renotify: false,
+      silent: false,
       data: payload?.data || {},
     });
   });

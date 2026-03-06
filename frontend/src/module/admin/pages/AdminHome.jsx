@@ -30,6 +30,14 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const INR_SYMBOL = "\u20B9"
+
+function formatCurrency(amount, options = {}) {
+  const numericAmount = Number(amount || 0)
+  const formattedAmount = numericAmount.toLocaleString("en-IN", options)
+  return `${INR_SYMBOL}${formattedAmount}`
+}
+
 
 export default function AdminHome() {
   const navigate = useNavigate()
@@ -142,6 +150,12 @@ export default function AdminHome() {
   }))
 
   const activityFeed = []
+  const totalRevenueHelper = [
+    `Commission ${formatCurrency(commissionTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Platform ${formatCurrency(platformFeeTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Delivery ${formatCurrency(deliveryFeeTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `GST ${formatCurrency(gstTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+  ].join(" + ")
 
   return (
     <div className="px-4 pb-10 lg:px-6 pt-4">
@@ -195,7 +209,7 @@ export default function AdminHome() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Gross revenue"
-              value={`â‚¹${revenueTotal.toLocaleString("en-IN")}`}
+              value={formatCurrency(revenueTotal)}
               helper="Rolling 12 months"
               icon={<ShoppingBag className="h-5 w-5 text-emerald-600" />}
               accent="bg-emerald-200/40"
@@ -203,7 +217,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Commission earned"
-              value={`â‚¹${commissionTotal.toLocaleString("en-IN")}`}
+              value={formatCurrency(commissionTotal)}
               helper="Restaurant commission"
               icon={<ArrowUpRight className="h-5 w-5 text-indigo-600" />}
               accent="bg-indigo-200/40"
@@ -219,7 +233,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Platform fee"
-              value={`â‚¹${platformFeeTotal.toLocaleString("en-IN")}`}
+              value={formatCurrency(platformFeeTotal)}
               helper="Total platform fees"
               icon={<CreditCard className="h-5 w-5 text-purple-600" />}
               accent="bg-purple-200/40"
@@ -227,7 +241,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Delivery fee"
-              value={`â‚¹${deliveryFeeTotal.toLocaleString("en-IN")}`}
+              value={formatCurrency(deliveryFeeTotal)}
               helper="Total delivery fees"
               icon={<Truck className="h-5 w-5 text-blue-600" />}
               accent="bg-blue-200/40"
@@ -235,7 +249,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="GST"
-              value={`â‚¹${gstTotal.toLocaleString("en-IN")}`}
+              value={formatCurrency(gstTotal)}
               helper="Total GST collected"
               icon={<Receipt className="h-5 w-5 text-orange-600" />}
               accent="bg-orange-200/40"
@@ -243,8 +257,8 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Total revenue"
-              value={`â‚¹${totalAdminEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              helper={`Commission â‚¹${commissionTotal.toFixed(2)} + Platform â‚¹${platformFeeTotal.toFixed(2)} + Delivery â‚¹${deliveryFeeTotal.toFixed(2)} + GST â‚¹${gstTotal.toFixed(2)}`}
+              value={formatCurrency(totalAdminEarnings, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              helper={totalRevenueHelper}
               icon={<DollarSign className="h-5 w-5 text-green-600" />}
               accent="bg-green-200/40"
               path="/admin/transaction-report"
