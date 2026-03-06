@@ -1,6 +1,7 @@
 import Admin from "../models/Admin.js";
 import Order from "../../order/models/Order.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
+import Delivery from "../../delivery/models/Delivery.js";
 import OutletTimings from "../../restaurant/models/OutletTimings.js";
 import Menu from "../../restaurant/models/Menu.js";
 import Offer from "../../restaurant/models/Offer.js";
@@ -168,10 +169,8 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     const activeRestaurants = await Restaurant.countDocuments({
       isActive: true,
     });
-    // Note: Delivery partners are stored in User model
     const User = (await import("../../auth/models/User.js")).default;
-    const activeDeliveryPartners = await User.countDocuments({
-      role: "delivery",
+    const activeDeliveryPartners = await Delivery.countDocuments({
       isActive: true,
     });
     const activePartners = activeRestaurants + activeDeliveryPartners;
@@ -215,14 +214,12 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       pendingRestaurantRequestsQuery,
     );
 
-    // Total delivery boys (all delivery users)
-    const totalDeliveryBoys = await User.countDocuments({ role: "delivery" });
+    // Total delivery boys are stored in the dedicated Delivery collection.
+    const totalDeliveryBoys = await Delivery.countDocuments({});
 
-    // Delivery boy requests pending (delivery users with isActive: false or verification pending)
-    // Assuming deliveryStatus field exists, if not we'll use isActive: false
-    const pendingDeliveryBoyRequests = await User.countDocuments({
-      role: "delivery",
-      $or: [{ isActive: false }, { deliveryStatus: "pending" }],
+    // Pending join requests are delivery partners awaiting approval or inactive.
+    const pendingDeliveryBoyRequests = await Delivery.countDocuments({
+      $or: [{ status: "pending" }, { isActive: false }],
     });
 
     // Total foods (Menu items) - Count all individual menu items from active menus

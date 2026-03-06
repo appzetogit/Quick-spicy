@@ -2660,6 +2660,12 @@ export default function Home() {
                                   <span className={`inline-flex mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
                                     {availability.isOpen ? "Open now" : "Offline"}
                                   </span>
+                                  {availability.isOpen && availability.closingCountdownLabel && (
+                                    <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 line-clamp-1">
+                                      <Timer className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.8} />
+                                      <span className="truncate">{availability.closingCountdownLabel}</span>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="flex-shrink-0 bg-green-600 text-white px-2 py-1 lg:px-3 lg:py-1.5 rounded-lg flex items-center gap-1 transform transition-transform duration-300 group-hover:scale-110 group-hover:rotate-6">
                                   <span className="text-sm lg:text-base font-bold">{restaurant.rating}</span>

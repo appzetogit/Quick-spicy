@@ -45,23 +45,27 @@ const resolveTargetLink = (target = "customer") => {
 };
 
 const extractTokensByPlatform = (records = [], platform = "all") => {
-  const tokens = [];
+  const webTokens = [];
+  const mobileTokens = [];
 
   records.forEach((record) => {
     if (platform === "web" || platform === "all") {
       if (record?.fcmtokenweb && String(record.fcmtokenweb).trim().length >= 10) {
-        tokens.push(String(record.fcmtokenweb).trim());
+        webTokens.push(String(record.fcmtokenweb).trim());
       }
     }
 
     if (platform === "mobile" || platform === "all") {
       if (record?.fcmtokenmobile && String(record.fcmtokenmobile).trim().length >= 10) {
-        tokens.push(String(record.fcmtokenmobile).trim());
+        mobileTokens.push(String(record.fcmtokenmobile).trim());
       }
     }
   });
 
-  return [...new Set(tokens)];
+  return {
+    webTokens: [...new Set(webTokens)],
+    mobileTokens: [...new Set(mobileTokens)],
+  };
 };
 
 const chunk = (arr = [], size = BATCH_SIZE) => {
@@ -102,8 +106,55 @@ async function getTargetTokens(target, platform) {
     getTargetTokens("restaurant", platform),
   ]);
 
-  return [...new Set([...userTokens, ...deliveryTokens, ...restaurantTokens])];
+  return {
+    webTokens: [
+      ...new Set([
+        ...userTokens.webTokens,
+        ...deliveryTokens.webTokens,
+        ...restaurantTokens.webTokens,
+      ]),
+    ],
+    mobileTokens: [
+      ...new Set([
+        ...userTokens.mobileTokens,
+        ...deliveryTokens.mobileTokens,
+        ...restaurantTokens.mobileTokens,
+      ]),
+    ],
+  };
 }
+
+const sendBatches = async (tokens = [], payload = {}) => {
+  const batches = chunk(tokens, BATCH_SIZE);
+  let sentCount = 0;
+  let failedCount = 0;
+  const failedTokens = [];
+  const failureCodeCounts = {};
+
+  for (const tokenBatch of batches) {
+    const batchResponse = await admin.messaging().sendEachForMulticast({
+      ...payload,
+      tokens: tokenBatch,
+    });
+
+    sentCount += batchResponse.successCount || 0;
+    failedCount += batchResponse.failureCount || 0;
+
+    batchResponse.responses.forEach((item, index) => {
+      if (!item.success) {
+        const errorCode = item.error?.code || "unknown";
+        failureCodeCounts[errorCode] = (failureCodeCounts[errorCode] || 0) + 1;
+        failedTokens.push({
+          token: tokenBatch[index],
+          code: errorCode,
+          error: item.error?.message || "Unknown FCM error",
+        });
+      }
+    });
+  }
+
+  return { sentCount, failedCount, failedTokens, failureCodeCounts };
+};
 
 /**
  * Send push notification to saved FCM tokens by target.
@@ -128,6 +179,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   const normalizedPlatform = normalizePlatform(platform);
   const normalizedZone = normalizeZone(zone);
   const targetLink = resolveTargetLink(normalizedTarget);
+  const notificationId = `admin-push:${normalizedTarget}:${normalizedPlatform}:${Date.now()}`;
 
   if (!normalizedTitle || !normalizedDescription) {
     return errorResponse(res, 400, "Title and description are required");
@@ -153,8 +205,10 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     );
   }
 
-  const allTokens = await getTargetTokens(normalizedTarget, normalizedPlatform);
-  if (allTokens.length === 0) {
+  const { webTokens, mobileTokens } = await getTargetTokens(normalizedTarget, normalizedPlatform);
+  const totalTokens = webTokens.length + mobileTokens.length;
+
+  if (totalTokens === 0) {
     return successResponse(res, 200, "No FCM tokens found for selected audience", {
       target: normalizedTarget,
       platform: normalizedPlatform,
@@ -165,71 +219,110 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     });
   }
 
-  const payload = {
-    notification: {
+  const baseData = {
+    notificationId,
+    type: "admin_push_notification",
+    target: normalizedTarget,
+    platform: normalizedPlatform,
+    zone: normalizedZone,
+    link: targetLink,
+    ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+    sentAt: new Date().toISOString(),
+  };
+
+  const webPayload = {
+    data: {
+      ...baseData,
       title: normalizedTitle,
       body: normalizedDescription,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
-    },
-    data: {
-      type: "admin_push_notification",
-      target: normalizedTarget,
-      platform: normalizedPlatform,
-      zone: normalizedZone,
-      link: targetLink,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
-      sentAt: new Date().toISOString(),
     },
     webpush: {
       notification: {
+        title: normalizedTitle,
+        body: normalizedDescription,
+        tag: notificationId,
+        renotify: false,
+        silent: false,
+        requireInteraction: false,
+        vibrate: [200, 100, 200, 100, 300],
         ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
       },
       fcmOptions: {
         link: targetLink,
       },
     },
-    ...(normalizedImageUrl
-      ? {
-          android: {
-            notification: {
-              imageUrl: normalizedImageUrl,
-            },
-          },
-          apns: {
-            fcmOptions: {
-              imageUrl: normalizedImageUrl,
-            },
-          },
-        }
-      : {}),
   };
 
-  const batches = chunk(allTokens, BATCH_SIZE);
+  const mobilePayload = {
+    notification: {
+      title: normalizedTitle,
+      body: normalizedDescription,
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+    },
+    data: baseData,
+    ...(normalizedImageUrl
+      ? {
+        android: {
+          notification: {
+            imageUrl: normalizedImageUrl,
+            sound: "default",
+            defaultSound: true,
+            defaultVibrateTimings: true,
+            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+          fcmOptions: {
+            imageUrl: normalizedImageUrl,
+          },
+        },
+      }
+      : {
+        android: {
+          notification: {
+            sound: "default",
+            defaultSound: true,
+            defaultVibrateTimings: true,
+            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+            },
+          },
+        },
+      }),
+  };
+
   let sentCount = 0;
   let failedCount = 0;
   const failedTokens = [];
   const failureCodeCounts = {};
 
-  for (const tokenBatch of batches) {
-    // sendEachForMulticast gives per-token status and works with Firebase Admin SDK v12.
-    const batchResponse = await admin.messaging().sendEachForMulticast({
-      ...payload,
-      tokens: tokenBatch,
+  if (webTokens.length > 0) {
+    const result = await sendBatches(webTokens, webPayload);
+    sentCount += result.sentCount;
+    failedCount += result.failedCount;
+    failedTokens.push(...result.failedTokens);
+    Object.entries(result.failureCodeCounts).forEach(([code, count]) => {
+      failureCodeCounts[code] = (failureCodeCounts[code] || 0) + count;
     });
+  }
 
-    sentCount += batchResponse.successCount || 0;
-    failedCount += batchResponse.failureCount || 0;
-
-    batchResponse.responses.forEach((item, index) => {
-      if (!item.success) {
-        const errorCode = item.error?.code || "unknown";
-        failureCodeCounts[errorCode] = (failureCodeCounts[errorCode] || 0) + 1;
-        failedTokens.push({
-          token: tokenBatch[index],
-          code: errorCode,
-          error: item.error?.message || "Unknown FCM error",
-        });
-      }
+  if (mobileTokens.length > 0) {
+    const result = await sendBatches(mobileTokens, mobilePayload);
+    sentCount += result.sentCount;
+    failedCount += result.failedCount;
+    failedTokens.push(...result.failedTokens);
+    Object.entries(result.failureCodeCounts).forEach(([code, count]) => {
+      failureCodeCounts[code] = (failureCodeCounts[code] || 0) + count;
     });
   }
 
@@ -244,7 +337,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     target: normalizedTarget,
     platform: normalizedPlatform,
     zone: normalizedZone,
-    totalTokens: allTokens.length,
+    totalTokens,
     sentCount,
     failedCount,
     failureCodeCounts,

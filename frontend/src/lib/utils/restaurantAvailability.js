@@ -79,6 +79,55 @@ const isWithinTimeWindow = (nowMinutes, openingMinutes, closingMinutes) => {
   return nowMinutes >= openingMinutes || nowMinutes <= closingMinutes
 }
 
+const getMinutesUntilClosing = (nowMinutes, openingMinutes, closingMinutes) => {
+  if (openingMinutes === null || closingMinutes === null) return null
+  if (!isWithinTimeWindow(nowMinutes, openingMinutes, closingMinutes)) return null
+
+  if (closingMinutes > openingMinutes) {
+    return closingMinutes - nowMinutes
+  }
+
+  if (nowMinutes <= closingMinutes) {
+    return closingMinutes - nowMinutes
+  }
+
+  return (24 * 60 - nowMinutes) + closingMinutes
+}
+
+const formatTimeLabel = (timeValue) => {
+  const totalMinutes = parseTimeToMinutes(timeValue)
+  if (totalMinutes === null) return timeValue || null
+
+  const hours24 = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const period = hours24 >= 12 ? "PM" : "AM"
+  const hours12 = hours24 % 12 || 12
+
+  return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`
+}
+
+const formatClosingCountdown = (minutesUntilClose, closingTime) => {
+  if (minutesUntilClose === null || minutesUntilClose === undefined) return null
+
+  if (minutesUntilClose <= 0) {
+    const closingLabel = formatTimeLabel(closingTime)
+    return closingLabel ? `Closes at ${closingLabel}` : null
+  }
+
+  if (minutesUntilClose < 60) {
+    return `Closes in ${minutesUntilClose} min`
+  }
+
+  const hours = Math.floor(minutesUntilClose / 60)
+  const minutes = minutesUntilClose % 60
+
+  if (minutes === 0) {
+    return `Closes in ${hours}h`
+  }
+
+  return `Closes in ${hours}h ${minutes}m`
+}
+
 export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) => {
   if (!restaurant) {
     return {
@@ -153,6 +202,9 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
       ? isWithinTimeWindow(nowMinutes, openingMinutes, closingMinutes)
       : false)
     : true
+  const minutesUntilClose = isWithinTimings
+    ? getMinutesUntilClosing(nowMinutes, openingMinutes, closingMinutes)
+    : null
 
   return {
     isOpen: isWithinTimings,
@@ -161,6 +213,10 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     isWithinTimings,
     openingTime,
     closingTime,
+    minutesUntilClose,
+    closingCountdownLabel: isWithinTimings
+      ? formatClosingCountdown(minutesUntilClose, closingTime)
+      : null,
     reason: isWithinTimings ? "open" : (hasExplicitWindow ? "outside-hours" : "no-timings"),
   }
 }
