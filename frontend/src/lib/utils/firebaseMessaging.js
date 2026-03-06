@@ -1,8 +1,9 @@
 import { toast } from "sonner";
 import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
-import pushNotificationSound from "@/assets/audio/zomato_sms.mp3";
 import fallbackNotificationSound from "@/assets/audio/alert.mp3";
+
+const pushNotificationSoundPath = "/zomato_sms.mp3";
 
 const DEFAULT_FIREBASE_CONFIG = {
   apiKey: "",
@@ -83,19 +84,25 @@ function wasRecentlyHandled(notificationKey) {
 function ensurePushSoundAudio() {
   if (typeof window === "undefined") return null;
   if (!pushSoundAudio) {
-    pushSoundAudio = new Audio(pushNotificationSound);
+    pushSoundAudio = new Audio(new URL(pushNotificationSoundPath, window.location.origin).toString());
     pushSoundAudio.preload = "auto";
     pushSoundAudio.volume = 1;
+    pushSoundAudio.load();
   }
   return pushSoundAudio;
 }
 
 function createPushPlaybackAudio() {
-  const audioSources = [pushNotificationSound, fallbackNotificationSound];
+  const primarySource =
+    typeof window === "undefined"
+      ? pushNotificationSoundPath
+      : new URL(pushNotificationSoundPath, window.location.origin).toString();
+  const audioSources = [primarySource, fallbackNotificationSound];
   return audioSources.map((source) => {
     const playbackAudio = new Audio(source);
     playbackAudio.preload = "auto";
     playbackAudio.volume = 1;
+    playbackAudio.load();
     return playbackAudio;
   });
 }
