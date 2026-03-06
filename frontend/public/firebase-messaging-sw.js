@@ -37,6 +37,23 @@ async function notifyOpenClients(payload) {
   });
 }
 
+async function hasVisibleClient() {
+  const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+  const visibleClient = windowClients.find(
+    (client) => client.visibilityState === "visible" || client.focused,
+  );
+  console.log(PUSH_DEBUG_PREFIX, "Visible client check", {
+    count: windowClients.length,
+    hasVisibleClient: Boolean(visibleClient),
+    clients: windowClients.map((client) => ({
+      url: client.url,
+      visibilityState: client.visibilityState,
+      focused: client.focused,
+    })),
+  });
+  return Boolean(visibleClient);
+}
+
 async function loadFirebaseWebConfig() {
   const candidates = ["/api/env/public"];
   if (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1") {
@@ -81,11 +98,17 @@ async function loadFirebaseWebConfig() {
   console.log(PUSH_DEBUG_PREFIX, "Firebase messaging service worker initialized");
   const messaging = firebase.messaging();
 
-  messaging.onBackgroundMessage((payload) => {
+  messaging.onBackgroundMessage(async (payload) => {
     console.log(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
-    self.registration.waitUntil(notifyOpenClients(payload));
+    await notifyOpenClients(payload);
+
+    if (await hasVisibleClient()) {
+      console.log(PUSH_DEBUG_PREFIX, "Skipping service worker notification because app tab is visible");
+      return;
+    }
 
     if (payload?.notification?.title || payload?.notification?.body) {
+      console.log(PUSH_DEBUG_PREFIX, "Skipping manual showNotification because payload already has notification");
       return;
     }
 
@@ -123,7 +146,14 @@ self.addEventListener("push", (event) => {
   try {
     const payload = event.data.json();
     console.log(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
-    event.waitUntil(notifyOpenClients(payload));
+    event.waitUntil(
+      (async () => {
+        await notifyOpenClients(payload);
+        if (await hasVisibleClient()) {
+          console.log(PUSH_DEBUG_PREFIX, "Raw push handled by visible tab; worker notification suppressed");
+        }
+      })(),
+    );
   } catch {
     // Ignore malformed payloads.
   }

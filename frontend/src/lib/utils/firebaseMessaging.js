@@ -26,6 +26,7 @@ let pushSoundAudio = null;
 let pushSoundUnlocked = false;
 let pushSoundContext = null;
 const PUSH_DEBUG_PREFIX = "[push-debug]";
+const notificationDedupWindowMs = 2000;
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -70,7 +71,7 @@ function wasRecentlyHandled(notificationKey) {
   const now = Date.now();
 
   for (const [key, timestamp] of recentForegroundNotifications.entries()) {
-    if (now - timestamp > 15000) {
+    if (now - timestamp > notificationDedupWindowMs) {
       recentForegroundNotifications.delete(key);
     }
   }
