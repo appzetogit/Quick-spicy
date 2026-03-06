@@ -1885,6 +1885,32 @@ export default function RestaurantOnboarding() {
               setStep3((prev) => ({ ...prev, panImage: e.target.files?.[0] || null }))
             }
           />
+          {step3.panImage && (
+            <div className="mt-3 relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100">
+              {getPreviewImageUrl(step3.panImage) ? (
+                <img
+                  src={getPreviewImageUrl(step3.panImage)}
+                  alt="PAN document"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                  Preview unavailable
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setStep3((prev) => ({ ...prev, panImage: null }))
+                }}
+                className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -1968,6 +1994,32 @@ export default function RestaurantOnboarding() {
                 setStep3((prev) => ({ ...prev, gstImage: e.target.files?.[0] || null }))
               }
             />
+            {step3.gstImage && (
+              <div className="mt-3 relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100">
+                {getPreviewImageUrl(step3.gstImage) ? (
+                  <img
+                    src={getPreviewImageUrl(step3.gstImage)}
+                    alt="GST document"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                    Preview unavailable
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setStep3((prev) => ({ ...prev, gstImage: null }))
+                  }}
+                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </section>
@@ -2056,6 +2108,32 @@ export default function RestaurantOnboarding() {
             setStep3((prev) => ({ ...prev, fssaiImage: e.target.files?.[0] || null }))
           }
         />
+        {step3.fssaiImage && (
+          <div className="mt-3 relative aspect-[4/3] rounded-md overflow-hidden bg-gray-100">
+            {getPreviewImageUrl(step3.fssaiImage) ? (
+              <img
+                src={getPreviewImageUrl(step3.fssaiImage)}
+                alt="FSSAI document"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-gray-500">
+                Preview unavailable
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setStep3((prev) => ({ ...prev, fssaiImage: null }))
+              }}
+              className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
       </section>
 
       <section className="bg-white p-4 sm:p-6 rounded-md space-y-4">
