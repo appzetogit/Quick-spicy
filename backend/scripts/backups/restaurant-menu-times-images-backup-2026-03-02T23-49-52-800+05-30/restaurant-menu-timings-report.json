@@ -1,0 +1,444 @@
+[
+  {
+    "restaurantMongoId": "699c0248aebcb890151ebb44",
+    "restaurantId": "REST-1771831880909-3840",
+    "slug": "shaik-irfan-basha",
+    "name": "Shaik Irfan Basha",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "699ebdc3a5accdaeedaf9467",
+    "restaurantId": "REST-1772010947837-1572",
+    "slug": "test-restaurant",
+    "name": "Test Restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "699feea8c1ace609716127b2",
+    "restaurantId": "REST-1772089000606-1918",
+    "slug": "best-bakes",
+    "name": "Best Bakes",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a00d7a0c509820c1191f9e",
+    "restaurantId": "REST-1772096890170-5314",
+    "slug": "restaurant-1855",
+    "name": "Aditi Restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a12996f42dc2f3f477080c",
+    "restaurantId": "REST-1772169622180-7724",
+    "slug": "abhinaya-family-restaurant",
+    "name": "Abhinaya Family Restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a134943ad1db3799635710",
+    "restaurantId": "REST-1772172436493-4094",
+    "slug": "poojitha-family-restaurant",
+    "name": "Poojitha Family Restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a2743223cfabe8779d7450",
+    "restaurantId": "REST-1772254258336-1105",
+    "slug": "restaurant-7890",
+    "name": "Test Restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a2a22e70ba942316a38045",
+    "restaurantId": "REST-1772266030626-8424",
+    "slug": "k-star-spicy-food-court",
+    "name": "K Star Spicy Food Court",
+    "hasOutletTimings": true,
+    "outletTimingsDocs": [
+      {
+        "_id": {
+          "$oid": "69a31ef1fb0987c99fd5d41e"
+        },
+        "restaurantId": {
+          "$oid": "69a2a22e70ba942316a38045"
+        },
+        "__v": {
+          "$numberInt": "0"
+        },
+        "createdAt": {
+          "$date": {
+            "$numberLong": "1772297969439"
+          }
+        },
+        "isActive": true,
+        "outletType": "Appzeto delivery",
+        "timings": [
+          {
+            "day": "Monday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Tuesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Wednesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Thursday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Friday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Saturday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Sunday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          }
+        ],
+        "updatedAt": {
+          "$date": {
+            "$numberLong": "1772298051548"
+          }
+        }
+      }
+    ],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a2a82970ba942316a3876d",
+    "restaurantId": "REST-1772267561686-6924",
+    "slug": "apple-fast-food-center",
+    "name": "Apple Fast Food Center",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a2cde77ae149b9b415312e",
+    "restaurantId": "REST-1772277223391-6692",
+    "slug": "kondapalli-r-f-c",
+    "name": "KONDAPALLI  R.F.C",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a318da8d5836be4068d040",
+    "restaurantId": "REST-1772185286970-4018",
+    "slug": "annapurna-family-garden-restaurant",
+    "name": "Annapurna Family Garden Restaurant",
+    "hasOutletTimings": true,
+    "outletTimingsDocs": [
+      {
+        "_id": {
+          "$oid": "69a31a49fb0987c99fd5c87a"
+        },
+        "restaurantId": {
+          "$oid": "69a318da8d5836be4068d040"
+        },
+        "__v": {
+          "$numberInt": "0"
+        },
+        "createdAt": {
+          "$date": {
+            "$numberLong": "1772296764858"
+          }
+        },
+        "isActive": true,
+        "outletType": "Appzeto delivery",
+        "timings": [
+          {
+            "day": "Monday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Tuesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Wednesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Thursday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Friday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Saturday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          },
+          {
+            "day": "Sunday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "21:00"
+          }
+        ],
+        "updatedAt": {
+          "$date": {
+            "$numberLong": "1772297335683"
+          }
+        }
+      }
+    ],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a44ef7e3c021b953395f99",
+    "restaurantId": "REST-1772375799252-325",
+    "slug": "restaurant-2513",
+    "name": "JVR Family Restaurant",
+    "hasOutletTimings": true,
+    "outletTimingsDocs": [
+      {
+        "_id": {
+          "$oid": "69a52bf5fb0987c99fd679a1"
+        },
+        "restaurantId": {
+          "$oid": "69a44ef7e3c021b953395f99"
+        },
+        "__v": {
+          "$numberInt": "0"
+        },
+        "createdAt": {
+          "$date": {
+            "$numberLong": "1772432373223"
+          }
+        },
+        "isActive": true,
+        "outletType": "Appzeto delivery",
+        "timings": [
+          {
+            "day": "Monday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Tuesday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Wednesday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Thursday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Friday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Saturday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          },
+          {
+            "day": "Sunday",
+            "isOpen": true,
+            "openingTime": "11:30",
+            "closingTime": "22:30"
+          }
+        ],
+        "updatedAt": {
+          "$date": {
+            "$numberLong": "1772432373223"
+          }
+        }
+      }
+    ],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a5246379ba0046f8528ce7",
+    "restaurantId": "REST-1772430435503-8674",
+    "slug": "restaurant-9487",
+    "name": "Test restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a535a179ba0046f852ab58",
+    "restaurantId": "REST-1772434849062-1407",
+    "slug": "jmb",
+    "name": "JMB",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a53e4f79ba0046f852b9cf",
+    "restaurantId": "REST-1772437071899-7038",
+    "slug": "swwetty",
+    "name": "Swwetty",
+    "hasOutletTimings": true,
+    "outletTimingsDocs": [
+      {
+        "_id": {
+          "$oid": "69a53f09fb0987c99fd67b05"
+        },
+        "restaurantId": {
+          "$oid": "69a53e4f79ba0046f852b9cf"
+        },
+        "__v": {
+          "$numberInt": "0"
+        },
+        "createdAt": {
+          "$date": {
+            "$numberLong": "1772437257107"
+          }
+        },
+        "isActive": true,
+        "outletType": "Appzeto delivery",
+        "timings": [
+          {
+            "day": "Monday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Tuesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Wednesday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Thursday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Friday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Saturday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          },
+          {
+            "day": "Sunday",
+            "isOpen": true,
+            "openingTime": "09:00",
+            "closingTime": "22:00"
+          }
+        ],
+        "updatedAt": {
+          "$date": {
+            "$numberLong": "1772437257107"
+          }
+        }
+      }
+    ],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a5590669c0486c8793ad07",
+    "restaurantId": "REST-1772443910295-1476",
+    "slug": "restaurant-0457",
+    "name": "Aditi cafe",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  },
+  {
+    "restaurantMongoId": "69a5860ee0b04b27750b779f",
+    "restaurantId": "REST-1772455438388-1758",
+    "slug": "restaurant-6911",
+    "name": "Ajay restaurant",
+    "hasOutletTimings": false,
+    "outletTimingsDocs": [],
+    "hasMenuItemSchedules": false,
+    "menuItemSchedulesCount": 0
+  }
+]

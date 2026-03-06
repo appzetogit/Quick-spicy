@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, MapPin, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, ShieldCheck, X, Loader2 } from "lucide-react"
+import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, MapPin, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, ShieldCheck, X, Loader2, Grid2x2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -56,6 +56,16 @@ export default function CategoryPage() {
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
   const BACKEND_ORIGIN = useMemo(() => API_BASE_URL.replace(/\/api\/?$/, ""), [])
+  const slugify = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  const uniqueByRestaurant = (list) => {
+    const seen = new Set()
+    return list.filter((row) => {
+      const key = row.restaurantId || row.id || slugify(row.name)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
 
   const normalizeImageUrl = (value) => {
     if (!value) return ""
@@ -144,7 +154,7 @@ export default function CategoryPage() {
 
           // Transform API categories to match expected format
           const transformedCategories = [
-            { id: 'all', name: "All", image: foodImages[7] || foodImages[0], slug: 'all' },
+            { id: 'all', name: "All", image: null, slug: 'all' },
             ...categoriesArray.map((cat) => ({
               id: cat.slug || cat.id,
               name: cat.name,
@@ -170,12 +180,12 @@ export default function CategoryPage() {
           setCategoryKeywords(keywordsMap)
         } else {
           // Keep default "All" category on error
-          setCategories([{ id: 'all', name: "All", image: foodImages[7] || foodImages[0], slug: 'all' }])
+          setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
         }
       } catch (error) {
         console.error('Error fetching categories:', error)
         // Keep default "All" category on error
-        setCategories([{ id: 'all', name: "All", image: foodImages[7] || foodImages[0], slug: 'all' }])
+        setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
       } finally {
         setLoadingCategories(false)
       }
@@ -430,6 +440,50 @@ export default function CategoryPage() {
 
           const transformedRestaurants = await Promise.all(menuPromises)
           setRestaurantsData(transformedRestaurants)
+
+          // Prefer real categories derived from menu sections that are common across restaurants.
+          const sectionStatsMap = new Map()
+          transformedRestaurants.forEach((restaurant) => {
+            const sections = restaurant?.menu?.sections
+            if (!Array.isArray(sections)) return
+            const seenInRestaurant = new Set()
+            sections.forEach((section) => {
+              const rawName = String(section?.name || "").trim()
+              if (!rawName) return
+              const key = slugify(rawName)
+              if (!key || seenInRestaurant.has(key)) return
+              seenInRestaurant.add(key)
+
+              const existing = sectionStatsMap.get(key) || { name: rawName, count: 0 }
+              existing.count += 1
+              sectionStatsMap.set(key, existing)
+            })
+          })
+
+          if (sectionStatsMap.size > 0) {
+            const sourceEntries = Array.from(sectionStatsMap.entries())
+              .map(([slug, stats]) => [slug, stats.name])
+
+            const dynamicCategories = [
+              { id: "all", name: "All", image: foodImages[7] || foodImages[0], slug: "all" },
+              ...sourceEntries.map(([slug, name], idx) => ({
+                id: slug,
+                name,
+                image: foodImages[idx % foodImages.length] || foodImages[0],
+                slug,
+              })),
+            ]
+
+            const dynamicKeywords = {}
+            sourceEntries.forEach(([slug, name]) => {
+              const lowered = name.toLowerCase()
+              const words = lowered.split(/[\s-]+/).filter((w) => w.length > 0)
+              dynamicKeywords[slug] = [lowered, ...words]
+            })
+
+            setCategories(dynamicCategories)
+            setCategoryKeywords(dynamicKeywords)
+          }
         } else {
           setRestaurantsData([])
         }
@@ -539,20 +593,22 @@ export default function CategoryPage() {
             const categoryDishes = getAllCategoryDishesFromMenu(r.menu, selectedCategory)
 
             if (categoryDishes.length > 0) {
-              // Create one card per dish
-              categoryDishes.forEach((dish, index) => {
+              const dishForCard = vegMode
+                ? (categoryDishes.find((dish) => dish.foodType === "Veg") || null)
+                : categoryDishes[0]
+
+              if (dishForCard) {
                 expandedDishes.push({
                   ...r,
-                  // Unique ID for each dish card
-                  id: `${r.id}-dish-${dish.itemId || index}`,
-                  dishId: dish.itemId || `${r.id}-dish-${index}`,
-                  // Category dish info for this specific dish
-                  categoryDish: dish,
-                  categoryDishName: dish.name,
-                  categoryDishPrice: dish.price,
-                  categoryDishImage: dish.image,
+                  // Keep one card per restaurant in category lists
+                  id: r.id,
+                  dishId: dishForCard.itemId || `${r.id}-dish`,
+                  categoryDish: dishForCard,
+                  categoryDishName: dishForCard.name,
+                  categoryDishPrice: dishForCard.price,
+                  categoryDishImage: dishForCard.image,
                 })
-              })
+              }
             } else {
               // If no dishes found but menu exists, skip this restaurant
             }
@@ -610,7 +666,7 @@ export default function CategoryPage() {
       )
     }
 
-    return filtered
+    return uniqueByRestaurant(filtered)
   }, [selectedCategory, activeFilters, searchQuery, restaurantsData, categoryKeywords, vegMode])
 
   const filteredAllRestaurants = useMemo(() => {
@@ -630,25 +686,22 @@ export default function CategoryPage() {
             const categoryDishes = getAllCategoryDishesFromMenu(r.menu, selectedCategory)
 
             if (categoryDishes.length > 0) {
-              // Create one card per dish
-              categoryDishes.forEach((dish, index) => {
-                // Filter by vegMode if enabled
-                if (vegMode && dish.foodType !== "Veg") {
-                  return // Skip non-veg dishes when vegMode is ON
-                }
+              const dishForCard = vegMode
+                ? (categoryDishes.find((dish) => dish.foodType === "Veg") || null)
+                : categoryDishes[0]
 
+              if (dishForCard) {
                 expandedDishes.push({
                   ...r,
-                  // Unique ID for each dish card
-                  id: `${r.id}-dish-${dish.itemId || index}`,
-                  dishId: dish.itemId || `${r.id}-dish-${index}`,
-                  // Category dish info for this specific dish
-                  categoryDish: dish,
-                  categoryDishName: dish.name,
-                  categoryDishPrice: dish.price,
-                  categoryDishImage: dish.image,
+                  // Keep one card per restaurant in category lists
+                  id: r.id,
+                  dishId: dishForCard.itemId || `${r.id}-dish`,
+                  categoryDish: dishForCard,
+                  categoryDishName: dishForCard.name,
+                  categoryDishPrice: dishForCard.price,
+                  categoryDishImage: dishForCard.image,
                 })
-              })
+              }
             }
           }
         } else {
@@ -707,7 +760,7 @@ export default function CategoryPage() {
       )
     }
 
-    return filtered
+    return uniqueByRestaurant(filtered)
   }, [selectedCategory, activeFilters, searchQuery, restaurantsData, categoryKeywords, vegMode])
 
   const handleCategorySelect = (category) => {
@@ -770,6 +823,7 @@ export default function CategoryPage() {
               categories && categories.length > 0 ? categories.map((cat) => {
                 const categorySlug = cat.slug || cat.id
                 const isSelected = selectedCategory === categorySlug || selectedCategory === cat.id
+                const isAllCategory = categorySlug === "all" || cat.id === "all"
                 return (
                   <button
                     key={cat.id}
@@ -777,7 +831,11 @@ export default function CategoryPage() {
                     className={`flex flex-col items-center gap-1.5 flex-shrink-0 pb-2 transition-all ${isSelected ? 'border-b-2 border-[#EB590E]' : ''
                       }`}
                   >
-                    {cat.image ? (
+                    {isAllCategory ? (
+                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full border-2 transition-all flex items-center justify-center ${isSelected ? 'border-[#EB590E] shadow-lg bg-[#FFF2EB] dark:bg-[#EB590E]/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#222222]'}`}>
+                        <Grid2x2 className={`h-6 w-6 md:h-7 md:w-7 ${isSelected ? 'text-[#EB590E]' : 'text-gray-500 dark:text-gray-400'}`} />
+                      </div>
+                    ) : cat.image ? (
                       <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-[#EB590E] shadow-lg' : 'border-transparent'
                         }`}>
                         <img

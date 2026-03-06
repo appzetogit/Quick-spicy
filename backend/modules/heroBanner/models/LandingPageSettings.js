@@ -6,6 +6,10 @@ const landingPageSettingsSchema = new mongoose.Schema({
     default: 'Explore More',
     trim: true
   },
+  recommendedRestaurants: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Restaurant',
+  }],
   updatedAt: {
     type: Date,
     default: Date.now
@@ -18,7 +22,10 @@ const landingPageSettingsSchema = new mongoose.Schema({
 landingPageSettingsSchema.statics.getSettings = async function() {
   let settings = await this.findOne();
   if (!settings) {
-    settings = new this({ exploreMoreHeading: 'Explore More' });
+    settings = new this({
+      exploreMoreHeading: 'Explore More',
+      recommendedRestaurants: [],
+    });
     await settings.save();
   }
   return settings;

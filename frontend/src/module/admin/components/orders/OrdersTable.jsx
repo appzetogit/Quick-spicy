@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Printer, ArrowUpDown, Loader2, Check, X } from "lucide-react"
+import { Eye, Printer, ArrowUpDown, Loader2, Check, X, Trash2 } from "lucide-react"
 
 const getStatusColor = (orderStatus) => {
   const colors = {
@@ -32,9 +32,11 @@ export default function OrdersTable({
   onViewOrder,
   onPrintOrder,
   onRefund,
+  onDeleteOrder,
   onAcceptOrder,
   onRejectOrder,
   actionLoadingOrderId,
+  deletingOrderId,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
@@ -98,6 +100,14 @@ export default function OrdersTable({
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Order Date</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                  </div>
+                </th>
+              )}
+              {visibleColumns.orderOtp && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  <div className="flex items-center gap-2">
+                    <span>Order OTP</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
                   </div>
                 </th>
@@ -184,6 +194,13 @@ export default function OrdersTable({
                 {visibleColumns.orderDate && (
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-medium text-slate-700">{order.date}, {order.time}</span>
+                  </td>
+                )}
+                {visibleColumns.orderOtp && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-semibold text-slate-900">
+                      {order.orderOtp || "--"}
+                    </span>
                   </td>
                 )}
                 {visibleColumns.customer && (
@@ -355,6 +372,20 @@ export default function OrdersTable({
                       >
                         <Printer className="w-4 h-4" />
                       </button>
+                      {onDeleteOrder && (
+                        <button
+                          onClick={() => onDeleteOrder(order)}
+                          disabled={deletingOrderId === (order.id || order.orderId)}
+                          className="p-1.5 rounded text-rose-600 hover:bg-rose-50 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                          title="Delete Order"
+                        >
+                          {deletingOrderId === (order.id || order.orderId) ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
                       {/* Show Refund button or Refunded status for cancelled orders with Online/Wallet payment (restaurant or user cancelled) */}
                       {(() => {
                         // Check if order is cancelled by restaurant or user

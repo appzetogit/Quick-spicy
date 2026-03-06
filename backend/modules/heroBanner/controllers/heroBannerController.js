@@ -321,7 +321,7 @@ export const linkRestaurantsToBanner = async (req, res) => {
  */
 export const getLandingConfig = async (req, res) => {
   try {
-    const [categories, exploreMore, settings] = await Promise.all([
+    const [categories, exploreMore, settingsDoc] = await Promise.all([
       LandingPageCategory.find({ isActive: true })
         .sort({ order: 1, createdAt: -1 })
         .select('label slug imageUrl order isActive')
@@ -332,12 +332,28 @@ export const getLandingConfig = async (req, res) => {
         .lean(),
       LandingPageSettings.getSettings(),
     ]);
+    const settings = await settingsDoc.populate(
+      'recommendedRestaurants',
+      'name slug restaurantId rating cuisines profileImage coverImages menuImages'
+    );
 
     return successResponse(res, 200, 'Landing config retrieved successfully', {
       categories,
       exploreMore,
       settings: {
         exploreMoreHeading: settings.exploreMoreHeading,
+        recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
+        recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
+          _id: restaurant._id,
+          name: restaurant.name,
+          slug: restaurant.slug,
+          restaurantId: restaurant.restaurantId,
+          rating: restaurant.rating,
+          cuisines: restaurant.cuisines,
+          profileImage: restaurant.profileImage,
+          coverImages: restaurant.coverImages,
+          menuImages: restaurant.menuImages,
+        })),
       },
     });
   } catch (error) {
@@ -728,11 +744,27 @@ export const toggleLandingExploreMoreStatus = async (req, res) => {
  */
 export const getLandingSettings = async (req, res) => {
   try {
-    const settings = await LandingPageSettings.getSettings();
+    const settingsDoc = await LandingPageSettings.getSettings();
+    const settings = await settingsDoc.populate(
+      'recommendedRestaurants',
+      'name slug restaurantId rating cuisines profileImage coverImages menuImages'
+    );
 
     return successResponse(res, 200, 'Landing settings retrieved successfully', {
       settings: {
-        exploreMoreHeading: settings.exploreMoreHeading
+        exploreMoreHeading: settings.exploreMoreHeading,
+        recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
+        recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
+          _id: restaurant._id,
+          name: restaurant.name,
+          slug: restaurant.slug,
+          restaurantId: restaurant.restaurantId,
+          rating: restaurant.rating,
+          cuisines: restaurant.cuisines,
+          profileImage: restaurant.profileImage,
+          coverImages: restaurant.coverImages,
+          menuImages: restaurant.menuImages,
+        })),
       }
     });
   } catch (error) {
@@ -746,7 +778,7 @@ export const getLandingSettings = async (req, res) => {
  */
 export const updateLandingSettings = async (req, res) => {
   try {
-    const { exploreMoreHeading } = req.body;
+    const { exploreMoreHeading, recommendedRestaurantIds } = req.body;
 
     const settings = await LandingPageSettings.getSettings();
 
@@ -754,11 +786,42 @@ export const updateLandingSettings = async (req, res) => {
       settings.exploreMoreHeading = exploreMoreHeading;
     }
 
+    if (Array.isArray(recommendedRestaurantIds)) {
+      const uniqueValidIds = Array.from(
+        new Set(
+          recommendedRestaurantIds
+            .filter((id) => mongoose.Types.ObjectId.isValid(id))
+            .map((id) => String(id))
+        )
+      );
+
+      const existingRestaurants = await Restaurant.find({
+        _id: { $in: uniqueValidIds },
+      })
+        .select('_id')
+        .lean();
+
+      settings.recommendedRestaurants = existingRestaurants.map((restaurant) => restaurant._id);
+    }
+
     await settings.save();
+    await settings.populate('recommendedRestaurants', 'name slug restaurantId rating cuisines profileImage coverImages menuImages');
 
     return successResponse(res, 200, 'Landing settings updated successfully', {
       settings: {
-        exploreMoreHeading: settings.exploreMoreHeading
+        exploreMoreHeading: settings.exploreMoreHeading,
+        recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id || restaurant)),
+        recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
+          _id: restaurant._id,
+          name: restaurant.name,
+          slug: restaurant.slug,
+          restaurantId: restaurant.restaurantId,
+          rating: restaurant.rating,
+          cuisines: restaurant.cuisines,
+          profileImage: restaurant.profileImage,
+          coverImages: restaurant.coverImages,
+          menuImages: restaurant.menuImages,
+        })),
       }
     });
   } catch (error) {

@@ -34,6 +34,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [isLoading, setIsLoading] = useState(true)
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
+  const [deletingOrderId, setDeletingOrderId] = useState(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null)
   const seenPendingOrderIdsRef = useRef(new Set())
@@ -295,6 +296,36 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }
 
+  const handleDeleteOrder = async (order) => {
+    const orderIdToUse = order.id || order._id || order.orderId
+    if (!orderIdToUse) {
+      toast.error("Order ID not found")
+      return
+    }
+
+    const shouldDelete = confirm(
+      `Delete order ${order.orderId} permanently?\n\nThis will remove it from customer and delivery apps as well.`,
+    )
+
+    if (!shouldDelete) return
+
+    try {
+      setDeletingOrderId(order.id || order.orderId)
+      const response = await adminAPI.deleteOrder(orderIdToUse)
+      if (response.data?.success) {
+        toast.success(response.data?.message || `Order ${order.orderId} deleted`)
+        await fetchOrders({ silent: true, withRingCheck: false })
+      } else {
+        toast.error(response.data?.message || "Failed to delete order")
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error)
+      toast.error(error.response?.data?.message || "Failed to delete order")
+    } finally {
+      setDeletingOrderId(null)
+    }
+  }
+
   // Handle refund button click - show modal for wallet payments, confirm dialog for others
   const handleRefund = (order) => {
     const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
@@ -519,9 +550,11 @@ export default function OrdersPage({ statusKey = "all" }) {
         onViewOrder={handleViewOrder}
         onPrintOrder={handlePrintOrder}
         onRefund={handleRefund}
+        onDeleteOrder={statusKey === "all" ? handleDeleteOrder : undefined}
         onAcceptOrder={statusKey === "all" || statusKey === "pending" ? handleAcceptOrder : undefined}
         onRejectOrder={statusKey === "all" || statusKey === "pending" ? handleRejectOrder : undefined}
         actionLoadingOrderId={processingActionOrderId}
+        deletingOrderId={deletingOrderId}
       />
     </div>
   )

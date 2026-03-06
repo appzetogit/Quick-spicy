@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useSearchParams, Link, useNavigate } from "react-router-dom"
-import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, Loader2 } from "lucide-react"
+import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, Loader2, Grid2x2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -42,6 +42,16 @@ export default function SearchResults() {
   ])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
+  const slugify = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  const uniqueRestaurants = (list) => {
+    const seen = new Set()
+    return list.filter((restaurant) => {
+      const key = restaurant?.id || restaurant?.restaurantId || slugify(restaurant?.name)
+      if (!key || seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
 
   // Fetch categories from admin API
   useEffect(() => {
@@ -369,6 +379,50 @@ export default function SearchResults() {
 
           console.log(`✅ Final transformed restaurants: ${transformedRestaurants.length}`)
           setRestaurantsData(transformedRestaurants)
+
+          // Prefer real categories derived from menu sections that are common across restaurants.
+          const sectionStatsMap = new Map()
+          transformedRestaurants.forEach((restaurant) => {
+            const sections = restaurant?.menu?.sections
+            if (!Array.isArray(sections)) return
+            const seenInRestaurant = new Set()
+            sections.forEach((section) => {
+              const rawName = String(section?.name || '').trim()
+              if (!rawName) return
+              const key = slugify(rawName)
+              if (!key || seenInRestaurant.has(key)) return
+              seenInRestaurant.add(key)
+
+              const existing = sectionStatsMap.get(key) || { name: rawName, count: 0 }
+              existing.count += 1
+              sectionStatsMap.set(key, existing)
+            })
+          })
+
+          if (sectionStatsMap.size > 0) {
+            const sourceEntries = Array.from(sectionStatsMap.entries())
+              .map(([slug, stats]) => [slug, stats.name])
+
+            const dynamicCategories = [
+              { id: 'all', name: "All", image: foodImages[7] || foodImages[0] },
+              ...sourceEntries.map(([slug, name], idx) => ({
+                id: slug,
+                name,
+                image: foodImages[idx % foodImages.length] || foodImages[0],
+                type: 'menu-section',
+              })),
+            ]
+
+            const dynamicKeywords = {}
+            sourceEntries.forEach(([slug, name]) => {
+              const lowered = name.toLowerCase()
+              const words = lowered.split(/[\s-]+/).filter((w) => w.length > 0)
+              dynamicKeywords[slug] = [lowered, ...words]
+            })
+
+            setCategories(dynamicCategories)
+            setCategoryKeywords(dynamicKeywords)
+          }
         } else {
           console.warn('⚠️ No restaurants in API response. Response structure:', {
             hasData: !!response.data,
@@ -535,7 +589,7 @@ export default function SearchResults() {
       filtered = filtered.filter(r => r.offer && r.offer.includes('50%'))
     }
 
-    return filtered
+    return uniqueRestaurants(filtered)
   }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories])
 
   const filteredAllRestaurants = useMemo(() => {
@@ -643,8 +697,17 @@ export default function SearchResults() {
       filtered = filtered.filter(r => r.offer && r.offer.includes('50%'))
     }
 
-    return filtered
+    return uniqueRestaurants(filtered)
   }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories])
+
+  const recommendedIds = useMemo(
+    () => new Set(filteredRecommended.slice(0, 6).map((restaurant) => restaurant.id)),
+    [filteredRecommended]
+  )
+  const nonRepeatedAllRestaurants = useMemo(
+    () => filteredAllRestaurants.filter((restaurant) => !recommendedIds.has(restaurant.id)),
+    [filteredAllRestaurants, recommendedIds]
+  )
 
   // Check if should show grayscale (user out of service)
   const shouldShowGrayscale = isOutOfService
@@ -688,6 +751,7 @@ export default function SearchResults() {
           >
             {categories.map((cat) => {
               const isSelected = selectedCategory === cat.id
+              const isAllCategory = cat.id === 'all'
               return (
                 <button
                   key={cat.id}
@@ -695,7 +759,11 @@ export default function SearchResults() {
                   className={`flex flex-col items-center gap-1.5 flex-shrink-0 pb-2 transition-all ${isSelected ? 'border-b-2 border-[#EB590E]' : ''
                     }`}
                 >
-                  {cat.image ? (
+                  {isAllCategory ? (
+                    <div className={`w-16 h-16 rounded-full border-2 transition-all flex items-center justify-center ${isSelected ? 'border-[#EB590E] dark:border-[#EB590E] shadow-lg bg-[#FFF2EB] dark:bg-[#EB590E]/20' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-[#222222]'}`}>
+                      <Grid2x2 className={`h-6 w-6 ${isSelected ? 'text-[#EB590E]' : 'text-gray-500 dark:text-gray-400'}`} />
+                    </div>
+                  ) : cat.image ? (
                     <div className={`w-16 h-16 rounded-full overflow-hidden border-2 transition-all ${isSelected ? 'border-[#EB590E] dark:border-[#EB590E] shadow-lg' : 'border-transparent'
                       }`}>
                       <img
@@ -851,7 +919,7 @@ export default function SearchResults() {
 
           {/* Large Restaurant Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 lg:gap-6">
-            {filteredAllRestaurants.map((restaurant) => {
+            {nonRepeatedAllRestaurants.map((restaurant) => {
               const restaurantSlug = restaurant.name.toLowerCase().replace(/\s+/g, "-")
               const isFavorite = favorites.has(restaurant.id)
 
@@ -973,7 +1041,7 @@ export default function SearchResults() {
             })}
 
             {/* Empty State */}
-            {filteredAllRestaurants.length === 0 && (
+            {nonRepeatedAllRestaurants.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400">
                   {query

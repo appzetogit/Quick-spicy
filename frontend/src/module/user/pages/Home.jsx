@@ -317,16 +317,24 @@ export default function Home() {
   const [landingCategories, setLandingCategories] = useState([])
   const [landingExploreMore, setLandingExploreMore] = useState([])
   const [exploreMoreHeading, setExploreMoreHeading] = useState("Explore More")
+  const [recommendedRestaurantIds, setRecommendedRestaurantIds] = useState([])
+  const [recommendedRestaurantsFromSettings, setRecommendedRestaurantsFromSettings] = useState([])
   const [loadingLandingConfig, setLoadingLandingConfig] = useState(true)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [realCategories, setRealCategories] = useState([])
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
+  const [menuCategories, setMenuCategories] = useState([])
+  const [loadingMenuCategories, setLoadingMenuCategories] = useState(false)
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
   const heroShellRef = useRef(null)
   const stickyHeaderRef = useRef(null)
+  const slugifyCategory = useCallback((value) => String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, ""), [])
 
   const normalizeImageUrl = useCallback((imageUrl) => {
     if (typeof imageUrl !== "string") return ""
@@ -517,6 +525,22 @@ export default function Home() {
     });
   }, [landingExploreMore]);
 
+  const normalizedLandingCategories = useMemo(() => {
+    return (landingCategories || []).map((category, index) => ({
+      id: category.id || category._id || `landing-category-${index}`,
+      name: category.label || category.name || "Category",
+      image: normalizeImageUrl(category.imageUrl || category.image) || foodImages[index % foodImages.length] || foodImages[0],
+      slug: category.slug || slugifyCategory(category.label || category.name || ""),
+      label: category.label || category.name || "Category",
+    }))
+  }, [landingCategories, normalizeImageUrl, slugifyCategory])
+
+  const displayCategories = useMemo(() => {
+    if (menuCategories.length > 0) return menuCategories
+    if (realCategories.length > 0) return realCategories
+    return normalizedLandingCategories
+  }, [menuCategories, realCategories, normalizedLandingCategories])
+
   // Swipe functionality for hero banner carousel
   const touchStartX = useRef(0)
   const touchStartY = useRef(0)
@@ -694,6 +718,12 @@ export default function Home() {
               .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
           )
           setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
+          setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
+            ? response.data.data.settings.recommendedRestaurantIds
+            : [])
+          setRecommendedRestaurantsFromSettings(Array.isArray(response.data.data.settings?.recommendedRestaurants)
+            ? response.data.data.settings.recommendedRestaurants
+            : [])
         }
       } catch (error) {
         console.error('Error fetching landing config:', error)
@@ -701,6 +731,8 @@ export default function Home() {
         setLandingCategories([])
         setLandingExploreMore([])
         setExploreMoreHeading("Explore More")
+        setRecommendedRestaurantIds([])
+        setRecommendedRestaurantsFromSettings([])
       } finally {
         setLoadingLandingConfig(false)
       }
@@ -1218,6 +1250,7 @@ export default function Home() {
             mongoId: restaurant._id || null,
             name: restaurant.name,
             cuisine: cuisine,
+            cuisines: Array.isArray(restaurant.cuisines) ? restaurant.cuisines : [],
             rating: restaurant.rating || 4.5,
             deliveryTime: deliveryTime,
             distance: distance,
@@ -1355,6 +1388,82 @@ export default function Home() {
     console.log('🔄 Recalculated distances for all restaurants based on user location')
   }, [location?.latitude, location?.longitude])
 
+  // Build a union of menu categories across all restaurants.
+  useEffect(() => {
+    const fetchMenuCategories = async () => {
+      if (!Array.isArray(restaurantsData) || restaurantsData.length === 0) {
+        setMenuCategories([])
+        return
+      }
+
+      setLoadingMenuCategories(true)
+      try {
+        const categoryMap = new Map()
+        const menuResponses = await Promise.all(
+          restaurantsData.map(async (restaurant) => {
+            const id = restaurant?.restaurantId || restaurant?.id
+            if (!id) return null
+            try {
+              const response = await restaurantAPI.getMenuByRestaurantId(id)
+              return response?.data?.data?.menu || null
+            } catch {
+              return null
+            }
+          })
+        )
+
+        menuResponses.forEach((menu) => {
+          const sections = Array.isArray(menu?.sections) ? menu.sections : []
+          sections.forEach((section) => {
+            const categoryName = String(section?.name || "").trim()
+            if (!categoryName) return
+
+            const slug = slugifyCategory(categoryName)
+            if (!slug) return
+
+            let image = ""
+            if (Array.isArray(section?.items) && section.items.length > 0) {
+              image = normalizeImageUrl(section.items[0]?.image)
+            }
+            if (!image && Array.isArray(section?.subsections)) {
+              for (const subsection of section.subsections) {
+                if (Array.isArray(subsection?.items) && subsection.items.length > 0) {
+                  image = normalizeImageUrl(subsection.items[0]?.image)
+                  if (image) break
+                }
+              }
+            }
+
+            if (!categoryMap.has(slug)) {
+              categoryMap.set(slug, {
+                id: slug,
+                name: categoryName,
+                slug,
+                label: categoryName,
+                image: image || "",
+              })
+            } else if (image && !categoryMap.get(slug).image) {
+              categoryMap.get(slug).image = image
+            }
+          })
+        })
+
+        const categories = Array.from(categoryMap.values())
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((category, index) => ({
+            ...category,
+            image: category.image || foodImages[index % foodImages.length] || foodImages[0],
+          }))
+
+        setMenuCategories(categories)
+      } finally {
+        setLoadingMenuCategories(false)
+      }
+    }
+
+    fetchMenuCategories()
+  }, [restaurantsData, normalizeImageUrl, slugifyCategory])
+
   // Filter restaurants and foods based on active filters
   const filteredRestaurants = useMemo(() => {
     // Use only API data - no mock data fallback
@@ -1457,6 +1566,67 @@ export default function Home() {
 
     return filtered
   }, [restaurantsData, activeFilters, selectedCuisine, sortBy, availabilityTick])
+
+  const recommendedForYouRestaurants = useMemo(() => {
+    const idsInOrder = (recommendedRestaurantIds || []).map((id) => String(id))
+    const hasIds = idsInOrder.length > 0
+    const fromSettings = Array.isArray(recommendedRestaurantsFromSettings)
+      ? recommendedRestaurantsFromSettings
+      : []
+
+    // Primary source: restaurants returned by landing settings API (already admin-selected).
+    const fromSettingsMapped = fromSettings.map((restaurant) => {
+      const restaurantId = restaurant?._id ? String(restaurant._id) : ''
+      const cuisine = Array.isArray(restaurant?.cuisines) && restaurant.cuisines.length > 0
+        ? restaurant.cuisines[0]
+        : 'Multi-cuisine'
+      const imageCandidates = [
+        ...extractImages(restaurant?.coverImages),
+        ...extractImages(restaurant?.profileImage),
+        ...extractImages(restaurant?.menuImages),
+      ]
+      const image = imageCandidates[0] || foodImages[0]
+
+      return {
+        id: restaurant?.restaurantId || restaurantId,
+        mongoId: restaurantId,
+        name: restaurant?.name || 'Restaurant',
+        cuisine,
+        rating: Number(restaurant?.rating) || 4.0,
+        distance: '',
+        deliveryTime: '',
+        image: normalizeImageUrl(image) || foodImages[0],
+        images: imageCandidates.length > 0 ? imageCandidates : [foodImages[0]],
+        slug: restaurant?.slug || restaurant?.restaurantId || restaurantId,
+        offer: null,
+        isActive: true,
+        isAcceptingOrders: true,
+      }
+    })
+
+    // Keep admin-selected order when IDs exist.
+    const orderedFromSettings = hasIds
+      ? idsInOrder
+        .map((id) => fromSettingsMapped.find((restaurant) => String(restaurant.mongoId) === id))
+        .filter(Boolean)
+      : fromSettingsMapped
+
+    // Fallback: if settings payload misses some entries, recover them from fetched restaurant list by ID.
+    const existingIds = new Set(orderedFromSettings.map((restaurant) => String(restaurant.mongoId || restaurant.id)))
+    const fromFetchedMissing = (restaurantsData || [])
+      .filter((restaurant) => {
+        const mongoId = String(restaurant.mongoId || '')
+        return hasIds && idsInOrder.includes(mongoId) && !existingIds.has(mongoId)
+      })
+
+    return [...orderedFromSettings, ...fromFetchedMissing].slice(0, 12)
+  }, [
+    recommendedRestaurantIds,
+    recommendedRestaurantsFromSettings,
+    restaurantsData,
+    extractImages,
+    normalizeImageUrl
+  ])
 
   // Featured foods removed - will be handled by restaurants data from API
   const filteredFeaturedFoods = useMemo(() => {
@@ -2003,14 +2173,14 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-            {loadingRealCategories ? (
+            {loadingRealCategories || loadingMenuCategories ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
               </div>
-            ) : realCategories.length > 0 ? (
+            ) : displayCategories.length > 0 ? (
               <>
                 {/* Show only first 10 categories */}
-                {realCategories.slice(0, 10).map((category, index) => (
+                {displayCategories.slice(0, 10).map((category, index) => (
                   <motion.div
                     key={category.id || index}
                     className="flex-shrink-0"
@@ -2045,76 +2215,24 @@ export default function Home() {
                   </motion.div>
                 ))}
                 {/* See All button - show if there are more than 10 categories */}
-                {realCategories.length > 10 && (
+                {displayCategories.length > 10 && (
                   <motion.div
                     className="flex-shrink-0 cursor-pointer"
                     initial={{ opacity: 0, scale: 0.8 }}
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.4, delay: 0.1 }}
-                    whileHover={{ scale: 1.1 }}
+                    whileHover={{ scale: 1.05, y: -5 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={() => setShowAllCategoriesModal(true)}
                   >
-                    <div className="relative w-32 h-36 sm:w-36 sm:h-40 md:w-40 md:h-44 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-sm border border-slate-100 dark:border-gray-800 overflow-hidden group hover:shadow-md transition-all flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-[#FFF2EB] dark:bg-[#EB590E]/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 text-[#EB590E] dark:text-[#EB590E]" />
-                        </div>
-                        <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                          See all
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </>
-            ) : landingCategories.length > 0 ? (
-              <>
-                {/* Show only first 10 categories */}
-                {landingCategories.slice(0, 10).map((category, index) => (
-                  <div
-                    key={category._id || index}
-                    className="flex-shrink-0 transform transition-all duration-300 hover:scale-105 active:scale-95"
-                  >
-                    <Link to={`/user/category/${category.slug || category.label.toLowerCase().replace(/\s+/g, '-')}`} className="flex flex-col items-center gap-2 group">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 relative">
-                        <OptimizedImage
-                          src={category.imageUrl}
-                          alt={category.label}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                          sizes="(max-width: 640px) 64px, (max-width: 768px) 80px, 96px"
-                          objectFit="cover"
-                          placeholder="blur"
-                        />
+                    <div className="flex flex-col items-center gap-2 group">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 group-hover:border-[#EB590E] transition-colors duration-300 flex items-center justify-center bg-[#FFF2EB] dark:bg-[#EB590E]/20">
+                        <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 text-[#EB590E] dark:text-[#EB590E]" />
                       </div>
                       <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 text-center whitespace-nowrap max-w-[80px] truncate">
-                        {category.label}
+                        See all
                       </span>
-                    </Link>
-                  </div>
-                ))}
-                {/* See All button - show if there are more than 10 categories */}
-                {landingCategories.length > 10 && (
-                  <motion.div
-                    className="flex-shrink-0 cursor-pointer"
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.4, delay: 0.1 }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowAllCategoriesModal(true)}
-                  >
-                    <div className="relative w-32 h-36 sm:w-36 sm:h-40 md:w-40 md:h-44 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-sm border border-slate-100 dark:border-gray-800 overflow-hidden group hover:shadow-md transition-all flex items-center justify-center">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-pink-100 dark:bg-pink-900/50 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                          <UtensilsCrossed className="w-5 h-5 sm:w-6 sm:h-6 text-pink-600 dark:text-pink-400" />
-                        </div>
-                        <span className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
-                          See all
-                        </span>
-                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -2201,6 +2319,57 @@ export default function Home() {
             })}
           </div>
         </motion.section>
+
+        {recommendedForYouRestaurants.length > 0 && (
+          <motion.section
+            className="pt-1 sm:pt-2"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-50px" }}
+            transition={{ duration: 0.5 }}
+          >
+            <motion.h2
+              className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 dark:text-gray-500 tracking-widest uppercase mb-2 sm:mb-3 px-1"
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5 }}
+            >
+              Recommended For You
+            </motion.h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+              {recommendedForYouRestaurants.map((restaurant, index) => {
+                const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
+                return (
+                  <motion.div
+                    key={`recommended-${restaurant.mongoId || restaurant.id || restaurantSlug}`}
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.35, delay: index * 0.05 }}
+                  >
+                    <Link to={`/user/restaurants/${restaurantSlug}`} className="block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a]">
+                      <div className="relative h-24 sm:h-28 md:h-32 bg-gray-100">
+                        <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" loading="lazy" />
+                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-white/95 text-[10px] font-semibold text-green-700">
+                          {Number(restaurant.rating || 0).toFixed(1)}
+                        </div>
+                      </div>
+                      <div className="p-2">
+                        <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{restaurant.name}</p>
+                        <p className="text-[11px] sm:text-xs text-green-600 font-medium mt-1 flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          Near & Fast
+                        </p>
+                      </div>
+                    </Link>
+                  </motion.div>
+                )
+              })}
+            </div>
+          </motion.section>
+        )}
 
         {/* Explore More Section */}
         <motion.section
@@ -3092,14 +3261,11 @@ export default function Home() {
               {/* Categories Grid - Scrollable */}
               <div className="flex-1 overflow-y-auto px-4 sm:px-5 py-4 sm:py-5">
                 <div className="grid grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-                  {(realCategories.length > 0 ? realCategories : landingCategories).map((category, index) => {
-                    const categoryData = realCategories.length > 0
-                      ? { name: category.name, image: category.image, slug: category.slug }
-                      : { name: category.label, image: category.imageUrl, slug: category.slug }
-
+                  {displayCategories.map((category, index) => {
+                    const categoryData = { name: category.name || category.label, image: category.image || category.imageUrl, slug: category.slug }
                     return (
                       <motion.div
-                        key={category.id || category._id || index}
+                        key={category.id || index}
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{
