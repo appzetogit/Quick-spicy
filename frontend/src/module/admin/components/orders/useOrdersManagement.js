@@ -2,9 +2,7 @@
 import { exportToCSV, exportToExcel, exportToPDF, exportToJSON } from "./ordersExportUtils"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugError = () => {}
 
 
 const toNumber = (value) => {
@@ -13,6 +11,11 @@ const toNumber = (value) => {
 }
 
 const formatMoney = (value) => `INR ${toNumber(value).toFixed(2)}`
+const formatDisplayText = (value, fallback = "N/A") => {
+  if (value === null || value === undefined) return fallback
+  const normalized = String(value).trim()
+  return normalized || fallback
+}
 
 const blobToDataUrl = (blob) =>
   new Promise((resolve, reject) => {
@@ -233,9 +236,42 @@ export function useOrdersManagement(orders, statusKey, title) {
       const discountAmount = toNumber(order.discountAmount || order.discount)
       const computedTotal = subtotal + deliveryFee + taxAmount - discountAmount
       const totalAmount = toNumber(order.totalAmount || computedTotal)
+      const paymentType = order.paymentType || order.payment?.method || order.paymentMethod || "N/A"
+      const deliveryPartnerName = formatDisplayText(
+        order.deliveryPartnerName || order.deliveryBoyName || order.deliveryPartnerId?.name,
+      )
+      const deliveryPartnerPhone = formatDisplayText(
+        order.deliveryPartnerPhone || order.deliveryBoyNumber || order.deliveryPartnerId?.phone,
+      )
+      const orderStatus = formatDisplayText(order.orderStatus || order.status)
+      const paymentStatus = formatDisplayText(
+        order.paymentStatus
+          || order.paymentCollectionStatus
+          || (paymentType === "Cash on Delivery" ? "Not Collected" : null),
+      )
+      const customerName = formatDisplayText(order.customerName)
+      const customerPhone = formatDisplayText(order.customerPhone)
+      const restaurantName = formatDisplayText(order.restaurant)
+      const deliveryType = formatDisplayText(order.deliveryType)
+      const addressParts = [
+        order.address?.label,
+        order.address?.street,
+        order.address?.additionalDetails,
+        order.address?.formattedAddress,
+        order.address?.city,
+        order.address?.state,
+        order.address?.zipCode,
+      ].filter(Boolean)
+      const deliveryAddress = formatDisplayText(addressParts.join(", "), "Not available")
+      const itemCount = items.reduce((sum, item) => sum + toNumber(item?.quantity || 1), 0) || items.length
 
       doc.setFillColor(15, 118, 110)
-      doc.rect(0, 0, pageWidth, 42, "F")
+      doc.rect(0, 0, pageWidth, 46, "F")
+      doc.setFillColor(255, 255, 255)
+      doc.setGState(new doc.GState({ opacity: 0.08 }))
+      doc.circle(pageWidth - 24, 12, 18, "F")
+      doc.circle(pageWidth - 6, 36, 22, "F")
+      doc.setGState(new doc.GState({ opacity: 1 }))
 
       if (logoDataUrl) {
         try {
@@ -247,41 +283,91 @@ export function useOrdersManagement(orders, statusKey, title) {
       }
 
       doc.setTextColor(255, 255, 255)
-      doc.setFontSize(16)
+      doc.setFontSize(17)
       doc.setFont(undefined, "bold")
       doc.text(companyName, logoDataUrl ? 42 : 14, 17)
       doc.setFontSize(10)
       doc.setFont(undefined, "normal")
       doc.text("Order Invoice", logoDataUrl ? 42 : 14, 24)
+      doc.setFontSize(8.5)
+      doc.text("Admin order summary with billing and delivery details", logoDataUrl ? 42 : 14, 30)
 
       doc.setFontSize(9)
       doc.text(`Invoice #: ${orderId}`, pageWidth - 14, 14, { align: "right" })
       doc.text(`Date: ${orderDate}`, pageWidth - 14, 20, { align: "right" })
+      doc.text(`Status: ${orderStatus}`, pageWidth - 14, 26, { align: "right" })
+      doc.text(`Payment: ${paymentStatus}`, pageWidth - 14, 32, { align: "right" })
 
       doc.setDrawColor(226, 232, 240)
       doc.setFillColor(248, 250, 252)
-      doc.roundedRect(14, 49, 90, 42, 2, 2, "FD")
-      doc.roundedRect(108, 49, 88, 42, 2, 2, "FD")
 
-      doc.setTextColor(15, 23, 42)
-      doc.setFontSize(10)
-      doc.setFont(undefined, "bold")
-      doc.text("Bill To", 18, 57)
-      doc.text("Order Details", 112, 57)
+      const drawInfoCard = (titleText, x, y, width, rows, accentColor = [15, 118, 110]) => {
+        doc.setFillColor(255, 255, 255)
+        doc.roundedRect(x, y, width, 39, 3, 3, "FD")
+        doc.setFillColor(...accentColor)
+        doc.roundedRect(x, y, width, 8, 3, 3, "F")
+        doc.setTextColor(255, 255, 255)
+        doc.setFontSize(9)
+        doc.setFont(undefined, "bold")
+        doc.text(titleText, x + 4, y + 5.5)
+        doc.setTextColor(71, 85, 105)
+        doc.setFont(undefined, "normal")
+        doc.setFontSize(8.5)
 
-      doc.setFont(undefined, "normal")
-      doc.setFontSize(9)
-      doc.setTextColor(71, 85, 105)
-      doc.text(`Customer: ${order.customerName || "N/A"}`, 18, 64)
-      doc.text(`Phone: ${order.customerPhone || "N/A"}`, 18, 70)
-      doc.text(`Restaurant: ${order.restaurant || "N/A"}`, 18, 76)
-      doc.text(`Delivery: ${order.deliveryType || "N/A"}`, 18, 82)
+        let currentY = y + 14
+        rows.forEach((row) => {
+          const label = `${row.label}:`
+          const valueLines = doc.splitTextToSize(formatDisplayText(row.value), width - 26)
+          doc.setFont(undefined, "bold")
+          doc.text(label, x + 4, currentY)
+          doc.setFont(undefined, "normal")
+          doc.text(valueLines, x + 18, currentY)
+          currentY += Math.max(5, valueLines.length * 4)
+        })
+      }
 
-      const paymentType = order.paymentType || order.payment?.method || order.paymentMethod || "N/A"
-      doc.text(`Order ID: ${orderId}`, 112, 64)
-      doc.text(`Status: ${order.orderStatus || "N/A"}`, 112, 70)
-      doc.text(`Payment: ${paymentType}`, 112, 76)
-      doc.text(`Payment Status: ${order.paymentStatus || "N/A"}`, 112, 82)
+      drawInfoCard("Customer", 14, 53, 58, [
+        { label: "Name", value: customerName },
+        { label: "Phone", value: customerPhone },
+        { label: "Address", value: deliveryAddress },
+      ])
+      drawInfoCard("Restaurant", 76, 53, 58, [
+        { label: "Name", value: restaurantName },
+        { label: "Delivery", value: deliveryType },
+        { label: "Items", value: `${itemCount} item${itemCount === 1 ? "" : "s"}` },
+      ], [37, 99, 235])
+      drawInfoCard("Delivery Partner", 138, 53, 58, [
+        { label: "Name", value: deliveryPartnerName },
+        { label: "Phone", value: deliveryPartnerPhone },
+        { label: "Payment", value: paymentType },
+      ], [249, 115, 22])
+
+      autoTable(doc, {
+        startY: 100,
+        body: [[
+          `Order ID: ${orderId}`,
+          `Status: ${orderStatus}`,
+          `Payment Status: ${paymentStatus}`,
+          `Grand Total: ${formatMoney(totalAmount)}`,
+        ]],
+        theme: "plain",
+        styles: {
+          fontSize: 9,
+          textColor: [30, 41, 59],
+          fillColor: [241, 245, 249],
+          cellPadding: { top: 3.5, right: 4, bottom: 3.5, left: 4 },
+          lineColor: [226, 232, 240],
+          lineWidth: 0.25,
+          fontStyle: "bold",
+        },
+        columnStyles: {
+          0: { cellWidth: 45 },
+          1: { cellWidth: 45 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 42, halign: "right", textColor: [15, 118, 110] },
+        },
+        margin: { left: 14, right: 14 },
+      })
 
       const tableBody = items.length > 0
         ? items.map((item) => {
@@ -294,7 +380,7 @@ export function useOrdersManagement(orders, statusKey, title) {
         : [[1, "Order Total", formatMoney(totalAmount), formatMoney(totalAmount)]]
 
       autoTable(doc, {
-        startY: 98,
+        startY: (doc.lastAutoTable?.finalY || 110) + 6,
         head: [["Qty", "Item", "Unit Price", "Line Total"]],
         body: tableBody,
         theme: "grid",
@@ -325,7 +411,10 @@ export function useOrdersManagement(orders, statusKey, title) {
         margin: { left: 14, right: 14 },
       })
 
-      const summaryStartY = (doc.lastAutoTable?.finalY || 130) + 8
+      const summaryStartY = (doc.lastAutoTable?.finalY || 130) + 10
+      doc.setDrawColor(226, 232, 240)
+      doc.setFillColor(248, 250, 252)
+      doc.roundedRect(pageWidth - 92, summaryStartY - 5, 78, 35, 2, 2, "FD")
       autoTable(doc, {
         startY: summaryStartY,
         body: [
@@ -355,13 +444,13 @@ export function useOrdersManagement(orders, statusKey, title) {
         },
       })
 
-      const footerY = Math.max((doc.lastAutoTable?.finalY || summaryStartY) + 14, 255)
+      const footerY = Math.max((doc.lastAutoTable?.finalY || summaryStartY) + 18, 262)
       doc.setDrawColor(226, 232, 240)
       doc.line(14, footerY - 6, pageWidth - 14, footerY - 6)
       doc.setFontSize(9)
       doc.setTextColor(100, 116, 139)
       doc.text(`Generated on ${new Date().toLocaleString()}`, 14, footerY)
-      doc.text("Thank you for using our platform.", pageWidth - 14, footerY, { align: "right" })
+      doc.text("Includes customer, restaurant, and delivery partner details.", pageWidth - 14, footerY, { align: "right" })
 
       const filename = `Invoice_${orderId}_${new Date().toISOString().split("T")[0]}.pdf`
       doc.save(filename)
