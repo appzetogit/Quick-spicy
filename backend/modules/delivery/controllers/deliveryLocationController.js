@@ -41,8 +41,13 @@ function calculateDistanceKm(lat1, lng1, lat2, lng2) {
 
 function getActiveRoutePayload(order) {
   const phase = String(order?.deliveryState?.currentPhase || '').toLowerCase();
+  const status = String(order?.deliveryState?.status || '').toLowerCase();
   const routeCoordinates =
-    phase === 'en_route_to_delivery' || phase === 'at_delivery' || order?.status === 'out_for_delivery'
+    phase === 'en_route_to_delivery' ||
+    phase === 'at_delivery' ||
+    status === 'order_confirmed' ||
+    status === 'en_route_to_delivery' ||
+    order?.status === 'out_for_delivery'
       ? order?.deliveryState?.routeToDelivery?.coordinates
       : order?.deliveryState?.routeToPickup?.coordinates;
 
@@ -179,7 +184,7 @@ export const updateLocation = asyncHandler(async (req, res) => {
         { 'deliveryState.currentPhase': { $exists: false } }
       ]
     })
-      .select('_id orderId status deliveryState.currentPhase deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates address.location.coordinates')
+      .select('_id orderId status deliveryState.currentPhase deliveryState.status deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates address.location.coordinates')
       .sort({ updatedAt: -1 })
       .lean();
 
@@ -201,8 +206,12 @@ export const updateLocation = asyncHandler(async (req, res) => {
       Number.isFinite(lng)
     ) {
       const phase = String(activeOrder?.deliveryState?.currentPhase || '').toLowerCase();
+      const deliveryStateStatus = String(activeOrder?.deliveryState?.status || '').toLowerCase();
       const trackingStatus =
-        phase === 'en_route_to_delivery' || activeOrder.status === 'out_for_delivery'
+        phase === 'en_route_to_delivery' ||
+        deliveryStateStatus === 'order_confirmed' ||
+        deliveryStateStatus === 'en_route_to_delivery' ||
+        activeOrder.status === 'out_for_delivery'
           ? 'out_for_delivery'
           : 'en_route_to_pickup';
 

@@ -85,17 +85,22 @@ function extractOrderCoords(order = {}) {
   return { restaurant, customer };
 }
 
-async function syncOrderPhaseToRealtime(order = {}, deliveryId, status) {
+async function syncOrderPhaseToRealtime(order = {}, deliveryId, status, options = {}) {
   try {
     const orderTrackingId = order?.orderId || order?._id?.toString?.();
     if (!orderTrackingId || !deliveryId) return false;
 
-    const deliveryDoc = await Delivery.findById(deliveryId)
-      .select('availability.currentLocation')
-      .lean();
-    const deliveryCoords = deliveryDoc?.availability?.currentLocation?.coordinates;
-    const boyLat = Array.isArray(deliveryCoords) ? Number(deliveryCoords[1]) : null;
-    const boyLng = Array.isArray(deliveryCoords) ? Number(deliveryCoords[0]) : null;
+    let boyLat = Number.isFinite(Number(options?.boyLat)) ? Number(options.boyLat) : null;
+    let boyLng = Number.isFinite(Number(options?.boyLng)) ? Number(options.boyLng) : null;
+
+    if (!Number.isFinite(boyLat) || !Number.isFinite(boyLng)) {
+      const deliveryDoc = await Delivery.findById(deliveryId)
+        .select('availability.currentLocation')
+        .lean();
+      const deliveryCoords = deliveryDoc?.availability?.currentLocation?.coordinates;
+      boyLat = Array.isArray(deliveryCoords) ? Number(deliveryCoords[1]) : null;
+      boyLng = Array.isArray(deliveryCoords) ? Number(deliveryCoords[0]) : null;
+    }
 
     const { restaurant, customer } = extractOrderCoords(order);
     const currentPhase = String(order?.deliveryState?.currentPhase || status || '').toLowerCase();
@@ -1745,7 +1750,10 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
         estimatedDeliveryTime: routeData.duration || null
       }
     );
-    syncOrderPhaseToRealtime(updatedOrder, delivery._id, 'out_for_delivery');
+    syncOrderPhaseToRealtime(updatedOrder, delivery._id, 'out_for_delivery', {
+      boyLat: Number(deliveryLat),
+      boyLng: Number(deliveryLng)
+    });
     notifyUserOrderUpdate(updatedOrder?._id?.toString?.() || updatedOrder?.orderId, 'out_for_delivery').catch((notifError) => {
       console.error('Error sending user notification:', notifError);
     });
