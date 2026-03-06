@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { ArrowLeft, X, Pencil, Loader2 } from "lucide-react"
+import { ArrowLeft, X, Pencil, Loader2, Camera, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { useProfile } from "../../context/ProfileContext"
 import { userAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -51,6 +58,9 @@ const saveProfileToStorage = (data) => {
   }
 }
 
+const normalizePhoneToTenDigits = (value) =>
+  String(value || "").replace(/\D/g, "").slice(-10)
+
 export default function EditProfile() {
   const navigate = useNavigate()
   const { userProfile, updateUserProfile } = useProfile()
@@ -61,7 +71,7 @@ export default function EditProfile() {
 
   const initialFormData = {
     name: initialProfile.name ?? "",
-    mobile: initialProfile.mobile ?? initialProfile.phone ?? "",
+    mobile: normalizePhoneToTenDigits(initialProfile.mobile ?? initialProfile.phone ?? ""),
     email: initialProfile.email ?? "",
     dateOfBirth: initialProfile.dateOfBirth
       ? (typeof initialProfile.dateOfBirth === 'string'
@@ -83,6 +93,12 @@ export default function EditProfile() {
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [profileImage, setProfileImage] = useState(initialProfile?.profileImage || "")
   const [imagePreview, setImagePreview] = useState(initialProfile?.profileImage || "")
+  const [photoPickerOpen, setPhotoPickerOpen] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState({
+    mobile: "",
+    email: "",
+    dateOfBirth: "",
+  })
   const fileInputRef = useRef(null)
 
   // Update form data when profile changes
@@ -91,7 +107,7 @@ export default function EditProfile() {
     const profile = storedProfile || userProfile || {}
     const newFormData = {
       name: profile.name ?? "",
-      mobile: profile.mobile ?? profile.phone ?? "",
+      mobile: normalizePhoneToTenDigits(profile.mobile ?? profile.phone ?? ""),
       email: profile.email ?? "",
       dateOfBirth: profile.dateOfBirth
         ? (typeof profile.dateOfBirth === 'string'
@@ -124,11 +140,48 @@ export default function EditProfile() {
     setHasChanges(currentData !== savedData)
   }, [formData, initialData])
 
+  const validateEmail = (value) => {
+    if (!value) return ""
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Please enter a valid email"
+  }
+
+  const validateMobile = (value) => {
+    if (!value) return ""
+    return /^\d{10}$/.test(value) ? "" : "Mobile number must be 10 digits"
+  }
+
+  const validateDateOfBirth = (value) => {
+    if (!value) return ""
+    const dob = dayjs(value)
+    if (!dob.isValid()) return "Please select a valid date of birth"
+    return dob.isAfter(dayjs(), "day") ? "Date of birth cannot be in the future" : ""
+  }
+
   const handleChange = (field, value) => {
-    setFormData(prev => ({
+    let normalizedValue = value
+    let errorMessage = ""
+
+    if (field === "mobile") {
+      normalizedValue = String(value || "").replace(/\D/g, "").slice(0, 10)
+      errorMessage = validateMobile(normalizedValue)
+    } else if (field === "email") {
+      normalizedValue = String(value || "").trim()
+      errorMessage = validateEmail(normalizedValue)
+    } else if (field === "dateOfBirth") {
+      errorMessage = validateDateOfBirth(normalizedValue)
+    }
+
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: normalizedValue
     }))
+
+    if (field === "mobile" || field === "email" || field === "dateOfBirth") {
+      setFieldErrors((prev) => ({
+        ...prev,
+        [field]: errorMessage
+      }))
+    }
   }
 
   const handleClear = (field) => {
@@ -138,8 +191,7 @@ export default function EditProfile() {
     }))
   }
 
-  const handleImageSelect = async (e) => {
-    const file = e.target.files?.[0]
+  const processProfileImageFile = async (file) => {
     if (!file) return
 
     // Validate file type
@@ -188,8 +240,111 @@ export default function EditProfile() {
     }
   }
 
+  const handleImageSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      await processProfileImageFile(file)
+    }
+    e.target.value = ""
+  }
+
+  const convertBase64ToFile = (base64Value, mimeType = "image/jpeg", fileNamePrefix = "profile-photo") => {
+    if (!base64Value || typeof base64Value !== "string") {
+      throw new Error("Invalid base64 image data")
+    }
+
+    let pureBase64 = base64Value
+    if (base64Value.includes(",")) {
+      pureBase64 = base64Value.split(",")[1]
+    }
+
+    const byteCharacters = atob(pureBase64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i += 1) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+
+    const byteArray = new Uint8Array(byteNumbers)
+    const extension = mimeType.includes("png") ? "png" : "jpg"
+    const blob = new Blob([byteArray], { type: mimeType })
+    return new File([blob], `${fileNamePrefix}-${Date.now()}.${extension}`, { type: mimeType })
+  }
+
+  const handleOpenCamera = async () => {
+    try {
+      const hasBridge =
+        typeof window !== "undefined" &&
+        window.flutter_inappwebview &&
+        typeof window.flutter_inappwebview.callHandler === "function"
+
+      if (!hasBridge) {
+        toast.error("Camera option is available only in app")
+        return
+      }
+
+      const result = await window.flutter_inappwebview.callHandler("openCamera", {
+        source: "camera",
+        accept: "image/*",
+        multiple: false,
+        quality: 0.8,
+      })
+
+      if (!result || !result.success) return
+
+      let selectedFile = null
+      if (result.base64) {
+        selectedFile = convertBase64ToFile(
+          result.base64,
+          result.mimeType || "image/jpeg",
+          "profile-photo"
+        )
+      } else if (result.file instanceof File || result.file instanceof Blob) {
+        selectedFile = result.file
+      }
+
+      if (!selectedFile || !String(selectedFile.type || "").startsWith("image/")) {
+        toast.error("Failed to capture image from camera")
+        return
+      }
+
+      await processProfileImageFile(selectedFile)
+      setPhotoPickerOpen(false)
+    } catch (error) {
+      console.error("openCamera bridge failed:", error)
+      toast.error("Failed to open camera")
+    }
+  }
+
+  const handleProfileImageAction = () => {
+    const hasBridge =
+      typeof window !== "undefined" &&
+      window.flutter_inappwebview &&
+      typeof window.flutter_inappwebview.callHandler === "function"
+
+    if (hasBridge) {
+      setPhotoPickerOpen(true)
+      return
+    }
+
+    fileInputRef.current?.click()
+  }
+
+  const validateForm = () => {
+    const nextErrors = {
+      mobile: validateMobile(formData.mobile),
+      email: validateEmail(formData.email),
+      dateOfBirth: validateDateOfBirth(formData.dateOfBirth),
+    }
+    setFieldErrors(nextErrors)
+    return !Object.values(nextErrors).some(Boolean)
+  }
+
   const handleUpdate = async () => {
     if (isSaving) return
+    if (!validateForm()) {
+      toast.error("Please fix the highlighted fields")
+      return
+    }
 
     try {
       setIsSaving(true)
@@ -270,7 +425,7 @@ export default function EditProfile() {
       </div>
 
       {/* Content */}
-      <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 md:py-10 lg:py-12 space-y-6 md:space-y-8 lg:space-y-10">
+      <div className="max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto px-4 sm:px-6 md:px-8 lg:px-10 xl:px-12 py-6 sm:py-8 md:py-10 lg:py-12 pb-28 md:pb-12 space-y-6 md:space-y-8 lg:space-y-10">
         {/* Avatar Section */}
         <div className="flex justify-center">
           <div className="relative">
@@ -287,7 +442,7 @@ export default function EditProfile() {
             </Avatar>
             {/* Edit Icon */}
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={handleProfileImageAction}
               disabled={isUploadingImage}
               className="absolute bottom-0 right-0 w-8 h-8 bg-[#EB590E] rounded-full flex items-center justify-center shadow-lg border-2 border-white hover:bg-[#D94F0C] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -351,6 +506,9 @@ export default function EditProfile() {
                   placeholder="Mobile"
                 />
               </div>
+              {fieldErrors.mobile && (
+                <p className="text-xs text-red-600">{fieldErrors.mobile}</p>
+              )}
             </div>
 
             {/* Email Field */}
@@ -368,6 +526,9 @@ export default function EditProfile() {
                   placeholder="Email"
                 />
               </div>
+              {fieldErrors.email && (
+                <p className="text-xs text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
 
             {/* Date of Birth Field */}
@@ -379,6 +540,7 @@ export default function EditProfile() {
                 <DatePicker
                   value={formData.dateOfBirth}
                   onChange={(newValue) => handleChange('dateOfBirth', newValue)}
+                  maxDate={dayjs()}
                   slotProps={{
                     textField: {
                       className: "w-full",
@@ -406,6 +568,9 @@ export default function EditProfile() {
                   }}
                 />
               </LocalizationProvider>
+              {fieldErrors.dateOfBirth && (
+                <p className="text-xs text-red-600">{fieldErrors.dateOfBirth}</p>
+              )}
             </div>
 
             {/* Anniversary Field */}
@@ -474,7 +639,7 @@ export default function EditProfile() {
         <Button
           onClick={handleUpdate}
           disabled={!hasChanges || isSaving || isUploadingImage}
-          className={`w-full h-14 rounded-xl font-semibold text-base transition-all ${hasChanges && !isSaving && !isUploadingImage
+          className={`w-full h-14 rounded-xl font-semibold text-base transition-all mb-2 ${hasChanges && !isSaving && !isUploadingImage
               ? 'bg-[#EB590E] hover:bg-[#D94F0C] text-white'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
@@ -488,6 +653,38 @@ export default function EditProfile() {
             'Update profile'
           )}
         </Button>
+
+        <Dialog open={photoPickerOpen} onOpenChange={setPhotoPickerOpen}>
+          <DialogContent className="max-w-sm w-[calc(100%-2rem)] rounded-2xl p-0 overflow-hidden">
+            <DialogHeader className="p-5 pb-3">
+              <DialogTitle className="text-lg font-bold text-gray-900">Update profile photo</DialogTitle>
+              <DialogDescription className="text-sm text-gray-500">
+                Choose how you want to upload your profile photo.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2 px-5 pb-5">
+              <button
+                type="button"
+                onClick={handleOpenCamera}
+                className="w-full p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 transition-all flex items-center justify-between"
+              >
+                <span className="font-medium text-sm text-gray-900">Use Camera</span>
+                <Camera className="h-5 w-5 text-gray-600" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPhotoPickerOpen(false)
+                  fileInputRef.current?.click()
+                }}
+                className="w-full p-3 rounded-xl border-2 border-gray-200 bg-white hover:border-gray-300 transition-all flex items-center justify-between"
+              >
+                <span className="font-medium text-sm text-gray-900">Upload from Device</span>
+                <Upload className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   )

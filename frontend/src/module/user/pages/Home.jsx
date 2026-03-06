@@ -556,12 +556,9 @@ export default function Home() {
     }
   }, [vegMode])
 
-  // Home should always start with Veg Mode OFF by default.
+  // Keep persisted Veg Mode preference; only reset popup UI state on mount.
   useEffect(() => {
-    if (vegMode !== false) {
-      setVegModeContext(false)
-    }
-    setPrevVegMode(false)
+    setPrevVegMode(vegMode)
     setShowVegModePopup(false)
     setShowSwitchOffPopup(false)
     setVegModeOption("all")
