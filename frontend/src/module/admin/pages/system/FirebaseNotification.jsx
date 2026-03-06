@@ -1,12 +1,16 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Cloud, Settings, Info } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const languageTabs = [
   { key: "default", label: "Default" },
   { key: "en", label: "English(EN)" },
-  { key: "bn", label: "Bengali - বাংলা(BN)" },
-  { key: "ar", label: "Arabic - العربية (AR)" },
-  { key: "es", label: "Spanish - español(ES)" }
+  { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+  { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+  { key: "es", label: "Spanish - espaÃ±ol(ES)" }
 ]
 
 const notificationMessages = [
@@ -152,7 +156,7 @@ export default function FirebaseNotification() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", { activeTab, messages, firebaseConfig })
+    debugLog("Form submitted:", { activeTab, messages, firebaseConfig })
     alert("Firebase Notification settings saved successfully!")
   }
 
@@ -426,3 +430,4 @@ export default function FirebaseNotification() {
     </div>
   )
 }
+

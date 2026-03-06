@@ -1,8 +1,12 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Filter, Eye, Check, X, Package, ArrowUpDown, FileText, FileSpreadsheet, Loader2, Download, ExternalLink, Calendar, MapPin, CreditCard, User, Mail, Phone, Bike, FileCheck } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportJoinRequestsToExcel, exportJoinRequestsToPDF } from "../../components/deliveryman/joinRequestExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function JoinRequest() {
   const [activeTab, setActiveTab] = useState("pending")
@@ -58,7 +62,7 @@ export default function JoinRequest() {
         setRequests([])
       }
     } catch (err) {
-      console.error("Error fetching join requests:", err)
+      debugError("Error fetching join requests:", err)
       
       // Better error handling
       let errorMessage = "Failed to fetch join requests. Please try again."
@@ -139,7 +143,7 @@ export default function JoinRequest() {
       // Show success message
       alert(`Successfully approved ${selectedRequest.name}'s join request!`)
     } catch (err) {
-      console.error("Error approving request:", err)
+      debugError("Error approving request:", err)
       alert(err.response?.data?.message || "Failed to approve request. Please try again.")
     } finally {
       setProcessing(false)
@@ -175,7 +179,7 @@ export default function JoinRequest() {
       // Show success message
       alert(`Successfully rejected ${selectedRequest.name}'s join request.`)
     } catch (err) {
-      console.error("Error rejecting request:", err)
+      debugError("Error rejecting request:", err)
       alert(err.response?.data?.message || "Failed to reject request. Please try again.")
     } finally {
       setProcessing(false)
@@ -194,7 +198,7 @@ export default function JoinRequest() {
         alert("Failed to load details")
       }
     } catch (err) {
-      console.error("Error fetching details:", err)
+      debugError("Error fetching details:", err)
       alert(err.response?.data?.message || "Failed to load details")
     } finally {
       setLoading(false)
@@ -402,7 +406,7 @@ export default function JoinRequest() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                              <span className="text-sm">👤</span>
+                              <span className="text-sm">ðŸ‘¤</span>
                             </div>
                             <span className="text-sm font-medium text-slate-900">{request.name}</span>
                           </div>
@@ -997,3 +1001,4 @@ export default function JoinRequest() {
     </div>
   )
 }
+

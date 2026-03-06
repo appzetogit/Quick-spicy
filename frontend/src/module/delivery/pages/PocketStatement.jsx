@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { 
   ArrowLeft,
@@ -10,11 +10,15 @@ import { formatCurrency } from "../../restaurant/utils/currency"
 import WeekSelector from "../components/WeekSelector"
 import { deliveryAPI } from "@/lib/api"
 import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function PocketStatement() {
   const navigate = useNavigate()
 
-  // Current week range (Sunday–Saturday)
+  // Current week range (Sundayâ€“Saturday)
   const getInitialWeekRange = () => {
     const now = new Date()
     const start = new Date(now)
@@ -53,7 +57,7 @@ export default function PocketStatement() {
         setOrders(trips)
         setBonusTransactions(bonus)
       } catch (error) {
-        console.error("Error loading pocket statement data:", error)
+        debugError("Error loading pocket statement data:", error)
         setOrders([])
         setBonusTransactions([])
       } finally {
@@ -240,7 +244,7 @@ export default function PocketStatement() {
                     }`}></div>
                     <div>
                       <p className="text-gray-900 text-sm font-medium">
-                        Order #{orderId || "—"}
+                        Order #{orderId || "â€”"}
                       </p>
                       <p className="text-gray-500 text-xs">{dateText}</p>
                       {trip.restaurantName && (
@@ -276,4 +280,5 @@ export default function PocketStatement() {
     </div>
   )
 }
+
 

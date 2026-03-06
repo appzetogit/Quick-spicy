@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Menu, ChevronRight, MapPin, X, Bell } from "lucide-react"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantNavbar({
   restaurantName: propRestaurantName,
@@ -30,7 +34,7 @@ export default function RestaurantNavbar({
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Continue with default values if fetch fails
       } finally {
@@ -128,7 +132,7 @@ export default function RestaurantNavbar({
     }
     // Priority 2: Check restaurantData location
     else if (restaurantData) {
-      console.log('🔍 Checking restaurant data for address:', {
+      debugLog('ðŸ” Checking restaurant data for address:', {
         hasLocation: !!restaurantData.location,
         locationKeys: restaurantData.location ? Object.keys(restaurantData.location) : [],
         formattedAddress: restaurantData.location?.formattedAddress,
@@ -146,7 +150,7 @@ export default function RestaurantNavbar({
           const isCoordinates = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(restaurantData.location.formattedAddress.trim())
           if (!isCoordinates) {
             newLocation = restaurantData.location.formattedAddress.trim()
-            console.log('✅ Using formattedAddress:', newLocation)
+            debugLog('âœ… Using formattedAddress:', newLocation)
           }
         }
         
@@ -155,21 +159,21 @@ export default function RestaurantNavbar({
           const formatted = formatAddress(restaurantData.location)
           if (formatted && formatted.trim() !== "") {
             newLocation = formatted.trim()
-            console.log('✅ Using formatAddress result:', newLocation)
+            debugLog('âœ… Using formatAddress result:', newLocation)
           }
         }
         
         // Additional fallback: check if address is directly on location
         if (!newLocation && restaurantData.location.address && restaurantData.location.address.trim() !== "") {
           newLocation = restaurantData.location.address.trim()
-          console.log('✅ Using location.address:', newLocation)
+          debugLog('âœ… Using location.address:', newLocation)
         }
       }
       
       // Priority 3: Fallback - check if address is directly on restaurantData (not in location object)
       if (!newLocation && restaurantData.address && restaurantData.address.trim() !== "") {
         newLocation = restaurantData.address.trim()
-        console.log('✅ Using restaurantData.address:', newLocation)
+        debugLog('âœ… Using restaurantData.address:', newLocation)
       }
     }
     
@@ -177,9 +181,9 @@ export default function RestaurantNavbar({
     
     // Debug log
     if (newLocation) {
-      console.log('📍 Restaurant address displayed:', newLocation)
+      debugLog('ðŸ“ Restaurant address displayed:', newLocation)
     } else if (restaurantData) {
-      console.log('⚠️ Restaurant data available but no address found')
+      debugLog('âš ï¸ Restaurant data available but no address found')
     }
   }, [restaurantData, propLocation])
 
@@ -196,7 +200,7 @@ export default function RestaurantNavbar({
           setStatus("Offline")
         }
       } catch (error) {
-        console.error("Error loading restaurant status:", error)
+        debugError("Error loading restaurant status:", error)
         setStatus("Offline")
       }
     }
@@ -354,3 +358,4 @@ export default function RestaurantNavbar({
     </div>
   )
 }
+

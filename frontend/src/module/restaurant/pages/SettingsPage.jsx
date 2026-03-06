@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -23,6 +23,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SettingsPage() {
   const navigate = useNavigate()
@@ -83,7 +87,7 @@ export default function SettingsPage() {
       title: "Actions",
       items: [
         { id: "logout", label: "Logout", icon: LogOut, isDestructive: true, action: () => {
-          console.log("Logout clicked")
+          debugLog("Logout clicked")
           // Add logout logic here
         } },
       ]
@@ -207,4 +211,5 @@ export default function SettingsPage() {
     </div>
   )
 }
+
 

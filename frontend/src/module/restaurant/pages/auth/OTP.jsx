@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { restaurantAPI } from "@/lib/api"
 import { setAuthData as setRestaurantAuthData } from "@/lib/utils/auth"
 import { checkOnboardingStatus, isRestaurantOnboardingComplete } from "../../utils/onboardingUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantOTP() {
   const navigate = useNavigate()
@@ -199,7 +203,7 @@ export default function RestaurantOTP() {
         sessionStorage.removeItem("restaurantLoginPhone")
 
         setTimeout(async () => {
-          console.log({ authData })
+          debugLog({ authData })
           // After signup, send to onboarding
           if (authData?.isSignUp) {
             navigate("/restaurant/onboarding", { replace: true })
@@ -219,7 +223,7 @@ export default function RestaurantOTP() {
               // Onboarding is complete, go to restaurant home
               navigate("/restaurant", { replace: true })
             } catch (err) {
-              console.error("Failed to check onboarding status:", err)
+              debugError("Failed to check onboarding status:", err)
               // Fallback to restaurant home
               navigate("/restaurant", { replace: true })
             }
@@ -402,3 +406,4 @@ export default function RestaurantOTP() {
     </div>
   )
 }
+

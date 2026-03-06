@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, X, Pencil, Loader2, Camera, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -27,6 +27,10 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Gender options
 const genderOptions = [
@@ -44,7 +48,7 @@ const loadProfileFromStorage = () => {
       return JSON.parse(stored)
     }
   } catch (error) {
-    console.error('Error loading profile from localStorage:', error)
+    debugError('Error loading profile from localStorage:', error)
   }
   return null
 }
@@ -54,7 +58,7 @@ const saveProfileToStorage = (data) => {
   try {
     localStorage.setItem('appzeto_user_profile', JSON.stringify(data))
   } catch (error) {
-    console.error('Error saving profile to localStorage:', error)
+    debugError('Error saving profile to localStorage:', error)
   }
 }
 
@@ -231,7 +235,7 @@ export default function EditProfile() {
         window.dispatchEvent(new Event("userAuthChanged"))
       }
     } catch (error) {
-      console.error('Error uploading image:', error)
+      debugError('Error uploading image:', error)
       toast.error(error?.response?.data?.message || 'Failed to upload image')
       // Revert preview
       setImagePreview(profileImage)
@@ -310,7 +314,7 @@ export default function EditProfile() {
       await processProfileImageFile(selectedFile)
       setPhotoPickerOpen(false)
     } catch (error) {
-      console.error("openCamera bridge failed:", error)
+      debugError("openCamera bridge failed:", error)
       toast.error("Failed to open camera")
     }
   }
@@ -392,7 +396,7 @@ export default function EditProfile() {
         navigate("/user/profile")
       }
     } catch (error) {
-      console.error('Error updating profile:', error)
+      debugError('Error updating profile:', error)
       toast.error(error?.response?.data?.message || 'Failed to update profile')
     } finally {
       setIsSaving(false)
@@ -401,12 +405,12 @@ export default function EditProfile() {
 
   const handleMobileChange = () => {
     // Navigate to mobile change page or show modal
-    console.log('Change mobile clicked')
+    debugLog('Change mobile clicked')
   }
 
   const handleEmailChange = () => {
     // Navigate to email change page or show modal
-    console.log('Change email clicked')
+    debugLog('Change email clicked')
   }
 
   return (
@@ -689,3 +693,4 @@ export default function EditProfile() {
     </div>
   )
 }
+

@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Export utility functions for orders
 export const exportToCSV = (orders, filename = "orders") => {
   // Detect order structure
@@ -30,7 +34,7 @@ export const exportToCSV = (orders, filename = "orders") => {
       order.customerName,
       order.customerPhone,
       order.restaurant,
-      order.total || `₹${(order.totalAmount || 0).toFixed(2)}`,
+      order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}`,
       order.paymentStatus || "",
       order.orderStatus || "",
       order.deliveryType || ""
@@ -99,7 +103,7 @@ export const exportToExcel = (orders, filename = "orders") => {
         order.deliveryBoyName || 'N/A',
         order.deliveryBoyNumber || 'N/A',
         order.status || 'N/A',
-        totalAmount > 0 ? `₹${totalAmount.toFixed(2)}` : 'N/A',
+        totalAmount > 0 ? `â‚¹${totalAmount.toFixed(2)}` : 'N/A',
         paymentStatus
       ]
     })
@@ -112,7 +116,7 @@ export const exportToExcel = (orders, filename = "orders") => {
       order.customerName || 'N/A',
       order.customerPhone || 'N/A',
       order.restaurant || 'N/A',
-      order.total || `₹${(order.totalAmount || 0).toFixed(2)}`,
+      order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}`,
       order.paymentStatus || 'N/A',
       order.orderStatus || 'N/A',
       order.deliveryType || 'N/A'
@@ -266,7 +270,7 @@ export const exportToPDF = async (orders, filename = "orders") => {
           order.deliveryBoyName || 'N/A',
           order.deliveryBoyNumber || 'N/A',
           order.status || 'N/A',
-          totalAmount > 0 ? `₹${totalAmount.toFixed(2)}` : 'N/A',
+          totalAmount > 0 ? `â‚¹${totalAmount.toFixed(2)}` : 'N/A',
           paymentStatus
         ]
       })
@@ -279,7 +283,7 @@ export const exportToPDF = async (orders, filename = "orders") => {
         order.customerName || 'N/A',
         order.customerPhone || 'N/A',
         order.restaurant || 'N/A',
-        order.total || `₹${(order.totalAmount || 0).toFixed(2)}` || 'N/A',
+        order.total || `â‚¹${(order.totalAmount || 0).toFixed(2)}` || 'N/A',
         order.paymentStatus || 'N/A',
         order.orderStatus || 'N/A',
         order.deliveryType || 'N/A'
@@ -318,7 +322,7 @@ export const exportToPDF = async (orders, filename = "orders") => {
     const fileTimestamp = new Date().toISOString().split("T")[0]
     doc.save(`${filename}_${fileTimestamp}.pdf`)
   } catch (error) {
-    console.error("Error loading PDF library:", error)
+    debugError("Error loading PDF library:", error)
     alert("Failed to load PDF library. Please try again.")
   }
 }
@@ -335,4 +339,5 @@ export const exportToJSON = (orders, filename = "orders") => {
   link.click()
   document.body.removeChild(link)
 }
+
 

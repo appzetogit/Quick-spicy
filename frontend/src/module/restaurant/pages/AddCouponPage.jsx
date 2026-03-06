@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -14,6 +14,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import BottomNavbar from "../components/BottomNavbar"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AddCouponPage(props) {
   const { mode = "create", couponId } = props || {}
@@ -478,9 +482,9 @@ export default function AddCouponPage(props) {
         <Button
           onClick={() => {
             if (isEditMode) {
-              console.log("Update coupon:", { id: couponId, ...formData })
+              debugLog("Update coupon:", { id: couponId, ...formData })
             } else {
-              console.log("Add coupon:", formData)
+              debugLog("Add coupon:", formData)
             }
             // Navigate to coupon list after save
             navigate("/restaurant/coupon")
@@ -496,4 +500,5 @@ export default function AddCouponPage(props) {
     </div>
   )
 }
+
 

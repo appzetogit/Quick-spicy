@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -8,6 +8,10 @@ import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_outlet_timings"
 
@@ -99,7 +103,7 @@ export default function OutletTimings() {
         return validated
       }
     } catch (error) {
-      console.error("Error loading outlet timings:", error)
+      debugError("Error loading outlet timings:", error)
     }
     return getDefaultDays()
   })
@@ -114,7 +118,7 @@ export default function OutletTimings() {
         // Dispatch event to notify other components
         window.dispatchEvent(new Event("outletTimingsUpdated"))
       } catch (error) {
-        console.error("Error saving outlet timings:", error)
+        debugError("Error saving outlet timings:", error)
       }
       isInternalUpdate.current = false
     }
@@ -136,7 +140,7 @@ export default function OutletTimings() {
             })
           }
         } catch (error) {
-          console.error("Error loading updated outlet timings:", error)
+          debugError("Error loading updated outlet timings:", error)
         }
       }
     }
@@ -182,7 +186,7 @@ export default function OutletTimings() {
 
   const handleTimeChange = (day, timeType, newTime) => {
     if (!newTime) {
-      console.warn('⚠️ No time value received in handleTimeChange')
+      debugWarn('âš ï¸ No time value received in handleTimeChange')
       return
     }
     
@@ -191,11 +195,11 @@ export default function OutletTimings() {
     
     // Validate time string format
     if (!timeString || !timeString.includes(":")) {
-      console.warn('⚠️ Invalid time string generated:', timeString)
+      debugWarn('âš ï¸ Invalid time string generated:', timeString)
       return
     }
     
-    console.log(`🕐 Time changed for ${day} - ${timeType}: ${timeString}`)
+    debugLog(`ðŸ• Time changed for ${day} - ${timeType}: ${timeString}`)
     
     setDays(prev => ({
       ...prev,
@@ -299,13 +303,13 @@ export default function OutletTimings() {
                                   <MobileTimePicker
                                     value={stringToTime(dayData.openingTime)}
                                     onChange={(newValue) => {
-                                      console.log('🕐 Opening time picker onChange:', newValue)
+                                      debugLog('ðŸ• Opening time picker onChange:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "openingTime", newValue)
                                       }
                                     }}
                                     onAccept={(newValue) => {
-                                      console.log('✅ Opening time picker onAccept:', newValue)
+                                      debugLog('âœ… Opening time picker onAccept:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "openingTime", newValue)
                                       }
@@ -355,13 +359,13 @@ export default function OutletTimings() {
                                   <MobileTimePicker
                                     value={stringToTime(dayData.closingTime)}
                                     onChange={(newValue) => {
-                                      console.log('🕐 Closing time picker onChange:', newValue)
+                                      debugLog('ðŸ• Closing time picker onChange:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "closingTime", newValue)
                                       }
                                     }}
                                     onAccept={(newValue) => {
-                                      console.log('✅ Closing time picker onAccept:', newValue)
+                                      debugLog('âœ… Closing time picker onAccept:', newValue)
                                       if (newValue) {
                                         handleTimeChange(day, "closingTime", newValue)
                                       }
@@ -417,3 +421,4 @@ export default function OutletTimings() {
     </LocalizationProvider>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Search, Filter, AlertCircle, CheckCircle, Clock, XCircle, FileText } from "lucide-react"
@@ -9,6 +9,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STATUS_OPTIONS = [
   { value: 'all', label: 'All Status' },
@@ -76,7 +80,7 @@ export default function RestaurantComplaints() {
         setPagination(response.data.data.pagination || pagination)
       }
     } catch (error) {
-      console.error('Error fetching complaints:', error)
+      debugError('Error fetching complaints:', error)
       toast.error('Failed to fetch complaints')
     } finally {
       setLoading(false)
@@ -255,3 +259,4 @@ export default function RestaurantComplaints() {
     </div>
   )
 }
+

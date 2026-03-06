@@ -1,5 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+﻿import { useState, useEffect, useCallback, useRef } from 'react'
 import { zoneAPI } from '@/lib/api'
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 /**
  * Hook to detect and manage user's zone based on location
@@ -51,7 +55,7 @@ export function useZone(location) {
         throw new Error(response.data?.message || 'Failed to detect zone')
       }
     } catch (err) {
-      console.error('Error detecting zone:', err)
+      debugError('Error detecting zone:', err)
       setError(err.response?.data?.message || err.message || 'Failed to detect zone')
       
       // Try to use cached zone if available
@@ -127,3 +131,4 @@ export function useZone(location) {
     refreshZone
   }
 }
+

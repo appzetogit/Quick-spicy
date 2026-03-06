@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { useNavigate, useLocation } from "react-router-dom"
 import { 
@@ -10,6 +10,10 @@ import {
   fetchWalletTransactions
 } from "../utils/deliveryWalletState"
 import { formatCurrency } from "../../restaurant/utils/currency"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TransactionHistory() {
   const navigate = useNavigate()
@@ -74,7 +78,7 @@ export default function TransactionHistory() {
         
         setTransactions(formattedTransactions)
       } catch (error) {
-        console.error('Error loading transactions:', error)
+        debugError('Error loading transactions:', error)
         setTransactions([])
       } finally {
         setLoading(false)
@@ -345,4 +349,5 @@ export default function TransactionHistory() {
     </div>
   )
 }
+
 

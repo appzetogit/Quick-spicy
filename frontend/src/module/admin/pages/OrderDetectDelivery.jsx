@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react"
+﻿import { useMemo, useState, useEffect } from "react"
 import { Package, Truck, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -7,6 +7,10 @@ import OrderDetectDeliveryTable from "../components/orders/OrderDetectDeliveryTa
 import ViewOrderDetectDeliveryDialog from "../components/orders/ViewOrderDetectDeliveryDialog"
 import SettingsDialog from "../components/orders/SettingsDialog"
 import { useGenericTableManagement } from "../components/orders/useGenericTableManagement"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Function to map backend order status to frontend display status
 const mapOrderStatus = (order) => {
@@ -247,13 +251,13 @@ export default function OrderDetectDelivery() {
           )
           setOrders(transformedOrders)
         } else {
-          console.error("Failed to fetch orders:", response.data)
+          debugError("Failed to fetch orders:", response.data)
           setError(response.data?.message || "Failed to fetch orders")
           toast.error("Failed to fetch orders")
           setOrders([])
         }
       } catch (error) {
-        console.error("Error fetching orders:", error)
+        debugError("Error fetching orders:", error)
         setError(error.response?.data?.message || "Failed to fetch orders")
         toast.error(error.response?.data?.message || "Failed to fetch orders")
         setOrders([])
@@ -498,4 +502,5 @@ export default function OrderDetectDelivery() {
     </div>
   )
 }
+
 

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { ArrowLeft, ArrowRight, Heart, Users, Shield, Clock, Star, Award, FileText, Lock, Loader2, Receipt, Truck, XCircle } from "lucide-react"
 import { motion } from "framer-motion"
@@ -9,6 +9,10 @@ import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Icon mapping
 const iconMap = {
@@ -44,7 +48,7 @@ export default function About() {
         setAboutData(response.data.data)
       }
     } catch (error) {
-      console.error('Error fetching about data:', error)
+      debugError('Error fetching about data:', error)
       // Use default data on error
     } finally {
       setLoading(false)
@@ -290,11 +294,12 @@ export default function About() {
           className="text-center mt-8 mb-4"
         >
           <p className="text-sm text-gray-500 dark:text-gray-500">
-            © {new Date().getFullYear()} {companyName}. All rights reserved.
+            Â© {new Date().getFullYear()} {companyName}. All rights reserved.
           </p>
         </motion.div>
       </div>
     </AnimatedPage>
   )
 }
+
 

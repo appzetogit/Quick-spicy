@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom"
+﻿import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useState, useRef } from "react"
 import { ChevronDown, ShoppingCart, Wallet, Search, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -12,6 +12,10 @@ import { FaLocationDot } from "react-icons/fa6"
 import { AnimatePresence, motion } from "framer-motion"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DesktopNavbar() {
     const location = useLocation()
@@ -81,7 +85,7 @@ export default function DesktopNavbar() {
                     }
                 }
             } catch (error) {
-                console.error('Error loading logo:', error)
+                debugError('Error loading logo:', error)
             }
         }
         loadLogo()
@@ -236,7 +240,7 @@ export default function DesktopNavbar() {
                                                 onClick={() => setHeroSearch("")}
                                             >
                                                 <span className="sr-only">Clear</span>
-                                                <span aria-hidden="true">×</span>
+                                                <span aria-hidden="true">Ã—</span>
                                             </Button>
                                         )}
                                     </div>
@@ -382,4 +386,5 @@ export default function DesktopNavbar() {
         </nav>
     )
 }
+
 

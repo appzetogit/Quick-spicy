@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, IndianRupee, Plus, ArrowDownCircle, ArrowUpCircle, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import AddMoneyModal from "../components/AddMoneyModal"
 import { userAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Transaction types
 const TRANSACTION_TYPES = {
@@ -41,7 +45,7 @@ export default function Wallet() {
         setTransactions(walletData.transactions || [])
       }
     } catch (err) {
-      console.error('Error fetching wallet:', err)
+      debugError('Error fetching wallet:', err)
       setError(err?.response?.data?.message || 'Failed to load wallet')
       toast.error('Failed to load wallet data')
     } finally {
@@ -88,7 +92,7 @@ export default function Wallet() {
   }, [selectedFilter, transactions])
 
   const formatAmount = (amount) => {
-    return `₹${amount.toLocaleString('en-IN')}`
+    return `â‚¹${amount.toLocaleString('en-IN')}`
   }
 
   const formatDate = (dateString) => {
@@ -104,7 +108,7 @@ export default function Wallet() {
       minute: '2-digit',
       hour12: true
     })
-    return `${formattedDate} • ${formattedTime}`
+    return `${formattedDate} â€¢ ${formattedTime}`
   }
 
   const getTransactionIcon = (type) => {
@@ -337,4 +341,5 @@ export default function Wallet() {
     </AnimatedPage>
   )
 }
+
 

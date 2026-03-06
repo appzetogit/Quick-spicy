@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,6 +7,10 @@ import { userAPI } from "@/lib/api"
 import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
   const [amount, setAmount] = useState("")
@@ -31,12 +35,12 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     const amountNum = parseFloat(amount)
 
     if (!amount || isNaN(amountNum) || amountNum < 1) {
-      toast.error("Please enter a valid amount (minimum ₹1)")
+      toast.error("Please enter a valid amount (minimum â‚¹1)")
       return
     }
 
     if (amountNum > 50000) {
-      toast.error("Maximum amount is ₹50,000")
+      toast.error("Maximum amount is â‚¹50,000")
       return
     }
 
@@ -44,14 +48,14 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
       setLoading(true)
 
       // Create Razorpay order
-      console.log('Creating wallet top-up order for amount:', amountNum)
+      debugLog('Creating wallet top-up order for amount:', amountNum)
       const orderResponse = await userAPI.createWalletTopupOrder(amountNum)
-      console.log('Order response:', orderResponse)
+      debugLog('Order response:', orderResponse)
 
       const { razorpay } = orderResponse.data.data
 
       if (!razorpay || !razorpay.orderId || !razorpay.key) {
-        console.error('Invalid Razorpay response:', { razorpay, orderResponse })
+        debugError('Invalid Razorpay response:', { razorpay, orderResponse })
         throw new Error("Failed to initialize payment gateway")
       }
 
@@ -71,7 +75,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         const userResponse = await userAPI.getProfile()
         userInfo = userResponse?.data?.data?.user || userResponse?.data?.user || {}
       } catch (err) {
-        console.warn("Could not fetch user profile for Razorpay prefill:", err)
+        debugWarn("Could not fetch user profile for Razorpay prefill:", err)
       }
 
       const userPhone = userInfo.phone || ""
@@ -91,7 +95,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         currency: razorpay.currency || 'INR',
         order_id: razorpay.orderId,
         name: companyName,
-        description: `Wallet Top-up - ₹${amountNum.toFixed(2)}`,
+        description: `Wallet Top-up - â‚¹${amountNum.toFixed(2)}`,
         prefill: {
           name: userName,
           email: userEmail,
@@ -111,7 +115,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
               amount: amountNum
             })
 
-            toast.success(`₹${amountNum} added to wallet successfully!`)
+            toast.success(`â‚¹${amountNum} added to wallet successfully!`)
 
             // Reset form
             setAmount("")
@@ -123,13 +127,13 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
               onSuccess()
             }
           } catch (error) {
-            console.error("Payment verification error:", error)
+            debugError("Payment verification error:", error)
             toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.")
             setProcessing(false)
           }
         },
         onError: (error) => {
-          console.error("Razorpay payment error:", error)
+          debugError("Razorpay payment error:", error)
           toast.error(error?.description || "Payment failed. Please try again.")
           setProcessing(false)
         },
@@ -139,9 +143,9 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         }
       })
     } catch (error) {
-      console.error("Error creating payment order:", error)
-      console.error("Error response:", error?.response)
-      console.error("Error response data:", error?.response?.data)
+      debugError("Error creating payment order:", error)
+      debugError("Error response:", error?.response)
+      debugError("Error response data:", error?.response?.data)
 
       // Extract error message from response
       let errorMessage = "Failed to initialize payment. Please try again."
@@ -158,7 +162,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         errorMessage = error.message
       }
 
-      console.error("Final error message:", errorMessage)
+      debugError("Final error message:", errorMessage)
       toast.error(errorMessage)
       setLoading(false)
       setProcessing(false)
@@ -204,7 +208,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
               />
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Minimum: ₹1 | Maximum: ₹50,000
+              Minimum: â‚¹1 | Maximum: â‚¹50,000
             </p>
           </div>
 
@@ -223,7 +227,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
                   onClick={() => handleAmountSelect(quickAmount)}
                   disabled={loading || processing}
                 >
-                  ₹{quickAmount}
+                  â‚¹{quickAmount}
                 </Button>
               ))}
             </div>
@@ -241,7 +245,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
                 {loading ? "Processing..." : "Opening Payment Gateway..."}
               </>
             ) : (
-              `Add ₹${amount || "0"}`
+              `Add â‚¹${amount || "0"}`
             )}
           </Button>
         </div>
@@ -249,4 +253,5 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     </Dialog>
   )
 }
+
 

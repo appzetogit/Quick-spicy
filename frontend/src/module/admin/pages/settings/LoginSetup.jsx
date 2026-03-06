@@ -1,6 +1,10 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { Monitor, Info, Check, Copy, Edit, ExternalLink, Settings, ArrowUpDown, Columns } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const panelLoginUrls = [
   {
@@ -81,9 +85,9 @@ export default function LoginSetup() {
   const handleSubmit = (e) => {
     e.preventDefault()
     if (activeTab === "customer-login") {
-      console.log("Form submitted:", { loginOptions, socialMedia, verification })
+      debugLog("Form submitted:", { loginOptions, socialMedia, verification })
     } else {
-      console.log("Panel URLs submitted:", panelUrls)
+      debugLog("Panel URLs submitted:", panelUrls)
     }
     alert("Settings saved successfully!")
   }
@@ -205,9 +209,9 @@ export default function LoginSetup() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
-                  { key: "manualLogin", label: "Manual Login", icon: "👤" },
-                  { key: "otpLogin", label: "OTP Login", icon: "📱" },
-                  { key: "socialMediaLogin", label: "Social Media Login", icon: "🌐" }
+                  { key: "manualLogin", label: "Manual Login", icon: "ðŸ‘¤" },
+                  { key: "otpLogin", label: "OTP Login", icon: "ðŸ“±" },
+                  { key: "socialMediaLogin", label: "Social Media Login", icon: "ðŸŒ" }
                 ].map((option) => (
                   <div
                     key={option.key}
@@ -260,9 +264,9 @@ export default function LoginSetup() {
                 <h3 className="text-sm font-semibold text-slate-700 mb-3">Choose social media</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {[
-                    { key: "google", label: "Google", icon: "🔵", color: "blue" },
-                    { key: "facebook", label: "Facebook", icon: "🔵", color: "blue" },
-                    { key: "apple", label: "Apple", icon: "⚫", color: "black" }
+                    { key: "google", label: "Google", icon: "ðŸ”µ", color: "blue" },
+                    { key: "facebook", label: "Facebook", icon: "ðŸ”µ", color: "blue" },
+                    { key: "apple", label: "Apple", icon: "âš«", color: "black" }
                   ].map((platform) => (
                     <div
                       key={platform.key}
@@ -311,8 +315,8 @@ export default function LoginSetup() {
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {[
-                  { key: "emailVerification", label: "Email Verification", icon: "📧" },
-                  { key: "phoneVerification", label: "Phone Number Verification", icon: "📱" }
+                  { key: "emailVerification", label: "Email Verification", icon: "ðŸ“§" },
+                  { key: "phoneVerification", label: "Phone Number Verification", icon: "ðŸ“±" }
                 ].map((verify) => (
                   <div
                     key={verify.key}
@@ -588,3 +592,4 @@ export default function LoginSetup() {
     </div>
   )
 }
+

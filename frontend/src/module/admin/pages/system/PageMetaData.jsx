@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { Pencil, Settings, Search, Download, ChevronDown, FileText, FileSpreadsheet, Code, Check, Columns, ArrowUpDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -6,6 +6,10 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { exportSEOPagesToCSV, exportSEOPagesToExcel, exportSEOPagesToPDF, exportSEOPagesToJSON } from "../../components/seo/seoExportUtils"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const seoPages = [
   { id: 1, name: "Restaurant list" },
@@ -79,7 +83,7 @@ export default function PageMetaDataPageMetaData() {
     if (!editingPage) return
     
     // In real app, this would save to API
-    console.log("Saving SEO data for:", editingPage.name, seoData)
+    debugLog("Saving SEO data for:", editingPage.name, seoData)
     alert(`SEO data saved successfully for ${editingPage.name}!`)
     setIsEditDialogOpen(false)
     setEditingPage(null)
@@ -455,3 +459,4 @@ export default function PageMetaDataPageMetaData() {
     </div>
   )
 }
+

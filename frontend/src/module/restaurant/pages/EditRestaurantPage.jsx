@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -17,6 +17,10 @@ import { Button } from "@/components/ui/button"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
 import { getRestaurantData, updateRestaurantData } from "../utils/restaurantManagement"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function EditRestaurantPage() {
   const navigate = useNavigate()
@@ -96,8 +100,8 @@ export default function EditRestaurantPage() {
 
   const languages = [
     { id: "english", label: "English" },
-    { id: "bengali", label: "Bengali - বাংলা" },
-    { id: "arabic", label: "Arabic - العربية" },
+    { id: "bengali", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾" },
+    { id: "arabic", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©" },
     { id: "spanish", label: "Spanish" }
   ]
 
@@ -146,7 +150,7 @@ export default function EditRestaurantPage() {
       // Navigate back to restaurant details page
       navigate("/restaurant/details")
     } catch (error) {
-      console.error("Error saving restaurant data:", error)
+      debugError("Error saving restaurant data:", error)
       alert("Error saving restaurant data. Please try again.")
     }
   }
@@ -220,7 +224,7 @@ export default function EditRestaurantPage() {
                 </label>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-50">
-                    <span className="text-lg">🇺🇸</span>
+                    <span className="text-lg">ðŸ‡ºðŸ‡¸</span>
                     <span className="text-sm text-gray-700">+1</span>
                   </div>
                   <input
@@ -271,7 +275,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, logo: null }))}
                       className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1"
                     >
-                      ×
+                      Ã—
                     </button>
                   </div>
                 ) : (
@@ -316,7 +320,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, cover: null }))}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                     >
-                      ×
+                      Ã—
                     </button>
                   </div>
                 ) : (
@@ -389,7 +393,7 @@ export default function EditRestaurantPage() {
                       onClick={() => setFormData(prev => ({ ...prev, metaImage: null }))}
                       className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
                     >
-                      ×
+                      Ã—
                     </button>
                   </div>
                 ) : (
@@ -430,4 +434,5 @@ export default function EditRestaurantPage() {
     </div>
   )
 }
+
 

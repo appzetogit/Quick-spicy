@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { MapPin, ArrowLeft, Search, Bike } from "lucide-react"
 import { adminAPI } from "@/lib/api"
@@ -6,6 +6,10 @@ import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
 import { subscribeAllDeliveryLocations } from "@/lib/realtimeTracking"
 import bikeLogo from "../../../../assets/bikelogo.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DeliveryBoyViewMap() {
   const navigate = useNavigate()
@@ -72,7 +76,7 @@ export default function DeliveryBoyViewMap() {
         setLoading(false)
       },
       (error) => {
-        console.error("Firebase delivery listener failed:", error)
+        debugError("Firebase delivery listener failed:", error)
       }
     )
 
@@ -112,7 +116,7 @@ export default function DeliveryBoyViewMap() {
       if (deliveryBoys.length > 0) {
         // drawDeliveryBoyMarkers is async, so handle it properly
         drawDeliveryBoyMarkers(window.google, mapInstanceRef.current).catch(error => {
-          console.error("Error drawing delivery boy markers:", error)
+          debugError("Error drawing delivery boy markers:", error)
         })
       }
     }
@@ -126,7 +130,7 @@ export default function DeliveryBoyViewMap() {
         setZones(response.data.data.zones)
       }
     } catch (error) {
-      console.error("Error fetching zones:", error)
+      debugError("Error fetching zones:", error)
       setZones([])
     } finally {
       setLoading(false)
@@ -163,7 +167,7 @@ export default function DeliveryBoyViewMap() {
         deliveryMetaByIdRef.current = nextMap
       }
     } catch (error) {
-      console.error("Error fetching delivery partner directory:", error)
+      debugError("Error fetching delivery partner directory:", error)
     }
   }
   const loadGoogleMaps = async () => {
@@ -197,7 +201,7 @@ export default function DeliveryBoyViewMap() {
         setMapLoading(false)
       }
     } catch (error) {
-      console.error("Error loading Google Maps:", error)
+      debugError("Error loading Google Maps:", error)
       setMapLoading(false)
     }
   }
@@ -367,7 +371,7 @@ export default function DeliveryBoyViewMap() {
           rotatedIconCacheRef.current.set(cacheKey, dataUrl)
           resolve(dataUrl)
         } catch (error) {
-          console.warn('⚠️ Error rotating bike icon:', error)
+          debugWarn('âš ï¸ Error rotating bike icon:', error)
           // Fallback to original image if rotation fails
           resolve(bikeLogo)
         }
@@ -407,7 +411,7 @@ export default function DeliveryBoyViewMap() {
       const boyId = boy._id || boy.id || boy.deliveryId || fullData?._id || fullData?.id || fullData?.deliveryId
       
       if (!boyId) {
-        console.warn("⚠️ Skipping delivery boy without ID:", fullData.name || "Unknown")
+        debugWarn("âš ï¸ Skipping delivery boy without ID:", fullData.name || "Unknown")
         continue
       }
       
@@ -415,7 +419,7 @@ export default function DeliveryBoyViewMap() {
       
       // Skip if we've already processed this delivery boy
       if (processedIds.has(idString)) {
-        console.warn("⚠️ Duplicate delivery boy detected, skipping:", fullData.name || "Unknown", idString)
+        debugWarn("âš ï¸ Duplicate delivery boy detected, skipping:", fullData.name || "Unknown", idString)
         continue
       }
       
@@ -426,7 +430,7 @@ export default function DeliveryBoyViewMap() {
       const currentLocation = availability?.currentLocation
       
       if (!currentLocation?.coordinates) {
-        console.warn("⚠️ No coordinates for delivery boy:", fullData.name || "Unknown")
+        debugWarn("âš ï¸ No coordinates for delivery boy:", fullData.name || "Unknown")
         continue
       }
 
@@ -444,17 +448,17 @@ export default function DeliveryBoyViewMap() {
           lng = coords[1]
         }
       } else {
-        console.warn("⚠️ Invalid coordinates format:", coords)
+        debugWarn("âš ï¸ Invalid coordinates format:", coords)
         continue
       }
 
       if (!lat || !lng || isNaN(lat) || isNaN(lng) || lat === 0 || lng === 0) {
-        console.warn("⚠️ Invalid lat/lng values:", { lat, lng })
+        debugWarn("âš ï¸ Invalid lat/lng values:", { lat, lng })
         continue
       }
 
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        console.warn("⚠️ Coordinates out of range:", { lat, lng })
+        debugWarn("âš ï¸ Coordinates out of range:", { lat, lng })
         continue
       }
 
@@ -465,7 +469,7 @@ export default function DeliveryBoyViewMap() {
       const boyName = fullData.name || "Delivery Boy"
       const boyPhone = fullData.phone || "N/A"
       
-      console.log("🚴 Creating bike marker for:", {
+      debugLog("ðŸš´ Creating bike marker for:", {
         name: boyName,
         lat,
         lng,
@@ -637,5 +641,6 @@ export default function DeliveryBoyViewMap() {
     </div>
   )
 }
+
 
 

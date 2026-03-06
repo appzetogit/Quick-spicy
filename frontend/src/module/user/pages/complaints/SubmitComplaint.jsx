@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, AlertCircle, FileText } from "lucide-react"
 import { orderAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const COMPLAINT_TYPES = [
   { value: 'food_quality', label: 'Food Quality Issue' },
@@ -31,7 +35,7 @@ export default function SubmitComplaint() {
 
   useEffect(() => {
     if (!orderId) {
-      console.error("Order ID missing from URL params")
+      debugError("Order ID missing from URL params")
       toast.error("Order ID is required")
       setTimeout(() => {
         navigate("/user/orders")
@@ -42,7 +46,7 @@ export default function SubmitComplaint() {
     const fetchOrder = async () => {
       try {
         setLoading(true)
-        console.log("Fetching order details for orderId:", orderId)
+        debugLog("Fetching order details for orderId:", orderId)
         const response = await orderAPI.getOrderDetails(orderId)
 
         let orderData = null
@@ -51,7 +55,7 @@ export default function SubmitComplaint() {
         } else if (response?.data?.order) {
           orderData = response.data.order
         } else {
-          console.error("Order not found in response:", response?.data)
+          debugError("Order not found in response:", response?.data)
           toast.error("Order not found")
           setTimeout(() => {
             navigate("/user/orders")
@@ -59,14 +63,14 @@ export default function SubmitComplaint() {
           return
         }
 
-        console.log("Order fetched successfully:", {
+        debugLog("Order fetched successfully:", {
           _id: orderData._id,
           orderId: orderData.orderId,
           restaurantName: orderData.restaurantName
         })
         setOrder(orderData)
       } catch (error) {
-        console.error("Error fetching order:", error)
+        debugError("Error fetching order:", error)
         toast.error(error?.response?.data?.message || "Failed to load order details")
         setTimeout(() => {
           navigate("/user/orders")
@@ -109,7 +113,7 @@ export default function SubmitComplaint() {
         ? orderMongoId.toString()
         : String(orderMongoId)
 
-      console.log("Submitting complaint for orderId:", orderIdString)
+      debugLog("Submitting complaint for orderId:", orderIdString)
       const response = await orderAPI.submitComplaint({
         orderId: orderIdString,
         complaintType: formData.complaintType,
@@ -126,7 +130,7 @@ export default function SubmitComplaint() {
         toast.error(response?.data?.message || "Failed to submit complaint")
       }
     } catch (error) {
-      console.error("Error submitting complaint:", error)
+      debugError("Error submitting complaint:", error)
       toast.error(error?.response?.data?.message || "Failed to submit complaint")
     } finally {
       setSubmitting(false)
@@ -274,3 +278,4 @@ export default function SubmitComplaint() {
     </div>
   )
 }
+

@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Wallet, Settings } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AddFund() {
   const [formData, setFormData] = useState({
@@ -14,7 +18,7 @@ export default function AddFund() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
+    debugLog("Form submitted:", formData)
     alert("Fund added successfully!")
   }
 
@@ -108,3 +112,4 @@ export default function AddFund() {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,6 +16,10 @@ import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { authAPI, adminAPI } from "@/lib/api"
 import { setAuthData } from "@/lib/utils/auth"
 import { loadBusinessSettings } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminSignup() {
   const navigate = useNavigate()
@@ -45,7 +49,7 @@ export default function AdminSignup() {
         }
       } catch (error) {
         // Silently fail and use default logo
-        console.warn("Failed to load business settings logo:", error)
+        debugWarn("Failed to load business settings logo:", error)
       }
     }
     fetchLogo()
@@ -477,4 +481,5 @@ export default function AdminSignup() {
     </div>
   )
 }
+
 

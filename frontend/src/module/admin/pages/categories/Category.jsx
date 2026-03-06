@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react"
+﻿import { useState, useMemo, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Search, Download, ChevronDown, Plus, Edit, Trash2, Info, MapPin, SlidersHorizontal, ArrowDownUp, Timer, Star, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, X, Loader2, Upload } from "lucide-react"
@@ -8,6 +8,10 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Category() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -52,15 +56,15 @@ export default function Category() {
     // Check if admin is authenticated
     const adminToken = localStorage.getItem('admin_accessToken')
     if (!adminToken) {
-      console.warn('No admin token found. User may need to login.')
+      debugWarn('No admin token found. User may need to login.')
       toast.error('Please login to access categories')
       setLoading(false)
       return
     }
     
     // Log API base URL for debugging
-    console.log('API Base URL:', API_BASE_URL)
-    console.log('Admin Token:', adminToken ? 'Present' : 'Missing')
+    debugLog('API Base URL:', API_BASE_URL)
+    debugLog('Admin Token:', adminToken ? 'Present' : 'Missing')
     
     fetchCategories()
   }, [])
@@ -118,8 +122,8 @@ export default function Category() {
       }
     } catch (error) {
       // More detailed error logging
-      console.error('Error fetching categories:', error)
-      console.error('Error details:', {
+      debugError('Error fetching categories:', error)
+      debugError('Error details:', {
         message: error.message,
         code: error.code,
         response: error.response ? {
@@ -152,12 +156,12 @@ export default function Category() {
         }
       } else if (error.request) {
         // Request was made but no response received
-        console.error('Network error - No response from server')
-        console.error('Request URL:', error.config?.baseURL + error.config?.url)
+        debugError('Network error - No response from server')
+        debugError('Request URL:', error.config?.baseURL + error.config?.url)
         toast.error('Cannot connect to server. Please check if backend is running on ' + API_BASE_URL.replace('/api', ''))
       } else {
         // Something else happened
-        console.error('Request setup error:', error.message)
+        debugError('Request setup error:', error.message)
         toast.error(error.message || 'Failed to load categories')
       }
       
@@ -196,7 +200,7 @@ export default function Category() {
         setTimeout(() => fetchCategories(), 500)
       }
     } catch (error) {
-      console.error('Error toggling status:', error)
+      debugError('Error toggling status:', error)
       const errorMessage = error.response?.data?.message || 'Failed to update category status'
       toast.error(errorMessage)
     }
@@ -216,7 +220,7 @@ export default function Category() {
           setTimeout(() => fetchCategories(), 500)
         }
       } catch (error) {
-        console.error('Error deleting category:', error)
+        debugError('Error deleting category:', error)
         const errorMessage = error.response?.data?.message || 'Failed to delete category'
         toast.error(errorMessage)
       }
@@ -333,7 +337,7 @@ export default function Category() {
       
       toast.success('PDF exported successfully!')
     } catch (error) {
-      console.error('Error exporting PDF:', error)
+      debugError('Error exporting PDF:', error)
       toast.error('Failed to export PDF')
     }
   }
@@ -408,7 +412,7 @@ export default function Category() {
         formDataToSend.append('image', formData.image)
       }
 
-      console.log('Sending category data:', {
+      debugLog('Sending category data:', {
         name: formData.name,
         type: formData.type,
         status: formData.status,
@@ -418,7 +422,7 @@ export default function Category() {
 
       if (editingCategory) {
         const response = await adminAPI.updateCategory(editingCategory.id, formDataToSend)
-        console.log('Category update response:', response.data)
+        debugLog('Category update response:', response.data)
         if (response.data.success) {
           toast.success('Category updated successfully')
           // Update local state immediately for better UX
@@ -433,7 +437,7 @@ export default function Category() {
         }
       } else {
         const response = await adminAPI.createCategory(formDataToSend)
-        console.log('Category create response:', response.data)
+        debugLog('Category create response:', response.data)
         if (response.data.success) {
           toast.success('Category created successfully')
         }
@@ -445,8 +449,8 @@ export default function Category() {
       // Refresh from server to ensure consistency
       setTimeout(() => fetchCategories(), 500)
     } catch (error) {
-      console.error('Error saving category:', error)
-      console.error('Error details:', {
+      debugError('Error saving category:', error)
+      debugError('Error details:', {
         message: error.message,
         code: error.code,
         response: error.response ? {
@@ -938,7 +942,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹200</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under â‚¹200</span>
                           </button>
                           <button 
                             onClick={() => toggleFilter('price-under-500')}
@@ -948,7 +952,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹500</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under â‚¹500</span>
                           </button>
                         </div>
                       </div>
@@ -1198,3 +1202,4 @@ export default function Category() {
     </div>
   )
 }
+

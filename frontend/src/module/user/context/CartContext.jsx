@@ -1,5 +1,9 @@
-// src/context/cart-context.jsx
+﻿// src/context/cart-context.jsx
 import { createContext, useContext, useEffect, useMemo, useState } from "react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Default cart context value to prevent errors during initial render
 const defaultCartContext = {
@@ -11,22 +15,22 @@ const defaultCartContext = {
   lastAddEvent: null,
   lastRemoveEvent: null,
   addToCart: () => {
-    console.warn('CartProvider not available - addToCart called');
+    debugWarn('CartProvider not available - addToCart called');
   },
   removeFromCart: () => {
-    console.warn('CartProvider not available - removeFromCart called');
+    debugWarn('CartProvider not available - removeFromCart called');
   },
   updateQuantity: () => {
-    console.warn('CartProvider not available - updateQuantity called');
+    debugWarn('CartProvider not available - updateQuantity called');
   },
   getCartCount: () => 0,
   isInCart: () => false,
   getCartItem: () => null,
   clearCart: () => {
-    console.warn('CartProvider not available - clearCart called');
+    debugWarn('CartProvider not available - clearCart called');
   },
   cleanCartForRestaurant: () => {
-    console.warn('CartProvider not available - cleanCartForRestaurant called');
+    debugWarn('CartProvider not available - cleanCartForRestaurant called');
   },
 }
 
@@ -161,7 +165,7 @@ export function CartProvider({ children }) {
         // If names match, allow it even if IDs differ (same restaurant, different ID format)
         if (firstRestaurantNameNormalized && newRestaurantNameNormalized) {
           if (firstRestaurantNameNormalized !== newRestaurantNameNormalized) {
-            console.error('❌ Cannot add item: Restaurant name mismatch!', {
+            debugError('âŒ Cannot add item: Restaurant name mismatch!', {
               cartRestaurantId: firstItemRestaurantId,
               cartRestaurantName: firstItemRestaurantName,
               newItemRestaurantId: newItemRestaurantId,
@@ -173,7 +177,7 @@ export function CartProvider({ children }) {
         } else if (firstItemRestaurantId && newItemRestaurantId) {
           // If names are not available, fallback to ID comparison
           if (firstItemRestaurantId !== newItemRestaurantId) {
-            console.error('❌ Cannot add item: Cart contains items from different restaurant!', {
+            debugError('âŒ Cannot add item: Cart contains items from different restaurant!', {
               cartRestaurantId: firstItemRestaurantId,
               cartRestaurantName: firstItemRestaurantName,
               newItemRestaurantId: newItemRestaurantId,
@@ -206,7 +210,7 @@ export function CartProvider({ children }) {
       
       // Validate item has required restaurant info
       if (!item.restaurantId && !item.restaurant) {
-        console.error('❌ Cannot add item: Missing restaurant information!', item);
+        debugError('âŒ Cannot add item: Missing restaurant information!', item);
         return safePrev;
       }
       
@@ -338,7 +342,7 @@ export function CartProvider({ children }) {
       });
       
       if (cleanedCart.length !== safePrev.length) {
-        console.warn('🧹 Cleaned cart: Removed items from different restaurants', {
+        debugWarn('ðŸ§¹ Cleaned cart: Removed items from different restaurants', {
           before: safePrev.length,
           after: cleanedCart.length,
           removed: safePrev.length - cleanedCart.length
@@ -372,7 +376,7 @@ export function CartProvider({ children }) {
     
     // Check if cart has items from multiple restaurants
     if (uniqueRestaurantIds.length > 1 || uniqueRestaurantNamesSet.size > 1) {
-      console.warn('⚠️ Cart contains items from multiple restaurants. Cleaning cart...', {
+      debugWarn('âš ï¸ Cart contains items from multiple restaurants. Cleaning cart...', {
         restaurantIds: uniqueRestaurantIds,
         restaurantNames: uniqueRestaurantNames
       });
@@ -462,11 +466,12 @@ export function useCart() {
   if (!context || context._isProvider !== true) {
     // In development, log a warning but don't throw to prevent crashes
     if (process.env.NODE_ENV === 'development') {
-      console.warn('⚠️ useCart called outside CartProvider. Using default values.');
-      console.warn('💡 Make sure the component is rendered inside UserLayout which provides CartProvider.');
+      debugWarn('âš ï¸ useCart called outside CartProvider. Using default values.');
+      debugWarn('ðŸ’¡ Make sure the component is rendered inside UserLayout which provides CartProvider.');
     }
     // Return default context instead of throwing
     return defaultCartContext
   }
   return context
 }
+

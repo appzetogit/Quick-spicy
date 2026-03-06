@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -20,6 +20,10 @@ import { Switch } from "@/components/ui/switch"
 import api from "@/lib/api"
 import { restaurantAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const getUploadErrorMessage = (error, fileName = "image") => {
   const message =
@@ -240,7 +244,7 @@ export default function ItemDetailsPage() {
             toast.error("Item not found")
           }
         } catch (error) {
-          console.error('Error fetching item data:', error)
+          debugError('Error fetching item data:', error)
           toast.error("Failed to load item data")
         } finally {
           setLoadingItem(false)
@@ -264,14 +268,14 @@ export default function ItemDetailsPage() {
             name: cat.name
           }))
 
-          console.log('Formatted restaurant categories:', formattedCategories)
+          debugLog('Formatted restaurant categories:', formattedCategories)
           setCategories(formattedCategories)
         } else {
           // If no categories exist, show empty array (user can add categories)
           setCategories([])
         }
       } catch (error) {
-        console.error('Error fetching restaurant categories:', error)
+        debugError('Error fetching restaurant categories:', error)
         // Show empty array on error - user can add categories
         setCategories([])
       } finally {
@@ -422,7 +426,7 @@ export default function ItemDetailsPage() {
     if (imageToDelete && imageToDelete.startsWith('blob:')) {
       newImageFilesMap.delete(imageToDelete)
       URL.revokeObjectURL(imageToDelete)
-      console.log('Deleted preview image (blob URL):', imageToDelete)
+      debugLog('Deleted preview image (blob URL):', imageToDelete)
     } else if (imageToDelete && (imageToDelete.startsWith('http://') || imageToDelete.startsWith('https://'))) {
       // For already uploaded images, we need to remove from imageFiles map if it exists
       // Find and remove the file entry if it exists
@@ -433,7 +437,7 @@ export default function ItemDetailsPage() {
           URL.revokeObjectURL(previewUrl)
         }
       }
-      console.log('Deleted uploaded image (HTTP URL):', imageToDelete)
+      debugLog('Deleted uploaded image (HTTP URL):', imageToDelete)
     }
 
     setImages(newImages)
@@ -450,7 +454,7 @@ export default function ItemDetailsPage() {
     }
 
     toast.success('Image deleted successfully')
-    console.log(`Image deleted. Remaining images: ${newImages.length}`)
+    debugLog(`Image deleted. Remaining images: ${newImages.length}`)
   }
 
   // Swipe handlers
@@ -541,20 +545,20 @@ export default function ItemDetailsPage() {
         !img.startsWith('blob:')
       )
 
-      console.log('Images state:', images)
-      console.log('Existing image URLs (already uploaded):', existingImageUrls)
-      console.log('Image files map:', imageFiles)
+      debugLog('Images state:', images)
+      debugLog('Existing image URLs (already uploaded):', existingImageUrls)
+      debugLog('Image files map:', imageFiles)
 
       // Upload new File objects to Cloudinary (files that are blob URLs)
       const filesToUpload = Array.from(imageFiles.values())
-      console.log('Files to upload:', filesToUpload.length, filesToUpload)
+      debugLog('Files to upload:', filesToUpload.length, filesToUpload)
 
       if (filesToUpload.length > 0) {
         toast.info(`Uploading ${filesToUpload.length} image(s)...`)
         for (let i = 0; i < filesToUpload.length; i++) {
           const file = filesToUpload[i]
           try {
-            console.log(`Uploading image ${i + 1}/${filesToUpload.length}:`, file.name)
+            debugLog(`Uploading image ${i + 1}/${filesToUpload.length}:`, file.name)
             let uploadResponse
             try {
               uploadResponse = await uploadAPI.uploadMedia(file, {
@@ -562,19 +566,19 @@ export default function ItemDetailsPage() {
               })
             } catch (folderUploadError) {
               // Fallback: retry without folder in case provider/account rejects custom folder.
-              console.warn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
+              debugWarn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
               uploadResponse = await uploadAPI.uploadMedia(file)
             }
             const imageUrl = uploadResponse?.data?.data?.url || uploadResponse?.data?.url
             if (imageUrl) {
               uploadedImageUrls.push(imageUrl)
-              console.log(`Successfully uploaded image ${i + 1}:`, imageUrl)
+              debugLog(`Successfully uploaded image ${i + 1}:`, imageUrl)
             } else {
-              console.error('Upload response:', uploadResponse)
+              debugError('Upload response:', uploadResponse)
               throw new Error("Failed to get uploaded image URL")
             }
           } catch (uploadError) {
-            console.error(`Error uploading image ${i + 1} (${file.name}):`, uploadError)
+            debugError(`Error uploading image ${i + 1} (${file.name}):`, uploadError)
             toast.error(getUploadErrorMessage(uploadError, file.name))
             setUploadingImages(false)
             return
@@ -594,11 +598,11 @@ export default function ItemDetailsPage() {
       ).slice(0, 1)
 
       // Debug: Log image URLs
-      console.log('=== IMAGE UPLOAD SUMMARY ===')
-      console.log('Existing image URLs:', existingImageUrls.length, existingImageUrls)
-      console.log('Newly uploaded URLs:', uploadedImageUrls.length, uploadedImageUrls)
-      console.log('Total image URLs to save:', allImageUrls.length, allImageUrls)
-      console.log('==========================')
+      debugLog('=== IMAGE UPLOAD SUMMARY ===')
+      debugLog('Existing image URLs:', existingImageUrls.length, existingImageUrls)
+      debugLog('Newly uploaded URLs:', uploadedImageUrls.length, uploadedImageUrls)
+      debugLog('Total image URLs to save:', allImageUrls.length, allImageUrls)
+      debugLog('==========================')
 
       // Get current menu
       const menuResponse = await restaurantAPI.getMenu()
@@ -615,14 +619,14 @@ export default function ItemDetailsPage() {
         // Try to get ID from itemData first (most reliable), then from URL param
         itemId = itemData?.id || id
         if (!itemId) {
-          console.warn('No item ID found, generating new one')
+          debugWarn('No item ID found, generating new one')
           itemId = `item-${Date.now()}-${Math.random()}`
         }
         // Ensure ID is a string
         itemId = String(itemId)
       }
 
-      console.log('Item ID for save:', itemId, 'From itemData:', itemData?.id, 'From URL:', id)
+      debugLog('Item ID for save:', itemId, 'From itemData:', itemData?.id, 'From URL:', id)
 
       // If editing, remove item from its current location (in case category changed or it's in a subsection)
       if (!isNewItem && itemId) {
@@ -644,7 +648,7 @@ export default function ItemDetailsPage() {
             if (itemIndex !== -1) {
               section.items.splice(itemIndex, 1)
               itemRemoved = true
-              console.log(`Removed item from section: ${section.name}, item ID was: ${section.items[itemIndex]?.id}`)
+              debugLog(`Removed item from section: ${section.name}, item ID was: ${section.items[itemIndex]?.id}`)
               break
             }
           }
@@ -663,7 +667,7 @@ export default function ItemDetailsPage() {
                 if (subItemIndex !== -1) {
                   subsection.items.splice(subItemIndex, 1)
                   itemRemoved = true
-                  console.log(`Removed item from subsection: ${subsection.name} in section: ${section.name}`)
+                  debugLog(`Removed item from subsection: ${subsection.name} in section: ${section.name}`)
                   break
                 }
               }
@@ -673,7 +677,7 @@ export default function ItemDetailsPage() {
         }
 
         if (!itemRemoved && !isNewItem) {
-          console.warn(`Item with ID ${itemId} (URL: ${id}) not found in menu for removal. It will be added as new.`)
+          debugWarn(`Item with ID ${itemId} (URL: ${id}) not found in menu for removal. It will be added as new.`)
         }
       }
 
@@ -747,31 +751,31 @@ export default function ItemDetailsPage() {
 
       if (existingItemIndex !== -1) {
         // Update existing item (shouldn't happen if removal worked, but handle it)
-        console.log(`Updating existing item at index ${existingItemIndex} in section: ${targetSection.name}`)
+        debugLog(`Updating existing item at index ${existingItemIndex} in section: ${targetSection.name}`)
         targetSection.items[existingItemIndex] = itemDataToSave
       } else {
         // Add new item (or re-add after removal)
-        console.log(`Adding item to section: ${targetSection.name}`)
+        debugLog(`Adding item to section: ${targetSection.name}`)
         targetSection.items.push(itemDataToSave)
       }
 
       // Update menu with new sections
-      console.log('=== SAVING ITEM DATA ===')
-      console.log('Item ID:', itemId, 'Is new item:', isNewItem)
-      console.log('Item name:', itemDataToSave.name)
-      console.log('Images array type:', Array.isArray(itemDataToSave.images) ? 'Array' : typeof itemDataToSave.images)
-      console.log('Images array:', itemDataToSave.images)
-      console.log('Images count:', itemDataToSave.images?.length)
-      console.log('PhotoCount:', itemDataToSave.photoCount)
-      console.log('Full itemDataToSave:', JSON.stringify(itemDataToSave, null, 2))
+      debugLog('=== SAVING ITEM DATA ===')
+      debugLog('Item ID:', itemId, 'Is new item:', isNewItem)
+      debugLog('Item name:', itemDataToSave.name)
+      debugLog('Images array type:', Array.isArray(itemDataToSave.images) ? 'Array' : typeof itemDataToSave.images)
+      debugLog('Images array:', itemDataToSave.images)
+      debugLog('Images count:', itemDataToSave.images?.length)
+      debugLog('PhotoCount:', itemDataToSave.photoCount)
+      debugLog('Full itemDataToSave:', JSON.stringify(itemDataToSave, null, 2))
 
       // Verify sections structure
-      console.log('Sections being sent:', sections.length, 'sections')
+      debugLog('Sections being sent:', sections.length, 'sections')
       const itemSection = sections.find(s => s.items?.some(item => item.id === itemId))
       if (itemSection) {
         const itemInSection = itemSection.items.find(item => item.id === itemId)
         if (itemInSection) {
-          console.log('Item in section before API call - images:', itemInSection.images, 'count:', itemInSection.images?.length)
+          debugLog('Item in section before API call - images:', itemInSection.images, 'count:', itemInSection.images?.length)
         }
       }
 
@@ -791,11 +795,11 @@ export default function ItemDetailsPage() {
         // Trigger a page refresh event
         window.dispatchEvent(new CustomEvent('foodsChanged'))
       } else {
-        console.error('Update failed:', updateResponse.data)
+        debugError('Update failed:', updateResponse.data)
         toast.error(updateResponse.data?.message || "Failed to save item")
       }
     } catch (error) {
-      console.error('Error saving menu:', error)
+      debugError('Error saving menu:', error)
       if (error.code === 'ERR_NETWORK') {
         toast.error('Network error. Please check if backend server is running and try again.')
       } else {
@@ -808,7 +812,7 @@ export default function ItemDetailsPage() {
 
   const handleDelete = () => {
     // Delete logic here
-    console.log("Deleting item:", id)
+    debugLog("Deleting item:", id)
     navigate(-1)
   }
 
@@ -1078,7 +1082,7 @@ export default function ItemDetailsPage() {
                     value={basePrice}
                     onChange={(e) => {
                       // Remove rupee symbol and any non-numeric characters except decimal point
-                      const value = e.target.value.replace(/[₹\s,]/g, '').replace(/[^0-9.]/g, '')
+                      const value = e.target.value.replace(/[â‚¹\s,]/g, '').replace(/[^0-9.]/g, '')
                       // Allow only one decimal point
                       const parts = value.split('.')
                       const cleanedValue = parts.length > 2
@@ -1088,14 +1092,14 @@ export default function ItemDetailsPage() {
                     }}
                     onFocus={(e) => {
                       // Remove rupee symbol when focused for easier editing
-                      if (e.target.value.startsWith('₹')) {
-                        e.target.value = e.target.value.replace(/₹\s*/g, '')
+                      if (e.target.value.startsWith('â‚¹')) {
+                        e.target.value = e.target.value.replace(/â‚¹\s*/g, '')
                       }
                     }}
                     placeholder="Enter price"
                     className="w-full pl-8 pr-12 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">₹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">â‚¹</span>
                   <button className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100">
                     <EditIcon className="w-4 h-4 text-gray-500" />
                   </button>
@@ -1330,3 +1334,4 @@ export default function ItemDetailsPage() {
     </div>
   )
 }
+

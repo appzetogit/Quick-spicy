@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from "react"
+﻿import { useMemo, useState, useEffect } from "react"
 import { BarChart3, ChevronDown, Settings, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -17,6 +17,10 @@ import deliveredIcon from "../../assets/Dashboard-icons/image25.png"
 import canceledIcon from "../../assets/Dashboard-icons/image26.png"
 import paymentFailedIcon from "../../assets/Dashboard-icons/image27.png"
 import refundedIcon from "../../assets/Dashboard-icons/image25.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const statusMeta = {
   Scheduled: { label: "Scheduled Orders", color: "text-amber-600", bg: "bg-amber-50", icon: scheduledIcon },
@@ -73,7 +77,7 @@ export default function RegularOrderReport() {
           setCustomers(usersRes.data.data.users || [])
         }
       } catch (err) {
-        console.error("Error fetching filter data:", err)
+        debugError("Error fetching filter data:", err)
       }
     }
 
@@ -152,7 +156,7 @@ export default function RegularOrderReport() {
           toast.error(response.data?.message || "Failed to fetch orders")
         }
       } catch (err) {
-        console.error("Error fetching orders:", err)
+        debugError("Error fetching orders:", err)
         setError(err.response?.data?.message || "Failed to fetch orders")
         toast.error(err.response?.data?.message || "Failed to fetch orders")
       } finally {
@@ -653,5 +657,6 @@ export default function RegularOrderReport() {
     </div>
   )
 }
+
 
 

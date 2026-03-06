@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
 import { ArrowLeft, Zap } from "lucide-react"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RushHour() {
   const navigate = useNavigate()
@@ -31,7 +35,7 @@ export default function RushHour() {
 
   const handleConfirm = () => {
     // Handle rush hour confirmation logic here
-    console.log("Rush hour confirmed for:", selectedTime, "minutes")
+    debugLog("Rush hour confirmed for:", selectedTime, "minutes")
     // You can add API call or state management here
     navigate(-1) // Go back after confirmation
   }
@@ -123,3 +127,4 @@ export default function RushHour() {
     </div>
   )
 }
+

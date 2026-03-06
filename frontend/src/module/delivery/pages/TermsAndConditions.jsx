@@ -1,8 +1,12 @@
-import { motion } from "framer-motion"
+﻿import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { publicAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TermsAndConditions() {
   const navigate = useNavigate()
@@ -19,7 +23,7 @@ export default function TermsAndConditions() {
           setLastUpdated(response.data.data.updatedAt)
         }
       } catch (error) {
-        console.error("Error fetching terms:", error)
+        debugError("Error fetching terms:", error)
       } finally {
         setLoading(false)
       }
@@ -91,3 +95,4 @@ export default function TermsAndConditions() {
     </div>
   )
 }
+

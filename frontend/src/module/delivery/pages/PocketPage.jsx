@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from "react"
+﻿import { useEffect, useRef, useState, useMemo } from "react"
 import Lenis from "lenis"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion } from "framer-motion"
@@ -35,6 +35,10 @@ import FeedNavbar from "../components/FeedNavbar"
 import AvailableCashLimit from "../components/AvailableCashLimit"
 import BottomPopup from "../components/BottomPopup"
 import DepositPopup from "../components/DepositPopup"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function PocketPage() {
   const navigate = useNavigate()
@@ -96,7 +100,7 @@ export default function PocketPage() {
       } catch (error) {
         // Skip logging timeout errors (handled by axios interceptor)
         if (error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error checking bank details:", error)
+          debugError("Error checking bank details:", error)
         }
         // Default to showing the banner if we can't check
         setBankDetailsFilled(false)
@@ -134,20 +138,20 @@ export default function PocketPage() {
 
   // Debug: Log wallet state and balances
   useEffect(() => {
-    console.log('💰 Wallet State:', walletState)
-    console.log('💰 Calculated Balances:', balances)
+    debugLog('ðŸ’° Wallet State:', walletState)
+    debugLog('ðŸ’° Calculated Balances:', balances)
     // Pocket balance = total balance (includes bonus)
     const calculatedPocketBalance = walletState?.totalBalance || balances.totalBalance || 0
-    console.log('💰 Pocket Balance (same as Total Balance):', calculatedPocketBalance)
-    console.log('💰 Total Balance (includes bonus):', walletState?.totalBalance || balances.totalBalance)
-    console.log('💰 Cash In Hand:', walletState?.cashInHand || balances.cashInHand)
+    debugLog('ðŸ’° Pocket Balance (same as Total Balance):', calculatedPocketBalance)
+    debugLog('ðŸ’° Total Balance (includes bonus):', walletState?.totalBalance || balances.totalBalance)
+    debugLog('ðŸ’° Cash In Hand:', walletState?.cashInHand || balances.cashInHand)
     // Check for bonus transactions
     const bonusTransactions = walletState?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed') || []
-    console.log('💰 Bonus Transactions:', bonusTransactions)
+    debugLog('ðŸ’° Bonus Transactions:', bonusTransactions)
     if (bonusTransactions.length > 0) {
       const totalBonus = bonusTransactions.reduce((sum, t) => sum + (t.amount || 0), 0)
-      console.log('💰 Total Bonus Amount:', totalBonus)
-      console.log('💰 Pocket Balance should include this bonus:', totalBonus)
+      debugLog('ðŸ’° Total Bonus Amount:', totalBonus)
+      debugLog('ðŸ’° Pocket Balance should include this bonus:', totalBonus)
     }
   }, [walletState, balances])
 
@@ -210,7 +214,7 @@ export default function PocketPage() {
         })
       } catch (error) {
         if (error.code !== "ECONNABORTED" && !error.message?.includes("timeout")) {
-          console.warn("Pocket week stats fetch failed, using wallet fallback:", error?.message)
+          debugWarn("Pocket week stats fetch failed, using wallet fallback:", error?.message)
         }
         setLiveWeekStats({ earnings: null, orders: null })
       }
@@ -233,13 +237,13 @@ export default function PocketPage() {
     const fetchActiveEarningAddons = async () => {
       try {
         setEarningAddonLoading(true)
-        console.log('🔄 Fetching active earning addons...')
+        debugLog('ðŸ”„ Fetching active earning addons...')
         const response = await deliveryAPI.getActiveEarningAddons()
-        console.log('✅ Active earning addons response:', response?.data)
+        debugLog('âœ… Active earning addons response:', response?.data)
 
         if (response?.data?.success && response?.data?.data?.activeOffers) {
           const offers = response.data.data.activeOffers
-          console.log('📦 Active offers found:', offers.length, offers)
+          debugLog('ðŸ“¦ Active offers found:', offers.length, offers)
 
           // Get the first valid active offer (prioritize isValid, then isUpcoming, then any active status)
           const activeOffer = offers.find(offer => offer.isValid) ||
@@ -248,20 +252,20 @@ export default function PocketPage() {
             offers[0] ||
             null
 
-          console.log('🎯 Selected active offer:', activeOffer)
+          debugLog('ðŸŽ¯ Selected active offer:', activeOffer)
           setActiveEarningAddon(activeOffer)
         } else {
-          console.log('ℹ️ No active offers found in response')
+          debugLog('â„¹ï¸ No active offers found in response')
           setActiveEarningAddon(null)
         }
       } catch (error) {
         if (error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
           if (error.code === 'ERR_NETWORK') {
-            console.warn('Active offers: network error. Ensure backend is running and CORS allows /api/delivery.')
+            debugWarn('Active offers: network error. Ensure backend is running and CORS allows /api/delivery.')
           } else if (error.response) {
-            console.warn('Active offers fetch failed:', error.response.status, error.response?.data?.message || error.response?.data)
+            debugWarn('Active offers fetch failed:', error.response.status, error.response?.data?.message || error.response?.data)
           } else {
-            console.warn('Active offers fetch failed:', error.message)
+            debugWarn('Active offers fetch failed:', error.message)
           }
         }
         setActiveEarningAddon(null)
@@ -334,7 +338,7 @@ export default function PocketPage() {
   }
 
   // Earnings Guarantee - Use active earning addon if available, otherwise show 0
-  // When no offer is active, show 0 of 0 and ₹0
+  // When no offer is active, show 0 of 0 and â‚¹0
   const earningsGuaranteeTarget = activeEarningAddon?.earningAmount || 0
   const earningsGuaranteeOrdersTarget = activeEarningAddon?.requiredOrders || 0
   // Only show current orders/earnings if there's an active offer
@@ -408,7 +412,7 @@ export default function PocketPage() {
     const bonusTransactions = walletState?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed') || []
     const calculatedTotalBonus = bonusTransactions.reduce((sum, t) => sum + (t.amount || 0), 0) || 0
 
-    console.log('💰 FINAL Pocket Balance Display:', {
+    debugLog('ðŸ’° FINAL Pocket Balance Display:', {
       pocketBalance: pocketBalance,
       walletStatePocketBalance: walletState?.pocketBalance,
       walletStateTotalBalance: walletState?.totalBalance,
@@ -483,15 +487,15 @@ export default function PocketPage() {
         setWalletLoading(true)
         const walletData = await fetchDeliveryWallet()
         setWalletState(walletData)
-        console.log('💰 Wallet data fetched:', walletData)
-        console.log('💰 Total Balance from API:', walletData?.totalBalance)
-        console.log('💰 Pocket Balance from API:', walletData?.pocketBalance)
-        console.log('💰 Bonus Transactions:', walletData?.transactions?.filter(t => t.type === 'bonus'))
+        debugLog('ðŸ’° Wallet data fetched:', walletData)
+        debugLog('ðŸ’° Total Balance from API:', walletData?.totalBalance)
+        debugLog('ðŸ’° Pocket Balance from API:', walletData?.pocketBalance)
+        debugLog('ðŸ’° Bonus Transactions:', walletData?.transactions?.filter(t => t.type === 'bonus'))
         const totalBonus = walletData?.transactions?.filter(t => t.type === 'bonus' && t.status === 'Completed')
           .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
-        console.log('💰 Total Bonus Amount:', totalBonus)
+        debugLog('ðŸ’° Total Bonus Amount:', totalBonus)
       } catch (error) {
-        console.error('Error fetching wallet data:', error)
+        debugError('Error fetching wallet data:', error)
         // Keep empty state on error
         setWalletState({
           totalBalance: 0,
@@ -841,7 +845,7 @@ export default function PocketPage() {
 
             {/* Earnings number */}
             <div className="text-black text-3xl font-bold text-center">
-              ₹{weeklyEarnings.toFixed(0)}
+              â‚¹{weeklyEarnings.toFixed(0)}
             </div>
 
           </CardContent>
@@ -871,7 +875,7 @@ export default function PocketPage() {
               </div>
               {/* Summary Box */}
               <div className="bg-black text-white px-4 py-3 rounded-lg text-center min-w-[80px]">
-                <div className="text-2xl font-bold">₹{earningsGuaranteeTarget.toFixed(0)}</div>
+                <div className="text-2xl font-bold">â‚¹{earningsGuaranteeTarget.toFixed(0)}</div>
                 <div className="text-xs text-white/80 mt-1">{earningsGuaranteeOrdersTarget} orders</div>
               </div>
             </div>
@@ -957,7 +961,7 @@ export default function PocketPage() {
                     />
                   </svg>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-lg font-bold text-gray-900">₹{earningsGuaranteeCurrentEarnings.toFixed(2)}</span>
+                    <span className="text-lg font-bold text-gray-900">â‚¹{earningsGuaranteeCurrentEarnings.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mt-3">
@@ -984,7 +988,7 @@ export default function PocketPage() {
               <div onClick={() => navigate("/delivery/pocket-balance")} className="flex items-center justify-between">
                 <span className="text-black text-sm">Pocket balance</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-black text-sm font-medium">₹{pocketBalance.toFixed(2)}</span>
+                  <span className="text-black text-sm font-medium">â‚¹{pocketBalance.toFixed(2)}</span>
                   <ArrowRight className="w-4 h-4 text-gray-600" />
                 </div>
               </div>
@@ -995,7 +999,7 @@ export default function PocketPage() {
               <div onClick={() => setShowCashLimitPopup(true)} className="flex items-center justify-between">
                 <span className="text-black text-sm">Available cash limit</span>
                 <div className="flex items-center gap-2">
-                  <span className="text-black text-sm font-medium">₹{availableCashLimit.toFixed(2)}</span>
+                  <span className="text-black text-sm font-medium">â‚¹{availableCashLimit.toFixed(2)}</span>
                   <ArrowRight className="w-4 h-4 text-gray-600" />
                 </div>
               </div>
@@ -1006,7 +1010,7 @@ export default function PocketPage() {
                   <span className="text-yellow-500 text-xs font-bold leading-none">!</span>
                 </div>
                 <p className="text-black text-sm font-medium flex-1">
-                  Deposit ₹{depositAmount.toFixed(2)} to avoid getting blocked
+                  Deposit â‚¹{depositAmount.toFixed(2)} to avoid getting blocked
                 </p>
               </div> */}
 
@@ -1040,7 +1044,7 @@ export default function PocketPage() {
               onClick={() => navigate("/delivery/payout")}
             >
               <CardContent className="p-4 flex flex-col items-start text-start">
-                <div className="text-black text-2xl font-bold mb-2">₹{payoutAmount}</div>
+                <div className="text-black text-2xl font-bold mb-2">â‚¹{payoutAmount}</div>
                 <div className="text-black text-sm font-medium mb-1">Payout</div>
                 <div className="text-gray-600 text-xs">{payoutPeriod}</div>
               </CardContent>
@@ -1127,3 +1131,4 @@ export default function PocketPage() {
     </div>
   )
 }
+

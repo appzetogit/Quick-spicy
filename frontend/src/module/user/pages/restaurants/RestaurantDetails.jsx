@@ -46,6 +46,10 @@ import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 import fssaiLogo from "@/assets/fssai.png"
 
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 
 const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
@@ -117,7 +121,7 @@ function RestaurantDetailsContent() {
         setLoadingRestaurant(!fetchedRestaurantRef.current && !restaurant)
         setRestaurantError(null)
 
-        console.log('Fetching restaurant with slug:', slug)
+        debugLog('Fetching restaurant with slug:', slug)
         let response = null
         let apiRestaurant = null
 
@@ -126,12 +130,12 @@ function RestaurantDetailsContent() {
           response = await diningAPI.getRestaurantBySlug(slug)
           if (response.data && response.data.success && response.data.data) {
             apiRestaurant = response.data.data
-            console.log('✅ Found restaurant in dining API:', apiRestaurant)
+            debugLog('? Found restaurant in dining API:', apiRestaurant)
           }
         } catch (diningError) {
           // If dining API fails with 404, try restaurant API
           if (diningError.response?.status === 404) {
-            console.log('⚠️ Restaurant not found in dining API, trying restaurant API...')
+            debugLog('?? Restaurant not found in dining API, trying restaurant API...')
             try {
               // First, try to get restaurant directly by slug (getRestaurantById supports both ID and slug)
               // This doesn't require zoneId, so it works even if zone is not detected
@@ -139,12 +143,12 @@ function RestaurantDetailsContent() {
                 response = await restaurantAPI.getRestaurantById(slug)
                 if (response.data && response.data.success && response.data.data) {
                   apiRestaurant = response.data.data
-                  console.log('✅ Found restaurant in restaurant API by slug/ID:', apiRestaurant)
+                  debugLog('? Found restaurant in restaurant API by slug/ID:', apiRestaurant)
                 }
               } catch (directLookupError) {
                 // If direct lookup fails, try searching by name.
                 // Fallback without zoneId so missing live location never blocks this page.
-                console.log('⚠️ Direct lookup failed, trying search by name...')
+                debugLog('?? Direct lookup failed, trying search by name...')
 
                 const searchVariants = zoneId
                   ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
@@ -168,17 +172,17 @@ function RestaurantDetailsContent() {
                       const fullResponse = await restaurantAPI.getRestaurantById(matchingRestaurant._id || matchingRestaurant.restaurantId)
                       if (fullResponse.data && fullResponse.data.success && fullResponse.data.data) {
                         apiRestaurant = fullResponse.data.data
-                        console.log('✅ Found restaurant in restaurant API by name search:', apiRestaurant)
+                        debugLog('? Found restaurant in restaurant API by name search:', apiRestaurant)
                         break
                       }
                     }
                   } catch (searchError) {
-                    console.warn('⚠️ Search fallback failed for params:', searchParams, searchError?.message)
+                    debugWarn('?? Search fallback failed for params:', searchParams, searchError?.message)
                   }
                 }
               }
             } catch (restaurantError) {
-              console.error('❌ Restaurant not found in restaurant API either:', restaurantError)
+              debugError('? Restaurant not found in restaurant API either:', restaurantError)
               // Only throw if we haven't found the restaurant yet
               if (!apiRestaurant) {
                 throw diningError // Throw original error to show "Restaurant not found"
@@ -190,12 +194,12 @@ function RestaurantDetailsContent() {
         }
 
         if (apiRestaurant) {
-          console.log('✅ Fetched restaurant from API:', apiRestaurant)
-          console.log('📋 Restaurant data keys:', Object.keys(apiRestaurant))
-          console.log('📋 Restaurant name field:', apiRestaurant?.name)
-          console.log('📋 Restaurant restaurantId:', apiRestaurant?.restaurantId)
-          console.log('📋 Restaurant _id:', apiRestaurant?._id)
-          console.log('📋 Restaurant.restaurant:', apiRestaurant?.restaurant)
+          debugLog('? Fetched restaurant from API:', apiRestaurant)
+          debugLog('?? Restaurant data keys:', Object.keys(apiRestaurant))
+          debugLog('?? Restaurant name field:', apiRestaurant?.name)
+          debugLog('?? Restaurant restaurantId:', apiRestaurant?.restaurantId)
+          debugLog('?? Restaurant _id:', apiRestaurant?._id)
+          debugLog('?? Restaurant.restaurant:', apiRestaurant?.restaurant)
 
           // Check if this is a dining restaurant with nested restaurant data
           const actualRestaurant = apiRestaurant?.restaurant || apiRestaurant
@@ -296,10 +300,10 @@ function RestaurantDetailsContent() {
 
           // Get location object for address formatting
           const locationObj = actualRestaurant?.location || apiRestaurant?.location
-          console.log('📍 Location Object for formatting:', locationObj)
-          console.log('📍 formattedAddress field:', locationObj?.formattedAddress)
+          debugLog('?? Location Object for formatting:', locationObj)
+          debugLog('?? formattedAddress field:', locationObj?.formattedAddress)
           const formattedAddress = formatRestaurantAddress(locationObj)
-          console.log('📍 Final Formatted Address:', formattedAddress)
+          debugLog('?? Final Formatted Address:', formattedAddress)
 
           // Calculate distance from user to restaurant
           const calculateDistance = (lat1, lng1, lat2, lng2) => {
@@ -319,13 +323,13 @@ function RestaurantDetailsContent() {
           const restaurantLat = locationObj?.latitude || (locationObj?.coordinates && Array.isArray(locationObj.coordinates) ? locationObj.coordinates[1] : null)
           const restaurantLng = locationObj?.longitude || (locationObj?.coordinates && Array.isArray(locationObj.coordinates) ? locationObj.coordinates[0] : null)
 
-          console.log('📍 Restaurant coordinates:', { restaurantLat, restaurantLng, locationObj })
+          debugLog('?? Restaurant coordinates:', { restaurantLat, restaurantLng, locationObj })
 
           // Get user coordinates
           const userLat = userLocation?.latitude
           const userLng = userLocation?.longitude
 
-          console.log('📍 User location:', { userLat, userLng, userLocation })
+          debugLog('?? User location:', { userLat, userLng, userLocation })
 
           // Calculate distance if both coordinates are available
           let calculatedDistance = null
@@ -339,9 +343,9 @@ function RestaurantDetailsContent() {
               const distanceInMeters = Math.round(distanceInKm * 1000)
               calculatedDistance = `${distanceInMeters} m`
             }
-            console.log('✅ Calculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
+            debugLog('? Calculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
           } else {
-            console.warn('⚠️ Cannot calculate distance - missing coordinates:', {
+            debugWarn('?? Cannot calculate distance - missing coordinates:', {
               hasUserLocation: !!(userLat && userLng),
               hasRestaurantLocation: !!(restaurantLat && restaurantLng),
               userLat,
@@ -419,9 +423,9 @@ function RestaurantDetailsContent() {
             restaurantOffers: {
               goldOffer: {
                 title: normalizedRestaurantOffers?.goldOffer?.title || "Gold exclusive offer",
-                description: apiRestaurant?.restaurantOffers?.goldOffer?.description || "Free delivery above ₹99",
+                description: apiRestaurant?.restaurantOffers?.goldOffer?.description || "Free delivery above ?99",
                 unlockText: normalizedRestaurantOffers?.goldOffer?.unlockText || "join Gold to unlock",
-                buttonText: apiRestaurant?.restaurantOffers?.goldOffer?.buttonText || "Add Gold - ₹1",
+                buttonText: apiRestaurant?.restaurantOffers?.goldOffer?.buttonText || "Add Gold - ?1",
               },
               coupons: Array.isArray(normalizedRestaurantOffers?.coupons)
                 ? normalizedRestaurantOffers.coupons
@@ -456,11 +460,11 @@ function RestaurantDetailsContent() {
             isAcceptingOrders: actualRestaurant?.isAcceptingOrders !== false, // Default to true if not specified
           }
 
-          console.log('✅ Transformed restaurant:', transformedRestaurant)
-          console.log('✅ Restaurant ID for menu fetch:', transformedRestaurant.id)
+          debugLog('? Transformed restaurant:', transformedRestaurant)
+          debugLog('? Restaurant ID for menu fetch:', transformedRestaurant.id)
 
           if (!transformedRestaurant.id) {
-            console.error('❌ No restaurant ID found! Cannot fetch menu.')
+            debugError('? No restaurant ID found! Cannot fetch menu.')
           }
 
           setRestaurant(transformedRestaurant)
@@ -478,7 +482,7 @@ function RestaurantDetailsContent() {
               }
             }
           } catch (outletError) {
-            console.warn("Outlet timings fetch failed, falling back to delivery timings:", outletError?.message)
+            debugWarn("Outlet timings fetch failed, falling back to delivery timings:", outletError?.message)
           }
 
           // Fetch menu and inventory for this restaurant
@@ -486,7 +490,7 @@ function RestaurantDetailsContent() {
           let restaurantIdForMenu = transformedRestaurant.id
 
           if (!restaurantIdForMenu) {
-            console.warn('⚠️ No restaurant ID available, searching for restaurant by name...')
+            debugWarn('?? No restaurant ID available, searching for restaurant by name...')
             try {
               const searchVariants = zoneId
                 ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
@@ -503,7 +507,7 @@ function RestaurantDetailsContent() {
 
                 if (matchingRestaurant) {
                   restaurantIdForMenu = matchingRestaurant._id || matchingRestaurant.restaurantId || matchingRestaurant.id
-                  console.log('✅ Found matching restaurant by name, ID:', restaurantIdForMenu)
+                  debugLog('? Found matching restaurant by name, ID:', restaurantIdForMenu)
 
                   // Update the restaurant ID in state
                   setRestaurant(prev => ({
@@ -516,10 +520,10 @@ function RestaurantDetailsContent() {
               }
 
               if (!restaurantIdForMenu) {
-                console.warn('⚠️ No matching restaurant found by name')
+                debugWarn('?? No matching restaurant found by name')
               }
             } catch (searchError) {
-              console.error('❌ Error searching for restaurant:', searchError)
+              debugError('? Error searching for restaurant:', searchError)
             }
           }
 
@@ -613,17 +617,17 @@ function RestaurantDetailsContent() {
                   return !!targetRestaurantName && candidateNames.includes(targetRestaurantName)
                 })
               } catch (orderCheckError) {
-                console.warn("Could not verify previous orders for recommendation section:", orderCheckError)
+                debugWarn("Could not verify previous orders for recommendation section:", orderCheckError)
               }
             }
 
             try {
-              console.log('📋 Fetching menu for restaurant ID:', restaurantIdForMenu)
+              debugLog('?? Fetching menu for restaurant ID:', restaurantIdForMenu)
               let menuResponse = null
               let resolvedMenuLookupId = null
               for (const lookupId of normalizedLookupIds) {
                 try {
-                  console.log('📋 Fetching menu for restaurant lookup ID:', lookupId)
+                  debugLog('?? Fetching menu for restaurant lookup ID:', lookupId)
                   const response = await restaurantAPI.getMenuByRestaurantId(lookupId, { noCache: true })
                   if (response?.data?.success) {
                     menuResponse = response
@@ -639,7 +643,7 @@ function RestaurantDetailsContent() {
               if (!menuResponse) {
                 throw Object.assign(new Error('Menu not found'), { response: { status: 404 } })
               }
-              console.log('✅ Menu resolved using lookup ID:', resolvedMenuLookupId)
+              debugLog('? Menu resolved using lookup ID:', resolvedMenuLookupId)
               if (menuResponse.data && menuResponse.data.success && menuResponse.data.data && menuResponse.data.data.menu) {
                 const rawSections = menuResponse.data.data.menu.sections || []
                 const toArray = (value) => {
@@ -701,7 +705,7 @@ function RestaurantDetailsContent() {
                 })
 
                 // Debug log to verify recommended items and their isRecommended values
-                console.log('Recommended items collected:', recommendedItems.map(item => ({
+                debugLog('Recommended items collected:', recommendedItems.map(item => ({
                   name: item.name,
                   isRecommended: item.isRecommended,
                   isRecommendedType: typeof item.isRecommended,
@@ -709,7 +713,7 @@ function RestaurantDetailsContent() {
                 })))
 
                 // Debug log to check preparationTime in menu sections
-                console.log('Menu sections with preparationTime:', menuSections.map(section => ({
+                debugLog('Menu sections with preparationTime:', menuSections.map(section => ({
                   sectionName: section.name,
                   items: section.items?.map(item => ({
                     name: item.name,
@@ -732,25 +736,25 @@ function RestaurantDetailsContent() {
                 )
                 setExpandedSections(defaultExpandedSections)
 
-                console.log('Fetched menu sections with recommended items:', finalMenuSections)
+                debugLog('Fetched menu sections with recommended items:', finalMenuSections)
               }
             } catch (menuError) {
               if (menuError.response && menuError.response.status === 404) {
-                console.log('⚠️ Menu not found for this restaurant (might be a dining-only listing).')
+                debugLog('?? Menu not found for this restaurant (might be a dining-only listing).')
               } else {
-                console.error('❌ Error fetching menu:', menuError)
+                debugError('? Error fetching menu:', menuError)
               }
             } finally {
               setLoadingMenuItems(false)
             }
 
             try {
-              console.log('📋 Fetching inventory for restaurant ID:', restaurantIdForMenu)
+              debugLog('?? Fetching inventory for restaurant ID:', restaurantIdForMenu)
               let inventoryResponse = null
               let resolvedInventoryLookupId = null
               for (const lookupId of normalizedLookupIds) {
                 try {
-                  console.log('📋 Fetching inventory for restaurant lookup ID:', lookupId)
+                  debugLog('?? Fetching inventory for restaurant lookup ID:', lookupId)
                   const response = await restaurantAPI.getInventoryByRestaurantId(lookupId)
                   if (response?.data?.success) {
                     inventoryResponse = response
@@ -766,7 +770,7 @@ function RestaurantDetailsContent() {
               if (!inventoryResponse) {
                 throw Object.assign(new Error('Inventory not found'), { response: { status: 404 } })
               }
-              console.log('✅ Inventory resolved using lookup ID:', resolvedInventoryLookupId)
+              debugLog('? Inventory resolved using lookup ID:', resolvedInventoryLookupId)
               if (inventoryResponse.data && inventoryResponse.data.success && inventoryResponse.data.data && inventoryResponse.data.data.inventory) {
                 const inventoryCategories = inventoryResponse.data.data.inventory.categories || []
 
@@ -794,13 +798,13 @@ function RestaurantDetailsContent() {
                   ...prev,
                   inventory: normalizedInventory,
                 }))
-                console.log('✅ Fetched and normalized inventory categories:', normalizedInventory)
+                debugLog('? Fetched and normalized inventory categories:', normalizedInventory)
               }
             } catch (inventoryError) {
               if (inventoryError.response && inventoryError.response.status === 404) {
-                console.log('⚠️ Inventory not found for this restaurant (might be a dining-only listing).')
+                debugLog('?? Inventory not found for this restaurant (might be a dining-only listing).')
               } else {
-                console.error('❌ Error fetching inventory:', inventoryError)
+                debugError('? Error fetching inventory:', inventoryError)
               }
             }
           }
@@ -808,9 +812,9 @@ function RestaurantDetailsContent() {
             setLoadingMenuItems(false)
           }
         } else {
-          console.error('❌ No restaurant data found in API response')
-          console.error('❌ Response:', response)
-          console.error('❌ apiRestaurant:', apiRestaurant)
+          debugError('? No restaurant data found in API response')
+          debugError('? Response:', response)
+          debugError('? apiRestaurant:', apiRestaurant)
           if (!fetchedRestaurantRef.current) {
             setRestaurantError('Restaurant not found')
             setRestaurant(null)
@@ -827,21 +831,21 @@ function RestaurantDetailsContent() {
           // Network error - backend is not running
           // Don't show "Restaurant not found" for network errors
           // The axios interceptor will show a toast notification
-          console.error('Network error fetching restaurant (backend may not be running):', error)
+          debugError('Network error fetching restaurant (backend may not be running):', error)
           if (!fetchedRestaurantRef.current) {
             setRestaurantError('Backend server is not connected. Please make sure the backend is running.')
             setRestaurant(null)
           }
         } else if (is404Error) {
           // 404 error - restaurant doesn't exist in database
-          console.log(`Restaurant "${slug}" not found in database`)
+          debugLog(`Restaurant "${slug}" not found in database`)
           if (!fetchedRestaurantRef.current) {
             setRestaurantError('Restaurant not found')
             setRestaurant(null)
           }
         } else {
           // Other errors
-          console.error('Error fetching restaurant:', error)
+          debugError('Error fetching restaurant:', error)
           if (!fetchedRestaurantRef.current) {
             setRestaurantError(error.message || 'Failed to load restaurant')
             setRestaurant(null)
@@ -930,7 +934,7 @@ function RestaurantDetailsContent() {
 
       // Only update if distance actually changed
       if (calculatedDistance !== prevDistanceRef.current) {
-        console.log('🔄 Recalculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
+        debugLog('?? Recalculated distance from user to restaurant:', calculatedDistance, 'km:', distanceInKm)
         prevDistanceRef.current = calculatedDistance
 
         // Update restaurant distance
@@ -991,7 +995,7 @@ function RestaurantDetailsContent() {
 
     // CRITICAL: Validate restaurant data before adding to cart
     if (!restaurant || !restaurant.name) {
-      console.error('❌ Cannot add item to cart: Restaurant data is missing!');
+      debugError('? Cannot add item to cart: Restaurant data is missing!');
       toast.error('Restaurant information is missing. Please refresh the page.');
       return;
     }
@@ -999,7 +1003,7 @@ function RestaurantDetailsContent() {
     // Ensure we have a valid restaurantId
     const validRestaurantId = restaurant?.restaurantId || restaurant?._id || restaurant?.id;
     if (!validRestaurantId) {
-      console.error('❌ Cannot add item to cart: Restaurant ID is missing!', {
+      debugError('? Cannot add item to cart: Restaurant ID is missing!', {
         restaurant: restaurant,
         restaurantId: restaurant?.restaurantId,
         _id: restaurant?._id,
@@ -1010,7 +1014,7 @@ function RestaurantDetailsContent() {
     }
 
     // Log for debugging
-    console.log('🛒 Adding item to cart:', {
+    debugLog('?? Adding item to cart:', {
       itemName: item.name,
       restaurantName: restaurant.name,
       restaurantId: validRestaurantId,
@@ -1403,7 +1407,7 @@ function RestaurantDetailsContent() {
     return sorted
   }
 
-  // Helper function to check if a section has any items under ₹250
+  // Helper function to check if a section has any items under ?250
   const sectionHasItemsUnder250 = (section) => {
     if (!showOnlyUnder250) return true; // If not filtering, show all sections
 
@@ -1434,7 +1438,7 @@ function RestaurantDetailsContent() {
     return false;
   }
 
-  // Filter sections to only show those with items under ₹250
+  // Filter sections to only show those with items under ?250
   // Returns array of { section, originalIndex } to preserve original index for expanded sections
   const getFilteredSections = () => {
     if (!restaurant?.menuSections) return [];
@@ -1877,7 +1881,7 @@ function RestaurantDetailsContent() {
 
                         // Debug: Log preparationTime for troubleshooting
                         if (item.preparationTime) {
-                          console.log(`[FRONTEND] Item "${item.name}" preparationTime:`, item.preparationTime, 'Type:', typeof item.preparationTime)
+                          debugLog(`[FRONTEND] Item "${item.name}" preparationTime:`, item.preparationTime, 'Type:', typeof item.preparationTime)
                         }
 
                         return (
@@ -1899,7 +1903,7 @@ function RestaurantDetailsContent() {
                                     <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
                                   </div>
                                 )}
-                                {item.isSpicy && <span className="text-red-500">🌶️</span>}
+                                {item.isSpicy && <span className="text-red-500">???</span>}
                               </div>
 
                               <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{item.name}</h3>
@@ -1915,7 +1919,7 @@ function RestaurantDetailsContent() {
                               )}
 
                               <div className="flex items-center gap-3 mt-1">
-                                <p className="font-semibold text-gray-900 dark:text-white">₹{Math.round(item.price)}</p>
+                                <p className="font-semibold text-gray-900 dark:text-white">?{Math.round(item.price)}</p>
                                 {/* Preparation Time - Show if available */}
                                 {item.preparationTime && String(item.preparationTime).trim() && (
                                   <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
@@ -2048,7 +2052,7 @@ function RestaurantDetailsContent() {
                   {isExpanded && sectionSubsections.length > 0 && (
                     <div className="space-y-4">
                       {sectionSubsections.filter(subsection => {
-                        // Filter subsections to only show those with items under ₹250
+                        // Filter subsections to only show those with items under ?250
                         if (!showOnlyUnder250) return true;
                         const subsectionItems = toRenderableArray(subsection?.items)
                         if (subsectionItems.length === 0) return false;
@@ -2101,7 +2105,7 @@ function RestaurantDetailsContent() {
 
                                   // Debug: Log preparationTime for troubleshooting
                                   if (item.preparationTime) {
-                                    console.log(`[FRONTEND] Subsection item "${item.name}" preparationTime:`, item.preparationTime)
+                                    debugLog(`[FRONTEND] Subsection item "${item.name}" preparationTime:`, item.preparationTime)
                                   }
 
                                   return (
@@ -2123,7 +2127,7 @@ function RestaurantDetailsContent() {
                                               <div className="w-2 h-2 bg-orange-600 rounded-full"></div>
                                             </div>
                                           )}
-                                          {item.isSpicy && <span className="text-red-500">🌶️</span>}
+                                          {item.isSpicy && <span className="text-red-500">???</span>}
                                         </div>
 
                                         <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{item.name}</h3>
@@ -2139,7 +2143,7 @@ function RestaurantDetailsContent() {
                                         )}
 
                                         <div className="flex items-center gap-3 mt-1">
-                                          <p className="font-semibold text-gray-900 dark:text-white">₹{Math.round(item.price)}</p>
+                                          <p className="font-semibold text-gray-900 dark:text-white">?{Math.round(item.price)}</p>
                                           {/* Preparation Time - Show if available */}
                                           {item.preparationTime && String(item.preparationTime).trim() && (
                                             <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
@@ -2989,11 +2993,11 @@ function RestaurantDetailsContent() {
                         <div className="flex items-center gap-1">
                           {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
                             <span className="text-sm line-through text-red-200">
-                              ₹{Math.round(selectedItem.originalPrice)}
+                              ?{Math.round(selectedItem.originalPrice)}
                             </span>
                           )}
                           <span className="text-base font-bold">
-                            ₹{Math.round(selectedItem.price)}
+                            ?{Math.round(selectedItem.price)}
                           </span>
                         </div>
                       </Button>
@@ -3171,7 +3175,7 @@ function RestaurantDetailsContent() {
                             <Lock className="h-5 w-5 text-yellow-600 dark:text-yellow-500 flex-shrink-0 mt-0.5" />
                             <div className="flex-1">
                               <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-                                {restaurant.restaurantOffers.goldOffer?.description || "Free delivery above ₹99"}
+                                {restaurant.restaurantOffers.goldOffer?.description || "Free delivery above ?99"}
                               </p>
                               <p className="text-xs text-gray-500 dark:text-gray-400">
                                 {restaurant.restaurantOffers.goldOffer?.unlockText || "join Gold to unlock"}
@@ -3184,7 +3188,7 @@ function RestaurantDetailsContent() {
                               // Handle add gold
                             }}
                           >
-                            {restaurant.restaurantOffers.goldOffer?.buttonText || "Add Gold - ₹1"}
+                            {restaurant.restaurantOffers.goldOffer?.buttonText || "Add Gold - ?1"}
                           </Button>
                         </div>
                       </div>
@@ -3403,7 +3407,7 @@ class RestaurantDetailsErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error("RestaurantDetails crashed:", error, info)
+    debugError("RestaurantDetails crashed:", error, info)
   }
 
   render() {
@@ -3441,5 +3445,8 @@ export default function RestaurantDetails() {
     </RestaurantDetailsErrorBoundary>
   )
 }
+
+
+
 
 

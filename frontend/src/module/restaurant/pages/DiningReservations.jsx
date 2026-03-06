@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Calendar, Clock, Users, Search, Filter, MessageSquare, ChevronRight, CheckCircle2, XCircle, Clock4 } from "lucide-react"
 import { diningAPI, restaurantAPI } from "@/lib/api"
 import Loader from "@/components/Loader"
 import { Badge } from "@/components/ui/badge"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DiningReservations() {
     const [bookings, setBookings] = useState([])
@@ -28,11 +32,11 @@ export default function DiningReservations() {
                             setBookings(bookingsResponse.data.data)
                         }
                     } else {
-                        console.error("Restaurant ID not found in response:", resData)
+                        debugError("Restaurant ID not found in response:", resData)
                     }
                 }
             } catch (error) {
-                console.error("Error fetching reservations:", error)
+                debugError("Error fetching reservations:", error)
             } finally {
                 setLoading(false)
             }
@@ -50,7 +54,7 @@ export default function DiningReservations() {
                 ))
             }
         } catch (error) {
-            console.error("Error updating status:", error)
+            debugError("Error updating status:", error)
         }
     }
 
@@ -236,3 +240,4 @@ export default function DiningReservations() {
         </div>
     )
 }
+

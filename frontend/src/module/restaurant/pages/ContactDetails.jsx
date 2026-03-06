@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -13,6 +13,10 @@ import {
 import { restaurantAPI } from "@/lib/api"
 import OptimizedImage from "@/components/OptimizedImage"
 import { ImageIcon } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ContactDetails() {
   const navigate = useNavigate()
@@ -47,7 +51,7 @@ export default function ContactDetails() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error("Error fetching restaurant data:", error)
+        debugError("Error fetching restaurant data:", error)
         }
         // Fallback to localStorage
         try {
@@ -57,7 +61,7 @@ export default function ContactDetails() {
             setOwnerData(parsed)
           }
         } catch (e) {
-          console.error("Error loading owner data from localStorage:", e)
+          debugError("Error loading owner data from localStorage:", e)
         }
       } finally {
         setLoading(false)
@@ -128,7 +132,7 @@ export default function ContactDetails() {
         
         setInvitedUsers(transformedStaff)
       } catch (error) {
-        console.error("Error fetching staff:", error)
+        debugError("Error fetching staff:", error)
         setInvitedUsers([])
       } finally {
         setLoadingStaff(false)
@@ -158,7 +162,7 @@ export default function ContactDetails() {
           setOwnerData(parsed)
         }
       } catch (error) {
-        console.error("Error loading updated owner data:", error)
+        debugError("Error loading updated owner data:", error)
       }
     }
 
@@ -183,7 +187,7 @@ export default function ContactDetails() {
           throw new Error("Failed to delete user")
         }
       } catch (error) {
-        console.error("Error deleting user:", error)
+        debugError("Error deleting user:", error)
         const errorMessage = error.response?.data?.message || error.message || "Failed to remove user. Please try again."
         alert(errorMessage)
       }
@@ -390,3 +394,4 @@ export default function ContactDetails() {
     </div>
   )
 }
+

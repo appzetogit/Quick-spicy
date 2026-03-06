@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -8,6 +8,10 @@ import { Button } from "@/components/ui/button"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
 import { formatCurrency, usdToInr } from "../utils/currency"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function BusinessPlanPage() {
   const navigate = useNavigate()
@@ -125,7 +129,7 @@ export default function BusinessPlanPage() {
           className="w-full bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 rounded-xl text-base"
           onClick={() => {
             // Future: open change plan flow
-            console.log("Change Business Plan clicked")
+            debugLog("Change Business Plan clicked")
           }}
         >
           Change Business Plan
@@ -257,7 +261,7 @@ export default function BusinessPlanPage() {
                               variant={isActive ? "default" : "outline"}
                               onClick={(e) => {
                                 e.stopPropagation()
-                                console.log("Shift plan to:", p.id)
+                                debugLog("Shift plan to:", p.id)
                                 setSelectedPlanId(p.id)
                                 setShowPlans(false)
                               }}
@@ -278,5 +282,6 @@ export default function BusinessPlanPage() {
     </div>
   )
 }
+
 
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate, useParams } from "react-router-dom"
 import Lenis from "lenis"
@@ -10,6 +10,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import BottomNavbar from "../components/BottomNavbar"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function UpdateReplyPage() {
   const navigate = useNavigate()
@@ -155,7 +159,7 @@ export default function UpdateReplyPage() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 z-50 md:relative md:border-t-0 md:px-4 md:py-4 md:mt-6">
         <Button
           onClick={() => {
-            console.log("Update reply:", { reviewId: id, reply: replyText })
+            debugLog("Update reply:", { reviewId: id, reply: replyText })
             // Navigate back to reviews list after update
             navigate("/restaurant/reviews")
           }}
@@ -172,4 +176,5 @@ export default function UpdateReplyPage() {
     </div>
   )
 }
+
 

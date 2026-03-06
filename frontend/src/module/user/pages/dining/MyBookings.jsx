@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { ArrowLeft, Calendar, Clock, Users, MapPin, ChevronRight, Utensils } from "lucide-react"
 import { diningAPI } from "@/lib/api"
@@ -8,6 +8,10 @@ import { Badge } from "@/components/ui/badge"
 import { Star, X } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 function ReviewModal({ booking, onClose, onSubmit }) {
     const [rating, setRating] = useState(5)
@@ -90,7 +94,7 @@ export default function MyBookings() {
                     setBookings(response.data.data)
                 }
             } catch (error) {
-                console.error("Error fetching bookings:", error)
+                debugError("Error fetching bookings:", error)
             } finally {
                 setLoading(false)
             }
@@ -108,7 +112,7 @@ export default function MyBookings() {
                 setSelectedBooking(null)
             }
         } catch (error) {
-            console.error("Error submitting review:", error)
+            debugError("Error submitting review:", error)
             toast.error(error.response?.data?.message || "Failed to submit review")
         }
     }
@@ -208,3 +212,4 @@ export default function MyBookings() {
         </AnimatedPage>
     )
 }
+

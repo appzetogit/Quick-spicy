@@ -1,23 +1,27 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Wallet, Settings, Folder, Download, ChevronDown, FileText, FileSpreadsheet, Check, Columns, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { exportBonusToExcel, exportBonusToPDF } from "../../components/deliveryman/deliverymanExportUtils"
 import { adminAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Helper function to format bonus amount properly
 const formatBonusAmount = (transaction) => {
   // Use raw amount if available, otherwise clean the bonus string
   if (transaction.amount !== undefined && transaction.amount !== null) {
-    return `₹${parseFloat(transaction.amount).toFixed(2)}`
+    return `â‚¹${parseFloat(transaction.amount).toFixed(2)}`
   }
   
-  if (!transaction.bonus) return '₹0.00'
+  if (!transaction.bonus) return 'â‚¹0.00'
   
   // Clean the bonus string - remove superscript characters
   let cleaned = transaction.bonus.toString()
-    .replace(/¹/g, '') // Remove superscript 1
+    .replace(/Â¹/g, '') // Remove superscript 1
     .replace(/[\u2070-\u207F\u2080-\u208F]/g, '') // Remove all superscript characters
     .trim()
   
@@ -25,10 +29,10 @@ const formatBonusAmount = (transaction) => {
   const numericMatch = cleaned.match(/[\d.]+/)
   if (numericMatch) {
     const amount = parseFloat(numericMatch[0])
-    return `₹${amount.toFixed(2)}`
+    return `â‚¹${amount.toFixed(2)}`
   }
   
-  return '₹0.00'
+  return 'â‚¹0.00'
 }
 
 export default function DeliverymanBonus() {
@@ -63,7 +67,7 @@ export default function DeliverymanBonus() {
           setDeliveryPartners(response.data.data.deliveryPartners)
         }
       } catch (error) {
-        console.error("Error fetching delivery partners:", error)
+        debugError("Error fetching delivery partners:", error)
       }
     }
 
@@ -92,7 +96,7 @@ export default function DeliverymanBonus() {
           setTransactions(formatted)
         }
       } catch (error) {
-        console.error("Error fetching bonus transactions:", error)
+        debugError("Error fetching bonus transactions:", error)
         setError("Failed to load transactions. Please refresh the page.")
       } finally {
         setLoading(false)
@@ -142,7 +146,7 @@ export default function DeliverymanBonus() {
     setError("")
     
     // Log request details
-    console.log("Submitting bonus with data:", {
+    debugLog("Submitting bonus with data:", {
       deliveryPartnerId: formData.deliveryPartnerId,
       amount: formData.amount
     })
@@ -154,9 +158,9 @@ export default function DeliverymanBonus() {
         '' // No reference
       )
       
-      console.log("Bonus response:", response)
-      console.log("Response data:", response.data)
-      console.log("Response status:", response.status)
+      debugLog("Bonus response:", response)
+      debugLog("Response data:", response.data)
+      debugLog("Response status:", response.status)
       
       if (response?.data?.success || response?.data?.data) {
         // Refresh transactions
@@ -181,18 +185,18 @@ export default function DeliverymanBonus() {
         setError("Unexpected response format. Please check console for details.")
       }
     } catch (error) {
-      console.error("=== ERROR ADDING BONUS ===")
-      console.error("Error object:", error)
-      console.error("Error name:", error.name)
-      console.error("Error message:", error.message)
-      console.error("Error code:", error.code)
-      console.error("Error response:", error.response)
-      console.error("Error response status:", error.response?.status)
-      console.error("Error response data:", error.response?.data)
-      console.error("Error request URL:", error.config?.url)
-      console.error("Error request method:", error.config?.method)
-      console.error("Error request data:", error.config?.data)
-      console.error("==========================")
+      debugError("=== ERROR ADDING BONUS ===")
+      debugError("Error object:", error)
+      debugError("Error name:", error.name)
+      debugError("Error message:", error.message)
+      debugError("Error code:", error.code)
+      debugError("Error response:", error.response)
+      debugError("Error response status:", error.response?.status)
+      debugError("Error response data:", error.response?.data)
+      debugError("Error request URL:", error.config?.url)
+      debugError("Error request method:", error.config?.method)
+      debugError("Error request data:", error.config?.data)
+      debugError("==========================")
       
       // Extract error message
       let errorMessage = "Failed to add bonus. Please try again."
@@ -558,3 +562,4 @@ export default function DeliverymanBonus() {
     </div>
   )
 }
+

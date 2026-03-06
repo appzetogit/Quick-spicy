@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Export utility functions for deliveryman data
 export const exportDeliverymenToCSV = (deliverymen, filename = "deliverymen") => {
   const headers = ["SI", "Name", "Contact", "Zone", "Total Orders", "Availability Status"]
@@ -129,15 +133,15 @@ export const exportDeliverymenToPDF = (deliverymen, filename = "deliverymen") =>
         const fileTimestamp = new Date().toISOString().split("T")[0]
         doc.save(`${filename}_${fileTimestamp}.pdf`)
       }).catch((error) => {
-        console.error("Error loading jspdf-autotable:", error)
+        debugError("Error loading jspdf-autotable:", error)
         alert("Failed to load PDF library. Please try again.")
       })
     }).catch((error) => {
-      console.error("Error loading jsPDF:", error)
+      debugError("Error loading jsPDF:", error)
       alert("Failed to load PDF library. Please try again.")
     })
   } catch (error) {
-    console.error("PDF export error:", error)
+    debugError("PDF export error:", error)
     alert("Failed to export PDF. Please try again.")
   }
 }
@@ -307,18 +311,18 @@ const formatBonusForExport = (transaction) => {
   // First priority: use raw amount value if available
   if (transaction.amount !== undefined && transaction.amount !== null && !isNaN(transaction.amount)) {
     const amount = parseFloat(transaction.amount)
-    return `₹${amount.toFixed(2)}`
+    return `â‚¹${amount.toFixed(2)}`
   }
   
   // Second priority: clean and extract from bonus string
   if (transaction.bonus) {
     // Remove all superscript/special characters and unwanted text
     let cleaned = transaction.bonus.toString()
-      .replace(/¹/g, '') // Remove superscript 1
-      .replace(/[¹²³⁴⁵⁶⁷⁸⁹⁰]/g, '') // Remove all superscript numbers
+      .replace(/Â¹/g, '') // Remove superscript 1
+      .replace(/[Â¹Â²Â³â´âµâ¶â·â¸â¹â°]/g, '') // Remove all superscript numbers
       .replace(/[\u2070-\u207F\u2080-\u208F]/g, '') // Remove all superscript Unicode ranges
-      .replace(/â/g, '') // Remove encoding artifacts
-      .replace(/‚/g, '') // Remove encoding artifacts
+      .replace(/Ã¢/g, '') // Remove encoding artifacts
+      .replace(/â€š/g, '') // Remove encoding artifacts
       .replace(/[^\d.-]/g, '') // Keep only digits, dots, and minus signs
       .trim()
     
@@ -327,12 +331,12 @@ const formatBonusForExport = (transaction) => {
     if (numericMatch) {
       const amount = parseFloat(numericMatch[0])
       if (!isNaN(amount)) {
-        return `₹${amount.toFixed(2)}`
+        return `â‚¹${amount.toFixed(2)}`
       }
     }
   }
   
-  return '₹0.00'
+  return 'â‚¹0.00'
 }
 
 export const exportBonusToExcel = (transactions, filename = "deliveryman_bonus") => {
@@ -424,7 +428,7 @@ export const exportBonusToPDF = (transactions, filename = "deliveryman_bonus") =
         // Prepare table data - ensure bonus is properly formatted
         const tableData = transactions.map((transaction) => {
           // ALWAYS use raw amount value - don't rely on formatted bonus string
-          let bonusAmount = '₹0.00'
+          let bonusAmount = 'â‚¹0.00'
           
           // First priority: Use raw numeric amount from transaction.amount
           if (transaction.amount !== undefined && transaction.amount !== null) {
@@ -432,7 +436,7 @@ export const exportBonusToPDF = (transactions, filename = "deliveryman_bonus") =
               ? parseFloat(transaction.amount.replace(/[^\d.-]/g, ''))
               : parseFloat(transaction.amount)
             if (!isNaN(numAmount)) {
-              bonusAmount = `₹${numAmount.toFixed(2)}`
+              bonusAmount = `â‚¹${numAmount.toFixed(2)}`
             }
           } 
           // Second priority: Extract number from bonus string and rebuild
@@ -441,7 +445,7 @@ export const exportBonusToPDF = (transactions, filename = "deliveryman_bonus") =
             const numericPart = String(transaction.bonus).replace(/[^\d.-]/g, '')
             const numAmount = parseFloat(numericPart)
             if (!isNaN(numAmount) && numAmount > 0) {
-              bonusAmount = `₹${numAmount.toFixed(2)}`
+              bonusAmount = `â‚¹${numAmount.toFixed(2)}`
             }
           }
           
@@ -489,15 +493,15 @@ export const exportBonusToPDF = (transactions, filename = "deliveryman_bonus") =
         const fileTimestamp = new Date().toISOString().split("T")[0]
         doc.save(`${filename}_${fileTimestamp}.pdf`)
       }).catch((error) => {
-        console.error("Error loading jspdf-autotable:", error)
+        debugError("Error loading jspdf-autotable:", error)
         alert("Failed to load PDF library. Please try again.")
       })
     }).catch((error) => {
-      console.error("Error loading jsPDF:", error)
+      debugError("Error loading jsPDF:", error)
       alert("Failed to load PDF library. Please try again.")
     })
   } catch (error) {
-    console.error("PDF export error:", error)
+    debugError("PDF export error:", error)
     alert("Failed to export PDF. Please try again.")
   }
 }
@@ -514,4 +518,5 @@ export const exportBonusToJSON = (transactions, filename = "deliveryman_bonus") 
   link.click()
   document.body.removeChild(link)
 }
+
 

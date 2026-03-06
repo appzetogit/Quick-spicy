@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
 import BottomNavbar from "../components/BottomNavbar"
@@ -20,6 +20,10 @@ import { getOrderStatus, normalizeStatus, matchesOrdersPageFilter, ORDER_STATUS 
 import { getTransactionsByType, getOrderPaymentAmount } from "../utils/walletState"
 import { formatCurrency, usdToInr } from "../utils/currency"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function OrdersPage() {
   const navigate = useNavigate()
@@ -164,7 +168,7 @@ export default function OrdersPage() {
           setOrders([])
         }
       } catch (err) {
-        console.error('Error fetching orders:', err)
+        debugError('Error fetching orders:', err)
         setError(err.response?.data?.message || 'Failed to fetch orders')
         setOrders([])
       } finally {
@@ -187,7 +191,7 @@ export default function OrdersPage() {
   // Refresh orders when new order notification is received
   useEffect(() => {
     if (newOrder) {
-      console.log('🔄 New order notification received, refreshing orders list')
+      debugLog('ðŸ”„ New order notification received, refreshing orders list')
       const fetchOrders = async () => {
         try {
           const response = await restaurantAPI.getOrders()
@@ -231,7 +235,7 @@ export default function OrdersPage() {
             setOrders(transformedOrders)
           }
         } catch (err) {
-          console.error('Error refreshing orders:', err)
+          debugError('Error refreshing orders:', err)
         }
       }
       fetchOrders()
@@ -284,7 +288,7 @@ export default function OrdersPage() {
             setOrders(transformedOrders)
           }
         } catch (err) {
-          console.error('Error refreshing orders:', err)
+          debugError('Error refreshing orders:', err)
         }
       }
       fetchOrders()
@@ -493,7 +497,7 @@ export default function OrdersPage() {
                         Order #{order.id}
                       </p>
                       <p className="text-gray-500 text-xs md:text-sm mb-1.5">
-                        {order.items} Item{order.items !== 1 ? 's' : ''} • {order.customerName}
+                        {order.items} Item{order.items !== 1 ? 's' : ''} â€¢ {order.customerName}
                       </p>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`inline-flex items-center gap-1 ${getStatusBadgeColor(order.status)} text-[10px] md:text-xs font-medium px-2 py-0.5 rounded-full`}>
@@ -515,7 +519,7 @@ export default function OrdersPage() {
                     <div className="text-right">
                       <p className="text-gray-500 text-[10px] md:text-xs mb-0.5">Amount</p>
                       <p className="text-gray-900 font-bold text-sm md:text-base">
-                        ₹{order.amount?.toFixed(2) || '0.00'}
+                        â‚¹{order.amount?.toFixed(2) || '0.00'}
                       </p>
                     </div>
                   </div>
@@ -544,4 +548,5 @@ export default function OrdersPage() {
     </div>
   )
 }
+
 

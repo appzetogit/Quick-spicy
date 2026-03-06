@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Link as LinkIcon, Tag, UtensilsCrossed, FileText, Edit, X } from "lucide-react"
 import api from "@/lib/api"
 import { getModuleToken } from "@/lib/utils/auth"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DiningManagement() {
     const [activeTab, setActiveTab] = useState('categories')
@@ -70,7 +74,7 @@ export default function DiningManagement() {
             setCategoriesLoading(true)
             const response = await api.get('/admin/dining/categories', getAuthConfig())
             if (response.data.success) setCategories(response.data.data.categories)
-        } catch (err) { console.error(err) } finally { setCategoriesLoading(false) }
+        } catch (err) { debugError(err) } finally { setCategoriesLoading(false) }
     }
 
     const handleCreateCategory = async () => {
@@ -113,14 +117,14 @@ export default function DiningManagement() {
             setBannersLoading(true)
             const response = await api.get('/admin/dining/offer-banners', getAuthConfig())
             if (response.data.success) setBanners(response.data.data.banners)
-        } catch (err) { console.error(err) } finally { setBannersLoading(false) }
+        } catch (err) { debugError(err) } finally { setBannersLoading(false) }
     }
 
     const fetchRestaurantsList = async () => {
         try {
             const response = await api.get('/admin/dining/restaurants-list', getAuthConfig())
             if (response.data.success) setRestaurantsList(response.data.data.restaurants)
-        } catch (err) { console.error(err) }
+        } catch (err) { debugError(err) }
     }
 
     const handleSubmitBanner = async () => {
@@ -194,7 +198,7 @@ export default function DiningManagement() {
             setStoriesLoading(true)
             const response = await api.get('/admin/dining/stories', getAuthConfig())
             if (response.data.success) setStories(response.data.data.stories)
-        } catch (err) { console.error(err) } finally { setStoriesLoading(false) }
+        } catch (err) { debugError(err) } finally { setStoriesLoading(false) }
     }
 
     const handleSubmitStory = async () => {
@@ -469,3 +473,4 @@ export default function DiningManagement() {
         </div>
     )
 }
+

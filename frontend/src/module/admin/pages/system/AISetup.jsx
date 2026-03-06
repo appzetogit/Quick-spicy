@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Bot, Settings, Info, Store } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 function ToggleSwitch({ enabled, onToggle }) {
   return (
@@ -32,7 +36,7 @@ export default function AISetup() {
 
   const handleAIConfigSave = (e) => {
     e.preventDefault()
-    console.log("Saving AI Configuration:", { apiKey, organization, isEnabled })
+    debugLog("Saving AI Configuration:", { apiKey, organization, isEnabled })
     alert("AI Configuration saved successfully!")
   }
 
@@ -43,7 +47,7 @@ export default function AISetup() {
 
   const handleAISettingsSave = (e) => {
     e.preventDefault()
-    console.log("Saving AI Settings:", { sectionWiseLimit, imageUploadLimit })
+    debugLog("Saving AI Settings:", { sectionWiseLimit, imageUploadLimit })
     alert("AI Settings saved successfully!")
   }
 
@@ -232,3 +236,4 @@ export default function AISetup() {
     </div>
   )
 }
+

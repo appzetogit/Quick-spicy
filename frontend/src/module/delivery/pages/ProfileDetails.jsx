@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Plus, Edit2, ChevronRight, FileText, CheckCircle, XCircle, Eye, X, Loader2, User } from "lucide-react"
 import BottomPopup from "../components/BottomPopup"
 import { toast } from "sonner"
 import { deliveryAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ProfileDetails() {
   const navigate = useNavigate()
@@ -52,7 +56,7 @@ export default function ProfileDetails() {
         const walletResponse = await deliveryAPI.getWallet()
         setWalletBalance(parseWalletBalance(walletResponse))
       } catch (error) {
-        console.error("Error fetching wallet balance:", error)
+        debugError("Error fetching wallet balance:", error)
       }
     }
 
@@ -85,7 +89,7 @@ export default function ProfileDetails() {
           throw new Error("Profile fetch failed")
         }
       } catch (error) {
-        console.error("Error fetching profile:", error)
+        debugError("Error fetching profile:", error)
         
         // More detailed error handling
         if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
@@ -122,7 +126,7 @@ export default function ProfileDetails() {
         ) || 0
         setWalletBalance(balance)
       } catch (error) {
-        console.error("Error refreshing wallet balance:", error)
+        debugError("Error refreshing wallet balance:", error)
       }
     }
 
@@ -369,7 +373,7 @@ export default function ProfileDetails() {
               <div className="w-full align-center flex content-center justify-between">
                 <p className="text-sm text-gray-900 mb-1">Wallet Balance</p>
                 <p className="text-base text-gray-900">
-                  ₹{(walletBalance ?? profile?.wallet?.balance ?? 0).toFixed(2)}
+                  â‚¹{(walletBalance ?? profile?.wallet?.balance ?? 0).toFixed(2)}
                 </p>
               </div>
             </div>
@@ -492,7 +496,7 @@ export default function ProfileDetails() {
                     setProfile(response.data.data.profile)
                   }
                 } catch (error) {
-                  console.error("Error updating vehicle number:", error)
+                  debugError("Error updating vehicle number:", error)
                   toast.error("Failed to update vehicle number")
                 }
               } else {
@@ -736,7 +740,7 @@ export default function ProfileDetails() {
                   setProfile(response.data.data.profile)
                 }
               } catch (error) {
-                console.error("Error updating bank details:", error)
+                debugError("Error updating bank details:", error)
                 toast.error(error?.response?.data?.message || "Failed to update bank details")
               } finally {
                 setIsUpdatingBankDetails(false)
@@ -757,3 +761,4 @@ export default function ProfileDetails() {
     </div>
   )
 }
+

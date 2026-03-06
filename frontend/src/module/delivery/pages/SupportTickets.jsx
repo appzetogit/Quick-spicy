@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Plus, Clock, CheckCircle, XCircle, Loader2, Eye, MessageSquare } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SupportTickets() {
   const navigate = useNavigate()
@@ -25,7 +29,7 @@ export default function SupportTickets() {
         setTickets([])
       }
     } catch (error) {
-      console.error("Error fetching tickets:", error)
+      debugError("Error fetching tickets:", error)
       toast.error("Failed to load tickets")
       setTickets([])
     } finally {
@@ -215,3 +219,4 @@ export default function SupportTickets() {
     </div>
   )
 }
+

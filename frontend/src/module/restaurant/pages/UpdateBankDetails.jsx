@@ -1,6 +1,10 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, AlertCircle } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function UpdateBankDetails() {
   const navigate = useNavigate()
@@ -229,7 +233,7 @@ export default function UpdateBankDetails() {
     })
     
     // Here you would typically save to backend
-    console.log("Bank details updated:", formData)
+    debugLog("Bank details updated:", formData)
   }
 
   const handleEditClick = () => {
@@ -442,4 +446,5 @@ export default function UpdateBankDetails() {
     </div>
   )
 }
+
 

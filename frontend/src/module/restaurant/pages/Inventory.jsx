@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Search,
@@ -20,6 +20,10 @@ import { Switch } from "@/components/ui/switch"
 import { useNavigate } from "react-router-dom"
 import { restaurantAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const INVENTORY_STORAGE_KEY = "restaurant_inventory_state"
 
@@ -608,7 +612,7 @@ export default function Inventory() {
         }
       }
     } catch (error) {
-      console.error("Error loading inventory from storage:", error)
+      debugError("Error loading inventory from storage:", error)
     }
     return mockCategories
   })
@@ -731,7 +735,7 @@ export default function Inventory() {
       } catch (error) {
         // Only log and show toast if it's not a network/timeout error
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error('Error fetching menu data:', error)
+        debugError('Error fetching menu data:', error)
           toast.error('Failed to load menu data')
         } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
           // Silently handle network errors - backend is not running
@@ -771,7 +775,7 @@ export default function Inventory() {
       const sortedAddons = [...data].sort((a, b) => getAddonCreatedMs(b) - getAddonCreatedMs(a))
       setAddons(sortedAddons)
     } catch (error) {
-      console.error('Error fetching add-ons:', error)
+      debugError('Error fetching add-ons:', error)
       toast.error('Failed to load add-ons')
       setAddons([])
     } finally {
@@ -800,7 +804,7 @@ export default function Inventory() {
 
       toast.success(`Add-on ${isAvailable ? 'enabled' : 'disabled'} successfully`)
     } catch (error) {
-      console.error('Error toggling addon:', error)
+      debugError('Error toggling addon:', error)
       toast.error('Failed to update add-on availability')
     }
   }
@@ -884,7 +888,7 @@ export default function Inventory() {
       if (typeof window === "undefined") return
       localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(categories))
     } catch (error) {
-      console.error("Error saving inventory to storage:", error)
+      debugError("Error saving inventory to storage:", error)
     }
   }, [categories])
 
@@ -970,7 +974,7 @@ export default function Inventory() {
       // Fetch current menu
       const menuResponse = await restaurantAPI.getMenu()
       if (!menuResponse.data || !menuResponse.data.success || !menuResponse.data.data || !menuResponse.data.data.menu) {
-        console.error('Failed to fetch menu for update')
+        debugError('Failed to fetch menu for update')
         return
       }
 
@@ -1023,9 +1027,9 @@ export default function Inventory() {
 
       // Save updated menu
       await restaurantAPI.updateMenu({ sections: updatedSections })
-      console.log('Menu updated successfully')
+      debugLog('Menu updated successfully')
     } catch (error) {
-      console.error('Error updating menu:', error)
+      debugError('Error updating menu:', error)
       toast.error('Failed to update menu')
     }
   }
@@ -1171,7 +1175,7 @@ export default function Inventory() {
       // Fetch current menu
       const menuResponse = await restaurantAPI.getMenu()
       if (!menuResponse.data || !menuResponse.data.success || !menuResponse.data.data || !menuResponse.data.data.menu) {
-        console.error('Failed to fetch menu for update')
+        debugError('Failed to fetch menu for update')
         return
       }
 
@@ -1204,9 +1208,9 @@ export default function Inventory() {
 
       // Save updated menu
       await restaurantAPI.updateMenu({ sections: updatedSections })
-      console.log('Menu recommendation updated successfully')
+      debugLog('Menu recommendation updated successfully')
     } catch (error) {
-      console.error('Error updating menu recommendation:', error)
+      debugError('Error updating menu recommendation:', error)
       toast.error('Failed to update recommendation')
     }
   }
@@ -1464,7 +1468,7 @@ export default function Inventory() {
                           {addon.description && (
                             <p className="text-sm text-gray-600 mb-2">{addon.description}</p>
                           )}
-                          <p className="text-base font-bold text-gray-900">₹{addon.price}</p>
+                          <p className="text-base font-bold text-gray-900">â‚¹{addon.price}</p>
                           {addon.approvalStatus === 'rejected' && addon.rejectionReason && (
                             <p className="text-xs text-red-600 mt-1">Reason: {addon.rejectionReason}</p>
                           )}
@@ -1761,8 +1765,8 @@ export default function Inventory() {
                     <div className="">
                       <h3 className="text-base font-bold text-gray-900 mb-3">{categoryData.name}</h3>
                       <ul className="space-y-1 text-sm text-gray-600">
-                        <li>• {categoryData.name}</li>
-                        <li>• Includes {categoryData.itemCount} item{categoryData.itemCount !== 1 ? 's' : ''}</li>
+                        <li>â€¢ {categoryData.name}</li>
+                        <li>â€¢ Includes {categoryData.itemCount} item{categoryData.itemCount !== 1 ? 's' : ''}</li>
                       </ul>
                       <div className="border-t border-gray-200 mt-4"></div>
                     </div>
@@ -2005,3 +2009,4 @@ export default function Inventory() {
     </div>
   )
 }
+

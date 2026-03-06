@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { AlertCircle, Loader2 } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { authAPI } from "@/lib/api"
 import loginBanner from "@/assets/loginbanner.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SignIn() {
   const navigate = useNavigate()
@@ -32,7 +36,7 @@ export default function SignIn() {
         phone: phoneDigits || prev.phone,
       }))
     } catch (err) {
-      console.error("Error parsing stored auth data:", err)
+      debugError("Error parsing stored auth data:", err)
     }
   }, [])
 
@@ -184,3 +188,4 @@ export default function SignIn() {
     </AnimatedPage>
   )
 }
+

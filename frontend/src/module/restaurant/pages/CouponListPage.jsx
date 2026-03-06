@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -12,6 +12,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
 import { formatCurrency, usdToInr } from "../utils/currency"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function CouponListPage() {
   const navigate = useNavigate()
@@ -130,7 +134,7 @@ export default function CouponListPage() {
                                 label: "Edit Coupon", 
                                 action: () => navigate(`/restaurant/coupon/${coupon.id}/edit`) 
                               },
-                              { label: "Delete Coupon", action: () => console.log("Delete:", coupon.id), isDanger: true }
+                              { label: "Delete Coupon", action: () => debugLog("Delete:", coupon.id), isDanger: true }
                             ].map((option, idx) => (
                               <motion.button
                                 key={option.label}
@@ -237,4 +241,5 @@ export default function CouponListPage() {
     </div>
   )
 }
+
 

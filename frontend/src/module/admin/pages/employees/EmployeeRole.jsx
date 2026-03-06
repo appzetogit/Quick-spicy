@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { UserCog, ChevronDown, ArrowUpDown, Trash2, Search, Download, Edit, Settings, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const modulePermissions = [
   // Column 1
@@ -68,9 +72,9 @@ export default function EmployeeRole() {
   const languageTabs = [
     { key: "default", label: "Default" },
     { key: "en", label: "English(EN)" },
-    { key: "bn", label: "Bengali - বাংলা(BN)" },
-    { key: "ar", label: "Arabic - العربية(AR)" },
-    { key: "es", label: "Spanish - español(ES)" },
+    { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+    { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©(AR)" },
+    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
   ]
 
   const handlePermissionChange = (permissionId, checked) => {
@@ -94,7 +98,7 @@ export default function EmployeeRole() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", { roleName, permissions })
+    debugLog("Form submitted:", { roleName, permissions })
     alert("Employee role created successfully!")
   }
 
@@ -122,7 +126,7 @@ export default function EmployeeRole() {
       alert("No data to export")
       return
     }
-    console.log(`Exporting as ${format}`, filteredRoles)
+    debugLog(`Exporting as ${format}`, filteredRoles)
   }
 
   const toggleColumn = (columnKey) => {
@@ -541,3 +545,4 @@ export default function EmployeeRole() {
     </div>
   )
 }
+

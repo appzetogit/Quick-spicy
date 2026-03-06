@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from "react"
+﻿import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
@@ -30,6 +30,10 @@ import {
 import { Play } from "lucide-react"
 import BottomNavOrders from "../components/BottomNavOrders"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ToHub() {
   const navigate = useNavigate()
@@ -53,7 +57,7 @@ export default function ToHub() {
     } catch (error) {
       // Only log error if it's not a network/timeout error (backend might be down/slow)
       if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error("Error fetching restaurant data:", error)
+        debugError("Error fetching restaurant data:", error)
       }
       // Continue with default values if fetch fails
     } finally {
@@ -328,7 +332,7 @@ export default function ToHub() {
     { hour: "12am", orders: 0, sales: 0 },
   ])
 
-  const [totalSales, setTotalSales] = useState("₹ 0")
+  const [totalSales, setTotalSales] = useState("â‚¹ 0")
   const [totalOrders, setTotalOrders] = useState("0")
   const [lastUpdated, setLastUpdated] = useState(null)
   const [mealtimeMetrics, setMealtimeMetrics] = useState([
@@ -447,12 +451,12 @@ export default function ToHub() {
     { day: "S", adCTR: 0, adM2O: 0 },
   ])
   const discountTypeBreakup = [
-    { title: "Promo discounts", value: "₹0", change: "- 0%", color: "#111827" },
-    { title: "Dish discounts", value: "₹0", change: "- 0%", color: "#ef4444" },
-    { title: "Buy 1 Get 1, etc.", value: "₹0", change: "- 0%", color: "#2563eb" },
-    { title: "Freebie", value: "₹0", change: "- 0%", color: "#f59e0b" },
-    { title: "Gold discount", value: "₹0", change: "- 0%", color: "#10b981" },
-    { title: "Winback discount", value: "₹0", change: "- 0%", color: "#d1d5db" },
+    { title: "Promo discounts", value: "â‚¹0", change: "- 0%", color: "#111827" },
+    { title: "Dish discounts", value: "â‚¹0", change: "- 0%", color: "#ef4444" },
+    { title: "Buy 1 Get 1, etc.", value: "â‚¹0", change: "- 0%", color: "#2563eb" },
+    { title: "Freebie", value: "â‚¹0", change: "- 0%", color: "#f59e0b" },
+    { title: "Gold discount", value: "â‚¹0", change: "- 0%", color: "#10b981" },
+    { title: "Winback discount", value: "â‚¹0", change: "- 0%", color: "#d1d5db" },
   ]
   const offersCustomerAffinity = [
     { title: "New customers", sub: "No orders in last 90 days", value: "0", change: "- 0%", color: "#111827" },
@@ -795,12 +799,12 @@ export default function ToHub() {
             hasMore = false
           }
         } catch (pageError) {
-          console.error(`Error fetching orders page ${page}:`, pageError)
+          debugError(`Error fetching orders page ${page}:`, pageError)
           hasMore = false
         }
       }
       
-      console.log(`📊 Fetched ${allOrders.length} orders for date range:`, {
+      debugLog(`ðŸ“Š Fetched ${allOrders.length} orders for date range:`, {
         startDate: startDateISO.toISOString(),
         endDate: endDateISO.toISOString(),
         rangeId
@@ -813,7 +817,7 @@ export default function ToHub() {
         // Calculate mealtime data
         const mealtimeData = calculateMealtimeData(allOrders, startDate, endDate)
         
-        console.log('📈 Chart data calculated:', {
+        debugLog('ðŸ“ˆ Chart data calculated:', {
           totalSales: newTotalSales,
           totalOrders: newTotalOrders,
           chartDataPoints: newChartData.length,
@@ -821,13 +825,13 @@ export default function ToHub() {
         })
         
         setChartData(newChartData)
-        setTotalSales(`₹ ${newTotalSales.toLocaleString("en-IN")}`)
+        setTotalSales(`â‚¹ ${newTotalSales.toLocaleString("en-IN")}`)
         setTotalOrders(newTotalOrders.toString())
         setMealtimeMetrics(mealtimeData)
         setLastUpdated(new Date())
       } else {
         // No orders found
-        console.log('⚠️ No orders found for the selected date range')
+        debugLog('âš ï¸ No orders found for the selected date range')
         setChartData([
           { hour: "12am", orders: 0, sales: 0 },
           { hour: "4am", orders: 0, sales: 0 },
@@ -837,7 +841,7 @@ export default function ToHub() {
           { hour: "8pm", orders: 0, sales: 0 },
           { hour: "12am", orders: 0, sales: 0 },
         ])
-        setTotalSales("₹ 0")
+        setTotalSales("â‚¹ 0")
         setTotalOrders("0")
         // Reset mealtime metrics to zero
         setMealtimeMetrics([
@@ -851,7 +855,7 @@ export default function ToHub() {
     } catch (error) {
       // Suppress 401 errors as they're handled by axios interceptor
       if (error.response?.status !== 401) {
-        console.error('Error fetching orders for chart:', error)
+        debugError('Error fetching orders for chart:', error)
       }
       // Keep existing data on error
     } finally {
@@ -911,19 +915,19 @@ export default function ToHub() {
     const r = getDateRanges()
     switch (selectedDateRange) {
       case "today":
-        return `Today • ${formatDateLong(r.today)}`
+        return `Today â€¢ ${formatDateLong(r.today)}`
       case "yesterday":
-        return `Yesterday • ${formatDateLong(r.yesterday)}`
+        return `Yesterday â€¢ ${formatDateLong(r.yesterday)}`
       case "thisWeek":
-        return `This week • ${formatDateShort(r.thisWeekStart)} - ${formatDateShort(r.thisWeekEnd)}`
+        return `This week â€¢ ${formatDateShort(r.thisWeekStart)} - ${formatDateShort(r.thisWeekEnd)}`
       case "lastWeek":
-        return `Last week • ${formatDateShort(r.lastWeekStart)} - ${formatDateShort(r.lastWeekEnd)}`
+        return `Last week â€¢ ${formatDateShort(r.lastWeekStart)} - ${formatDateShort(r.lastWeekEnd)}`
       case "thisMonth":
-        return `This month • ${formatDateShort(r.thisMonthStart)} - ${formatDateShort(r.thisMonthEnd)}`
+        return `This month â€¢ ${formatDateShort(r.thisMonthStart)} - ${formatDateShort(r.thisMonthEnd)}`
       case "lastMonth":
-        return `Last month • ${formatDateShort(r.lastMonthStart)} - ${formatDateShort(r.lastMonthEnd)}`
+        return `Last month â€¢ ${formatDateShort(r.lastMonthStart)} - ${formatDateShort(r.lastMonthEnd)}`
       case "last5days":
-        return `Last 5 days • ${formatDateShort(r.last5DaysStart)} - ${formatDateShort(r.last5DaysEnd)}`
+        return `Last 5 days â€¢ ${formatDateShort(r.last5DaysStart)} - ${formatDateShort(r.last5DaysEnd)}`
       case "custom":
         if (customDateRange.start && customDateRange.end) {
           return `${formatDateShort(customDateRange.start)} - ${formatDateShort(customDateRange.end)}`
@@ -961,9 +965,9 @@ export default function ToHub() {
       { title: "Lapsed customers", sub: "Last order 60 to 365 days ago", color: "#2563eb", value: "0", change: "- 0%" },
     ],
     spending: [
-      { title: "Value seekers", sub: "Orders under ₹300", color: "#111827", value: "2", change: "- 0%" },
-      { title: "Mid spenders", sub: "Orders ₹300 - ₹800", color: "#ef4444", value: "1", change: "- 0%" },
-      { title: "High spenders", sub: "Orders above ₹800", color: "#2563eb", value: "0", change: "- 0%" },
+      { title: "Value seekers", sub: "Orders under â‚¹300", color: "#111827", value: "2", change: "- 0%" },
+      { title: "Mid spenders", sub: "Orders â‚¹300 - â‚¹800", color: "#ef4444", value: "1", change: "- 0%" },
+      { title: "High spenders", sub: "Orders above â‚¹800", color: "#2563eb", value: "0", change: "- 0%" },
     ],
   }
   const ordersPlacedCustomerTypes = {
@@ -973,9 +977,9 @@ export default function ToHub() {
       { title: "Lapsed customers", sub: "Last order 60 to 365 days ago", color: "#2563eb", value: "0", change: "- 0%" },
     ],
     spending: [
-      { title: "Value seekers", sub: "Orders under ₹300", color: "#111827", value: "0", change: "- 0%" },
-      { title: "Mid spenders", sub: "Orders ₹300 - ₹800", color: "#ef4444", value: "0", change: "- 0%" },
-      { title: "High spenders", sub: "Orders above ₹800", color: "#2563eb", value: "0", change: "- 0%" },
+      { title: "Value seekers", sub: "Orders under â‚¹300", color: "#111827", value: "0", change: "- 0%" },
+      { title: "Mid spenders", sub: "Orders â‚¹300 - â‚¹800", color: "#ef4444", value: "0", change: "- 0%" },
+      { title: "High spenders", sub: "Orders above â‚¹800", color: "#2563eb", value: "0", change: "- 0%" },
     ],
   }
   const complaintsReasons = {
@@ -1014,15 +1018,15 @@ export default function ToHub() {
     { title: "Offer clicks", value: "0", change: "- 0%", sub: "Clicks on offers" },
     { title: "Offer redemptions", value: "0", change: "- 0%", sub: "Total redeemed" },
     { title: "Conversion rate", value: "0%", change: "- 0%", sub: "Redemptions / clicks" },
-    { title: "Cost per redemption", value: "₹0", change: "- 0%", sub: "Est. cost" },
+    { title: "Cost per redemption", value: "â‚¹0", change: "- 0%", sub: "Est. cost" },
   ]
   const offersCardSummary = {
-    grossSales: "₹0",
+    grossSales: "â‚¹0",
     grossPct: "0%",
     grossShare: "0% of total gross sales",
-    discountGiven: "₹0",
+    discountGiven: "â‚¹0",
     discountPct: "0%",
-    discountPerOrder: "₹0 discount per order",
+    discountPerOrder: "â‚¹0 discount per order",
     ordersFromOffers: "0",
     ordersPct: "0%",
     ordersShare: "0% of total orders",
@@ -1034,7 +1038,7 @@ export default function ToHub() {
     { title: "Ad impressions", value: "0", change: "- 0%", sub: "Served impressions" },
     { title: "Ad clicks", value: "0", change: "- 0%", sub: "Total clicks" },
     { title: "CTR", value: "0%", change: "- 0%", sub: "Click-through rate" },
-    { title: "Spend", value: "₹0", change: "- 0%", sub: "Total spend" },
+    { title: "Spend", value: "â‚¹0", change: "- 0%", sub: "Total spend" },
   ]
   const customersMetrics = [
     { title: "New customers", sub: "No orders in last 365 days", value: "0", change: "- 0%", color: "#111827" },
@@ -1221,9 +1225,9 @@ export default function ToHub() {
           </div>
 
           {[
-            { title: "Net sales", value: "₹0 • 0%", dataKey: "sales", color: "#f97316" },
-            { title: "Orders delivered", value: "0 • 0%", dataKey: "orders", color: "#f97316" },
-            { title: "Avg. order value", value: "₹0 • 0%", dataKey: "sales", color: "#f97316" },
+            { title: "Net sales", value: "â‚¹0 â€¢ 0%", dataKey: "sales", color: "#f97316" },
+            { title: "Orders delivered", value: "0 â€¢ 0%", dataKey: "orders", color: "#f97316" },
+            { title: "Avg. order value", value: "â‚¹0 â€¢ 0%", dataKey: "sales", color: "#f97316" },
           ].map((section, idx) => (
             <div key={section.title} className={idx < 2 ? "pb-3 border-b border-dashed border-gray-200 space-y-2" : "space-y-2"}>
               <div className="flex items-center justify-between text-sm font-semibold text-gray-900">
@@ -1554,9 +1558,9 @@ export default function ToHub() {
             </div>
 
             {[
-              { title: "Net sales", value: "₹0 • 0%", dataKey: "sales", color: "#f97316" },
-              { title: "Orders delivered", value: "0 • 0%", dataKey: "orders", color: "#f97316" },
-              { title: "Avg. order value", value: "₹0 • 0%", dataKey: "sales", color: "#f97316" },
+              { title: "Net sales", value: "â‚¹0 â€¢ 0%", dataKey: "sales", color: "#f97316" },
+              { title: "Orders delivered", value: "0 â€¢ 0%", dataKey: "orders", color: "#f97316" },
+              { title: "Avg. order value", value: "â‚¹0 â€¢ 0%", dataKey: "sales", color: "#f97316" },
             ].map((section, idx) => (
               <div key={section.title} className={idx < 2 ? "pb-3 border-b border-dashed border-gray-200 space-y-2" : "space-y-2"}>
                 <div className="flex items-center justify-between text-sm font-semibold text-gray-900">
@@ -1627,7 +1631,7 @@ export default function ToHub() {
             <div className="grid grid-cols-2 gap-4 text-sm font-semibold text-gray-900 text-center items-center">
               <div className="space-y-1 flex flex-col items-center">
                 <p className="text-xs text-gray-500">Net sales</p>
-                <p className="text-lg font-bold text-gray-900">{totalSales || "₹0"}</p>
+                <p className="text-lg font-bold text-gray-900">{totalSales || "â‚¹0"}</p>
                 <p className="text-xs text-gray-500">- 0%</p>
               </div>
               <div className="space-y-1 flex flex-col items-center">
@@ -1653,7 +1657,7 @@ export default function ToHub() {
                   <YAxis
                     yAxisId="left"
                     tick={{ fontSize: 10, fill: "#9ca3af" }}
-                    tickFormatter={(value) => `₹${value.toLocaleString("en-IN")}`}
+                    tickFormatter={(value) => `â‚¹${value.toLocaleString("en-IN")}`}
                     tickLine={false}
                     axisLine={{ stroke: "#e5e7eb" }}
                     allowDecimals={false}
@@ -1746,7 +1750,7 @@ export default function ToHub() {
             <div className="space-y-1">
               <p className="text-xs text-gray-500">AOV</p>
               <p className="text-lg font-bold text-gray-900">
-                ₹0 <span className="text-xs font-normal text-gray-500">- 0%</span>
+                â‚¹0 <span className="text-xs font-normal text-gray-500">- 0%</span>
               </p>
             </div>
 
@@ -1765,7 +1769,7 @@ export default function ToHub() {
                   />
                   <YAxis
                     tick={{ fontSize: 10, fill: "#9ca3af" }}
-                    tickFormatter={(value) => `₹${value.toLocaleString("en-IN")}`}
+                    tickFormatter={(value) => `â‚¹${value.toLocaleString("en-IN")}`}
                     tickLine={false}
                     axisLine={{ stroke: "#e5e7eb" }}
                     allowDecimals={false}
@@ -2029,3 +2033,4 @@ function MessageIcon(props) { return <BarChart3 {...props} /> }
 function LinkIcon(props) { return <TrendingUp {...props} /> }
 function SettingsIcon(props) { return <Wand2 {...props} /> }
 function GridIcon(props) { return <Users {...props} /> }
+

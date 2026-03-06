@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -18,6 +18,10 @@ import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 
 // Removed hardcoded suggested items - now fetching approved addons from backend
@@ -65,7 +69,7 @@ export default function Cart() {
   try {
     cartContext = useCart();
   } catch (error) {
-    console.error('❌ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
+    debugError('âŒ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
     // Return early with error message
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-[#0a0a0a]">
@@ -117,7 +121,7 @@ export default function Cart() {
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
-        console.error('Error sharing:', error);
+        debugError('Error sharing:', error);
         toast.error("Failed to share link");
       }
     }
@@ -150,7 +154,7 @@ export default function Cart() {
 
     orderSuccessAudioRef.current.currentTime = 0
     orderSuccessAudioRef.current.play().catch((error) => {
-      console.warn("Order success sound blocked by browser:", error?.message || error)
+      debugWarn("Order success sound blocked by browser:", error?.message || error)
     })
   }, [showOrderSuccess])
 
@@ -290,7 +294,7 @@ export default function Cart() {
           const cartRestaurantId = cart[0].restaurantId;
           const cartRestaurantName = cart[0].restaurant;
 
-          console.log("🔄 Fetching restaurant data by restaurantId from cart:", cartRestaurantId)
+          debugLog("ðŸ”„ Fetching restaurant data by restaurantId from cart:", cartRestaurantId)
           const response = await restaurantAPI.getRestaurantById(cartRestaurantId)
           const data = response?.data?.data?.restaurant || response?.data?.restaurant
 
@@ -311,7 +315,7 @@ export default function Cart() {
               fetchedRestaurantName?.toLowerCase().trim() === cartRestaurantName.toLowerCase().trim();
 
             if (!restaurantIdMatches) {
-              console.error('❌ CRITICAL: Fetched restaurant ID does not match cart restaurantId!', {
+              debugError('âŒ CRITICAL: Fetched restaurant ID does not match cart restaurantId!', {
                 cartRestaurantId: cartRestaurantId,
                 fetchedRestaurantId: fetchedRestaurantId,
                 fetched_id: data._id?.toString(),
@@ -325,14 +329,14 @@ export default function Cart() {
             }
 
             if (!restaurantNameMatches) {
-              console.warn('⚠️ WARNING: Restaurant name mismatch:', {
+              debugWarn('âš ï¸ WARNING: Restaurant name mismatch:', {
                 cartRestaurantName: cartRestaurantName,
                 fetchedRestaurantName: fetchedRestaurantName
               });
               // Still proceed but log warning
             }
 
-            console.log("✅ Restaurant data loaded from cart restaurantId:", {
+            debugLog("âœ… Restaurant data loaded from cart restaurantId:", {
               _id: data._id,
               restaurantId: data.restaurantId,
               name: data.name,
@@ -344,17 +348,17 @@ export default function Cart() {
             return
           }
         } catch (error) {
-          console.warn("⚠️ Failed to fetch by cart restaurantId, trying fallback...", error)
+          debugWarn("âš ï¸ Failed to fetch by cart restaurantId, trying fallback...", error)
         }
       }
 
       // Strategy 2: If no restaurantId in cart, search by restaurant name
       if (cart[0]?.restaurant && !restaurantData) {
         try {
-          console.log("🔍 Searching restaurant by name:", cart[0].restaurant)
+          debugLog("ðŸ” Searching restaurant by name:", cart[0].restaurant)
           const searchResponse = await restaurantAPI.getRestaurants({ limit: 100 })
           const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
-          console.log("📋 Fetched", restaurants.length, "restaurants for name search")
+          debugLog("ðŸ“‹ Fetched", restaurants.length, "restaurants for name search")
 
           // Try exact match first
           let matchingRestaurant = restaurants.find(r =>
@@ -363,7 +367,7 @@ export default function Cart() {
 
           // If no exact match, try partial match
           if (!matchingRestaurant) {
-            console.log("🔍 No exact match, trying partial match...")
+            debugLog("ðŸ” No exact match, trying partial match...")
             matchingRestaurant = restaurants.find(r =>
               r.name?.toLowerCase().includes(cart[0].restaurant?.toLowerCase().trim()) ||
               cart[0].restaurant?.toLowerCase().trim().includes(r.name?.toLowerCase())
@@ -376,7 +380,7 @@ export default function Cart() {
             const foundRestaurantName = matchingRestaurant.name?.toLowerCase().trim();
 
             if (cartRestaurantName && foundRestaurantName && cartRestaurantName !== foundRestaurantName) {
-              console.error("❌ CRITICAL: Restaurant name mismatch!", {
+              debugError("âŒ CRITICAL: Restaurant name mismatch!", {
                 cartRestaurantName: cart[0]?.restaurant,
                 foundRestaurantName: matchingRestaurant.name,
                 cartRestaurantId: cart[0]?.restaurantId,
@@ -387,7 +391,7 @@ export default function Cart() {
               return;
             }
 
-            console.log("✅ Found restaurant by name:", {
+            debugLog("âœ… Found restaurant by name:", {
               name: matchingRestaurant.name,
               _id: matchingRestaurant._id,
               restaurantId: matchingRestaurant.restaurantId,
@@ -398,13 +402,13 @@ export default function Cart() {
             setLoadingRestaurant(false)
             return
           } else {
-            console.warn("⚠️ Restaurant not found even by name search. Searched in", restaurants.length, "restaurants")
+            debugWarn("âš ï¸ Restaurant not found even by name search. Searched in", restaurants.length, "restaurants")
             if (restaurants.length > 0) {
-              console.log("📋 Available restaurant names:", restaurants.map(r => r.name).slice(0, 10))
+              debugLog("ðŸ“‹ Available restaurant names:", restaurants.map(r => r.name).slice(0, 10))
             }
           }
         } catch (searchError) {
-          console.warn("⚠️ Error searching restaurants by name:", searchError)
+          debugWarn("âš ï¸ Error searching restaurants by name:", searchError)
         }
       }
 
@@ -420,7 +424,7 @@ export default function Cart() {
   useEffect(() => {
     const fetchAddonsWithId = async (idToUse) => {
 
-      console.log("🔍 Addons fetch - Using ID:", {
+      debugLog("ðŸ” Addons fetch - Using ID:", {
         restaurantData: restaurantData ? {
           _id: restaurantData._id,
           restaurantId: restaurantData.restaurantId,
@@ -432,23 +436,23 @@ export default function Cart() {
 
       // Convert to string for validation
       const idString = String(idToUse)
-      console.log("🔍 Restaurant ID string:", idString, "Type:", typeof idString, "Length:", idString.length)
+      debugLog("ðŸ” Restaurant ID string:", idString, "Type:", typeof idString, "Length:", idString.length)
 
       // Validate ID format (should be ObjectId or restaurantId format)
       const isValidIdFormat = /^[a-zA-Z0-9\-_]+$/.test(idString) && idString.length >= 3
 
       if (!isValidIdFormat) {
-        console.warn("⚠️ Restaurant ID format invalid:", idString)
+        debugWarn("âš ï¸ Restaurant ID format invalid:", idString)
         setAddons([])
         return
       }
 
       try {
         setLoadingAddons(true)
-        console.log("🚀 Fetching addons for restaurant ID:", idString)
+        debugLog("ðŸš€ Fetching addons for restaurant ID:", idString)
         const response = await restaurantAPI.getAddonsByRestaurantId(idString)
-        console.log("✅ Addons API response received:", response?.data)
-        console.log("📦 Response structure:", {
+        debugLog("âœ… Addons API response received:", response?.data)
+        debugLog("ðŸ“¦ Response structure:", {
           success: response?.data?.success,
           data: response?.data?.data,
           addons: response?.data?.data?.addons,
@@ -456,19 +460,19 @@ export default function Cart() {
         })
 
         const data = response?.data?.data?.addons || response?.data?.addons || []
-        console.log("📊 Fetched addons count:", data.length)
-        console.log("📋 Fetched addons data:", JSON.stringify(data, null, 2))
+        debugLog("ðŸ“Š Fetched addons count:", data.length)
+        debugLog("ðŸ“‹ Fetched addons data:", JSON.stringify(data, null, 2))
 
         if (data.length === 0) {
-          console.warn("⚠️ No addons returned from API. Response:", response?.data)
+          debugWarn("âš ï¸ No addons returned from API. Response:", response?.data)
         } else {
-          console.log("✅ Successfully fetched", data.length, "addons:", data.map(a => a.name))
+          debugLog("âœ… Successfully fetched", data.length, "addons:", data.map(a => a.name))
         }
 
         setAddons(data)
       } catch (error) {
         // Log error for debugging
-        console.error("❌ Addons fetch error:", {
+        debugError("âŒ Addons fetch error:", {
           code: error.code,
           status: error.response?.status,
           message: error.message,
@@ -479,7 +483,7 @@ export default function Cart() {
         // Network errors (ERR_NETWORK) happen when backend is not running - this is OK for development
         // 404 errors mean restaurant might not have addons or restaurant not found - also OK
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error("Error fetching addons:", error)
+          debugError("Error fetching addons:", error)
         }
         // Continue with cart even if addons fetch fails
         setAddons([])
@@ -496,13 +500,13 @@ export default function Cart() {
 
       // Wait for restaurantData to be loaded (including fallback search)
       if (loadingRestaurant) {
-        console.log("⏳ Waiting for restaurantData to load (including fallback search)...")
+        debugLog("â³ Waiting for restaurantData to load (including fallback search)...")
         return
       }
 
       // Must have restaurantData to fetch addons
       if (!restaurantData) {
-        console.warn("⚠️ No restaurantData available for addons fetch")
+        debugWarn("âš ï¸ No restaurantData available for addons fetch")
         setAddons([])
         return
       }
@@ -510,12 +514,12 @@ export default function Cart() {
       // Use restaurantData ID (most reliable)
       const idToUse = restaurantData._id || restaurantData.restaurantId
       if (!idToUse) {
-        console.warn("⚠️ No valid restaurant ID in restaurantData")
+        debugWarn("âš ï¸ No valid restaurant ID in restaurantData")
         setAddons([])
         return
       }
 
-      console.log("✅ Using restaurantData ID for addons:", idToUse)
+      debugLog("âœ… Using restaurantData ID for addons:", idToUse)
       fetchAddonsWithId(idToUse)
     }
 
@@ -530,7 +534,7 @@ export default function Cart() {
         return
       }
 
-      console.log(`[CART-COUPONS] Fetching coupons for ${cart.length} items in cart`)
+      debugLog(`[CART-COUPONS] Fetching coupons for ${cart.length} items in cart`)
       setLoadingCoupons(true)
 
       const allCoupons = []
@@ -539,17 +543,17 @@ export default function Cart() {
       // Fetch coupons for each item in cart
       for (const cartItem of cart) {
         if (!cartItem.id) {
-          console.log(`[CART-COUPONS] Skipping item without id:`, cartItem)
+          debugLog(`[CART-COUPONS] Skipping item without id:`, cartItem)
           continue
         }
 
         try {
-          console.log(`[CART-COUPONS] Fetching coupons for itemId: ${cartItem.id}, name: ${cartItem.name}`)
+          debugLog(`[CART-COUPONS] Fetching coupons for itemId: ${cartItem.id}, name: ${cartItem.name}`)
           const response = await restaurantAPI.getCouponsByItemIdPublic(restaurantId, cartItem.id)
 
           if (response?.data?.success && response?.data?.data?.coupons) {
             const coupons = response.data.data.coupons
-            console.log(`[CART-COUPONS] Found ${coupons.length} coupons for item ${cartItem.id}`)
+            debugLog(`[CART-COUPONS] Found ${coupons.length} coupons for item ${cartItem.id}`)
 
             // Add coupons, avoiding duplicates
             coupons.forEach(coupon => {
@@ -562,11 +566,11 @@ export default function Cart() {
                   discountPercentage: coupon.discountPercentage,
                   discountDisplay: coupon.discountType === "percentage"
                     ? `${coupon.discountPercentage}% OFF`
-                    : `₹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} OFF`,
+                    : `â‚¹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} OFF`,
                   minOrder: coupon.minOrderValue || 0,
                   description: coupon.discountType === "percentage"
                     ? `${coupon.discountPercentage}% OFF with '${coupon.couponCode}'`
-                    : `Save ₹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} with '${coupon.couponCode}'`,
+                    : `Save â‚¹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} with '${coupon.couponCode}'`,
                   originalPrice: coupon.originalPrice,
                   discountedPrice: coupon.discountedPrice,
                   customerGroup: coupon.customerGroup || "all",
@@ -578,11 +582,11 @@ export default function Cart() {
             })
           }
         } catch (error) {
-          console.error(`[CART-COUPONS] Error fetching coupons for item ${cartItem.id}:`, error)
+          debugError(`[CART-COUPONS] Error fetching coupons for item ${cartItem.id}:`, error)
         }
       }
 
-      console.log(`[CART-COUPONS] Total unique coupons found: ${allCoupons.length}`, allCoupons)
+      debugLog(`[CART-COUPONS] Total unique coupons found: ${allCoupons.length}`, allCoupons)
       setAvailableCoupons(allCoupons)
       setLoadingCoupons(false)
     }
@@ -632,7 +636,7 @@ export default function Cart() {
       } catch (error) {
         // Network errors or 404 errors - silently handle, fallback to frontend calculation
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error("Error calculating pricing:", error)
+          debugError("Error calculating pricing:", error)
         }
         // Fallback to frontend calculation if backend fails
         setPricing(null)
@@ -654,7 +658,7 @@ export default function Cart() {
           setWalletBalance(response.data.data.wallet.balance || 0)
         }
       } catch (error) {
-        console.error("Error fetching wallet balance:", error)
+        debugError("Error fetching wallet balance:", error)
         setWalletBalance(0)
       } finally {
         setIsLoadingWallet(false)
@@ -673,7 +677,7 @@ export default function Cart() {
           setUserOrderCount(totalOrders)
         }
       } catch (error) {
-        console.error("Error fetching user order count:", error)
+        debugError("Error fetching user order count:", error)
         setUserOrderCount(0)
       }
     }
@@ -696,7 +700,7 @@ export default function Cart() {
           })
         }
       } catch (error) {
-        console.error('Error fetching fee settings:', error)
+        debugError('Error fetching fee settings:', error)
         // Keep default values on error
       }
     }
@@ -753,7 +757,7 @@ export default function Cart() {
     deliveryFeeBreakdown?.source === "distance" &&
     Number.isFinite(Number(deliveryFeeBreakdown?.distanceKm))
   const deliveryFeeBreakdownText = hasDistanceDeliveryBreakdown
-    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ₹${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km × ₹${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
+    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: â‚¹${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km Ã— â‚¹${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
     : null
   const platformFee = pricing?.platformFee || feeSettings.platformFee
   const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
@@ -779,7 +783,7 @@ export default function Cart() {
 
       await handleSelectSavedAddress(address)
     } catch (error) {
-      console.error(`Error selecting ${label} address:`, error)
+      debugError(`Error selecting ${label} address:`, error)
       toast.error(`Failed to select ${label} address. Please try again.`)
     }
   }
@@ -832,7 +836,7 @@ export default function Cart() {
 
       toast.success(`${address.label || "Saved"} address selected!`)
     } catch (error) {
-      console.error("Error selecting saved address:", error)
+      debugError("Error selecting saved address:", error)
       toast.error("Failed to select address. Please try again.")
     }
   }
@@ -874,7 +878,7 @@ export default function Cart() {
             setPricing(response.data.data.pricing)
           }
         } catch (error) {
-          console.error("Error recalculating pricing:", error)
+          debugError("Error recalculating pricing:", error)
         }
       }
     }
@@ -946,7 +950,7 @@ export default function Cart() {
       setShowCoupons(false)
       toast.success("Coupon applied")
     } catch (error) {
-      console.error("Error applying coupon code:", error)
+      debugError("Error applying coupon code:", error)
       toast.error("Failed to apply coupon")
     }
   }
@@ -982,7 +986,7 @@ export default function Cart() {
           setPricing(response.data.data.pricing)
         }
       } catch (error) {
-        console.error("Error recalculating pricing:", error)
+        debugError("Error recalculating pricing:", error)
       }
     }
   }
@@ -1005,10 +1009,10 @@ export default function Cart() {
     // Use API_BASE_URL from config (supports both dev and production)
 
     try {
-      console.log("🛒 Starting order placement process...")
-      console.log("📦 Cart items:", cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })))
-      console.log("💰 Applied coupon:", appliedCoupon?.code || "None")
-      console.log("📍 Delivery address:", defaultAddress?.label || defaultAddress?.city)
+      debugLog("ðŸ›’ Starting order placement process...")
+      debugLog("ðŸ“¦ Cart items:", cart.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price })))
+      debugLog("ðŸ’° Applied coupon:", appliedCoupon?.code || "None")
+      debugLog("ðŸ“ Delivery address:", defaultAddress?.label || defaultAddress?.city)
 
       // Ensure couponCode is included in pricing
       const orderPricing = pricing || {
@@ -1038,13 +1042,13 @@ export default function Cart() {
         isVeg: item.isVeg !== false
       }))
 
-      console.log("📋 Order items to send:", orderItems)
-      console.log("💵 Order pricing:", orderPricing)
+      debugLog("ðŸ“‹ Order items to send:", orderItems)
+      debugLog("ðŸ’µ Order pricing:", orderPricing)
 
       // Check API base URL before making request (for debugging)
       const fullUrl = `${API_BASE_URL}${API_ENDPOINTS.ORDER.CREATE}`;
-      console.log("🌐 Making request to:", fullUrl)
-      console.log("🔑 Authentication token present:", !!localStorage.getItem('accessToken') || !!localStorage.getItem('user_accessToken'))
+      debugLog("ðŸŒ Making request to:", fullUrl)
+      debugLog("ðŸ”‘ Authentication token present:", !!localStorage.getItem('accessToken') || !!localStorage.getItem('user_accessToken'))
 
       // CRITICAL: Validate restaurant ID before placing order
       // Ensure we're using the correct restaurant from restaurantData (most reliable)
@@ -1052,8 +1056,8 @@ export default function Cart() {
       const finalRestaurantName = restaurantData?.name || null;
 
       if (!finalRestaurantId) {
-        console.error('❌ CRITICAL: Cannot place order - Restaurant ID is missing!');
-        console.error('📋 Debug info:', {
+        debugError('âŒ CRITICAL: Cannot place order - Restaurant ID is missing!');
+        debugError('ðŸ“‹ Debug info:', {
           restaurantData: restaurantData ? {
             _id: restaurantData._id,
             restaurantId: restaurantData.restaurantId,
@@ -1092,7 +1096,7 @@ export default function Cart() {
       // Note: If restaurant names match, allow even if IDs differ (same restaurant, different ID format)
       if (uniqueRestaurantNames.length > 1) {
         // Different restaurant names = definitely different restaurants
-        console.error('❌ CRITICAL ERROR: Cart contains items from multiple restaurants!', {
+        debugError('âŒ CRITICAL ERROR: Cart contains items from multiple restaurants!', {
           restaurantIds: uniqueRestaurantIds,
           restaurantNames: uniqueRestaurantNames,
           cartItems: cart.map(item => ({
@@ -1105,7 +1109,7 @@ export default function Cart() {
 
         // Automatically clean cart to keep items from the restaurant matching restaurantData
         if (finalRestaurantId && finalRestaurantName) {
-          console.log('🧹 Auto-cleaning cart to keep items from:', finalRestaurantName);
+          debugLog('ðŸ§¹ Auto-cleaning cart to keep items from:', finalRestaurantName);
           cleanCartForRestaurant(finalRestaurantId, finalRestaurantName);
           toast.error('Cart contained items from different restaurants. Items from other restaurants have been removed.');
         } else {
@@ -1113,7 +1117,7 @@ export default function Cart() {
           const firstRestaurantId = cart[0]?.restaurantId;
           const firstRestaurantName = cart[0]?.restaurant;
           if (firstRestaurantId && firstRestaurantName) {
-            console.log('🧹 Auto-cleaning cart to keep items from first restaurant:', firstRestaurantName);
+            debugLog('ðŸ§¹ Auto-cleaning cart to keep items from first restaurant:', firstRestaurantName);
             cleanCartForRestaurant(firstRestaurantId, firstRestaurantName);
             toast.error('Cart contained items from different restaurants. Items from other restaurants have been removed.');
           } else {
@@ -1129,7 +1133,7 @@ export default function Cart() {
       // But log a warning in development
       if (uniqueRestaurantIds.length > 1 && uniqueRestaurantNames.length === 1) {
         if (process.env.NODE_ENV === 'development') {
-          console.warn('⚠️ Cart items have different restaurant IDs but same name. This is OK if IDs are in different formats.', {
+          debugWarn('âš ï¸ Cart items have different restaurant IDs but same name. This is OK if IDs are in different formats.', {
             restaurantIds: uniqueRestaurantIds,
             restaurantName: uniqueRestaurantNames[0]
           });
@@ -1147,7 +1151,7 @@ export default function Cart() {
           cartRestaurantId === restaurantData?.restaurantId;
 
         if (!restaurantIdMatches) {
-          console.error('❌ CRITICAL ERROR: Cart restaurantId does not match restaurantData!', {
+          debugError('âŒ CRITICAL ERROR: Cart restaurantId does not match restaurantData!', {
             cartRestaurantId: cartRestaurantId,
             finalRestaurantId: finalRestaurantId,
             restaurantDataId: restaurantData?._id?.toString(),
@@ -1165,7 +1169,7 @@ export default function Cart() {
       if (cartRestaurantNames.length > 0 && finalRestaurantName) {
         const cartRestaurantName = cartRestaurantNames[0];
         if (cartRestaurantName.toLowerCase().trim() !== finalRestaurantName.toLowerCase().trim()) {
-          console.error('❌ CRITICAL ERROR: Restaurant name mismatch!', {
+          debugError('âŒ CRITICAL ERROR: Restaurant name mismatch!', {
             cartRestaurantName: cartRestaurantName,
             finalRestaurantName: finalRestaurantName
           });
@@ -1176,7 +1180,7 @@ export default function Cart() {
       }
 
       // Log order details for debugging
-      console.log('✅ Order validation passed - Placing order with restaurant:', {
+      debugLog('âœ… Order validation passed - Placing order with restaurant:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         restaurantDataId: restaurantData?._id,
@@ -1191,7 +1195,7 @@ export default function Cart() {
       if (cartRestaurantId && cartRestaurantId !== finalRestaurantId &&
         cartRestaurantId !== restaurantData?._id?.toString() &&
         cartRestaurantId !== restaurantData?.restaurantId) {
-        console.error('❌ CRITICAL: Final validation failed - restaurantId mismatch!', {
+        debugError('âŒ CRITICAL: Final validation failed - restaurantId mismatch!', {
           cartRestaurantId: cartRestaurantId,
           finalRestaurantId: finalRestaurantId,
           restaurantDataId: restaurantData?._id?.toString(),
@@ -1217,7 +1221,7 @@ export default function Cart() {
         zoneId: zoneId // CRITICAL: Pass zoneId for strict zone validation
       };
       // Log final order details (including paymentMethod for COD debugging)
-      console.log('📤 FINAL: Sending order to backend with:', {
+      debugLog('ðŸ“¤ FINAL: Sending order to backend with:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         itemCount: orderItems.length,
@@ -1227,7 +1231,7 @@ export default function Cart() {
 
       // Check wallet balance if wallet payment selected
       if (selectedPaymentMethod === "wallet" && walletBalance < total) {
-        toast.error(`Insufficient wallet balance. Required: ₹${total.toFixed(0)}, Available: ₹${walletBalance.toFixed(0)}`)
+        toast.error(`Insufficient wallet balance. Required: â‚¹${total.toFixed(0)}, Available: â‚¹${walletBalance.toFixed(0)}`)
         setIsPlacingOrder(false)
         return
       }
@@ -1235,7 +1239,7 @@ export default function Cart() {
       // Create order in backend
       const orderResponse = await orderAPI.createOrder(orderPayload)
 
-      console.log("✅ Order created successfully:", orderResponse.data)
+      debugLog("âœ… Order created successfully:", orderResponse.data)
 
       const { order, razorpay } = orderResponse.data.data
 
@@ -1263,17 +1267,17 @@ export default function Cart() {
             setWalletBalance(walletResponse.data.data.wallet.balance || 0)
           }
         } catch (error) {
-          console.error("Error refreshing wallet balance:", error)
+          debugError("Error refreshing wallet balance:", error)
         }
         return
       }
 
       if (!razorpay || !razorpay.orderId || !razorpay.key) {
-        console.error("❌ Razorpay initialization failed:", { razorpay, order })
+        debugError("âŒ Razorpay initialization failed:", { razorpay, order })
         throw new Error(razorpay ? "Razorpay payment gateway is not configured. Please contact support." : "Failed to initialize payment")
       }
 
-      console.log("💳 Razorpay order created:", {
+      debugLog("ðŸ’³ Razorpay order created:", {
         orderId: razorpay.orderId,
         amount: razorpay.amount,
         currency: razorpay.currency,
@@ -1289,7 +1293,7 @@ export default function Cart() {
       // Format phone number (remove non-digits, take last 10 digits)
       const formattedPhone = userPhone.replace(/\D/g, "").slice(-10)
 
-      console.log("👤 User info for payment:", {
+      debugLog("ðŸ‘¤ User info for payment:", {
         name: userName,
         email: userEmail,
         phone: formattedPhone
@@ -1305,7 +1309,7 @@ export default function Cart() {
         currency: razorpay.currency || 'INR',
         order_id: razorpay.orderId,
         name: companyName,
-        description: `Order ${order.orderId} - ₹${(razorpay.amount / 100).toFixed(2)}`,
+        description: `Order ${order.orderId} - â‚¹${(razorpay.amount / 100).toFixed(2)}`,
         prefill: {
           name: userName,
           email: userEmail,
@@ -1318,7 +1322,7 @@ export default function Cart() {
         },
         handler: async (response) => {
           try {
-            console.log("✅ Payment successful, verifying...", {
+            debugLog("âœ… Payment successful, verifying...", {
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id
             })
@@ -1331,11 +1335,11 @@ export default function Cart() {
               razorpaySignature: response.razorpay_signature
             })
 
-            console.log("✅ Payment verification response:", verifyResponse.data)
+            debugLog("âœ… Payment verification response:", verifyResponse.data)
 
             if (verifyResponse.data.success) {
               // Payment successful
-              console.log("🎉 Order placed successfully:", {
+              debugLog("ðŸŽ‰ Order placed successfully:", {
                 orderId: order.orderId,
                 paymentId: verifyResponse.data.data?.payment?.paymentId
               })
@@ -1347,14 +1351,14 @@ export default function Cart() {
               throw new Error(verifyResponse.data.message || "Payment verification failed")
             }
           } catch (error) {
-            console.error("❌ Payment verification error:", error)
+            debugError("âŒ Payment verification error:", error)
             const errorMessage = error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
             alert(errorMessage)
             setIsPlacingOrder(false)
           }
         },
         onError: (error) => {
-          console.error("❌ Razorpay payment error:", error)
+          debugError("âŒ Razorpay payment error:", error)
           // Don't show alert for user cancellation
           if (error?.code !== 'PAYMENT_CANCELLED' && error?.message !== 'PAYMENT_CANCELLED') {
             const errorMessage = error?.description || error?.message || "Payment failed. Please try again."
@@ -1363,12 +1367,12 @@ export default function Cart() {
           setIsPlacingOrder(false)
         },
         onClose: () => {
-          console.log("⚠️ Payment modal closed by user")
+          debugLog("âš ï¸ Payment modal closed by user")
           setIsPlacingOrder(false)
         }
       })
     } catch (error) {
-      console.error("❌ Order creation error:", error)
+      debugError("âŒ Order creation error:", error)
 
       let errorMessage = "Failed to create order. Please try again."
 
@@ -1384,7 +1388,7 @@ export default function Cart() {
           `If backend is not running, start it with:\n` +
           `cd appzetofood/backend && npm start`
 
-        console.error("🔴 Network Error Details:", {
+        debugError("ðŸ”´ Network Error Details:", {
           code: error.code,
           message: error.message,
           config: {
@@ -1402,17 +1406,17 @@ export default function Cart() {
           fetch(backendUrl + '/health', { method: 'GET', signal: AbortSignal.timeout(5000) })
             .then(response => {
               if (response.ok) {
-                console.log("✅ Backend health check passed - server is running")
+                debugLog("âœ… Backend health check passed - server is running")
               } else {
-                console.warn("⚠️ Backend health check returned:", response.status)
+                debugWarn("âš ï¸ Backend health check returned:", response.status)
               }
             })
             .catch(fetchError => {
-              console.error("❌ Backend health check failed:", fetchError.message)
-              console.error("💡 Make sure backend server is running at:", backendUrl)
+              debugError("âŒ Backend health check failed:", fetchError.message)
+              debugError("ðŸ’¡ Make sure backend server is running at:", backendUrl)
             })
         } catch (fetchTestError) {
-          console.error("❌ Could not test backend connectivity:", fetchTestError.message)
+          debugError("âŒ Could not test backend connectivity:", fetchTestError.message)
         }
       }
       // Handle timeout errors
@@ -1506,7 +1510,7 @@ export default function Cart() {
           <div className="bg-blue-100 dark:bg-blue-900/20 px-4 md:px-6 py-2 md:py-3 flex-shrink-0">
             <div className="max-w-7xl mx-auto">
               <p className="text-sm md:text-base font-medium text-blue-800 dark:text-blue-200">
-                🎉 You saved ₹{savings} on this order
+                ðŸŽ‰ You saved â‚¹{savings} on this order
               </p>
             </div>
           </div>
@@ -1551,7 +1555,7 @@ export default function Cart() {
                         </div>
 
                         <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200 min-w-[50px] md:min-w-[70px] text-right">
-                          ₹{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
+                          â‚¹{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
                         </p>
                       </div>
                     </div>
@@ -1604,7 +1608,7 @@ export default function Cart() {
                 <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
                   <div className="flex items-center gap-2 md:gap-3 mb-3 md:mb-4">
                     <div className="w-6 h-6 md:w-8 md:h-8 bg-gray-100 dark:bg-gray-800 rounded flex items-center justify-center">
-                      <span className="text-xs md:text-base">🍽️</span>
+                      <span className="text-xs md:text-base">ðŸ½ï¸</span>
                     </div>
                     <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">Complete your meal with</span>
                   </div>
@@ -1644,7 +1648,7 @@ export default function Cart() {
                                 const cartRestaurantName = cart[0]?.restaurant || restaurantName;
 
                                 if (!cartRestaurantId || !cartRestaurantName) {
-                                  console.error('❌ Cannot add addon: Missing restaurant information', {
+                                  debugError('âŒ Cannot add addon: Missing restaurant information', {
                                     cartRestaurantId,
                                     cartRestaurantName,
                                     restaurantId,
@@ -1675,7 +1679,7 @@ export default function Cart() {
                           {addon.description && (
                             <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{addon.description}</p>
                           )}
-                          <p className="text-xs md:text-sm text-gray-800 dark:text-gray-200 font-semibold mt-0.5">₹{addon.price}</p>
+                          <p className="text-xs md:text-sm text-gray-800 dark:text-gray-200 font-semibold mt-0.5">â‚¹{addon.price}</p>
                         </div>
                       ))}
                     </div>
@@ -1691,7 +1695,7 @@ export default function Cart() {
                       <Tag className="h-4 w-4 md:h-5 md:w-5 text-[#EB590E] dark:text-[#EB590E]" />
                       <div>
                         <p className="text-sm md:text-base font-medium text-orange-800 dark:text-orange-200">'{appliedCoupon.code}' applied</p>
-                        <p className="text-xs md:text-sm text-[#EB590E] dark:text-[#EB590E]">You saved ₹{discount}</p>
+                        <p className="text-xs md:text-sm text-[#EB590E] dark:text-[#EB590E]">You saved â‚¹{discount}</p>
                       </div>
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium">Remove</button>
@@ -1725,14 +1729,14 @@ export default function Cart() {
                         <Percent className="h-4 w-4 md:h-5 md:w-5 text-gray-600 dark:text-gray-400" />
                         <div>
                           <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200">
-                            {availableCoupons[0].discountDisplay || `Save ₹${availableCoupons[0].discount}`} with '{availableCoupons[0].code}'
+                            {availableCoupons[0].discountDisplay || `Save â‚¹${availableCoupons[0].discount}`} with '{availableCoupons[0].code}'
                           </p>
                           {availableCoupons[0].customerGroup === "new" && (
                             <p className="text-[11px] md:text-xs text-orange-600 dark:text-orange-400">First-time users only</p>
                           )}
                           {availableCoupons.length > 1 && (
                             <button onClick={() => setShowCoupons(!showCoupons)} className="text-xs md:text-sm text-blue-600 dark:text-blue-400 font-medium">
-                              View all coupons →
+                              View all coupons â†’
                             </button>
                           )}
                         </div>
@@ -1747,7 +1751,7 @@ export default function Cart() {
                         {availableCoupons[0].customerGroup === "new" && userOrderCount > 0
                           ? "Not Eligible"
                           : subtotal < availableCoupons[0].minOrder
-                            ? `Min ₹${availableCoupons[0].minOrder}`
+                            ? `Min â‚¹${availableCoupons[0].minOrder}`
                             : 'APPLY'}
                       </Button>
                     </div>
@@ -1781,7 +1785,7 @@ export default function Cart() {
                           {coupon.customerGroup === "new" && userOrderCount > 0
                             ? "Not Eligible"
                             : subtotal < coupon.minOrder
-                              ? `Min ₹${coupon.minOrder}`
+                              ? `Min â‚¹${coupon.minOrder}`
                               : 'APPLY'}
                         </Button>
                       </div>
@@ -1957,10 +1961,10 @@ export default function Cart() {
                     <div className="text-left">
                       <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                         <span className="text-sm md:text-base text-gray-800 dark:text-gray-200">Total Bill</span>
-                        <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">₹{totalBeforeDiscount.toFixed(0)}</span>
-                        <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">₹{total.toFixed(0)}</span>
+                        <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">â‚¹{totalBeforeDiscount.toFixed(0)}</span>
+                        <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">â‚¹{total.toFixed(0)}</span>
                         {savings > 0 && (
-                          <span className="text-xs md:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 md:px-2 py-0.5 rounded font-medium">You saved ₹{savings}</span>
+                          <span className="text-xs md:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 md:px-2 py-0.5 rounded font-medium">You saved â‚¹{savings}</span>
                         )}
                       </div>
                       <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Incl. taxes and charges</p>
@@ -1973,12 +1977,12 @@ export default function Cart() {
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700 space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{subtotal.toFixed(0)}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{subtotal.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `â‚¹${deliveryFee}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -1988,21 +1992,21 @@ export default function Cart() {
                     )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{platformFee}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{platformFee}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST and Restaurant Charges</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{gstCharges}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{gstCharges}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
                         <span>Coupon Discount</span>
-                        <span>-₹{discount}</span>
+                        <span>-â‚¹{discount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-sm md:text-base font-semibold pt-2 md:pt-3 border-t dark:border-gray-700">
                       <span>To Pay</span>
-                      <span>₹{total.toFixed(0)}</span>
+                      <span>â‚¹{total.toFixed(0)}</span>
                     </div>
                   </div>
                 )}
@@ -2019,12 +2023,12 @@ export default function Cart() {
                   <div className="space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{subtotal.toFixed(0)}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{subtotal.toFixed(0)}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
                       <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `₹${deliveryFee}`}
+                        {deliveryFee === 0 ? "FREE" : `â‚¹${deliveryFee}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -2034,21 +2038,21 @@ export default function Cart() {
                     )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{platformFee}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{platformFee}</span>
                     </div>
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST</span>
-                      <span className="text-gray-800 dark:text-gray-200">₹{gstCharges}</span>
+                      <span className="text-gray-800 dark:text-gray-200">â‚¹{gstCharges}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
                         <span>Discount</span>
-                        <span>-₹{discount}</span>
+                        <span>-â‚¹{discount}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-base md:text-lg font-bold pt-3 md:pt-4 pb-6 border-t dark:border-gray-700">
                       <span>Total</span>
-                      <span className="text-green-600 dark:text-green-400">₹{total.toFixed(0)}</span>
+                      <span className="text-green-600 dark:text-green-400">â‚¹{total.toFixed(0)}</span>
                     </div>
                   </div>
                 </div>
@@ -2098,7 +2102,7 @@ export default function Cart() {
               >
                 {(selectedPaymentMethod === "razorpay" || selectedPaymentMethod === "wallet") && (
                   <div className="text-left mr-3 md:mr-4">
-                    <p className="text-sm md:text-base opacity-90">₹{total.toFixed(0)}</p>
+                    <p className="text-sm md:text-base opacity-90">â‚¹{total.toFixed(0)}</p>
                     <p className="text-xs md:text-sm opacity-75">TOTAL</p>
                   </div>
                 )}
@@ -2139,9 +2143,9 @@ export default function Cart() {
                 <div>
                   <p className="text-lg font-semibold text-gray-900">
                     {selectedPaymentMethod === "razorpay"
-                      ? `Pay ₹${total.toFixed(2)} online (Razorpay)`
+                      ? `Pay â‚¹${total.toFixed(2)} online (Razorpay)`
                       : selectedPaymentMethod === "wallet"
-                        ? `Pay ₹${total.toFixed(2)} from Wallet`
+                        ? `Pay â‚¹${total.toFixed(2)} from Wallet`
                         : `Pay on delivery (COD)`}
                   </p>
                 </div>
@@ -2504,4 +2508,5 @@ export default function Cart() {
     </div>
   )
 }
+
 

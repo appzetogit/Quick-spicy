@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
+﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import io from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/api/config';
 import bikeLogo from '@/assets/bikelogo.png';
@@ -6,6 +6,10 @@ import { RouteBasedAnimationController } from '@/module/user/utils/routeBasedAni
 import { decodePolyline, extractPolylineFromDirections, findNearestPointOnPolyline } from '@/module/delivery/utils/liveTrackingPolyline';
 import { subscribeOrderTracking } from '@/lib/realtimeTracking';
 import './DeliveryTrackingMap.css';
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Helper function to calculate Haversine distance
 function calculateHaversineDistance(lat1, lng1, lat2, lng2) {
@@ -161,7 +165,7 @@ const DeliveryTrackingMap = ({
 
     // Validate coordinates before making API call
     if (!start || !end) {
-      console.warn('Invalid coordinates: start or end is missing');
+      debugWarn('Invalid coordinates: start or end is missing');
       return;
     }
 
@@ -172,20 +176,20 @@ const DeliveryTrackingMap = ({
 
     // Check if coordinates are valid numbers
     if (isNaN(startLat) || isNaN(startLng) || isNaN(endLat) || isNaN(endLng)) {
-      console.warn('Invalid coordinates: coordinates are not valid numbers', { start, end });
+      debugWarn('Invalid coordinates: coordinates are not valid numbers', { start, end });
       return;
     }
 
     // Check if coordinates are within valid range
     if (startLat < -90 || startLat > 90 || endLat < -90 || endLat > 90 ||
       startLng < -180 || startLng > 180 || endLng < -180 || endLng > 180) {
-      console.warn('Invalid coordinates: coordinates are out of valid range', { start, end });
+      debugWarn('Invalid coordinates: coordinates are out of valid range', { start, end });
       return;
     }
 
     // Check if start and end are the same (will cause API error)
     if (startLat === endLat && startLng === endLng) {
-      console.warn('Invalid route: start and end coordinates are the same');
+      debugWarn('Invalid route: start and end coordinates are the same');
       return;
     }
 
@@ -198,7 +202,7 @@ const DeliveryTrackingMap = ({
     const cached = directionsCacheRef.current.get(cacheKey);
     const now = Date.now();
       if (cached && (now - cached.timestamp) < 900000) { // 15 minutes cache
-      console.log('✅ Using cached route');
+      debugLog('âœ… Using cached route');
       // Use cached result
       if (cached.result && cached.result.routes && cached.result.routes[0]) {
         directionsRendererRef.current.setOptions({
@@ -262,7 +266,7 @@ const DeliveryTrackingMap = ({
       Math.abs(lastRequest.end.lat - endLat) < 0.0001 &&
       Math.abs(lastRequest.end.lng - endLng) < 0.0001 &&
       (now - lastRequest.timestamp) < 60000) {
-      console.log('⏭️ Skipping duplicate route request (throttled)');
+      debugLog('â­ï¸ Skipping duplicate route request (throttled)');
       return;
     }
 
@@ -309,7 +313,7 @@ const DeliveryTrackingMap = ({
           const polylinePoints = extractPolylineFromDirections(result);
           if (polylinePoints && polylinePoints.length > 0) {
             routePolylinePointsRef.current = polylinePoints;
-            console.log('✅ Extracted', polylinePoints.length, 'polyline points for route-based animation');
+            debugLog('âœ… Extracted', polylinePoints.length, 'polyline points for route-based animation');
 
             // Initialize animation controller if bike marker exists
             if (bikeMarkerRef.current && !animationControllerRef.current) {
@@ -317,7 +321,7 @@ const DeliveryTrackingMap = ({
                 bikeMarkerRef.current,
                 polylinePoints
               );
-              console.log('✅ Route-based animation controller initialized');
+              debugLog('âœ… Route-based animation controller initialized');
             }
           }
 
@@ -354,12 +358,12 @@ const DeliveryTrackingMap = ({
         } else {
           // Silently handle errors - don't log UNKNOWN_ERROR as it's often a temporary API issue
           if (status !== 'UNKNOWN_ERROR') {
-            console.warn('Directions request failed:', status);
+            debugWarn('Directions request failed:', status);
           }
         }
       });
     } catch (error) {
-      console.warn('Error calling Directions API:', error);
+      debugWarn('Error calling Directions API:', error);
     }
   }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, preserveViewportState, restoreViewportState]);
 
@@ -504,7 +508,7 @@ const DeliveryTrackingMap = ({
       (currentPhase === 'at_pickup') ||
       (currentPhase === 'en_route_to_delivery'));
 
-    console.log('🔍 hasDeliveryPartner check:', {
+    debugLog('ðŸ” hasDeliveryPartner check:', {
       hasPartner,
       hasAccepted,
       deliveryPartnerId: order?.deliveryPartnerId,
@@ -559,19 +563,19 @@ const DeliveryTrackingMap = ({
   // Move bike smoothly with rotation
   const moveBikeSmoothly = useCallback((lat, lng, heading) => {
     if (!mapInstance.current || !isMapLoaded) {
-      console.log('⏳ Map not loaded yet, storing location for later:', { lat, lng, heading });
+      debugLog('â³ Map not loaded yet, storing location for later:', { lat, lng, heading });
       setCurrentLocation({ lat, lng, heading });
       return;
     }
 
     try {
       if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
-        console.error('❌ Invalid coordinates:', { lat, lng });
+        debugError('âŒ Invalid coordinates:', { lat, lng });
         return;
       }
 
       if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-        console.error('❌ Coordinates out of range:', { lat, lng });
+        debugError('âŒ Coordinates out of range:', { lat, lng });
         return;
       }
 
@@ -579,9 +583,9 @@ const DeliveryTrackingMap = ({
 
       if (!bikeMarkerRef.current) {
         // Create bike marker with the same icon as delivery boy's map
-        console.log('🚴🚴🚴 Creating bike marker with logo path:', bikeLogo);
-        console.log('🚴 Map instance:', !!mapInstance.current);
-        console.log('🚴 Position:', { lat, lng, heading });
+        debugLog('ðŸš´ðŸš´ðŸš´ Creating bike marker with logo path:', bikeLogo);
+        debugLog('ðŸš´ Map instance:', !!mapInstance.current);
+        debugLog('ðŸš´ Position:', { lat, lng, heading });
 
         // Create bike icon configuration
         let bikeIcon = {
@@ -594,10 +598,10 @@ const DeliveryTrackingMap = ({
           // Test if image loads (but don't wait for it - create marker immediately)
           const img = new Image();
           img.onload = () => {
-            console.log('✅ Bike logo image loaded successfully:', bikeLogo);
+            debugLog('âœ… Bike logo image loaded successfully:', bikeLogo);
           };
           img.onerror = () => {
-            console.error('❌ Bike logo image failed to load:', bikeLogo);
+            debugError('âŒ Bike logo image failed to load:', bikeLogo);
             // If image fails, update marker with fallback icon
             if (bikeMarkerRef.current) {
               bikeMarkerRef.current.setIcon({
@@ -634,7 +638,7 @@ const DeliveryTrackingMap = ({
               bikeMarkerRef.current,
               routePolylinePointsRef.current
             );
-            console.log('✅ Route-based animation controller initialized with bike marker');
+            debugLog('âœ… Route-based animation controller initialized with bike marker');
           }
 
           // Verify marker is on map
@@ -642,7 +646,7 @@ const DeliveryTrackingMap = ({
           const markerVisible = bikeMarkerRef.current.getVisible();
           const markerPosition = bikeMarkerRef.current.getPosition();
 
-          console.log('✅✅✅ Bike marker created and visible at:', {
+          debugLog('âœ…âœ…âœ… Bike marker created and visible at:', {
             lat,
             lng,
             heading,
@@ -656,11 +660,11 @@ const DeliveryTrackingMap = ({
           });
 
           if (!markerMap) {
-            console.error('❌ Bike marker created but not on map! Re-adding...');
+            debugError('âŒ Bike marker created but not on map! Re-adding...');
             bikeMarkerRef.current.setMap(mapInstance.current);
           }
           if (!markerVisible) {
-            console.error('❌ Bike marker created but not visible! Making visible...');
+            debugError('âŒ Bike marker created but not visible! Making visible...');
             bikeMarkerRef.current.setVisible(true);
           }
 
@@ -669,7 +673,7 @@ const DeliveryTrackingMap = ({
             if (bikeMarkerRef.current) {
               const finalMap = bikeMarkerRef.current.getMap();
               const finalVisible = bikeMarkerRef.current.getVisible();
-              console.log('🔍 Bike marker verification after 500ms:', {
+              debugLog('ðŸ” Bike marker verification after 500ms:', {
                 exists: !!bikeMarkerRef.current,
                 onMap: !!finalMap,
                 visible: finalVisible,
@@ -678,7 +682,7 @@ const DeliveryTrackingMap = ({
             }
           }, 500);
         } catch (markerError) {
-          console.error('❌ Error creating bike marker:', markerError);
+          debugError('âŒ Error creating bike marker:', markerError);
           // Try fallback simple marker
           try {
             bikeMarkerRef.current = new window.google.maps.Marker({
@@ -697,9 +701,9 @@ const DeliveryTrackingMap = ({
               zIndex: window.google.maps.Marker.MAX_ZINDEX + 3
             });
             bikeMarkerRef.current._rotation = heading || 0;
-            console.log('✅ Created fallback marker (orange circle)');
+            debugLog('âœ… Created fallback marker (orange circle)');
           } catch (fallbackError) {
-            console.error('❌ Even fallback marker failed:', fallbackError);
+            debugError('âŒ Even fallback marker failed:', fallbackError);
           }
         }
       } else {
@@ -744,7 +748,7 @@ const DeliveryTrackingMap = ({
               // Allow small backward movement (GPS noise) but prevent large jumps
               if (progress < lastProgress - 0.05) {
                 progress = lastProgress; // Don't go backwards more than 5%
-                console.log('🛑 Preventing backward movement:', { new: progress, last: lastProgress });
+                debugLog('ðŸ›‘ Preventing backward movement:', { new: progress, last: lastProgress });
               } else if (progress < lastProgress) {
                 // Small backward movement - keep last progress
                 progress = lastProgress;
@@ -753,7 +757,7 @@ const DeliveryTrackingMap = ({
 
             // Use route-based animation controller if available
             if (animationControllerRef.current) {
-              console.log('🛵 Route-based animation (Rapido/Zomato style):', {
+              debugLog('ðŸ›µ Route-based animation (Rapido/Zomato style):', {
                 progress,
                 segmentIndex: nearest.segmentIndex,
                 onRoute: true,
@@ -770,19 +774,19 @@ const DeliveryTrackingMap = ({
                 );
                 animationControllerRef.current.updatePosition(progress, heading || 0);
                 animationControllerRef.current.lastProgress = progress;
-                console.log('✅ Initialized route-based animation controller');
+                debugLog('âœ… Initialized route-based animation controller');
               } else {
                 // Fallback: Move to nearest point on polyline (STAY ON ROAD)
                 const nearestPosition = new window.google.maps.LatLng(nearest.nearestPoint.lat, nearest.nearestPoint.lng);
                 bikeMarkerRef.current.setPosition(nearestPosition);
                 if (typeof bikeMarkerRef.current.setRotation === 'function') bikeMarkerRef.current.setRotation(heading || 0);
                 else bikeMarkerRef.current._rotation = heading || 0;
-                console.log('🛣️ Bike snapped to nearest road point:', nearest.nearestPoint);
+                debugLog('ðŸ›£ï¸ Bike snapped to nearest road point:', nearest.nearestPoint);
               }
             }
           } else {
             // If nearest point not found, use first point of polyline (don't use raw GPS)
-            console.warn('⚠️ Could not find nearest point, using polyline start point');
+            debugWarn('âš ï¸ Could not find nearest point, using polyline start point');
             const firstPoint = routePolylinePointsRef.current[0];
             if (firstPoint && bikeMarkerRef.current) {
               const firstPosition = new window.google.maps.LatLng(firstPoint.lat, firstPoint.lng);
@@ -792,8 +796,8 @@ const DeliveryTrackingMap = ({
         } else {
           // CRITICAL: If no polyline, DO NOT show bike at raw GPS location
           // Wait for route to be generated first
-          console.warn('⚠️⚠️⚠️ NO POLYLINE AVAILABLE - Bike marker NOT updated to prevent off-road display');
-          console.warn('⚠️ Waiting for route to be generated before showing bike position');
+          debugWarn('âš ï¸âš ï¸âš ï¸ NO POLYLINE AVAILABLE - Bike marker NOT updated to prevent off-road display');
+          debugWarn('âš ï¸ Waiting for route to be generated before showing bike position');
           // Don't update marker position - keep it at last known position on route
           // This prevents bike from jumping to buildings/footpaths
           return; // Exit early - don't update marker
@@ -804,7 +808,7 @@ const DeliveryTrackingMap = ({
 
         // Verify bike is on map
         if (!bikeMarkerRef.current.getMap()) {
-          console.log('⚠️ Bike marker not on map, re-adding...');
+          debugLog('âš ï¸ Bike marker not on map, re-adding...');
           bikeMarkerRef.current.setMap(mapInstance.current);
         }
 
@@ -812,7 +816,7 @@ const DeliveryTrackingMap = ({
         // Map should remain at user's chosen view
       }
     } catch (error) {
-      console.error('❌ Error moving bike:', error);
+      debugError('âŒ Error moving bike:', error);
     }
   }, [isMapLoaded, bikeLogo]);
 
@@ -890,7 +894,7 @@ const DeliveryTrackingMap = ({
           }
         },
         (error) => {
-          console.warn('Firebase order tracking listener error:', error?.message || error);
+          debugWarn('Firebase order tracking listener error:', error?.message || error);
         },
       ),
     );
@@ -1061,7 +1065,7 @@ const DeliveryTrackingMap = ({
     const loadGoogleMapsIfNeeded = async () => {
       // Wait for Google Maps to load from main.jsx first
       if (!window.google || !window.google.maps) {
-        console.log('⏳ Waiting for Google Maps API to load...');
+        debugLog('â³ Waiting for Google Maps API to load...');
         let attempts = 0;
         const maxAttempts = 50; // 5 seconds max wait
 
@@ -1072,7 +1076,7 @@ const DeliveryTrackingMap = ({
 
         // If still not loaded, try loading it ourselves
         if (!window.google || !window.google.maps) {
-          console.log('⏳ Google Maps not loaded from main.jsx, loading manually...');
+          debugLog('â³ Google Maps not loaded from main.jsx, loading manually...');
           try {
             const { getGoogleMapsApiKey } = await import('@/lib/utils/googleMapsApiKey.js');
             const { Loader } = await import('@googlemaps/js-api-loader');
@@ -1084,13 +1088,13 @@ const DeliveryTrackingMap = ({
                 libraries: ["places", "geometry", "drawing"]
               });
               await loader.load();
-              console.log('✅ Google Maps loaded manually');
+              debugLog('âœ… Google Maps loaded manually');
             } else {
-              console.error('❌ No Google Maps API key found');
+              debugError('âŒ No Google Maps API key found');
               return;
             }
           } catch (error) {
-            console.error('❌ Error loading Google Maps:', error);
+            debugError('âŒ Error loading Google Maps:', error);
             return;
           }
         }
@@ -1107,14 +1111,14 @@ const DeliveryTrackingMap = ({
             mapTypeIdAttempts++;
             setTimeout(checkMapTypeId, 100);
           } else {
-            console.warn('⚠️ Google Maps MapTypeId not available, using string fallback');
+            debugWarn('âš ï¸ Google Maps MapTypeId not available, using string fallback');
             // Use fallback - initialize with string instead of enum
             initializeMap();
           }
         };
         checkMapTypeId();
       } else {
-        console.error('❌ Google Maps API still not available');
+        debugError('âŒ Google Maps API still not available');
       }
     };
 
@@ -1124,7 +1128,7 @@ const DeliveryTrackingMap = ({
       try {
         // Verify Google Maps is fully loaded
         if (!window.google || !window.google.maps || !window.google.maps.Map) {
-          console.error('❌ Google Maps API not fully loaded');
+          debugError('âŒ Google Maps API not fully loaded');
           return;
         }
 
@@ -1342,7 +1346,7 @@ const DeliveryTrackingMap = ({
             zIndex: window.google.maps.Marker.MAX_ZINDEX + 1
           });
 
-          console.log('✅ User live location marker and radius circle added:', {
+          debugLog('âœ… User live location marker and radius circle added:', {
             position: userLiveCoords,
             radius: radiusMeters
           });
@@ -1380,7 +1384,7 @@ const DeliveryTrackingMap = ({
             deliveryStateStatus === 'accepted' ||
             (deliveryStateStatus && deliveryStateStatus !== 'pending');
 
-          console.log('🚴 Map tiles loaded - Checking for delivery partner:', {
+          debugLog('ðŸš´ Map tiles loaded - Checking for delivery partner:', {
             currentPhase,
             deliveryStateStatus,
             hasDeliveryPartnerOnLoad,
@@ -1390,11 +1394,11 @@ const DeliveryTrackingMap = ({
           // DO NOT create bike at restaurant on map load
           // Wait for real location from socket - bike will be created when real location is received
           if (hasDeliveryPartnerOnLoad && !bikeMarkerRef.current) {
-            console.log('🚴 Map loaded - Delivery partner detected, waiting for REAL location from socket...');
+            debugLog('ðŸš´ Map loaded - Delivery partner detected, waiting for REAL location from socket...');
             // Request current location immediately
             if (socketRef.current && socketRef.current.connected) {
               requestCurrentLocationForTrackingIds();
-              console.log('📡 Requested current location immediately on map load');
+              debugLog('ðŸ“¡ Requested current location immediately on map load');
             }
             // Don't create bike at restaurant - wait for real location
           }
@@ -1403,10 +1407,10 @@ const DeliveryTrackingMap = ({
           // Route will be drawn when delivery partner accepts or when location updates arrive
         });
 
-        console.log('✅ Google Map initialized successfully');
+        debugLog('âœ… Google Map initialized successfully');
         mapInitializedRef.current = true; // Mark map as initialized
       } catch (error) {
-        console.error('❌ Map initialization error:', error);
+        debugError('âŒ Map initialization error:', error);
       }
     }
   }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, restaurantCoords, customerCoords]); // Removed dependencies that cause re-initialization
@@ -1430,10 +1434,10 @@ const DeliveryTrackingMap = ({
 
     // If delivery partner is assigned but bike marker doesn't exist, create it
     if (hasDeliveryPartnerByPhase && !bikeMarkerRef.current && mapInstance.current) {
-      console.log('🚴 Delivery partner detected by phase, creating bike marker:', currentPhase);
+      debugLog('ðŸš´ Delivery partner detected by phase, creating bike marker:', currentPhase);
       // DO NOT show bike at restaurant - wait for real location from socket
       // Bike will be created when real location is received via socket
-      console.log('⏳ Waiting for real location from socket - NOT showing at restaurant');
+      debugLog('â³ Waiting for real location from socket - NOT showing at restaurant');
       if (socketRef.current && socketRef.current.connected) {
         requestCurrentLocationForTrackingIds();
       }
@@ -1481,7 +1485,7 @@ const DeliveryTrackingMap = ({
     if (route.start && route.end) {
       lastRouteUpdateRef.current = now;
       drawRoute(route.start, route.end);
-      console.log('🔄 Route updated:', {
+      debugLog('ðŸ”„ Route updated:', {
         phase: order?.deliveryState?.currentPhase,
         status: order?.deliveryState?.status,
         from: route.start,
@@ -1491,7 +1495,7 @@ const DeliveryTrackingMap = ({
 
       // Force show bike if delivery partner is assigned but bike marker doesn't exist
       if (hasDeliveryPartnerByPhase && !bikeMarkerRef.current && mapInstance.current) {
-        console.log('🚴🚴🚴 FORCING bike marker creation after route update!', {
+        debugLog('ðŸš´ðŸš´ðŸš´ FORCING bike marker creation after route update!', {
           phase: currentPhase,
           routeStart: route.start,
           routeEnd: route.end,
@@ -1501,15 +1505,15 @@ const DeliveryTrackingMap = ({
         // ONLY use real delivery boy location - NEVER use restaurant
         // Priority 1: Use delivery boy's REAL location from socket/state
         if (deliveryBoyLat && deliveryBoyLng) {
-          console.log('✅✅✅ Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng });
+          debugLog('âœ…âœ…âœ… Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng });
           moveBikeSmoothly(deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading || 0);
         }
         else {
-          console.log('⏳⏳⏳ No real location yet - requesting from socket and waiting...');
+          debugLog('â³â³â³ No real location yet - requesting from socket and waiting...');
           if (socketRef.current && socketRef.current.connected) {
             requestCurrentLocationForTrackingIds();
           }
-          console.log('✅ Bike will be created when real location is received from socket');
+          debugLog('âœ… Bike will be created when real location is received from socket');
         }
       }
     }
@@ -1518,7 +1522,7 @@ const DeliveryTrackingMap = ({
   // Update bike when REAL location changes (from socket)
   useEffect(() => {
     if (isMapLoaded && currentLocation && currentLocation.lat && currentLocation.lng) {
-      console.log('🔄🔄🔄 Updating bike to REAL location:', currentLocation);
+      debugLog('ðŸ”„ðŸ”„ðŸ”„ Updating bike to REAL location:', currentLocation);
       // Always update to real location - this takes priority over restaurant location
       moveBikeSmoothly(currentLocation.lat, currentLocation.lng, currentLocation.heading || 0);
     }
@@ -1527,7 +1531,7 @@ const DeliveryTrackingMap = ({
   // Create bike marker when map loads if we have stored location
   useEffect(() => {
     if (isMapLoaded && mapInstance.current && currentLocation && !bikeMarkerRef.current) {
-      console.log('🚴 Creating bike marker from stored location on map load:', currentLocation);
+      debugLog('ðŸš´ Creating bike marker from stored location on map load:', currentLocation);
       moveBikeSmoothly(currentLocation.lat, currentLocation.lng, currentLocation.heading || 0);
     }
   }, [isMapLoaded, currentLocation, moveBikeSmoothly]);
@@ -1535,7 +1539,7 @@ const DeliveryTrackingMap = ({
   // Show bike marker when delivery partner is assigned (even without location yet)
   useEffect(() => {
     if (!isMapLoaded || !mapInstance.current) {
-      console.log('⏳ Map not loaded yet, waiting...');
+      debugLog('â³ Map not loaded yet, waiting...');
       return;
     }
 
@@ -1555,7 +1559,7 @@ const DeliveryTrackingMap = ({
 
     const shouldShowBike = hasDeliveryPartner || hasPartnerByPhase;
 
-    console.log('🚴🚴🚴 BIKE VISIBILITY CHECK:', {
+    debugLog('ðŸš´ðŸš´ðŸš´ BIKE VISIBILITY CHECK:', {
       shouldShowBike,
       isAccepted,
       hasDeliveryPartner,
@@ -1565,7 +1569,7 @@ const DeliveryTrackingMap = ({
       hasBikeMarker: !!bikeMarkerRef.current
     });
 
-    console.log('🔍 Checking delivery partner assignment:', {
+    debugLog('ðŸ” Checking delivery partner assignment:', {
       hasDeliveryPartner,
       hasPartnerByPhase,
       shouldShowBike,
@@ -1583,19 +1587,19 @@ const DeliveryTrackingMap = ({
     });
 
     if (shouldShowBike && !bikeMarkerRef.current) {
-      console.log('🚴🚴🚴 CREATING BIKE MARKER - Delivery partner accepted!');
-      console.log('🚴 Full order state:', JSON.stringify(order?.deliveryState, null, 2));
+      debugLog('ðŸš´ðŸš´ðŸš´ CREATING BIKE MARKER - Delivery partner accepted!');
+      debugLog('ðŸš´ Full order state:', JSON.stringify(order?.deliveryState, null, 2));
 
       // Priority 1: ALWAYS use delivery boy's REAL location if available (from socket)
       if (deliveryBoyLat && deliveryBoyLng) {
-        console.log('✅✅✅ Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng, heading: deliveryBoyHeading });
+        debugLog('âœ…âœ…âœ… Creating bike at REAL delivery boy location:', { lat: deliveryBoyLat, lng: deliveryBoyLng, heading: deliveryBoyHeading });
         moveBikeSmoothly(deliveryBoyLat, deliveryBoyLng, deliveryBoyHeading || 0);
       }
       else {
         if (socketRef.current && socketRef.current.connected) {
           requestCurrentLocationForTrackingIds();
         }
-        console.log('⏳ Waiting for real GPS location from Firebase/socket before showing bike marker');
+        debugLog('â³ Waiting for real GPS location from Firebase/socket before showing bike marker');
       }
 
       // Verify marker was created after a short delay
@@ -1606,7 +1610,7 @@ const DeliveryTrackingMap = ({
           const markerVisible = marker.getVisible();
           const markerMap = marker.getMap();
 
-          console.log('✅✅✅ BIKE MARKER VERIFICATION:', {
+          debugLog('âœ…âœ…âœ… BIKE MARKER VERIFICATION:', {
             exists: true,
             visible: markerVisible,
             onMap: !!markerMap,
@@ -1619,20 +1623,20 @@ const DeliveryTrackingMap = ({
 
           // Force visibility if needed
           if (!markerVisible) {
-            console.warn('⚠️ Bike marker not visible, forcing visibility...');
+            debugWarn('âš ï¸ Bike marker not visible, forcing visibility...');
             marker.setVisible(true);
           }
           if (!markerMap) {
-            console.warn('⚠️ Bike marker not on map, re-adding...');
+            debugWarn('âš ï¸ Bike marker not on map, re-adding...');
             marker.setMap(mapInstance.current);
           }
         } else {
-          console.warn('⚠️ Bike marker not created yet - waiting for real delivery boy location from socket');
+          debugWarn('âš ï¸ Bike marker not created yet - waiting for real delivery boy location from socket');
           // Don't create fallback at restaurant - wait for real location
           // Real location will come via socket and bike will be created in moveBikeSmoothly
           if (socketRef.current && socketRef.current.connected) {
             requestCurrentLocationForTrackingIds();
-            console.log('📡 Requested current location from socket for bike marker');
+            debugLog('ðŸ“¡ Requested current location from socket for bike marker');
           }
         }
       }, 500);
@@ -1644,7 +1648,7 @@ const DeliveryTrackingMap = ({
     } else {
       // Remove bike marker if delivery partner is not assigned
       if (bikeMarkerRef.current) {
-        console.log('🗑️ Removing bike marker - no delivery partner');
+        debugLog('ðŸ—‘ï¸ Removing bike marker - no delivery partner');
         bikeMarkerRef.current.setMap(null);
         bikeMarkerRef.current = null;
       }
@@ -1713,7 +1717,7 @@ const DeliveryTrackingMap = ({
   //                            (deliveryStateStatus && deliveryStateStatus !== 'pending');
   //     
   //     if (shouldHaveBike && !bikeMarkerRef.current && restaurantCoords && restaurantCoords.lat && restaurantCoords.lng) {
-  //       console.log('🔄 Periodic check: Bike should be visible but missing, creating now...');
+  //       debugLog('ðŸ”„ Periodic check: Bike should be visible but missing, creating now...');
   //       try {
   //         const position = new window.google.maps.LatLng(restaurantCoords.lat, restaurantCoords.lng);
   //         bikeMarkerRef.current = new window.google.maps.Marker({
@@ -1730,9 +1734,9 @@ const DeliveryTrackingMap = ({
   //           title: 'Delivery Partner',
   //           visible: true
   //         });
-  //         console.log('✅✅✅ BIKE MARKER CREATED via periodic check!');
+  //         debugLog('âœ…âœ…âœ… BIKE MARKER CREATED via periodic check!');
   //       } catch (err) {
-  //         console.error('❌ Periodic bike creation failed:', err);
+  //         debugError('âŒ Periodic bike creation failed:', err);
   //       }
   //     }
   //   }, 2000); // Check every 2 seconds
@@ -1758,4 +1762,5 @@ const DeliveryTrackingMap = ({
 };
 
 export default DeliveryTrackingMap;
+
 

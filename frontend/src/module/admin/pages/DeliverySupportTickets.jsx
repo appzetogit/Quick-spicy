@@ -1,9 +1,13 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { MessageSquare, Search, Clock, CheckCircle, XCircle, Loader2, Eye, Edit } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DeliverySupportTickets() {
   const [tickets, setTickets] = useState([])
@@ -39,7 +43,7 @@ export default function DeliverySupportTickets() {
         setTickets([])
       }
     } catch (error) {
-      console.error("Error fetching tickets:", error)
+      debugError("Error fetching tickets:", error)
       toast.error("Failed to load tickets")
       setTickets([])
     } finally {
@@ -54,7 +58,7 @@ export default function DeliverySupportTickets() {
         setStats(response.data.data)
       }
     } catch (error) {
-      console.error("Error fetching stats:", error)
+      debugError("Error fetching stats:", error)
     }
   }
 
@@ -93,7 +97,7 @@ export default function DeliverySupportTickets() {
         toast.error(response?.data?.message || "Failed to update ticket")
       }
     } catch (error) {
-      console.error("Error updating ticket:", error)
+      debugError("Error updating ticket:", error)
       toast.error(error?.response?.data?.message || "Failed to update ticket")
     } finally {
       setUpdating(false)
@@ -112,7 +116,7 @@ export default function DeliverySupportTickets() {
         await fetchStats()
       }
     } catch (error) {
-      console.error("Error updating status:", error)
+      debugError("Error updating status:", error)
       toast.error("Failed to update status")
     }
   }
@@ -520,4 +524,5 @@ export default function DeliverySupportTickets() {
     </div>
   )
 }
+
 

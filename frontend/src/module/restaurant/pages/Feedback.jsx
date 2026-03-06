@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Bell, HelpCircle, Menu, Search, SlidersHorizontal, Calendar, Reply, ChevronLeft, Send, X, Loader2, ChevronRight } from "lucide-react"
 import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
 import BottomNavOrders from "../components/BottomNavOrders"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const REVIEWS_STORAGE_KEY = "restaurant_reviews_data"
 
@@ -158,7 +162,7 @@ export default function Feedback() {
           setRestaurantData(response.data.data.restaurant)
         }
       } catch (error) {
-        console.error("Error fetching restaurant data:", error)
+        debugError("Error fetching restaurant data:", error)
       } finally {
         setIsLoadingRestaurant(false)
       }
@@ -230,7 +234,7 @@ export default function Feedback() {
           setComplaints([])
         }
       } catch (error) {
-        console.error('Error fetching complaints:', error)
+        debugError('Error fetching complaints:', error)
         setComplaints([])
       } finally {
         setIsComplaintsLoading(false)
@@ -274,7 +278,7 @@ export default function Feedback() {
               hasMore = false
             }
           } catch (pageError) {
-            console.error(`Error fetching orders page ${page}:`, pageError)
+            debugError(`Error fetching orders page ${page}:`, pageError)
             hasMore = false
           }
         }
@@ -318,7 +322,7 @@ export default function Feedback() {
                              order.review?.text ||
                              order.feedback?.comment ||
                              order.feedback?.text ||
-                             (rating ? `${rating}★ rating` : 'No review text')
+                             (rating ? `${rating}â˜… rating` : 'No review text')
 
             // Count user's orders with this restaurant
             const userOrdersCount = allOrders.filter(o => 
@@ -366,10 +370,10 @@ export default function Feedback() {
             localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(transformedReviews))
           }
     } catch (error) {
-      console.error("Error saving reviews to storage:", error)
+      debugError("Error saving reviews to storage:", error)
     }
       } catch (error) {
-        console.error("Error fetching reviews:", error)
+        debugError("Error fetching reviews:", error)
         // Keep existing reviews on error
       } finally {
         setIsLoadingReviews(false)
@@ -467,10 +471,10 @@ export default function Feedback() {
           localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(updatedReviews))
         }
       } catch (error) {
-        console.error("Error saving reply to storage:", error)
+        debugError("Error saving reply to storage:", error)
       }
     } catch (error) {
-      console.error("Error sending reply:", error)
+      debugError("Error sending reply:", error)
     }
   }
 
@@ -883,7 +887,7 @@ export default function Feedback() {
                     Reviews ({displayedReviews.length})
                   </h2>
                   <div className="flex items-center gap-1 text-[11px] text-gray-500">
-                    <span>ⓘ</span>
+                    <span>â“˜</span>
                     <span>Delivery reviews are only visible to you</span>
                   </div>
                 </div>
@@ -918,7 +922,7 @@ export default function Feedback() {
                     {/* Order & outlet */}
                     <div className="text-[11px] text-gray-500 flex items-center justify-between gap-2">
                       <span className="truncate">
-                        Order #{review.orderNumber} · {review.outlet}
+                        Order #{review.orderNumber} Â· {review.outlet}
                       </span>
                     </div>
 
@@ -945,7 +949,7 @@ export default function Feedback() {
                       <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-100"></div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                          {review.rating}★
+                          {review.rating}â˜…
                         </span>
                         <span className="text-[11px] text-gray-500">
                           {review.date}
@@ -1058,7 +1062,7 @@ export default function Feedback() {
                   <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-50"></div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                      {selectedReview.rating}★
+                      {selectedReview.rating}â˜…
                     </span>
                     <span className="text-[11px] text-gray-500">
                       {selectedReview.date}
@@ -1681,3 +1685,4 @@ export default function Feedback() {
     </div>
   )
 }
+

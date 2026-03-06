@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Delivery Wallet State Management Utility
  * Fetches wallet data from API instead of using localStorage/default data
@@ -22,37 +26,37 @@ const EMPTY_WALLET_STATE = {
  */
 export const fetchDeliveryWallet = async () => {
   try {
-    console.log('🚀 Starting wallet fetch...')
+    debugLog('ðŸš€ Starting wallet fetch...')
     const response = await deliveryAPI.getWallet()
-    console.log('🔍 Full API Response:', JSON.stringify(response, null, 2))
-    console.log('🔍 Response Status:', response?.status)
-    console.log('🔍 Response Data:', response?.data)
-    console.log('🔍 Response Data Type:', typeof response?.data)
+    debugLog('ðŸ” Full API Response:', JSON.stringify(response, null, 2))
+    debugLog('ðŸ” Response Status:', response?.status)
+    debugLog('ðŸ” Response Data:', response?.data)
+    debugLog('ðŸ” Response Data Type:', typeof response?.data)
     
     // Check multiple possible response structures
     let walletData = null
     
     if (response?.data?.success && response?.data?.data?.wallet) {
       walletData = response.data.data.wallet
-      console.log('✅ Found wallet in: response.data.data.wallet')
+      debugLog('âœ… Found wallet in: response.data.data.wallet')
     } else if (response?.data?.wallet) {
       walletData = response.data.wallet
-      console.log('✅ Found wallet in: response.data.wallet')
+      debugLog('âœ… Found wallet in: response.data.wallet')
     } else if (response?.data?.data) {
       walletData = response.data.data
-      console.log('✅ Found wallet in: response.data.data')
+      debugLog('âœ… Found wallet in: response.data.data')
     } else if (response?.data) {
       walletData = response.data
-      console.log('✅ Found wallet in: response.data')
+      debugLog('âœ… Found wallet in: response.data')
     }
     
     if (walletData) {
-      console.log('💰 Wallet Data from API:', JSON.stringify(walletData, null, 2))
-      console.log('💰 Total Balance:', walletData.totalBalance)
-      console.log('💰 Cash In Hand:', walletData.cashInHand)
-      console.log('💰 Total Earned:', walletData.totalEarned)
-      console.log('💰 Transactions Count:', walletData.transactions?.length || walletData.recentTransactions?.length || 0)
-      console.log('💰 Transactions:', walletData.transactions || walletData.recentTransactions || [])
+      debugLog('ðŸ’° Wallet Data from API:', JSON.stringify(walletData, null, 2))
+      debugLog('ðŸ’° Total Balance:', walletData.totalBalance)
+      debugLog('ðŸ’° Cash In Hand:', walletData.cashInHand)
+      debugLog('ðŸ’° Total Earned:', walletData.totalEarned)
+      debugLog('ðŸ’° Transactions Count:', walletData.transactions?.length || walletData.recentTransactions?.length || 0)
+      debugLog('ðŸ’° Transactions:', walletData.transactions || walletData.recentTransactions || [])
       
       // Transform API response to match expected format (support both camelCase and snake_case)
       const transformedData = {
@@ -73,24 +77,24 @@ export const fetchDeliveryWallet = async () => {
         totalTransactions: walletData.totalTransactions || 0
       }
       
-      console.log('✅ Transformed Wallet Data:', JSON.stringify(transformedData, null, 2))
+      debugLog('âœ… Transformed Wallet Data:', JSON.stringify(transformedData, null, 2))
       return transformedData
     } else {
-      console.warn('⚠️ No wallet data found in response')
-      console.warn('⚠️ Response structure:', Object.keys(response?.data || {}))
-      console.warn('⚠️ Full response:', response)
+      debugWarn('âš ï¸ No wallet data found in response')
+      debugWarn('âš ï¸ Response structure:', Object.keys(response?.data || {}))
+      debugWarn('âš ï¸ Full response:', response)
     }
     
-    console.log('⚠️ Returning empty wallet state')
+    debugLog('âš ï¸ Returning empty wallet state')
     return EMPTY_WALLET_STATE
   } catch (error) {
     // Skip logging network errors - they're handled by axios interceptor
     // Network errors mean backend is not running, which is expected in some scenarios
     if (error.code !== 'ERR_NETWORK' && error.message !== 'Network Error') {
-      console.error('❌ Error fetching wallet data:', error)
-      console.error('❌ Error response:', error.response)
-      console.error('❌ Error response data:', error.response?.data)
-      console.error('❌ Error message:', error.message)
+      debugError('âŒ Error fetching wallet data:', error)
+      debugError('âŒ Error response:', error.response)
+      debugError('âŒ Error response data:', error.response?.data)
+      debugError('âŒ Error message:', error.message)
     }
     return EMPTY_WALLET_STATE
   }
@@ -103,7 +107,7 @@ export const fetchDeliveryWallet = async () => {
  */
 export const getDeliveryWalletState = () => {
   // Return empty state - should use fetchDeliveryWallet() instead
-  console.warn('getDeliveryWalletState is deprecated. Use fetchDeliveryWallet() instead.')
+  debugWarn('getDeliveryWalletState is deprecated. Use fetchDeliveryWallet() instead.')
   return EMPTY_WALLET_STATE
 }
 
@@ -113,7 +117,7 @@ export const getDeliveryWalletState = () => {
  */
 export const setDeliveryWalletState = (state) => {
   // No-op - data is managed by backend
-  console.warn('setDeliveryWalletState is deprecated. Wallet data is managed by backend.')
+  debugWarn('setDeliveryWalletState is deprecated. Wallet data is managed by backend.')
 }
 
 /**
@@ -122,10 +126,10 @@ export const setDeliveryWalletState = (state) => {
  * @returns {Object} - Calculated balances
  */
 export const calculateDeliveryBalances = (state) => {
-  console.log('📊 calculateDeliveryBalances called with state:', state)
+  debugLog('ðŸ“Š calculateDeliveryBalances called with state:', state)
   
   if (!state) {
-    console.warn('⚠️ No state provided to calculateDeliveryBalances')
+    debugWarn('âš ï¸ No state provided to calculateDeliveryBalances')
     return {
       totalBalance: 0,
       cashInHand: 0,
@@ -142,7 +146,7 @@ export const calculateDeliveryBalances = (state) => {
   const totalWithdrawn = state.totalWithdrawn || 0
   const totalEarned = state.totalEarned || 0
   
-  console.log('📊 Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned })
+  debugLog('ðŸ“Š Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned })
   
   // Calculate pending withdrawals from transactions if available
   let pendingWithdrawals = state.pendingWithdrawals || 0
@@ -174,7 +178,7 @@ export const calculateDeliveryBalances = (state) => {
     totalEarnings: totalEarningsFromTransactions || totalEarned || totalBalance || 0
   }
   
-  console.log('📊 Calculated balances:', balances)
+  debugLog('ðŸ“Š Calculated balances:', balances)
   return balances
 }
 
@@ -235,7 +239,7 @@ export const fetchWalletTransactions = async (params = {}) => {
     }
     return []
   } catch (error) {
-    console.error('Error fetching wallet transactions:', error)
+    debugError('Error fetching wallet transactions:', error)
     return []
   }
 }
@@ -259,7 +263,7 @@ export const createWithdrawalRequest = async (amount, paymentMethod, details = {
     }
     throw new Error(response?.data?.message || 'Failed to create withdrawal request')
   } catch (error) {
-    console.error('Error creating withdrawal request:', error)
+    debugError('Error creating withdrawal request:', error)
     throw error
   }
 }
@@ -281,7 +285,7 @@ export const collectPayment = async (orderId, amount = null) => {
     }
     throw new Error(response?.data?.message || 'Failed to collect payment')
   } catch (error) {
-    console.error('Error collecting payment:', error)
+    debugError('Error collecting payment:', error)
     throw error
   }
 }
@@ -292,7 +296,7 @@ export const collectPayment = async (orderId, amount = null) => {
  * @returns {Array} - Filtered transactions
  */
 export const getDeliveryTransactionsByType = (type = 'all') => {
-  console.warn('getDeliveryTransactionsByType is deprecated. Use fetchWalletTransactions() instead.')
+  debugWarn('getDeliveryTransactionsByType is deprecated. Use fetchWalletTransactions() instead.')
   return []
 }
 
@@ -302,7 +306,7 @@ export const getDeliveryTransactionsByType = (type = 'all') => {
  * @returns {Array} - Filtered transactions
  */
 export const getDeliveryTransactionsByStatus = (status) => {
-  console.warn('getDeliveryTransactionsByStatus is deprecated. Use fetchWalletTransactions() instead.')
+  debugWarn('getDeliveryTransactionsByStatus is deprecated. Use fetchWalletTransactions() instead.')
   return []
 }
 
@@ -312,7 +316,7 @@ export const getDeliveryTransactionsByStatus = (status) => {
  * @returns {number|null} - Payment amount if found, null otherwise
  */
 export const getDeliveryOrderPaymentAmount = (orderId) => {
-  console.warn('getDeliveryOrderPaymentAmount is deprecated. Use API to fetch transactions instead.')
+  debugWarn('getDeliveryOrderPaymentAmount is deprecated. Use API to fetch transactions instead.')
   return null
 }
 
@@ -322,7 +326,7 @@ export const getDeliveryOrderPaymentAmount = (orderId) => {
  * @returns {string} - Payment status ("Paid" or "Unpaid")
  */
 export const getDeliveryOrderPaymentStatus = (orderId) => {
-  console.warn('getDeliveryOrderPaymentStatus is deprecated. Use API to fetch transactions instead.')
+  debugWarn('getDeliveryOrderPaymentStatus is deprecated. Use API to fetch transactions instead.')
   return "Unpaid"
 }
 
@@ -332,7 +336,7 @@ export const getDeliveryOrderPaymentStatus = (orderId) => {
  * @returns {boolean} - Whether payment is collected
  */
 export const isPaymentCollected = (orderId) => {
-  console.warn('isPaymentCollected is deprecated. Use API to fetch transactions instead.')
+  debugWarn('isPaymentCollected is deprecated. Use API to fetch transactions instead.')
   return false
 }
 
@@ -341,7 +345,7 @@ export const isPaymentCollected = (orderId) => {
  * @param {Object} transaction - Transaction object
  */
 export const addDeliveryTransaction = (transaction) => {
-  console.warn('addDeliveryTransaction is deprecated. Use API endpoints instead.')
+  debugWarn('addDeliveryTransaction is deprecated. Use API endpoints instead.')
   return null
 }
 
@@ -352,7 +356,7 @@ export const addDeliveryTransaction = (transaction) => {
  * @returns {Object} - Created transaction
  */
 export const createDeliveryWithdrawRequest = (amount, paymentMethod) => {
-  console.warn('createDeliveryWithdrawRequest is deprecated. Use createWithdrawalRequest() instead.')
+  debugWarn('createDeliveryWithdrawRequest is deprecated. Use createWithdrawalRequest() instead.')
   return createWithdrawalRequest(amount, paymentMethod)
 }
 
@@ -364,7 +368,7 @@ export const createDeliveryWithdrawRequest = (amount, paymentMethod) => {
  * @param {boolean} paymentCollected - Whether payment is collected (for COD)
  */
 export const addDeliveryEarnings = (amount, orderId, description, paymentCollected = false) => {
-  console.warn('addDeliveryEarnings is deprecated. Use deliveryAPI.addEarning() instead.')
+  debugWarn('addDeliveryEarnings is deprecated. Use deliveryAPI.addEarning() instead.')
   return deliveryAPI.addEarning({
     amount,
     orderId,
@@ -372,3 +376,4 @@ export const addDeliveryEarnings = (amount, orderId, description, paymentCollect
     paymentCollected
   })
 }
+

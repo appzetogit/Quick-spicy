@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Search, MoreVertical, ChevronRight, Star, RotateCcw, AlertCircle, Loader2, Clock } from "lucide-react"
 import { orderAPI, api, API_ENDPOINTS } from "@/lib/api"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Orders() {
   const navigate = useNavigate()
@@ -31,7 +35,7 @@ export default function Orders() {
     try {
       localStorage.setItem('shownRatingForOrders', JSON.stringify(Array.from(shownRatingForOrders)))
     } catch (error) {
-      console.error('Error saving shownRatingForOrders to localStorage:', error)
+      debugError('Error saving shownRatingForOrders to localStorage:', error)
     }
   }, [shownRatingForOrders])
 
@@ -88,7 +92,7 @@ export default function Orders() {
       return
     }
 
-    console.log('🔍 Checking for delivered orders to show rating popup...', {
+    debugLog('ðŸ” Checking for delivered orders to show rating popup...', {
       totalOrders: orders.length,
       shownRatingForOrders: Array.from(shownRatingForOrders)
     })
@@ -124,7 +128,7 @@ export default function Orders() {
 
       const shouldShow = (isDelivered || hasDeliveredAt) && !hasRating && !hasShownPopup
 
-      console.log(`📦 Order ${orderId}:`, {
+      debugLog(`ðŸ“¦ Order ${orderId}:`, {
         originalStatus,
         transformedStatus,
         isDelivered,
@@ -139,14 +143,14 @@ export default function Orders() {
       return shouldShow
     })
 
-    console.log('✅ Found delivered orders needing rating:', deliveredOrders.length)
+    debugLog('âœ… Found delivered orders needing rating:', deliveredOrders.length)
 
     // Show popup for the first delivered order that needs rating
     if (deliveredOrders.length > 0) {
       const orderToRate = deliveredOrders[0]
       const orderId = orderToRate.id || orderToRate._id || orderToRate.mongoId
 
-      console.log('🎯 Showing rating popup for order:', {
+      debugLog('ðŸŽ¯ Showing rating popup for order:', {
         orderId,
         restaurant: orderToRate.restaurant,
         status: orderToRate.status
@@ -157,7 +161,7 @@ export default function Orders() {
 
       // Small delay to ensure smooth UX
       setTimeout(() => {
-        console.log('✨ Opening rating modal for order:', {
+        debugLog('âœ¨ Opening rating modal for order:', {
           orderId: orderId,
           restaurant: orderToRate.restaurant,
           status: orderToRate.status,
@@ -230,7 +234,7 @@ export default function Orders() {
         const ordersData = await fetchAllOrders()
 
         if (ordersData.length > 0) {
-          console.log('📦 Raw orders from API:', ordersData.slice(0, 3).map(o => ({
+          debugLog('ðŸ“¦ Raw orders from API:', ordersData.slice(0, 3).map(o => ({
             id: o.orderId || o._id,
             status: o.status,
             rating: o.rating || o.review?.rating,
@@ -305,7 +309,7 @@ export default function Orders() {
           // Sort by date (newest first)
           transformedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
 
-          console.log('✅ Orders fetched and transformed:', {
+          debugLog('âœ… Orders fetched and transformed:', {
             total: transformedOrders.length,
             delivered: transformedOrders.filter(o => o.status === 'delivered' || o.originalStatus === 'delivered').length,
             withRating: transformedOrders.filter(o => o.rating).length,
@@ -320,11 +324,11 @@ export default function Orders() {
 
           setOrders(transformedOrders)
         } else {
-          console.log('⚠️ No orders data in response')
+          debugLog('âš ï¸ No orders data in response')
           setOrders([])
         }
       } catch (error) {
-        console.error('Error fetching user orders:', error)
+        debugError('Error fetching user orders:', error)
         let errorMessage = 'Failed to load orders'
         if (error?.response?.status === 401) {
           errorMessage = 'Please login to view your orders'
@@ -414,7 +418,7 @@ Order again from this restaurant in the ${companyName} app.`
       }
     } catch (error) {
       if (error?.name !== "AbortError") {
-        console.error("Error sharing restaurant:", error)
+        debugError("Error sharing restaurant:", error)
         toast.error("Failed to share restaurant")
       }
     } finally {
@@ -476,7 +480,7 @@ Order again from this restaurant in the ${companyName} app.`
         )
       )
 
-      toast.success("Thanks for rating your order! 🎉")
+      toast.success("Thanks for rating your order! ðŸŽ‰")
 
       // Mark this order as rated so popup doesn't show again (before closing modal)
       const orderId = order.id || order._id || order.mongoId
@@ -484,7 +488,7 @@ Order again from this restaurant in the ${companyName} app.`
 
       handleCloseRating()
     } catch (error) {
-      console.error("Error submitting order rating:", error)
+      debugError("Error submitting order rating:", error)
       toast.error(
         error?.response?.data?.message ||
         "Failed to submit rating. Please try again."
@@ -609,13 +613,13 @@ Order again from this restaurant in the ${companyName} app.`
                       {order.deliveryPartnerName && (
                         <p className="text-xs text-gray-600 mt-1">
                           <span className="font-medium">Delivery:</span> {order.deliveryPartnerName}
-                          {order.deliveryPartnerPhone && ` • ${order.deliveryPartnerPhone}`}
+                          {order.deliveryPartnerPhone && ` â€¢ ${order.deliveryPartnerPhone}`}
                         </p>
                       )}
                       {order.restaurantId && (
                         <Link to={`/user/restaurants/${order.restaurantId}`}>
                           <button className="text-xs text-[#EB590E] font-medium flex items-center mt-1 hover:text-[#D94F0C]">
-                            View menu <span className="ml-0.5">▸</span>
+                            View menu <span className="ml-0.5">â–¸</span>
                           </button>
                         </Link>
                       )}
@@ -696,9 +700,9 @@ Order again from this restaurant in the ${companyName} app.`
                                 )}
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <span className="text-sm font-semibold text-gray-800">₹{itemTotal.toFixed(2)}</span>
+                                <span className="text-sm font-semibold text-gray-800">â‚¹{itemTotal.toFixed(2)}</span>
                                 {itemQuantity > 1 && (
-                                  <p className="text-xs text-gray-500">₹{itemPrice.toFixed(2)} each</p>
+                                  <p className="text-xs text-gray-500">â‚¹{itemPrice.toFixed(2)} each</p>
                                 )}
                               </div>
                             </div>
@@ -717,25 +721,25 @@ Order again from this restaurant in the ${companyName} app.`
                     {order.subtotal > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600">Subtotal</span>
-                        <span className="text-gray-800 font-medium">₹{order.subtotal.toFixed(2)}</span>
+                        <span className="text-gray-800 font-medium">â‚¹{order.subtotal.toFixed(2)}</span>
                       </div>
                     )}
                     {order.deliveryFee > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600">Delivery Fee</span>
-                        <span className="text-gray-800 font-medium">₹{order.deliveryFee.toFixed(2)}</span>
+                        <span className="text-gray-800 font-medium">â‚¹{order.deliveryFee.toFixed(2)}</span>
                       </div>
                     )}
                     {order.tax > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600">Tax</span>
-                        <span className="text-gray-800 font-medium">₹{order.tax.toFixed(2)}</span>
+                        <span className="text-gray-800 font-medium">â‚¹{order.tax.toFixed(2)}</span>
                       </div>
                     )}
                     {order.pricing?.discount > 0 && (
                       <div className="flex justify-between text-xs">
                         <span className="text-green-600">Discount</span>
-                        <span className="text-green-600 font-medium">-₹{order.pricing.discount.toFixed(2)}</span>
+                        <span className="text-green-600 font-medium">-â‚¹{order.pricing.discount.toFixed(2)}</span>
                       </div>
                     )}
                     {order.pricing?.couponCode && (
@@ -747,7 +751,7 @@ Order again from this restaurant in the ${companyName} app.`
                     <div className="border-t border-gray-200 pt-1.5 mt-1.5">
                       <div className="flex justify-between">
                         <span className="text-sm font-semibold text-gray-800">Total</span>
-                        <span className="text-base font-bold text-gray-900">₹{order.total.toFixed(2)}</span>
+                        <span className="text-base font-bold text-gray-900">â‚¹{order.total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -780,16 +784,16 @@ Order again from this restaurant in the ${companyName} app.`
                       </p>
                     )}
                     {isDelivered && !paymentFailed && (
-                      <p className="text-xs font-medium text-green-600 mt-1">✓ Delivered</p>
+                      <p className="text-xs font-medium text-green-600 mt-1">âœ“ Delivered</p>
                     )}
                     {isRestaurantCancelled && (
-                      <p className="text-xs font-medium text-red-500 mt-1">✗ Restaurant Cancelled</p>
+                      <p className="text-xs font-medium text-red-500 mt-1">âœ— Restaurant Cancelled</p>
                     )}
                     {isUserCancelled && (
-                      <p className="text-xs font-medium text-gray-500 mt-1">✗ Cancelled by you</p>
+                      <p className="text-xs font-medium text-gray-500 mt-1">âœ— Cancelled by you</p>
                     )}
                     {isCancelled && !isRestaurantCancelled && !isUserCancelled && (
-                      <p className="text-xs font-medium text-gray-500 mt-1">✗ Cancelled</p>
+                      <p className="text-xs font-medium text-gray-500 mt-1">âœ— Cancelled</p>
                     )}
                   </div>
                   <div className="flex items-center ml-4">
@@ -842,7 +846,7 @@ Order again from this restaurant in the ${companyName} app.`
                         onClick={() => handleOpenRating(order)}
                         className="text-xs text-[#EB590E] font-medium mt-0.5 flex items-center"
                       >
-                        Rate order <span className="ml-0.5">▸</span>
+                        Rate order <span className="ml-0.5">â–¸</span>
                       </button>
                     </div>
                   ) : (
@@ -896,14 +900,14 @@ Order again from this restaurant in the ${companyName} app.`
                   onClick={handleCloseRating}
                   className="text-white/80 hover:text-white transition-colors p-1 rounded-full hover:bg-white/20"
                 >
-                  <span className="text-xl">✕</span>
+                  <span className="text-xl">âœ•</span>
                 </button>
               </div>
               <p className="text-sm text-white/90">{ratingModal.order.restaurant}</p>
             </div>
 
             <div className="px-6 py-6">
-              {/* Star rating (1–5) */}
+              {/* Star rating (1â€“5) */}
               <div className="mb-6">
                 <p className="text-sm font-semibold text-gray-900 mb-4 text-center">
                   How was your overall experience?
@@ -935,11 +939,11 @@ Order again from this restaurant in the ${companyName} app.`
                 </div>
                 {selectedRating && (
                   <p className="text-center mt-3 text-sm font-medium text-gray-700">
-                    {selectedRating === 5 && "⭐⭐⭐⭐⭐ Excellent!"}
-                    {selectedRating === 4 && "⭐⭐⭐⭐ Great!"}
-                    {selectedRating === 3 && "⭐⭐⭐ Good"}
-                    {selectedRating === 2 && "⭐⭐ Fair"}
-                    {selectedRating === 1 && "⭐ Poor"}
+                    {selectedRating === 5 && "â­â­â­â­â­ Excellent!"}
+                    {selectedRating === 4 && "â­â­â­â­ Great!"}
+                    {selectedRating === 3 && "â­â­â­ Good"}
+                    {selectedRating === 2 && "â­â­ Fair"}
+                    {selectedRating === 1 && "â­ Poor"}
                   </p>
                 )}
               </div>
@@ -989,3 +993,4 @@ Order again from this restaurant in the ${companyName} app.`
     </div>
   )
 }
+

@@ -1,6 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react"
+﻿import { useState, useEffect, useMemo, useCallback } from "react"
 import { Search } from "lucide-react"
 import { adminAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Coupons() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -35,7 +39,7 @@ export default function Coupons() {
         setError("Failed to fetch offers")
       }
     } catch (err) {
-      console.error("Error fetching offers:", err)
+      debugError("Error fetching offers:", err)
       setError(err?.response?.data?.message || "Failed to fetch offers")
     } finally {
       setLoading(false)
@@ -54,7 +58,7 @@ export default function Coupons() {
           setRestaurants(response.data.data.restaurants || [])
         }
       } catch (err) {
-        console.error("Error fetching restaurants:", err)
+        debugError("Error fetching restaurants:", err)
       }
     }
 
@@ -120,7 +124,7 @@ export default function Coupons() {
       resetForm()
       await fetchOffers()
     } catch (err) {
-      console.error("Error creating coupon:", err)
+      debugError("Error creating coupon:", err)
       setSubmitError(err?.response?.data?.message || "Failed to create coupon")
     } finally {
       setIsSubmitting(false)
@@ -141,7 +145,7 @@ export default function Coupons() {
         ),
       )
     } catch (err) {
-      console.error("Error updating cart visibility:", err)
+      debugError("Error updating cart visibility:", err)
     } finally {
       setUpdatingCartVisibility((prev) => ({ ...prev, [key]: false }))
     }
@@ -385,14 +389,14 @@ export default function Coupons() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">
                           {offer.discountType === 'flat-price' 
-                            ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
+                            ? `â‚¹${offer.originalPrice - offer.discountedPrice} OFF`
                             : `${offer.discountPercentage}% OFF`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs text-slate-400 line-through">₹{offer.originalPrice}</span>
-                          <span className="text-sm font-semibold text-green-600">₹{offer.discountedPrice}</span>
+                          <span className="text-xs text-slate-400 line-through">â‚¹{offer.originalPrice}</span>
+                          <span className="text-sm font-semibold text-green-600">â‚¹{offer.discountedPrice}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -438,3 +442,4 @@ export default function Coupons() {
     </div>
   )
 }
+

@@ -1,5 +1,9 @@
-// Utility for managing restaurant data across pages
+﻿// Utility for managing restaurant data across pages
 import { restaurantsDummy } from "../data/restaurantsDummy"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "appzeto_restaurants"
 
@@ -14,7 +18,7 @@ export const getRestaurants = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurantsDummy))
     return restaurantsDummy
   } catch (error) {
-    console.error("Error loading restaurants:", error)
+    debugError("Error loading restaurants:", error)
     return restaurantsDummy
   }
 }
@@ -25,7 +29,7 @@ export const saveRestaurants = (restaurants) => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurants))
     return true
   } catch (error) {
-    console.error("Error saving restaurants:", error)
+    debugError("Error saving restaurants:", error)
     return false
   }
 }
@@ -67,4 +71,5 @@ export const deleteRestaurant = (id) => {
   saveRestaurants(updatedRestaurants)
   return true
 }
+
 

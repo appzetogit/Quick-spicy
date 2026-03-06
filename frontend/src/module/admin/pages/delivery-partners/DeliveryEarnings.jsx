@@ -1,11 +1,15 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
+﻿import { useState, useMemo, useEffect, useCallback } from "react"
 import { Search, Download, ChevronDown, DollarSign, Calendar, Filter, Loader2, FileText, FileSpreadsheet, Code } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const formatCurrency = (amount) => {
-  return `₹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  return `â‚¹${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 const formatDate = (dateString) => {
@@ -47,7 +51,7 @@ export default function DeliveryEarnings() {
         setDeliveryPartners(response.data.data.deliveryPartners || [])
       }
     } catch (err) {
-      console.error("Error fetching delivery partners:", err)
+      debugError("Error fetching delivery partners:", err)
     }
   }, [])
 
@@ -78,7 +82,7 @@ export default function DeliveryEarnings() {
         setEarnings([])
       }
     } catch (err) {
-      console.error("Error fetching earnings:", err)
+      debugError("Error fetching earnings:", err)
       const errorMessage = err.response?.data?.message || "Failed to fetch earnings. Please try again."
       setError(errorMessage)
       toast.error(errorMessage)
@@ -456,4 +460,5 @@ export default function DeliveryEarnings() {
     </div>
   )
 }
+
 

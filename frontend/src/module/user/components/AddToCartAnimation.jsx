@@ -1,8 +1,12 @@
-import { motion, AnimatePresence } from 'framer-motion';
+﻿import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 
 /**
@@ -447,7 +451,7 @@ export default function AddToCartAnimation({
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('View cart clicked, navigating to:', linkTo);
+                debugLog('View cart clicked, navigating to:', linkTo);
                 navigate(linkTo);
               }}
               className={`bg-gradient-to-r from-[#D94F0C] via-[#EB590E] to-[#D94F0C] text-white rounded-full shadow-xl shadow-orange-900/30 px-3 py-2 flex items-center gap-2 hover:from-[#D94F0C] hover:via-[#EB590E] hover:to-[#D94F0C] transition-all duration-300 pointer-events-auto border border-orange-800/30 backdrop-blur-sm cursor-pointer ${pillClassName}`}
@@ -527,3 +531,4 @@ export default function AddToCartAnimation({
     </>
   );
 }
+

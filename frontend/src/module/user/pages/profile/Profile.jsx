@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import {
@@ -44,6 +44,10 @@ import {
 import { authAPI } from "@/lib/api"
 import { firebaseAuth } from "@/lib/firebase"
 import { clearModuleAuth } from "@/lib/utils/auth"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Profile() {
   const { userProfile, vegMode, setVegMode, getDefaultAddress, addresses } = useProfile()
@@ -171,17 +175,17 @@ export default function Profile() {
     const percentage = Math.round((completedRequiredFields / totalRequiredFields) * 100)
 
     // Always log for debugging (remove in production if needed)
-    console.log('🔍 Profile completion check:', {
+    debugLog('ðŸ” Profile completion check:', {
       requiredFields,
       completedRequiredFields,
       totalRequiredFields,
       percentage,
       fieldStatus: {
-        name: hasName ? '✅' : '❌',
-        contact: hasContact ? '✅' : '❌',
-        profileImage: hasImage ? '✅' : '❌',
-        dateOfBirth: hasDateOfBirth ? '✅' : '❌',
-        gender: hasGender ? '✅' : '❌',
+        name: hasName ? 'âœ…' : 'âŒ',
+        contact: hasContact ? 'âœ…' : 'âŒ',
+        profileImage: hasImage ? 'âœ…' : 'âŒ',
+        dateOfBirth: hasDateOfBirth ? 'âœ…' : 'âŒ',
+        gender: hasGender ? 'âœ…' : 'âŒ',
       },
       rawData: {
         name: userProfile.name || 'missing',
@@ -210,13 +214,13 @@ export default function Profile() {
       setReferralCopied(true)
       setTimeout(() => setReferralCopied(false), 1500)
     } catch (error) {
-      console.error("Failed to copy referral code:", error)
+      debugError("Failed to copy referral code:", error)
     }
   }
 
   const handleShareReferral = async () => {
     if (!referralCode) return
-    const shareText = `Use my referral code ${referralCode} on signup and I get ₹50 in wallet.`
+    const shareText = `Use my referral code ${referralCode} on signup and I get â‚¹50 in wallet.`
     try {
       if (navigator.share) {
         await navigator.share({
@@ -229,7 +233,7 @@ export default function Profile() {
         window.open(fallbackUrl, "_blank", "noopener,noreferrer")
       }
     } catch (error) {
-      console.error("Failed to share referral:", error)
+      debugError("Failed to share referral:", error)
     }
   }
 
@@ -245,7 +249,7 @@ export default function Profile() {
         await authAPI.logout()
       } catch (apiError) {
         // Continue with logout even if API call fails (network issues, etc.)
-        console.warn("Logout API call failed, continuing with local cleanup:", apiError)
+        debugWarn("Logout API call failed, continuing with local cleanup:", apiError)
       }
 
       // Sign out from Firebase if user logged in via Google
@@ -257,7 +261,7 @@ export default function Profile() {
         }
       } catch (firebaseError) {
         // Continue even if Firebase logout fails
-        console.warn("Firebase logout failed, continuing with local cleanup:", firebaseError)
+        debugWarn("Firebase logout failed, continuing with local cleanup:", firebaseError)
       }
 
       // Clear user module authentication data using utility function
@@ -277,7 +281,7 @@ export default function Profile() {
       navigate("/user/auth/sign-in", { replace: true })
     } catch (err) {
       // Even if there's an error, we should still clear local data and logout
-      console.error("Error during logout:", err)
+      debugError("Error during logout:", err)
 
       // Clear local data anyway using utility function
       clearModuleAuth("user")
@@ -374,7 +378,7 @@ export default function Profile() {
                     <span className="text-base font-medium text-gray-900 dark:text-white">{companyName} Money</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-base font-semibold text-green-600 dark:text-green-400">₹{userProfile?.wallet?.balance?.toFixed(0) || '0'}</span>
+                    <span className="text-base font-semibold text-green-600 dark:text-green-400">â‚¹{userProfile?.wallet?.balance?.toFixed(0) || '0'}</span>
                     <motion.div
                       whileHover={{ x: 4 }}
                       transition={{ duration: 0.2 }}
@@ -461,7 +465,7 @@ export default function Profile() {
                     <span className="text-base font-medium text-gray-900 dark:text-white">Referral</span>
                   </div>
                   <span className="text-xs font-semibold px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-300">
-                    Earn ₹50
+                    Earn â‚¹50
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-2 bg-gray-50 dark:bg-gray-900 rounded-lg px-3 py-2 mb-2">
@@ -484,7 +488,7 @@ export default function Profile() {
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    When someone signs up using your code, you get ₹50 in wallet.
+                    When someone signs up using your code, you get â‚¹50 in wallet.
                   </p>
                   <button
                     type="button"
@@ -1036,4 +1040,5 @@ export default function Profile() {
     </AnimatedPage>
   )
 }
+
 

@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Settings, Info, Eye, EyeOff, CheckCircle, XCircle } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const thirdPartyServices = [
   {
@@ -157,7 +161,7 @@ export default function ThirdParty() {
       key: field.key,
       value: fieldValues[`${serviceId}-${field.key}`] || field.value
     }))
-    console.log("Saving service:", service.name, serviceFields)
+    debugLog("Saving service:", service.name, serviceFields)
     alert(`${service.name} configuration saved successfully!`)
     
     setServices(prev => prev.map(s => 
@@ -304,3 +308,4 @@ export default function ThirdParty() {
     </div>
   )
 }
+

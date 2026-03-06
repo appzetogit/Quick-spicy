@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { adminAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Lock, Eye, EyeOff, Save, Loader2, Shield } from "lucide-react";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminSettings() {
   const [passwordForm, setPasswordForm] = useState({
@@ -90,7 +94,7 @@ export default function AdminSettings() {
 
       toast.success("Password changed successfully");
     } catch (error) {
-      console.error("Error changing password:", error);
+      debugError("Error changing password:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to change password";
       
@@ -270,3 +274,4 @@ export default function AdminSettings() {
     </div>
   );
 }
+

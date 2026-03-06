@@ -1,5 +1,9 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { Edit, Upload, Info } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Using placeholder for promotional banner
 const bannerPreview = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&h=400&fit=crop"
 
@@ -17,16 +21,16 @@ export default function PromotionalBanner() {
       if (parsed?.activeLanguage) setActiveLanguage(parsed.activeLanguage)
       if (parsed?.bannerImage) setBannerImage(parsed.bannerImage)
     } catch (error) {
-      console.error("Failed to load saved promotional banner:", error)
+      debugError("Failed to load saved promotional banner:", error)
     }
   }, [])
 
   const languageTabs = [
     { key: "default", label: "Default" },
     { key: "en", label: "English(EN)" },
-    { key: "bn", label: "Bengali - বাংলা(BN)" },
-    { key: "ar", label: "Arabic - العربية (AR)" },
-    { key: "es", label: "Spanish - español(ES)" },
+    { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+    { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
   ]
 
   const handleSubmit = (e) => {
@@ -159,3 +163,4 @@ export default function PromotionalBanner() {
     </div>
   )
 }
+

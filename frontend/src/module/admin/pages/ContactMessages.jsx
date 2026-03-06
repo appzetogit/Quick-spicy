@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { Search, ArrowUpDown, Settings, Folder, ChevronDown, Eye, Loader2, Star } from "lucide-react"
 import { toast } from "sonner"
 import apiClient from "@/lib/api/axios"
@@ -17,6 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ContactMessages() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -57,11 +61,11 @@ export default function ContactMessages() {
         setTotalPages(1)
       }
     } catch (error) {
-      console.error('Error fetching reviews:', error)
-      console.error('Error response:', error.response)
-      console.error('Error status:', error.response?.status)
-      console.error('Error data:', error.response?.data)
-      console.error('Error message:', error.message)
+      debugError('Error fetching reviews:', error)
+      debugError('Error response:', error.response)
+      debugError('Error status:', error.response?.status)
+      debugError('Error data:', error.response?.data)
+      debugError('Error message:', error.message)
       
       // Set empty state on error
       setFeedbacks([])
@@ -489,13 +493,13 @@ export default function ContactMessages() {
                              </p>
                              {item.price && (
                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                 ₹{item.price} each
+                                 â‚¹{item.price} each
                                </p>
                              )}
                            </div>
                            {item.price && (
                              <p className="text-sm font-bold text-slate-900 dark:text-white">
-                               ₹{(item.price * item.quantity).toFixed(2)}
+                               â‚¹{(item.price * item.quantity).toFixed(2)}
                              </p>
                            )}
                          </div>
@@ -584,3 +588,4 @@ export default function ContactMessages() {
     </div>
   )
 }
+

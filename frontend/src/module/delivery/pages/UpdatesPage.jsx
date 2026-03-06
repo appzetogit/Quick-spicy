@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react"
+﻿import { useState, useRef, useEffect, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -22,6 +22,10 @@ import { Button } from "@/components/ui/button"
 import { useGigStore } from "../store/gigStore"
 import FeedNavbar from "../components/FeedNavbar"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Base stories data
 const baseStories = [
@@ -700,7 +704,7 @@ export default function UpdatesPage() {
                     autoPlay
                     playsInline
                     onError={(e) => {
-                      console.error("Video load error:", e)
+                      debugError("Video load error:", e)
                     }}
                   />
 
@@ -777,4 +781,5 @@ export default function UpdatesPage() {
     </div>
   )
 }
+
 

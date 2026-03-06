@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Phone, Save, Loader2, AlertCircle, CheckCircle2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DeliveryEmergencyHelp() {
   const [loading, setLoading] = useState(true)
@@ -34,7 +38,7 @@ export default function DeliveryEmergencyHelp() {
         })
       }
     } catch (error) {
-      console.error("Error fetching emergency help:", error)
+      debugError("Error fetching emergency help:", error)
       toast.error("Failed to load emergency help numbers")
     } finally {
       setLoading(false)
@@ -103,7 +107,7 @@ export default function DeliveryEmergencyHelp() {
         toast.error(response?.data?.message || "Failed to save emergency help numbers")
       }
     } catch (error) {
-      console.error("Error saving emergency help:", error)
+      debugError("Error saving emergency help:", error)
       toast.error(error?.response?.data?.message || "Failed to save emergency help numbers")
     } finally {
       setSaving(false)
@@ -115,28 +119,28 @@ export default function DeliveryEmergencyHelp() {
       id: "medicalEmergency",
       label: "Medical Emergency",
       placeholder: "Enter medical emergency phone number",
-      icon: "🚑",
+      icon: "ðŸš‘",
       description: "Phone number for medical emergencies (e.g., 108, +91-XXX-XXX-XXXX)"
     },
     {
       id: "accidentHelpline",
       label: "Accident Helpline",
       placeholder: "Enter accident helpline phone number",
-      icon: "⚠️",
+      icon: "âš ï¸",
       description: "Phone number for accident helpline"
     },
     {
       id: "contactPolice",
       label: "Contact Police",
       placeholder: "Enter police emergency phone number",
-      icon: "🚔",
+      icon: "ðŸš”",
       description: "Phone number for police emergency (e.g., 100)"
     },
     {
       id: "insurance",
       label: "Insurance",
       placeholder: "Enter insurance helpline phone number",
-      icon: "🛡️",
+      icon: "ðŸ›¡ï¸",
       description: "Phone number for insurance claims and policy help"
     }
   ]
@@ -255,3 +259,4 @@ export default function DeliveryEmergencyHelp() {
     </div>
   )
 }
+

@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
 import { ArrowLeft, ChevronDown } from "lucide-react"
 import BottomPopup from "@/module/delivery/components/BottomPopup"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const ADDRESS_STORAGE_KEY = "restaurant_address"
 
@@ -65,14 +69,14 @@ export default function EditRestaurantAddress() {
                 setAddress(savedAddress)
               }
             } catch (error) {
-              console.error("Error loading address from storage:", error)
+              debugError("Error loading address from storage:", error)
             }
           }
         }
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Fallback to localStorage
         try {
@@ -86,7 +90,7 @@ export default function EditRestaurantAddress() {
                            ""
           setRestaurantName(savedName)
         } catch (e) {
-          console.error("Error loading from localStorage:", e)
+          debugError("Error loading from localStorage:", e)
         }
       } finally {
         setLoading(false)
@@ -169,10 +173,10 @@ export default function EditRestaurantAddress() {
               
               if (data.status === 'OK' && data.results && data.results.length > 0) {
                 formattedAddress = data.results[0].formatted_address
-                console.log("✅ Fetched formattedAddress from coordinates:", formattedAddress)
+                debugLog("âœ… Fetched formattedAddress from coordinates:", formattedAddress)
               }
             } catch (error) {
-              console.warn("⚠️ Failed to fetch formattedAddress, using existing:", error)
+              debugWarn("âš ï¸ Failed to fetch formattedAddress, using existing:", error)
             }
           }
           
@@ -198,12 +202,12 @@ export default function EditRestaurantAddress() {
             throw new Error("Invalid response from server")
           }
         } catch (updateError) {
-          console.error("Error updating address:", updateError)
+          debugError("Error updating address:", updateError)
           alert(`Failed to update address: ${updateError.response?.data?.message || updateError.message || "Please try again."}`)
         }
       }
     } catch (error) {
-      console.error("Error updating address:", error)
+      debugError("Error updating address:", error)
       alert(`Failed to update address: ${error.response?.data?.message || error.message || "Please try again."}`)
     }
   }
@@ -367,3 +371,4 @@ export default function EditRestaurantAddress() {
     </div>
   )
 }
+

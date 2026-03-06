@@ -1,9 +1,13 @@
-import { Outlet, useLocation } from "react-router-dom"
+﻿import { Outlet, useLocation } from "react-router-dom"
 import { useEffect, useState, createContext, useContext, lazy, Suspense } from "react"
 import { ProfileProvider } from "../context/ProfileContext"
 import LocationPrompt from "./LocationPrompt"
 import { CartProvider } from "../context/CartContext"
 import { OrdersProvider } from "../context/OrdersContext"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Lazy load overlays to reduce initial bundle size
 const SearchOverlay = lazy(() => import("./SearchOverlay"))
 const LocationSelectorOverlay = lazy(() => import("./LocationSelectorOverlay"))
@@ -15,10 +19,10 @@ const SearchOverlayContext = createContext({
   isSearchOpen: false,
   searchValue: "",
   setSearchValue: () => {
-    console.warn("SearchOverlayProvider not available")
+    debugWarn("SearchOverlayProvider not available")
   },
   openSearch: () => {
-    console.warn("SearchOverlayProvider not available")
+    debugWarn("SearchOverlayProvider not available")
   },
   closeSearch: () => { }
 })
@@ -63,7 +67,7 @@ function SearchOverlayProvider({ children }) {
 const LocationSelectorContext = createContext({
   isLocationSelectorOpen: false,
   openLocationSelector: () => {
-    console.warn("LocationSelectorProvider not available")
+    debugWarn("LocationSelectorProvider not available")
   },
   closeLocationSelector: () => { }
 })
@@ -156,4 +160,5 @@ export default function UserLayout() {
     </div>
   )
 }
+
 

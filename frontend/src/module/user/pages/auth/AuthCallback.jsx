@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { setAuthData } from "@/lib/utils/auth"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AuthCallback() {
   const navigate = useNavigate()
@@ -58,7 +62,7 @@ export default function AuthCallback() {
             }, 1000)
             return
           } catch (err) {
-            console.error("Error processing token from URL:", err)
+            debugError("Error processing token from URL:", err)
             throw new Error("Invalid user data received from server")
           }
         }
@@ -234,3 +238,4 @@ export default function AuthCallback() {
     </AnimatedPage>
   )
 }
+

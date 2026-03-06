@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
 import { ArrowLeft, Settings, ChevronRight } from "lucide-react"
@@ -14,6 +14,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_outlet_timings"
 
@@ -51,7 +55,7 @@ export default function RestaurantStatus() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Continue with default values if fetch fails
       } finally {
@@ -72,7 +76,7 @@ export default function RestaurantStatus() {
           setOutletTimings(data)
         }
       } catch (error) {
-        console.error("Error loading outlet timings:", error)
+        debugError("Error loading outlet timings:", error)
       }
     }
 
@@ -104,7 +108,7 @@ export default function RestaurantStatus() {
           setOutletTimings(outletTimingsData)
         }
       } catch (error) {
-        console.error("Error loading outlet timings:", error)
+        debugError("Error loading outlet timings:", error)
       }
 
       if (!outletTimingsData || !outletTimingsData[currentDayFull]) {
@@ -202,7 +206,7 @@ export default function RestaurantStatus() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error loading delivery status:", error)
+          debugError("Error loading delivery status:", error)
         }
         // Fallback to localStorage
         try {
@@ -253,9 +257,9 @@ export default function RestaurantStatus() {
       // Update backend
       try {
         await restaurantAPI.updateDeliveryStatus(checked)
-        console.log('✅ Delivery status updated in backend:', checked)
+        debugLog('âœ… Delivery status updated in backend:', checked)
       } catch (apiError) {
-        console.error('Error updating delivery status in backend:', apiError)
+        debugError('Error updating delivery status in backend:', apiError)
         // Still continue with local update even if backend fails
       }
       
@@ -264,7 +268,7 @@ export default function RestaurantStatus() {
         detail: { isOnline: checked } 
       }))
     } catch (error) {
-      console.error("Error saving delivery status:", error)
+      debugError("Error saving delivery status:", error)
     }
   }
 
@@ -464,7 +468,7 @@ export default function RestaurantStatus() {
         <DialogContent className="sm:max-w-md p-4 w-[90%] gap-2 flex flex-col">
           <DialogHeader className="text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-              <span className="text-3xl">⚠️</span>
+              <span className="text-3xl">âš ï¸</span>
             </div>
             <DialogTitle className="text-lg font-semibold text-gray-900 text-center">
               Outlet Timings Closed
@@ -493,7 +497,7 @@ export default function RestaurantStatus() {
         <DialogContent className="sm:max-w-md p-4 w-[90%] gap-2 flex flex-col">
           <DialogHeader className="text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-orange-100">
-              <span className="text-3xl">⚠️</span>
+              <span className="text-3xl">âš ï¸</span>
             </div>
             <DialogTitle className="text-lg font-semibold text-gray-900 text-center">
               Outside Delivery Timings
@@ -527,3 +531,4 @@ export default function RestaurantStatus() {
     </div>
   )
 }
+

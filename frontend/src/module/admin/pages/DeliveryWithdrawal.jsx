@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { Search, Wallet, Eye, CheckCircle, XCircle, Loader2, Package } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -9,6 +9,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const TABS = [
   { key: "Pending", label: "Pending" },
@@ -47,7 +51,7 @@ export default function DeliveryWithdrawal() {
         setRequests([])
       }
     } catch (error) {
-      console.error("Error fetching delivery withdrawal requests:", error)
+      debugError("Error fetching delivery withdrawal requests:", error)
       toast.error(error.response?.data?.message || "Failed to fetch delivery withdrawal requests")
       setRequests([])
     } finally {
@@ -99,7 +103,7 @@ export default function DeliveryWithdrawal() {
       }
     } catch (error) {
       const msg = error.response?.data?.message || error.message || "Failed to approve withdrawal request"
-      console.error("Error approving delivery withdrawal:", error?.response?.data || error, msg)
+      debugError("Error approving delivery withdrawal:", error?.response?.data || error, msg)
       toast.error(msg)
     } finally {
       setProcessingAction(null)
@@ -120,7 +124,7 @@ export default function DeliveryWithdrawal() {
         toast.error(response?.data?.message || "Failed to reject")
       }
     } catch (error) {
-      console.error("Error rejecting delivery withdrawal:", error)
+      debugError("Error rejecting delivery withdrawal:", error)
       toast.error(error.response?.data?.message || "Failed to reject withdrawal request")
     } finally {
       setProcessingAction(null)
@@ -144,8 +148,8 @@ export default function DeliveryWithdrawal() {
   }
 
   const formatCurrency = (amount) => {
-    if (amount == null) return "₹0.00"
-    return `₹${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    if (amount == null) return "â‚¹0.00"
+    return `â‚¹${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   return (
@@ -202,7 +206,7 @@ export default function DeliveryWithdrawal() {
           {loading ? (
             <div className="py-20 text-center">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-4" />
-              <p className="text-slate-600">Loading withdrawal requests…</p>
+              <p className="text-slate-600">Loading withdrawal requestsâ€¦</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -378,7 +382,7 @@ export default function DeliveryWithdrawal() {
                 <textarea
                   value={rejectionReason}
                   onChange={(e) => setRejectionReason(e.target.value)}
-                  placeholder="Enter reason for rejection…"
+                  placeholder="Enter reason for rejectionâ€¦"
                   rows={4}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
                 />
@@ -400,7 +404,7 @@ export default function DeliveryWithdrawal() {
                 disabled={processingAction === selectedRequest?.id}
                 className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {processingAction === selectedRequest?.id ? "Rejecting…" : "Reject"}
+                {processingAction === selectedRequest?.id ? "Rejectingâ€¦" : "Reject"}
               </button>
             </DialogFooter>
           </DialogContent>
@@ -409,3 +413,4 @@ export default function DeliveryWithdrawal() {
     </div>
   )
 }
+

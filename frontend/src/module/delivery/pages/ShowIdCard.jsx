@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { X, Loader2 } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ShowIdCard() {
   const companyName = useCompanyName()
@@ -24,7 +28,7 @@ export default function ShowIdCard() {
           toast.error("Failed to load profile data")
         }
       } catch (error) {
-        console.error("Error fetching profile:", error)
+        debugError("Error fetching profile:", error)
         toast.error("Failed to load ID card data")
       } finally {
         setLoading(false)
@@ -201,4 +205,5 @@ export default function ShowIdCard() {
     </div>
   )
 }
+
 

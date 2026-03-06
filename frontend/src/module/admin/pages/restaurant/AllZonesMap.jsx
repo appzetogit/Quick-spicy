@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { MapPin, ArrowLeft, Search } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AllZonesMap() {
   const navigate = useNavigate()
@@ -72,7 +76,7 @@ export default function AllZonesMap() {
         setZones(response.data.data.zones)
       }
     } catch (error) {
-      console.error("Error fetching zones:", error)
+      debugError("Error fetching zones:", error)
       setZones([])
     } finally {
       setLoading(false)
@@ -86,7 +90,7 @@ export default function AllZonesMap() {
         setRestaurants(response.data.data.restaurants)
       }
     } catch (error) {
-      console.error("Error fetching restaurants:", error)
+      debugError("Error fetching restaurants:", error)
     }
   }
 
@@ -124,7 +128,7 @@ export default function AllZonesMap() {
         setMapLoading(false)
       }
     } catch (error) {
-      console.error("Error loading Google Maps:", error)
+      debugError("Error loading Google Maps:", error)
       setMapLoading(false)
     }
   }
@@ -467,4 +471,5 @@ export default function AllZonesMap() {
     </div>
   )
 }
+
 

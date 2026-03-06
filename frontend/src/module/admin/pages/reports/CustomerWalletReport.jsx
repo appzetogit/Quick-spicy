@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Filter, Wallet, RefreshCw, Calendar, Plus, ArrowUpDown, Settings, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -10,15 +10,19 @@ import { toast } from "sonner"
 import debitIcon from "../../assets/Dashboard-icons/image2.png"
 import creditIcon from "../../assets/Dashboard-icons/image1.png"
 import balanceIcon from "../../assets/Dashboard-icons/image6.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function CustomerWalletReport() {
   const [searchQuery, setSearchQuery] = useState("")
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [walletStats, setWalletStats] = useState({
-    debit: "₹ 0.00",
-    credit: "₹ 0.00",
-    balance: "₹ 0.00"
+    debit: "â‚¹ 0.00",
+    credit: "â‚¹ 0.00",
+    balance: "â‚¹ 0.00"
   })
   const [customers, setCustomers] = useState([])
   const [filters, setFilters] = useState({
@@ -49,9 +53,9 @@ export default function CustomerWalletReport() {
         if (response?.data?.success && response.data.data) {
           setTransactions(response.data.data.transactions || [])
           setWalletStats(response.data.data.stats || {
-            debit: "₹ 0.00",
-            credit: "₹ 0.00",
-            balance: "₹ 0.00"
+            debit: "â‚¹ 0.00",
+            credit: "â‚¹ 0.00",
+            balance: "â‚¹ 0.00"
           })
           setCustomers(response.data.data.customers || [])
         } else {
@@ -61,7 +65,7 @@ export default function CustomerWalletReport() {
           }
         }
       } catch (error) {
-        console.error("Error fetching customer wallet report:", error)
+        debugError("Error fetching customer wallet report:", error)
         toast.error("Failed to fetch customer wallet report")
         setTransactions([])
       } finally {
@@ -453,3 +457,4 @@ export default function CustomerWalletReport() {
     </div>
   )
 }
+

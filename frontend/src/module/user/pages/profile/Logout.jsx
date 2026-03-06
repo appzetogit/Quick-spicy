@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+﻿import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Power, AlertCircle } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
@@ -6,6 +6,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useState } from "react"
 import { authAPI } from "@/lib/api"
 import { firebaseAuth } from "@/lib/firebase"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Logout() {
   const navigate = useNavigate()
@@ -22,7 +26,7 @@ export default function Logout() {
         await authAPI.logout()
       } catch (apiError) {
         // Continue with logout even if API call fails (network issues, etc.)
-        console.warn("Logout API call failed, continuing with local cleanup:", apiError)
+        debugWarn("Logout API call failed, continuing with local cleanup:", apiError)
       }
 
       // Sign out from Firebase if user logged in via Google
@@ -34,7 +38,7 @@ export default function Logout() {
         }
       } catch (firebaseError) {
         // Continue even if Firebase logout fails
-        console.warn("Firebase logout failed, continuing with local cleanup:", firebaseError)
+        debugWarn("Firebase logout failed, continuing with local cleanup:", firebaseError)
       }
 
       // Clear all authentication data from localStorage
@@ -55,7 +59,7 @@ export default function Logout() {
       }, 500)
     } catch (err) {
       // Even if there's an error, we should still clear local data and logout
-      console.error("Error during logout:", err)
+      debugError("Error during logout:", err)
       
       // Clear local data anyway
       localStorage.removeItem("accessToken")
@@ -162,3 +166,4 @@ export default function Logout() {
     </AnimatedPage>
   )
 }
+

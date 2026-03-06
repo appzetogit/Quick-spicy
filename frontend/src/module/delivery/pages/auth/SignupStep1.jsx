@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SignupStep1() {
   const navigate = useNavigate()
@@ -12,7 +16,7 @@ export default function SignupStep1() {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error("Error parsing saved details:", e)
+        debugError("Error parsing saved details:", e)
       }
     }
     return {
@@ -137,7 +141,7 @@ export default function SignupStep1() {
         navigate("/delivery/signup/documents")
       }
     } catch (error) {
-      console.error("Error submitting signup details:", error)
+      debugError("Error submitting signup details:", error)
       const message = error?.response?.data?.message || "Failed to save details. Please try again."
       toast.error(message)
     } finally {
@@ -354,4 +358,5 @@ export default function SignupStep1() {
     </div>
   )
 }
+
 

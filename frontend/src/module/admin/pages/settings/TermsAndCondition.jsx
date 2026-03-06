@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
 import { Textarea } from "@/components/ui/textarea"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TermsAndCondition() {
   const [loading, setLoading] = useState(true)
@@ -62,7 +66,7 @@ export default function TermsAndCondition() {
         })
       }
     } catch (error) {
-      console.error('Error fetching terms data:', error)
+      debugError('Error fetching terms data:', error)
       toast.error('Failed to load terms and conditions')
     } finally {
       setLoading(false)
@@ -94,7 +98,7 @@ export default function TermsAndCondition() {
         })
       }
     } catch (error) {
-      console.error('Error saving terms:', error)
+      debugError('Error saving terms:', error)
       toast.error(error.response?.data?.message || 'Failed to save terms and conditions')
     } finally {
       setSaving(false)
@@ -154,3 +158,4 @@ export default function TermsAndCondition() {
     </div>
   )
 }
+

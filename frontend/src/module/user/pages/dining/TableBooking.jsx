@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, ChevronDown, Calendar, Clock, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -6,6 +6,10 @@ import AnimatedPage from "../../components/AnimatedPage"
 import { useEffect } from "react"
 import { diningAPI } from "@/lib/api"
 import Loader from "@/components/Loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TableBooking() {
     const { slug } = useParams()
@@ -29,7 +33,7 @@ export default function TableBooking() {
                     setRestaurant(actualRestaurant)
                 }
             } catch (error) {
-                console.error("Error fetching restaurant:", error)
+                debugError("Error fetching restaurant:", error)
             } finally {
                 setLoading(false)
             }
@@ -257,3 +261,4 @@ export default function TableBooking() {
         </AnimatedPage>
     )
 }
+

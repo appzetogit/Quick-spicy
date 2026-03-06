@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+﻿import { useEffect, useRef, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -20,6 +20,10 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { determineStepToShow } from "../utils/onboardingUtils"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const cuisinesOptions = [
   "North Indian",
@@ -147,7 +151,7 @@ const saveOnboardingToLocalStorage = (step1, step2, step3, step4, currentStep) =
     }
     localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(dataToSave))
   } catch (error) {
-    console.error("Failed to save onboarding data to localStorage:", error)
+    debugError("Failed to save onboarding data to localStorage:", error)
   }
 }
 
@@ -158,7 +162,7 @@ const loadOnboardingFromLocalStorage = () => {
       return JSON.parse(stored)
     }
   } catch (error) {
-    console.error("Failed to load onboarding data from localStorage:", error)
+    debugError("Failed to load onboarding data from localStorage:", error)
   }
   return null
 }
@@ -167,7 +171,7 @@ const clearOnboardingFromLocalStorage = () => {
   try {
     localStorage.removeItem(ONBOARDING_STORAGE_KEY)
   } catch (error) {
-    console.error("Failed to clear onboarding data from localStorage:", error)
+    debugError("Failed to clear onboarding data from localStorage:", error)
   }
 }
 
@@ -461,7 +465,7 @@ export default function RestaurantOnboarding() {
       }
       input.click()
     } catch (error) {
-      console.error("Browser camera fallback failed:", error)
+      debugError("Browser camera fallback failed:", error)
     }
   }
 
@@ -533,7 +537,7 @@ export default function RestaurantOnboarding() {
 
       onSelectFile(selectedFile)
     } catch (error) {
-      console.error("openCamera bridge failed:", error)
+      debugError("openCamera bridge failed:", error)
       openBrowserCameraFallback({ onSelectFile })
     }
   }
@@ -755,11 +759,11 @@ export default function RestaurantOnboarding() {
         // Handle error gracefully - if it's a 401 (unauthorized), the user might need to login again
         // Otherwise, just continue with empty onboarding data
         if (err?.response?.status === 401) {
-          console.error("Authentication error fetching onboarding:", err)
+          debugError("Authentication error fetching onboarding:", err)
           // Don't show error to user, they can still fill the form
           // The error might be because restaurant is not yet active (pending verification)
         } else {
-          console.error("Error fetching onboarding data:", err)
+          debugError("Error fetching onboarding data:", err)
         }
       } finally {
         setLoading(false)
@@ -776,7 +780,7 @@ export default function RestaurantOnboarding() {
     } catch (err) {
       // Provide more informative error message for upload failures
       const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Failed to upload image"
-      console.error("Upload error:", errorMsg, err)
+      debugError("Upload error:", errorMsg, err)
       throw new Error(`Image upload failed: ${errorMsg}`)
     }
   }
@@ -1066,7 +1070,7 @@ export default function RestaurantOnboarding() {
       validationErrors = validateStep3()
     } else if (step === 4) {
       validationErrors = validateStep4()
-      console.log('🔍 Step 4 validation:', {
+      debugLog('ðŸ” Step 4 validation:', {
         step4,
         errors: validationErrors,
         estimatedDeliveryTime: step4.estimatedDeliveryTime,
@@ -1085,7 +1089,7 @@ export default function RestaurantOnboarding() {
           })
         }, index * 100)
       })
-      console.log('❌ Validation failed:', validationErrors)
+      debugLog('âŒ Validation failed:', validationErrors)
       return
     }
 
@@ -1110,7 +1114,7 @@ export default function RestaurantOnboarding() {
             }
             menuUploads.push(uploaded)
           } catch (uploadError) {
-            console.error('Menu image upload error:', uploadError)
+            debugError('Menu image upload error:', uploadError)
             throw new Error(`Failed to upload menu image: ${uploadError.message}`)
           }
         }
@@ -1133,7 +1137,7 @@ export default function RestaurantOnboarding() {
               throw new Error('Failed to upload profile image')
             }
           } catch (uploadError) {
-            console.error('Profile image upload error:', uploadError)
+            debugError('Profile image upload error:', uploadError)
             throw new Error(`Failed to upload profile image: ${uploadError.message}`)
           }
         } else if (step2.profileImage?.url) {
@@ -1162,7 +1166,7 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 2,
         }
-        console.log('📤 Step2 payload:', {
+        debugLog('ðŸ“¤ Step2 payload:', {
           menuImageUrlsCount: payload.step2.menuImageUrls.length,
           hasProfileImage: !!payload.step2.profileImageUrl,
           cuisines: payload.step2.cuisines,
@@ -1171,7 +1175,7 @@ export default function RestaurantOnboarding() {
         })
 
         const response = await api.put("/restaurant/onboarding", payload)
-        console.log('✅ Step2 response:', response?.data)
+        debugLog('âœ… Step2 response:', response?.data)
 
         // Verify response is successful
         if (!response || !response.data) {
@@ -1181,12 +1185,12 @@ export default function RestaurantOnboarding() {
         // After step2, also update restaurant schema with step2 data
         // This ensures data is saved immediately, not just in onboarding subdocument
         if (response?.data?.data?.restaurant) {
-          console.log('✅ Step2 data saved and restaurant updated')
+          debugLog('âœ… Step2 data saved and restaurant updated')
         }
 
         // Only proceed to step 3 if save was successful
         if (response?.data?.data?.onboarding || response?.data?.data) {
-          console.log('✅ Step2 completed successfully, moving to step 3')
+          debugLog('âœ… Step2 completed successfully, moving to step 3')
           setStep(3)
         } else {
           throw new Error('Failed to save step2 data')
@@ -1202,7 +1206,7 @@ export default function RestaurantOnboarding() {
               throw new Error('Failed to upload PAN image')
             }
           } catch (uploadError) {
-            console.error('PAN image upload error:', uploadError)
+            debugError('PAN image upload error:', uploadError)
             throw new Error(`Failed to upload PAN image: ${uploadError.message}`)
           }
         } else if (step3.panImage?.url) {
@@ -1229,7 +1233,7 @@ export default function RestaurantOnboarding() {
                 throw new Error('Failed to upload GST image')
               }
             } catch (uploadError) {
-              console.error('GST image upload error:', uploadError)
+              debugError('GST image upload error:', uploadError)
               throw new Error(`Failed to upload GST image: ${uploadError.message}`)
             }
           } else if (step3.gstImage?.url) {
@@ -1256,7 +1260,7 @@ export default function RestaurantOnboarding() {
               throw new Error('Failed to upload FSSAI image')
             }
           } catch (uploadError) {
-            console.error('FSSAI image upload error:', uploadError)
+            debugError('FSSAI image upload error:', uploadError)
             throw new Error(`Failed to upload FSSAI image: ${uploadError.message}`)
           }
         } else if (step3.fssaiImage?.url) {
@@ -1300,7 +1304,7 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 3,
         }
-        console.log('📤 Step3 payload:', {
+        debugLog('ðŸ“¤ Step3 payload:', {
           hasPan: !!payload.step3.pan.panNumber,
           hasGst: payload.step3.gst.isRegistered,
           hasFssai: !!payload.step3.fssai.registrationNumber,
@@ -1308,14 +1312,14 @@ export default function RestaurantOnboarding() {
         })
 
         const response = await api.put("/restaurant/onboarding", payload)
-        console.log('✅ Step3 response:', response?.data)
+        debugLog('âœ… Step3 response:', response?.data)
 
         if (response?.data?.data?.onboarding) {
-          console.log('✅ Step3 data saved successfully')
+          debugLog('âœ… Step3 data saved successfully')
         }
         setStep(4)
       } else if (step === 4) {
-        console.log('📤 Submitting Step 4:', step4)
+        debugLog('ðŸ“¤ Submitting Step 4:', step4)
         const payload = {
           step4: {
             estimatedDeliveryTime: step4.estimatedDeliveryTime,
@@ -1325,9 +1329,9 @@ export default function RestaurantOnboarding() {
           },
           completedSteps: 4,
         }
-        console.log('📤 Step 4 payload:', payload)
+        debugLog('ðŸ“¤ Step 4 payload:', payload)
         const response = await api.put("/restaurant/onboarding", payload)
-        console.log('✅ Step4 completed, response:', response?.data)
+        debugLog('âœ… Step4 completed, response:', response?.data)
 
         // Verify response is successful
         if (!response || !response.data) {
@@ -1339,12 +1343,12 @@ export default function RestaurantOnboarding() {
         clearOnboardingFileCache()
 
         // Show success message briefly, then navigate
-        console.log('✅ Onboarding completed successfully, redirecting to restaurant home...')
+        debugLog('âœ… Onboarding completed successfully, redirecting to restaurant home...')
 
         // Wait a moment to ensure data is saved, then navigate
         setTimeout(() => {
           // Navigate to restaurant home page after onboarding completion
-          console.log('🚀 Navigating to restaurant home page...')
+          debugLog('ðŸš€ Navigating to restaurant home page...')
           navigate("/restaurant", { replace: true })
         }, 800)
       }
@@ -1543,7 +1547,7 @@ export default function RestaurantOnboarding() {
               <div className="flex flex-col">
                 <span className="text-xs font-medium text-gray-900">Upload menu images</span>
                 <span className="text-[11px] text-gray-500">
-                  JPG, PNG, WebP • You can select multiple files
+                  JPG, PNG, WebP â€¢ You can select multiple files
                 </span>
               </div>
             </div>
@@ -1577,7 +1581,7 @@ export default function RestaurantOnboarding() {
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
                 if (!files.length) return
-                console.log('📸 Menu images selected:', files.length, 'files')
+                debugLog('ðŸ“¸ Menu images selected:', files.length, 'files')
                 setStep2((prev) => ({
                   ...prev,
                   menuImages: [...(prev.menuImages || []), ...files], // Append new files to existing ones
@@ -1733,7 +1737,7 @@ export default function RestaurantOnboarding() {
             onChange={(e) => {
               const file = e.target.files?.[0] || null
               if (file) {
-                console.log('📸 Profile image selected:', file.name)
+                debugLog('ðŸ“¸ Profile image selected:', file.name)
                 setStep2((prev) => ({
                   ...prev,
                   profileImage: file,
@@ -2233,7 +2237,7 @@ export default function RestaurantOnboarding() {
         </div>
 
         <div>
-          <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
+          <Label className="text-xs text-gray-700">Featured Dish Price (â‚¹)*</Label>
           <Input
             type="text"
             inputMode="numeric"
@@ -2367,5 +2371,6 @@ export default function RestaurantOnboarding() {
     </LocalizationProvider>
   )
 }
+
 
 

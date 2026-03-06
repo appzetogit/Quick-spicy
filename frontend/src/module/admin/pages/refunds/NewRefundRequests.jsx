@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
@@ -8,6 +8,10 @@ import FilterPanel from "../../components/orders/FilterPanel"
 import ViewOrderDialog from "../../components/orders/ViewOrderDialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
 import { useGenericTableManagement } from "../../components/orders/useGenericTableManagement"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function NewRefundRequests() {
   const [orders, setOrders] = useState([])
@@ -41,13 +45,13 @@ export default function NewRefundRequests() {
           setOrders(response.data.data.orders)
           setTotalCount(response.data.data.pagination?.total || response.data.data.orders.length)
         } else {
-          console.error("Failed to fetch refund requests:", response.data)
+          debugError("Failed to fetch refund requests:", response.data)
           toast.error("Failed to fetch refund requests")
           setOrders([])
         }
       } catch (error) {
-        console.error("Error fetching refund requests:", error)
-        console.error("Error details:", {
+        debugError("Error fetching refund requests:", error)
+        debugError("Error details:", {
           message: error.message,
           response: error.response?.data,
           status: error.response?.status,
@@ -117,7 +121,7 @@ export default function NewRefundRequests() {
         toast.error(response.data?.message || "Failed to process refund")
       }
     } catch (error) {
-      console.error("Error processing refund:", error)
+      debugError("Error processing refund:", error)
       toast.error(error.response?.data?.message || "Failed to process refund")
     } finally {
       setProcessingRefund(null)
@@ -224,7 +228,7 @@ export default function NewRefundRequests() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <div className="text-sm font-medium text-slate-900">
-                          ₹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          â‚¹{order.totalAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                         <div className="text-xs text-emerald-600 mt-0.5">{order.paymentStatus}</div>
                       </td>
@@ -264,7 +268,7 @@ export default function NewRefundRequests() {
                               {processingRefund === order.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                <span className="text-sm">₹</span>
+                                <span className="text-sm">â‚¹</span>
                               )}
                             </button>
                           )}
@@ -281,3 +285,4 @@ export default function NewRefundRequests() {
     </div>
   )
 }
+

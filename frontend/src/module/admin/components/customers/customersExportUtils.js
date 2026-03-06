@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Export utility functions for customers
 export const exportCustomersToCSV = (customers, filename = "customers") => {
   if (!customers || customers.length === 0) {
@@ -181,15 +185,15 @@ export const exportCustomersToPDF = (customers, filename = "customers") => {
         const fileTimestamp = new Date().toISOString().split("T")[0]
         doc.save(`${filename}_${fileTimestamp}.pdf`)
       }).catch((error) => {
-        console.error("Error loading jspdf-autotable:", error)
+        debugError("Error loading jspdf-autotable:", error)
         alert("Failed to load PDF library. Please try again.")
       })
     }).catch((error) => {
-      console.error("Error loading jsPDF:", error)
+      debugError("Error loading jsPDF:", error)
       alert("Failed to load PDF library. Please try again.")
     })
   } catch (error) {
-    console.error("PDF export error:", error)
+    debugError("PDF export error:", error)
     alert("Failed to export PDF. Please try again.")
   }
 }
@@ -230,4 +234,5 @@ export const exportCustomersToJSON = (customers, filename = "customers") => {
   document.body.removeChild(link)
   URL.revokeObjectURL(url)
 }
+
 

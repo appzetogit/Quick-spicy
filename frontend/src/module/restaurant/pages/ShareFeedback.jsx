@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { X } from "lucide-react"
@@ -7,6 +7,10 @@ import { API_ENDPOINTS } from "@/lib/api/config"
 import api from "@/lib/api"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ShareFeedback() {
   const companyName = useCompanyName()
@@ -33,7 +37,7 @@ export default function ShareFeedback() {
       })
       setShowThanks(true)
     } catch (error) {
-      console.error('Error submitting feedback:', error)
+      debugError('Error submitting feedback:', error)
       // Still show thanks popup even if backend save fails (graceful degradation)
       if (error.response?.status !== 401) {
         toast.error('Failed to save feedback, but thank you for your input!')
@@ -171,7 +175,7 @@ export default function ShareFeedback() {
             >
               <div className="flex flex-col items-center text-center">
                 <div className="mb-3 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <span className="text-2xl">✓</span>
+                  <span className="text-2xl">âœ“</span>
                 </div>
                 <h2 className="text-base font-semibold text-gray-900 mb-1">
                   Thanks for your feedback
@@ -197,3 +201,4 @@ export default function ShareFeedback() {
     </div>
   )
 }
+

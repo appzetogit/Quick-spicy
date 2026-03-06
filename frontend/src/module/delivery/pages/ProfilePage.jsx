@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+﻿import { useEffect, useRef, useState } from "react"
 import { gsap } from "gsap"
 import Lenis from "lenis"
 import { useNavigate, useLocation } from "react-router-dom"
@@ -28,6 +28,10 @@ import { toast } from "sonner"
 import { clearModuleAuth } from "@/lib/utils/auth"
 import alertSound from "@/assets/audio/alert.mp3"
 import originalSound from "@/assets/audio/original.mp3"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -119,7 +123,7 @@ export default function ProfilePage() {
           const profileData = response.data.data.profile
           setProfile(profileData)
           // Debug: Log profile image data
-          console.log("Profile image data:", {
+          debugLog("Profile image data:", {
             profileImage: profileData.profileImage,
             documentsPhoto: profileData.documents?.photo,
             hasProfileImage: !!profileData.profileImage?.url,
@@ -127,7 +131,7 @@ export default function ProfilePage() {
           })
         }
       } catch (error) {
-        console.error("Error fetching profile:", error)
+        debugError("Error fetching profile:", error)
         toast.error("Failed to load profile data")
       } finally {
         setLoading(false)
@@ -149,7 +153,7 @@ export default function ProfilePage() {
             setProfile(response.data.data.profile)
           }
         } catch (error) {
-          console.error("Error fetching profile:", error)
+          debugError("Error fetching profile:", error)
         }
       }
       fetchProfile()
@@ -171,7 +175,7 @@ export default function ProfilePage() {
       // Call logout API to clear refresh token on server
       await deliveryAPI.logout()
     } catch (error) {
-      console.error("Logout API error (continuing with local cleanup):", error)
+      debugError("Logout API error (continuing with local cleanup):", error)
       // Continue with local cleanup even if API call fails
     }
 
@@ -310,7 +314,7 @@ export default function ProfilePage() {
           >
             <CardContent className="p-4 flex items-center justify-between">
               <div>
-                <h3 className="text-base font-medium mb-1">₹2000 referral bonus</h3>
+                <h3 className="text-base font-medium mb-1">â‚¹2000 referral bonus</h3>
                 <p className="text-gray-600 text-sm">Refer your friend and earn</p>
               </div>
               <div className="flex items-center justify-center w-12 h-12">
@@ -405,21 +409,21 @@ export default function ProfilePage() {
                       localStorage.setItem('delivery_alert_sound', e.target.value)
                       // Play preview sound
                       try {
-                        console.log('🔊 Playing preview sound: Original', { originalSoundPath: originalSound })
+                        debugLog('ðŸ”Š Playing preview sound: Original', { originalSoundPath: originalSound })
                         const audio = new Audio(originalSound)
                         audio.volume = 0.7
                         const playPromise = audio.play()
                         if (playPromise !== undefined) {
                           playPromise
                             .then(() => {
-                              console.log('✅ Preview sound playing: Original')
+                              debugLog('âœ… Preview sound playing: Original')
                             })
                             .catch(err => {
-                              console.error('❌ Preview audio error:', err)
+                              debugError('âŒ Preview audio error:', err)
                             })
                         }
                       } catch (err) {
-                        console.error('❌ Could not create preview audio:', err)
+                        debugError('âŒ Could not create preview audio:', err)
                       }
                     }}
                     className="w-5 h-5 text-black focus:ring-2 focus:ring-black"
@@ -439,21 +443,21 @@ export default function ProfilePage() {
                       localStorage.setItem('delivery_alert_sound', e.target.value)
                       // Play preview sound
                       try {
-                        console.log('🔊 Playing preview sound: Zomato Tone', { alertSoundPath: alertSound })
+                        debugLog('ðŸ”Š Playing preview sound: Zomato Tone', { alertSoundPath: alertSound })
                         const audio = new Audio(alertSound)
                         audio.volume = 0.7
                         const playPromise = audio.play()
                         if (playPromise !== undefined) {
                           playPromise
                             .then(() => {
-                              console.log('✅ Preview sound playing: Zomato Tone')
+                              debugLog('âœ… Preview sound playing: Zomato Tone')
                             })
                             .catch(err => {
-                              console.error('❌ Preview audio error:', err)
+                              debugError('âŒ Preview audio error:', err)
                             })
                         }
                       } catch (err) {
-                        console.error('❌ Could not create preview audio:', err)
+                        debugError('âŒ Could not create preview audio:', err)
                       }
                     }}
                     className="w-5 h-5 text-black focus:ring-2 focus:ring-black"
@@ -478,3 +482,4 @@ export default function ProfilePage() {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from "react"
+﻿import { useState, useMemo, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Eye, Settings, ArrowUpDown, Loader2, X, MapPin, Phone, Mail, Clock, Star, Building2, User, FileText, CreditCard, Calendar, Image as ImageIcon, ExternalLink, ShieldX, AlertTriangle, Trash2, Plus } from "lucide-react"
 import { adminAPI, restaurantAPI, locationAPI, uploadAPI } from "../../../../lib/api"
@@ -10,6 +10,10 @@ import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import locationIcon from "../../assets/Dashboard-icons/image1.png"
 import restaurantIcon from "../../assets/Dashboard-icons/image2.png"
 import inactiveIcon from "../../assets/Dashboard-icons/image3.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantsList() {
   const navigate = useNavigate()
@@ -118,7 +122,7 @@ export default function RestaurantsList() {
           response = await adminAPI.getRestaurants()
         } catch (adminErr) {
           // Fallback to regular restaurant API if admin endpoint doesn't exist
-          console.log("Admin restaurants endpoint not available, using fallback")
+          debugLog("Admin restaurants endpoint not available, using fallback")
           response = await restaurantAPI.getRestaurants()
         }
 
@@ -148,7 +152,7 @@ export default function RestaurantsList() {
           setRestaurants([])
         }
       } catch (err) {
-        console.error("Error fetching restaurants:", err)
+        debugError("Error fetching restaurants:", err)
         setError(err.message || "Failed to fetch restaurants")
         setRestaurants([])
       } finally {
@@ -261,9 +265,9 @@ export default function RestaurantsList() {
 
       // Call API to update restaurant status
       await adminAPI.updateRestaurantStatus(restaurantId, newStatus)
-      console.log(`Restaurant ${id} status updated to ${newStatus}`)
+      debugLog(`Restaurant ${id} status updated to ${newStatus}`)
     } catch (err) {
-      console.error("Error updating restaurant status:", err)
+      debugError("Error updating restaurant status:", err)
       // Revert on error
       setRestaurants(prev => prev.map(r =>
         r.id === id ? { ...r, status: !newStatus } : r
@@ -293,7 +297,7 @@ export default function RestaurantsList() {
   }
 
   const renderStars = (rating) => {
-    return "★".repeat(rating) + "☆".repeat(5 - rating)
+    return "â˜…".repeat(rating) + "â˜†".repeat(5 - rating)
   }
 
   const getLocationFromRestaurant = (restaurant) => {
@@ -395,7 +399,7 @@ export default function RestaurantsList() {
         pincode: parsed.pincode || prev.pincode,
       }))
     } catch (err) {
-      console.warn("Failed to reverse geocode location:", err)
+      debugWarn("Failed to reverse geocode location:", err)
     } finally {
       setResolvingAddress(false)
     }
@@ -493,7 +497,7 @@ export default function RestaurantsList() {
         reverseGeocodeLocation(nextLat, nextLng)
       })
     } catch (err) {
-      console.error("Error initializing location map:", err)
+      debugError("Error initializing location map:", err)
       setMapError("Failed to initialize map. Please try again.")
     } finally {
       setMapLoading(false)
@@ -513,7 +517,7 @@ export default function RestaurantsList() {
     try {
       // First, use original data if available (has all details)
       if (restaurant.originalData) {
-        console.log("Using original restaurant data:", restaurant.originalData)
+        debugLog("Using original restaurant data:", restaurant.originalData)
         setRestaurantDetails(restaurant.originalData)
         setLoadingDetails(false)
         return
@@ -531,7 +535,7 @@ export default function RestaurantsList() {
             response = await adminAPI.getRestaurantById(restaurantId)
           }
         } catch (err) {
-          console.log("Admin API failed, trying restaurant API:", err)
+          debugLog("Admin API failed, trying restaurant API:", err)
         }
 
         // Fallback to regular restaurant API
@@ -539,7 +543,7 @@ export default function RestaurantsList() {
           try {
             response = await restaurantAPI.getRestaurantById(restaurantId)
           } catch (err) {
-            console.log("Restaurant API also failed:", err)
+            debugLog("Restaurant API also failed:", err)
           }
         }
       }
@@ -558,11 +562,11 @@ export default function RestaurantsList() {
         }
       } else {
         // Use the restaurant data we already have
-        console.log("Using restaurant data from list:", restaurant)
+        debugLog("Using restaurant data from list:", restaurant)
         setRestaurantDetails(restaurant)
       }
     } catch (err) {
-      console.error("Error fetching restaurant details:", err)
+      debugError("Error fetching restaurant details:", err)
       // Use the restaurant data we already have
       setRestaurantDetails(restaurant)
     } finally {
@@ -645,7 +649,7 @@ export default function RestaurantsList() {
       setIsEditingLocation(false)
       alert("Restaurant location updated successfully")
     } catch (err) {
-      console.error("Error saving restaurant location:", err)
+      debugError("Error saving restaurant location:", err)
       alert(err?.response?.data?.message || "Failed to update restaurant location")
     } finally {
       setSavingLocation(false)
@@ -796,7 +800,7 @@ export default function RestaurantsList() {
       setProfileImageFile(null)
       alert("Restaurant details updated successfully")
     } catch (err) {
-      console.error("Error updating restaurant details:", err)
+      debugError("Error updating restaurant details:", err)
       alert(err?.response?.data?.message || "Failed to update restaurant details")
     } finally {
       setSavingDetails(false)
@@ -850,9 +854,9 @@ export default function RestaurantsList() {
         setBanConfirmDialog(null)
 
         // Show success message
-        console.log(`Restaurant ${isBanning ? 'banned' : 'unbanned'} successfully`)
+        debugLog(`Restaurant ${isBanning ? 'banned' : 'unbanned'} successfully`)
       } catch (apiErr) {
-        console.error("API Error:", apiErr)
+        debugError("API Error:", apiErr)
         // If API fails, still update locally for better UX
         setRestaurants(prevRestaurants =>
           prevRestaurants.map(r =>
@@ -866,7 +870,7 @@ export default function RestaurantsList() {
       }
 
     } catch (err) {
-      console.error("Error banning/unbanning restaurant:", err)
+      debugError("Error banning/unbanning restaurant:", err)
       alert(`Failed to ${action} restaurant. Please try again.`)
     } finally {
       setBanning(false)
@@ -908,12 +912,12 @@ export default function RestaurantsList() {
         // Show success message
         alert(`Restaurant "${restaurant.name}" deleted successfully!`)
       } catch (apiErr) {
-        console.error("API Error:", apiErr)
+        debugError("API Error:", apiErr)
         alert(apiErr.response?.data?.message || "Failed to delete restaurant. Please try again.")
       }
 
     } catch (err) {
-      console.error("Error deleting restaurant:", err)
+      debugError("Error deleting restaurant:", err)
       alert("Failed to delete restaurant. Please try again.")
     } finally {
       setDeleting(false)
@@ -2207,3 +2211,4 @@ export default function RestaurantsList() {
     </div>
   )
 }
+

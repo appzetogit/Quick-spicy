@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -26,6 +26,10 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_outlet_timings"
 
@@ -405,7 +409,7 @@ export default function DaySlots() {
         return getDefaultDayData()
       }
     } catch (error) {
-      console.error("Error loading day slots:", error)
+      debugError("Error loading day slots:", error)
     }
     return getDefaultDayData()
   })
@@ -594,7 +598,7 @@ export default function DaySlots() {
       window.dispatchEvent(new Event("outletTimingsUpdated"))
       navigate("/restaurant/outlet-timings")
     } catch (error) {
-      console.error("Error saving day slots:", error)
+      debugError("Error saving day slots:", error)
       alert("Error saving slots. Please try again.")
     }
   }
@@ -859,3 +863,4 @@ export default function DaySlots() {
     </div>
   )
 }
+

@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { Users, ChevronDown, Search, Settings, Edit, Trash2, ArrowUpDown, Download, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const employeesDummy = [
   {
@@ -71,7 +75,7 @@ export default function EmployeeList() {
       alert("No data to export")
       return
     }
-    console.log(`Exporting as ${format}`, filteredEmployees)
+    debugLog(`Exporting as ${format}`, filteredEmployees)
   }
 
   const toggleColumn = (columnKey) => {
@@ -344,3 +348,4 @@ export default function EmployeeList() {
     </div>
   )
 }
+

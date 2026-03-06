@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { BarChart3, ChevronDown, Info, Settings, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -16,6 +16,10 @@ import deliverymanEarningIcon from "../../assets/Transaction-report-icons/delive
 // Import search and export icons from Dashboard-icons
 import searchIcon from "../../assets/Dashboard-icons/image8.png"
 import exportIcon from "../../assets/Dashboard-icons/image9.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TransactionReport() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -53,7 +57,7 @@ export default function TransactionReport() {
           setRestaurants(restaurantsResponse.data.data.restaurants)
         }
       } catch (error) {
-        console.error("Error fetching filter data:", error)
+        debugError("Error fetching filter data:", error)
       }
     }
     fetchFilterData()
@@ -110,7 +114,7 @@ export default function TransactionReport() {
           }
         }
       } catch (error) {
-        console.error("Error fetching transaction report:", error)
+        debugError("Error fetching transaction report:", error)
         toast.error("Failed to fetch transaction report")
         setTransactions([])
       } finally {
@@ -154,13 +158,13 @@ export default function TransactionReport() {
 
   const formatCurrency = (amount) => {
     if (amount >= 1000) {
-      return `₹ ${(amount / 1000).toFixed(2)}K`
+      return `â‚¹ ${(amount / 1000).toFixed(2)}K`
     }
-    return `₹ ${amount.toFixed(2)}`
+    return `â‚¹ ${amount.toFixed(2)}`
   }
 
   const formatFullCurrency = (amount) => {
-    return `₹ ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    return `â‚¹ ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   if (loading) {
@@ -522,3 +526,4 @@ export default function TransactionReport() {
     </div>
   )
 }
+

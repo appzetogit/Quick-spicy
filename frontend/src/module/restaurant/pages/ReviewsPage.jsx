@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -12,6 +12,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ReviewsPage() {
   const navigate = useNavigate()
@@ -163,7 +167,7 @@ export default function ReviewsPage() {
                   <Button
                     onClick={() => {
                       if (review.hasReply) {
-                        console.log("View reply for review:", review.id)
+                        debugLog("View reply for review:", review.id)
                         // Navigate to view reply page if needed
                       } else {
                         navigate(`/restaurant/reviews/${review.id}/reply`)
@@ -211,4 +215,5 @@ export default function ReviewsPage() {
     </div>
   )
 }
+
 

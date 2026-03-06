@@ -1,6 +1,10 @@
-import { useState, useEffect } from 'react'
+﻿import { useState, useEffect } from 'react'
 import { Search, TrendingUp, TrendingDown, DollarSign, ShoppingCart, XCircle, Star, Calendar, BarChart3, Users, Award, Package } from 'lucide-react'
 import { adminAPI } from '@/lib/api'
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function PointOfSale() {
   const [restaurants, setRestaurants] = useState([])
@@ -82,7 +86,7 @@ export default function PointOfSale() {
         setRestaurants(response.data.data?.restaurants || response.data.data || [])
       }
     } catch (error) {
-      console.error('Error fetching restaurants:', error)
+      debugError('Error fetching restaurants:', error)
       // Fallback to dummy data for development
       setRestaurants([
         { _id: '1', name: 'Spice Garden', restaurantId: 'RST001' },
@@ -100,23 +104,23 @@ export default function PointOfSale() {
       
       // Validate restaurantId
       if (!restaurantId) {
-        console.error('Restaurant ID is required')
+        debugError('Restaurant ID is required')
         return
       }
       
-      console.log('Fetching analytics for restaurant:', restaurantId)
+      debugLog('Fetching analytics for restaurant:', restaurantId)
       
       // Fetch comprehensive restaurant analytics from backend
       const analyticsResponse = await adminAPI.getRestaurantAnalytics(restaurantId)
       
-      console.log('Analytics response:', analyticsResponse)
+      debugLog('Analytics response:', analyticsResponse)
       
       if (analyticsResponse?.data?.success && analyticsResponse.data.data) {
         const { restaurant, analytics } = analyticsResponse.data.data
         
-        console.log('Analytics data received:', analytics)
-        console.log('Commission percentage from API:', analytics.commissionPercentage)
-        console.log('Commission percentage type:', typeof analytics.commissionPercentage)
+        debugLog('Analytics data received:', analytics)
+        debugLog('Commission percentage from API:', analytics.commissionPercentage)
+        debugLog('Commission percentage type:', typeof analytics.commissionPercentage)
         
         // Set restaurant data
         setRestaurantData(restaurant)
@@ -126,7 +130,7 @@ export default function PointOfSale() {
           ? parseFloat(analytics.commissionPercentage) || 0
           : 0;
         
-        console.log('Parsed commission percentage:', commissionPercentage)
+        debugLog('Parsed commission percentage:', commissionPercentage)
         
         // Set analytics data - ensure all values are numbers, not null/undefined
         setAnalyticsData({
@@ -181,8 +185,8 @@ export default function PointOfSale() {
         })
       }
     } catch (error) {
-      console.error('Error fetching restaurant analytics:', error)
-      console.error('Error details:', {
+      debugError('Error fetching restaurant analytics:', error)
+      debugError('Error details:', {
         message: error?.message,
         response: error?.response?.data,
         status: error?.response?.status,
@@ -191,11 +195,11 @@ export default function PointOfSale() {
       
       // Show user-friendly error message
       if (error?.response?.status === 404) {
-        console.warn('Restaurant not found')
+        debugWarn('Restaurant not found')
       } else if (error?.response?.status === 400) {
-        console.warn('Invalid restaurant ID')
+        debugWarn('Invalid restaurant ID')
       } else {
-        console.warn('Failed to fetch analytics. Please try again.')
+        debugWarn('Failed to fetch analytics. Please try again.')
       }
       
       // Set empty data on error
@@ -262,7 +266,7 @@ export default function PointOfSale() {
   }
 
   const formatCurrency = (amount) => {
-    return `₹ ${amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
+    return `â‚¹ ${amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
   }
 
   const formatNumber = (num) => {
@@ -342,7 +346,7 @@ export default function PointOfSale() {
                   </div>
               {selectedRestaurant && (
                 <p className="text-xs text-green-600 mt-2">
-                  ✓ Selected: {getSelectedRestaurantName()}
+                  âœ“ Selected: {getSelectedRestaurantName()}
                 </p>
               )}
         </div>
@@ -372,7 +376,7 @@ export default function PointOfSale() {
                         ))}
                       </select>
                       <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">
-                        ▼
+                        â–¼
                       </span>
                     </div>
                   </div>
@@ -666,3 +670,4 @@ export default function PointOfSale() {
     </div>
   )
 }
+

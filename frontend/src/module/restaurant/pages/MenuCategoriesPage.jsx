@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import {
@@ -14,6 +14,10 @@ import {
 } from "lucide-react"
 import { restaurantAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function MenuCategoriesPage() {
   const navigate = useNavigate()
@@ -40,7 +44,7 @@ export default function MenuCategoriesPage() {
         setCategories(response.data.data.categories || [])
       }
     } catch (error) {
-      console.error('Error fetching categories:', error)
+      debugError('Error fetching categories:', error)
       toast.error('Failed to load categories')
     } finally {
       setLoading(false)
@@ -91,7 +95,7 @@ export default function MenuCategoriesPage() {
       setShowAddModal(false)
       fetchCategories()
     } catch (error) {
-      console.error('Error saving category:', error)
+      debugError('Error saving category:', error)
       if (error.code === 'ERR_NETWORK') {
         toast.error('Network error. Please check if backend server is running.')
       } else {
@@ -110,7 +114,7 @@ export default function MenuCategoriesPage() {
       toast.success('Category deleted successfully')
       fetchCategories()
     } catch (error) {
-      console.error('Error deleting category:', error)
+      debugError('Error deleting category:', error)
       toast.error(error.response?.data?.message || 'Failed to delete category')
     }
   }
@@ -123,7 +127,7 @@ export default function MenuCategoriesPage() {
       toast.success(`Category ${!category.isActive ? 'activated' : 'deactivated'}`)
       fetchCategories()
     } catch (error) {
-      console.error('Error toggling category:', error)
+      debugError('Error toggling category:', error)
       toast.error('Failed to update category')
     }
   }
@@ -290,4 +294,5 @@ export default function MenuCategoriesPage() {
     </div>
   )
 }
+
 

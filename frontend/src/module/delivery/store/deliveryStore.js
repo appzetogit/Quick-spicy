@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Delivery Module State Management using Zustand
  * Manages general delivery module data with localStorage persistence
@@ -292,7 +296,7 @@ export const useDeliveryStore = create(
           set(data)
           window.dispatchEvent(new CustomEvent('deliveryStoreImported'))
         } catch (error) {
-          console.error('Error importing delivery store data:', error)
+          debugError('Error importing delivery store data:', error)
           throw new Error('Invalid JSON data')
         }
       }
@@ -318,7 +322,8 @@ export const initializeDeliveryStore = () => {
     const store = useDeliveryStore.getState()
     store.updateLastActiveTime()
   } catch (error) {
-    console.error('Error initializing delivery store:', error)
+    debugError('Error initializing delivery store:', error)
   }
 }
+
 

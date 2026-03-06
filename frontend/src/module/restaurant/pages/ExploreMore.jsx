@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -35,6 +35,10 @@ import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
 import { clearModuleAuth, clearAuthData } from "@/lib/utils/auth"
 import { restaurantAPI } from "@/lib/api"
 import { firebaseAuth } from "@/lib/firebase"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Time Picker Wheel Component
 function TimePickerWheel({
@@ -368,7 +372,7 @@ export default function ExploreMore() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Continue with default values if fetch fails
       } finally {
@@ -464,7 +468,7 @@ export default function ExploreMore() {
         await restaurantAPI.logout()
       } catch (apiError) {
         // Continue with logout even if API call fails (network issues, etc.)
-        console.warn("Logout API call failed, continuing with local cleanup:", apiError)
+        debugWarn("Logout API call failed, continuing with local cleanup:", apiError)
       }
 
       // Sign out from Firebase if restaurant logged in via Google
@@ -476,7 +480,7 @@ export default function ExploreMore() {
         }
       } catch (firebaseError) {
         // Continue even if Firebase logout fails
-        console.warn("Firebase logout failed, continuing with local cleanup:", firebaseError)
+        debugWarn("Firebase logout failed, continuing with local cleanup:", firebaseError)
       }
 
       // Clear restaurant module authentication data
@@ -500,7 +504,7 @@ export default function ExploreMore() {
       }, 300)
     } catch (error) {
       // Even if there's an error, we should still clear local data and logout
-      console.error("Error during logout:", error)
+      debugError("Error during logout:", error)
       clearModuleAuth("restaurant")
       localStorage.removeItem("restaurant_onboarding")
       localStorage.removeItem("restaurant_accessToken")
@@ -526,7 +530,7 @@ export default function ExploreMore() {
         await restaurantAPI.logout()
       } catch (apiError) {
         // Continue with logout even if API call fails (network issues, etc.)
-        console.warn("Logout API call failed, continuing with local cleanup:", apiError)
+        debugWarn("Logout API call failed, continuing with local cleanup:", apiError)
       }
 
       // Sign out from Firebase if restaurant logged in via Google
@@ -538,7 +542,7 @@ export default function ExploreMore() {
         }
       } catch (firebaseError) {
         // Continue even if Firebase logout fails
-        console.warn("Firebase logout failed, continuing with local cleanup:", firebaseError)
+        debugWarn("Firebase logout failed, continuing with local cleanup:", firebaseError)
       }
 
       // Clear auth for all modules (admin, restaurant, delivery, user)
@@ -565,7 +569,7 @@ export default function ExploreMore() {
       }, 300)
     } catch (error) {
       // Even if there's an error, we should still clear local data and logout
-      console.error("Error during logout from all devices:", error)
+      debugError("Error during logout from all devices:", error)
       clearAuthData()
       localStorage.removeItem("restaurant_onboarding")
       sessionStorage.removeItem("restaurantAuthData")
@@ -600,7 +604,7 @@ export default function ExploreMore() {
         setExistingSchedule(schedule)
       }
     } catch (error) {
-      console.error("Error loading schedule from localStorage:", error)
+      debugError("Error loading schedule from localStorage:", error)
     }
   }, [])
 
@@ -619,7 +623,7 @@ export default function ExploreMore() {
         setScheduleOffOpen(true)
       }
     } catch (error) {
-      console.error("Error checking schedule:", error)
+      debugError("Error checking schedule:", error)
       setScheduleOffOpen(true)
     }
   }
@@ -1188,7 +1192,7 @@ export default function ExploreMore() {
                     onClick={(e) => {
                       e.preventDefault()
                       // Navigate to terms of service
-                      console.log("Terms of Service clicked")
+                      debugLog("Terms of Service clicked")
                     }}
                   >
                     Terms of Service
@@ -1200,7 +1204,7 @@ export default function ExploreMore() {
                     onClick={(e) => {
                       e.preventDefault()
                       // Navigate to privacy policy
-                      console.log("Privacy Policy clicked")
+                      debugLog("Privacy Policy clicked")
                     }}
                   >
                     Privacy Policy
@@ -1212,7 +1216,7 @@ export default function ExploreMore() {
                     onClick={(e) => {
                       e.preventDefault()
                       // Navigate to code of conduct
-                      console.log("Code of Conduct clicked")
+                      debugLog("Code of Conduct clicked")
                     }}
                   >
                     Code of Conduct
@@ -1593,3 +1597,4 @@ export default function ExploreMore() {
     </motion.div>
   )
 }
+

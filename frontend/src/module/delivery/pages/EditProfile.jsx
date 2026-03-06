@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { 
@@ -8,6 +8,10 @@ import {
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function EditProfile() {
   const navigate = useNavigate()
@@ -28,7 +32,7 @@ export default function EditProfile() {
   const handleSubmit = (e) => {
     e.preventDefault()
     // Handle form submission
-    console.log("Profile updated:", formData)
+    debugLog("Profile updated:", formData)
     navigate("/delivery/profile")
   }
 
@@ -66,7 +70,7 @@ export default function EditProfile() {
                       className="hidden"
                       onChange={(e) => {
                         // Handle image upload
-                        console.log("Image selected:", e.target.files[0])
+                        debugLog("Image selected:", e.target.files[0])
                       }}
                     />
                   </label>
@@ -156,4 +160,5 @@ export default function EditProfile() {
     </div>
   )
 }
+
 

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { 
   ArrowLeft,
@@ -11,11 +11,15 @@ import { formatCurrency } from "../../restaurant/utils/currency"
 import WeekSelector from "../components/WeekSelector"
 import { deliveryAPI } from "@/lib/api"
 import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function PocketDetails() {
   const navigate = useNavigate()
 
-  // Current week range (Sunday–Saturday)
+  // Current week range (Sundayâ€“Saturday)
   const getInitialWeekRange = () => {
     const now = new Date()
     const start = new Date(now)
@@ -83,7 +87,7 @@ export default function PocketDetails() {
         setPaymentTransactions(filteredPayments)
         setBonusTransactions(filteredBonuses)
       } catch (error) {
-        console.error("Error loading pocket details data:", error)
+        debugError("Error loading pocket details data:", error)
         setOrders([])
         setPaymentTransactions([])
         setBonusTransactions([])
@@ -365,4 +369,5 @@ export default function PocketDetails() {
     </div>
   )
 }
+
 

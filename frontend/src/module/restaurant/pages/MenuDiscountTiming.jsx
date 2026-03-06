@@ -1,10 +1,14 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { AnimatePresence, motion } from "framer-motion"
 import { ArrowLeft, Info, Calendar as CalendarIcon, ChevronDown, X } from "lucide-react"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import BottomNavOrders from "../components/BottomNavOrders"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function MenuDiscountTiming() {
   const navigate = useNavigate()
@@ -62,7 +66,7 @@ export default function MenuDiscountTiming() {
     if (!isFormValid) return
 
     // TODO: Save offer to backend here
-    console.log("Offer data:", {
+    debugLog("Offer data:", {
       customerGroup,
       offerPreference: "all",
       discountType,
@@ -310,3 +314,4 @@ export default function MenuDiscountTiming() {
     </div>
   )
 }
+

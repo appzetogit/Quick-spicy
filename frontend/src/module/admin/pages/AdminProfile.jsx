@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { adminAPI, uploadAPI } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,10 @@ import {
 } from "@/components/ui/card";
 import { toast } from "sonner";
 import { User, Mail, Phone, Save, Loader2, Upload, X, Pencil } from "lucide-react";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminProfile() {
   const [profile, setProfile] = useState(null);
@@ -49,7 +53,7 @@ export default function AdminProfile() {
         });
       }
     } catch (error) {
-      console.error("Error fetching admin profile:", error);
+      debugError("Error fetching admin profile:", error);
       toast.error(
         error?.response?.data?.message || "Failed to load profile"
       );
@@ -120,7 +124,7 @@ export default function AdminProfile() {
             throw new Error("Failed to get uploaded image URL");
           }
         } catch (uploadError) {
-          console.error("Error uploading image:", uploadError);
+          debugError("Error uploading image:", uploadError);
           toast.error(
             uploadError?.response?.data?.message || "Failed to upload image"
           );
@@ -161,7 +165,7 @@ export default function AdminProfile() {
         setIsEditMode(false);
       }
     } catch (error) {
-      console.error("Error updating profile:", error);
+      debugError("Error updating profile:", error);
       toast.error(
         error?.response?.data?.message || "Failed to update profile"
       );
@@ -482,3 +486,4 @@ export default function AdminProfile() {
     </div>
   );
 }
+

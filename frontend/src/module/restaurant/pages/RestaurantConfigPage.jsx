@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -8,6 +8,10 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantConfigPage() {
   const navigate = useNavigate()
@@ -219,7 +223,7 @@ export default function RestaurantConfigPage() {
                 <ToggleSwitch enabled={subscriptionOrder} onChange={setSubscriptionOrder} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Minimum Order Amount (₹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Minimum Order Amount (â‚¹):</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -412,7 +416,7 @@ export default function RestaurantConfigPage() {
                 <ToggleSwitch enabled={activeGST} onChange={setActiveGST} />
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">GST Amount (₹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">GST Amount (â‚¹):</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -468,7 +472,7 @@ export default function RestaurantConfigPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Extra Packaging Amount (₹):</span>
+                <span className="text-sm md:text-base text-gray-700 flex-shrink-0">Extra Packaging Amount (â‚¹):</span>
                 <Input
                   type="number"
                   step="0.1"
@@ -542,7 +546,7 @@ export default function RestaurantConfigPage() {
             <Button
               onClick={() => {
                 // Handle update logic here
-                console.log("Settings updated")
+                debugLog("Settings updated")
               }}
               className="w-full bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold py-3 md:py-4 rounded-lg text-base md:text-lg"
             >
@@ -560,4 +564,5 @@ export default function RestaurantConfigPage() {
     </div>
   )
 }
+
 

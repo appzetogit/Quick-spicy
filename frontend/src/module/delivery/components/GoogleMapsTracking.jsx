@@ -1,6 +1,10 @@
-import { useCallback, useRef, useEffect, useState } from 'react'
+﻿import { useCallback, useRef, useEffect, useState } from 'react'
 import { GoogleMap, useJsApiLoader, Marker, Polyline } from '@react-google-maps/api'
 import { motion } from 'framer-motion'
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 /**
  * GoogleMapsTracking Component
@@ -19,7 +23,7 @@ import { motion } from 'framer-motion'
  *   routeDestination={{ lat: restaurantLat, lng: restaurantLng }}
  *   destinationName="Restaurant Name"
  *   onRouteInfoUpdate={(info) => {
- *     console.log('Distance:', info.distance, 'Duration:', info.duration)
+ *     debugLog('Distance:', info.distance, 'Duration:', info.duration)
  *   }}
  *   lastUpdate={new Date()}
  * />
@@ -262,13 +266,13 @@ export default function GoogleMapsTracking({
   // Calculate and display route using Google Directions Service
   const calculateAndDisplayRoute = useCallback((origin, destination, waypoints = []) => {
     if (!isLoaded || !mapRef.current || !window.google?.maps) {
-      console.log('⚠️ Cannot calculate route: map not loaded or not ready')
+      debugLog('âš ï¸ Cannot calculate route: map not loaded or not ready')
       return
     }
 
     // Validate origin and destination
     if (!origin || !destination || !origin.lat || !origin.lng || !destination.lat || !destination.lng) {
-      console.log('⚠️ Cannot calculate route: invalid origin or destination', { origin, destination })
+      debugLog('âš ï¸ Cannot calculate route: invalid origin or destination', { origin, destination })
       return
     }
 
@@ -387,7 +391,7 @@ export default function GoogleMapsTracking({
             }, delay);
           });
         } else {
-          console.error('❌ Directions request failed:', status, { origin, destination })
+          debugError('âŒ Directions request failed:', status, { origin, destination })
           setRouteInfo(null)
           // Fallback to straight line if route fails
           if (status === 'ZERO_RESULTS') {
@@ -481,7 +485,7 @@ export default function GoogleMapsTracking({
   if (loadError) {
     return (
       <div className={containerClasses + " bg-red-50 border border-red-200 p-4 text-center"}>
-        <p className="text-red-800 text-sm">❌ Failed to load Google Maps</p>
+        <p className="text-red-800 text-sm">âŒ Failed to load Google Maps</p>
       </div>
     )
   }
@@ -489,7 +493,7 @@ export default function GoogleMapsTracking({
   if (!isLoaded) {
     return (
       <div className={containerClasses + " bg-gray-100 p-8 text-center"}>
-        <div className="animate-spin text-2xl">🗺️</div>
+        <div className="animate-spin text-2xl">ðŸ—ºï¸</div>
         <p className="text-gray-600 text-sm mt-2">Loading map...</p>
       </div>
     )
@@ -498,7 +502,7 @@ export default function GoogleMapsTracking({
   if (!apiKey) {
     return (
       <div className={containerClasses + " bg-yellow-50 border border-yellow-200 p-4 text-center"}>
-        <p className="text-yellow-800 text-sm">⚠️ Google Maps API key not configured</p>
+        <p className="text-yellow-800 text-sm">âš ï¸ Google Maps API key not configured</p>
       </div>
     )
   }
@@ -519,7 +523,7 @@ export default function GoogleMapsTracking({
             animate={{ opacity: 1, x: 0 }}
             className="bg-red-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold shadow-lg flex items-center gap-2"
           >
-            <span className="animate-pulse">⚠️</span>
+            <span className="animate-pulse">âš ï¸</span>
             GPS Signal Weak
           </motion.div>
         )}
@@ -567,7 +571,7 @@ export default function GoogleMapsTracking({
       {routeError && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-full text-xs font-medium shadow-lg flex items-center gap-2">
-            <span>⚠️</span>
+            <span>âš ï¸</span>
             {routeError}
           </div>
         </div>
@@ -578,7 +582,7 @@ export default function GoogleMapsTracking({
         <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 w-max max-w-[90%]">
           <div className="bg-orange-50 border border-orange-200 text-orange-800 px-4 py-3 rounded-lg text-xs font-medium shadow-lg flex flex-col items-center gap-1 text-center">
             <div className="flex items-center gap-2">
-              <span>📍</span>
+              <span>ðŸ“</span>
               <span className="font-bold">Location Unavailable</span>
             </div>
             <span>Customer hasn't pinned their location.</span>
@@ -613,7 +617,7 @@ export default function GoogleMapsTracking({
           <Marker
             position={customerLocation}
             icon={{
-              url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">📍</text></svg>')}`,
+              url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">ðŸ“</text></svg>')}`,
               scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
             }}
             title="Delivery Address"
@@ -633,7 +637,7 @@ export default function GoogleMapsTracking({
               strokeWeight: 3,
               strokeColor: '#ffffff',
             } : {
-              url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">🏪</text></svg>')}`,
+              url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><text x="8" y="32" font-size="32">ðŸª</text></svg>')}`,
               scaledSize: window.google?.maps?.Size ? new window.google.maps.Size(40, 40) : undefined
             }}
             title={seller.name || "Seller Shop"}
@@ -658,4 +662,5 @@ export default function GoogleMapsTracking({
     </div>
   )
 }
+
 

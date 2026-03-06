@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import api, { adminAPI } from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
@@ -10,6 +10,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Icon mapping
 const iconMap = {
@@ -63,7 +67,7 @@ export default function AboutUs() {
         setAboutData(response.data.data)
       }
     } catch (error) {
-      console.error('Error fetching about data:', error)
+      debugError('Error fetching about data:', error)
       toast.error('Failed to load about page data')
     } finally {
       setLoading(false)
@@ -79,7 +83,7 @@ export default function AboutUs() {
         setAboutData(response.data.data)
       }
     } catch (error) {
-      console.error('Error saving about data:', error)
+      debugError('Error saving about data:', error)
       toast.error(error.response?.data?.message || 'Failed to save about page')
     } finally {
       setSaving(false)
@@ -121,7 +125,7 @@ export default function AboutUs() {
         setAboutData(response.data.data)
       }
     } catch (error) {
-      console.error('Error deleting feature:', error)
+      debugError('Error deleting feature:', error)
       toast.error(error.response?.data?.message || 'Failed to delete feature')
       // Revert state on error
       fetchAboutData()
@@ -322,3 +326,4 @@ export default function AboutUs() {
     </div>
   )
 }
+

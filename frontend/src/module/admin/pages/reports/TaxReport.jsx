@@ -1,9 +1,13 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Download, ChevronDown, RefreshCw, FileText, DollarSign, Settings, FileSpreadsheet, Code } from "lucide-react"
 import { taxReportDummy, taxStats } from "../../data/taxReportDummy"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TaxReport() {
   const [filters, setFilters] = useState({
@@ -23,7 +27,7 @@ export default function TaxReport() {
 
   const handleSubmit = () => {
     // Handle form submission
-    console.log("Submitting tax report filters:", filters)
+    debugLog("Submitting tax report filters:", filters)
   }
 
   const handleExport = (format) => {
@@ -296,3 +300,4 @@ export default function TaxReport() {
     </div>
   )
 }
+

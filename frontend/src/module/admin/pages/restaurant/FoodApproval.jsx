@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from "react"
+﻿import { useState, useMemo, useEffect, useCallback, useRef } from "react"
 import { Search, CheckCircle2, XCircle, Eye, Clock, Loader2 } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import {
@@ -11,6 +11,10 @@ import {
 } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function FoodApproval() {
   const [foodRequests, setFoodRequests] = useState([])
@@ -34,7 +38,7 @@ export default function FoodApproval() {
       if (!isMountedRef.current) return
       setFoodRequests(data)
     } catch (error) {
-      console.error('Error fetching food approval requests:', error)
+      debugError('Error fetching food approval requests:', error)
       if (!isMountedRef.current) return
       if (!silent) {
         toast.error('Failed to load food approval requests')
@@ -109,7 +113,7 @@ export default function FoodApproval() {
       setShowDetailModal(false)
       setSelectedRequest(null)
     } catch (error) {
-      console.error('Error approving food item:', error)
+      debugError('Error approving food item:', error)
       toast.error(error?.response?.data?.message || 'Failed to approve food item')
     } finally {
       setProcessing(false)
@@ -137,7 +141,7 @@ export default function FoodApproval() {
       setSelectedRequest(null)
       setRejectReason("")
     } catch (error) {
-      console.error('Error rejecting food item:', error)
+      debugError('Error rejecting food item:', error)
       toast.error(error?.response?.data?.message || 'Failed to reject food item')
     } finally {
       setProcessing(false)
@@ -146,7 +150,7 @@ export default function FoodApproval() {
 
   // View food item details
   const handleViewDetails = (request) => {
-    console.log('Food item details:', {
+    debugLog('Food item details:', {
       images: request.images,
       imagesLength: request.images?.length,
       image: request.image,
@@ -405,7 +409,7 @@ export default function FoodApproval() {
                   if (selectedRequest.images && Array.isArray(selectedRequest.images) && selectedRequest.images.length > 0) {
                     const validImages = selectedRequest.images.filter(img => img && typeof img === 'string' && img.trim() !== '');
                     allImages.push(...validImages);
-                    console.log('Added images from request.images:', validImages.length, validImages);
+                    debugLog('Added images from request.images:', validImages.length, validImages);
                   }
                   
                   // Also check item.images (even if request.images exists, item.images might have more)
@@ -414,17 +418,17 @@ export default function FoodApproval() {
                       img && typeof img === 'string' && img.trim() !== '' && !allImages.includes(img)
                     );
                     allImages.push(...validItemImages);
-                    console.log('Added images from item.images:', validItemImages.length, validItemImages);
+                    debugLog('Added images from item.images:', validItemImages.length, validItemImages);
                   }
                   
                   // Add single image if it exists and not already in array
                   const singleImage = selectedRequest.image || selectedRequest.item?.image;
                   if (singleImage && singleImage.trim() !== '' && !allImages.includes(singleImage)) {
                     allImages.push(singleImage);
-                    console.log('Added single image:', singleImage);
+                    debugLog('Added single image:', singleImage);
                   }
                   
-                  console.log('Total images collected:', allImages.length, allImages);
+                  debugLog('Total images collected:', allImages.length, allImages);
                   
                   return allImages.length > 0 ? (
                     <div className="col-span-2">
@@ -442,7 +446,7 @@ export default function FoodApproval() {
                               onClick={() => window.open(img, '_blank')}
                               title="Click to view full size"
                               onError={(e) => {
-                                console.error('Image failed to load:', img);
+                                debugError('Image failed to load:', img);
                                 e.target.style.display = 'none';
                               }}
                             />
@@ -543,4 +547,5 @@ export default function FoodApproval() {
     </div>
   )
 }
+
 

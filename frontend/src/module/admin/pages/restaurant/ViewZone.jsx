@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { MapPin, ArrowLeft } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ViewZone() {
   const navigate = useNavigate()
@@ -47,7 +51,7 @@ export default function ViewZone() {
         setZone(response.data.data.zone)
       }
     } catch (error) {
-      console.error("Error fetching zone:", error)
+      debugError("Error fetching zone:", error)
       alert("Failed to load zone")
       navigate("/admin/zone-setup")
     } finally {
@@ -57,7 +61,7 @@ export default function ViewZone() {
 
   const loadGoogleMaps = async () => {
     try {
-      console.log("Loading Google Maps...")
+      debugLog("Loading Google Maps...")
       const apiKey = await getGoogleMapsApiKey()
       setGoogleMapsApiKey(apiKey || "loaded")
       
@@ -71,7 +75,7 @@ export default function ViewZone() {
       }
 
       if (window.google && window.google.maps) {
-        console.log("Google Maps already loaded, initializing map...")
+        debugLog("Google Maps already loaded, initializing map...")
         // Wait a bit for DOM to be ready
         setTimeout(() => {
           initializeMap(window.google)
@@ -80,7 +84,7 @@ export default function ViewZone() {
       }
 
       if (apiKey) {
-        console.log("Loading Google Maps with Loader...")
+        debugLog("Loading Google Maps with Loader...")
         const loader = new Loader({
           apiKey: apiKey,
           version: "weekly",
@@ -88,36 +92,36 @@ export default function ViewZone() {
         })
 
         const google = await loader.load()
-        console.log("Google Maps loaded, initializing map...")
+        debugLog("Google Maps loaded, initializing map...")
         // Wait a bit for DOM to be ready
         setTimeout(() => {
           initializeMap(google)
         }, 100)
       } else {
-        console.log("No API key found")
+        debugLog("No API key found")
         setMapLoading(false)
       }
     } catch (error) {
-      console.error("Error loading Google Maps:", error)
+      debugError("Error loading Google Maps:", error)
       setMapLoading(false)
     }
   }
 
   const initializeMap = (google) => {
-    console.log("initializeMap called, mapRef.current:", mapRef.current)
+    debugLog("initializeMap called, mapRef.current:", mapRef.current)
     
     if (!mapRef.current) {
-      console.log("Map ref not available, retrying...")
+      debugLog("Map ref not available, retrying...")
       setTimeout(() => initializeMap(google), 300)
       return
     }
 
     // Check if container has dimensions, retry if not
     const container = mapRef.current
-    console.log("Container dimensions:", container.offsetWidth, "x", container.offsetHeight)
+    debugLog("Container dimensions:", container.offsetWidth, "x", container.offsetHeight)
     
     if (container.offsetWidth === 0 || container.offsetHeight === 0) {
-      console.log("Map container has no dimensions, retrying...")
+      debugLog("Map container has no dimensions, retrying...")
       setTimeout(() => initializeMap(google), 300)
       return
     }
@@ -126,7 +130,7 @@ export default function ViewZone() {
       // Initial location (India center)
       const initialLocation = { lat: 20.5937, lng: 78.9629 }
 
-      console.log("Creating Google Map with container:", container)
+      debugLog("Creating Google Map with container:", container)
       
       // Create map
       const map = new google.maps.Map(container, {
@@ -147,22 +151,22 @@ export default function ViewZone() {
       })
 
       mapInstanceRef.current = map
-      console.log("Map instance created successfully, map:", map)
+      debugLog("Map instance created successfully, map:", map)
       
       // Wait for map to be ready before hiding loading
       google.maps.event.addListenerOnce(map, 'idle', () => {
-        console.log("Map is idle, hiding loading overlay")
+        debugLog("Map is idle, hiding loading overlay")
         setMapLoading(false)
         
         // Trigger resize to ensure map renders properly
         setTimeout(() => {
           if (mapInstanceRef.current) {
             google.maps.event.trigger(mapInstanceRef.current, 'resize')
-            console.log("Map resize triggered after idle")
+            debugLog("Map resize triggered after idle")
             
             // Draw zone polygon if zone data is available
             if (zone && zone.coordinates && zone.coordinates.length >= 3) {
-              console.log("Drawing zone polygon from initializeMap")
+              debugLog("Drawing zone polygon from initializeMap")
               drawZonePolygon(google, mapInstanceRef.current, zone.coordinates)
             }
           }
@@ -172,24 +176,24 @@ export default function ViewZone() {
       // Fallback: hide loading after timeout
       setTimeout(() => {
         if (mapLoading) {
-          console.log("Fallback: hiding loading overlay after timeout")
+          debugLog("Fallback: hiding loading overlay after timeout")
           setMapLoading(false)
         }
       }, 2000)
       
     } catch (error) {
-      console.error("Error initializing map:", error)
+      debugError("Error initializing map:", error)
       setMapLoading(false)
     }
   }
 
   const drawZonePolygon = (google, map, coordinates) => {
     if (!coordinates || coordinates.length < 3) {
-      console.log("Not enough coordinates to draw polygon:", coordinates?.length)
+      debugLog("Not enough coordinates to draw polygon:", coordinates?.length)
       return
     }
 
-    console.log("Drawing zone polygon with", coordinates.length, "coordinates")
+    debugLog("Drawing zone polygon with", coordinates.length, "coordinates")
 
     try {
       // Convert coordinates to LatLng array
@@ -197,14 +201,14 @@ export default function ViewZone() {
         const lat = typeof coord === 'object' ? (coord.latitude || coord.lat) : null
         const lng = typeof coord === 'object' ? (coord.longitude || coord.lng) : null
         if (lat === null || lng === null) {
-          console.error("Invalid coordinate:", coord)
+          debugError("Invalid coordinate:", coord)
           return null
         }
         return new google.maps.LatLng(lat, lng)
       }).filter(Boolean)
 
       if (path.length < 3) {
-        console.error("Not enough valid coordinates after conversion")
+        debugError("Not enough valid coordinates after conversion")
         return
       }
 
@@ -228,13 +232,13 @@ export default function ViewZone() {
 
       polygon.setMap(map)
       polygonRef.current = polygon
-      console.log("Polygon created and added to map")
+      debugLog("Polygon created and added to map")
 
       // Fit map to polygon bounds
       const bounds = new google.maps.LatLngBounds()
       path.forEach(latLng => bounds.extend(latLng))
       map.fitBounds(bounds)
-      console.log("Map fitted to polygon bounds")
+      debugLog("Map fitted to polygon bounds")
 
       // Add markers for each point
       coordinates.forEach((coord, index) => {
@@ -257,15 +261,15 @@ export default function ViewZone() {
           })
         }
       })
-      console.log("Markers added to map")
+      debugLog("Markers added to map")
     } catch (error) {
-      console.error("Error drawing zone polygon:", error)
+      debugError("Error drawing zone polygon:", error)
     }
   }
 
   // Redraw polygon when zone data loads and map is ready
   useEffect(() => {
-    console.log("Polygon drawing useEffect triggered", {
+    debugLog("Polygon drawing useEffect triggered", {
       hasZone: !!zone,
       hasCoordinates: !!(zone?.coordinates),
       coordinatesLength: zone?.coordinates?.length,
@@ -276,11 +280,11 @@ export default function ViewZone() {
     
     // Only draw if map is not loading
     if (zone && zone.coordinates && zone.coordinates.length >= 3 && mapInstanceRef.current && window.google && !mapLoading) {
-      console.log("All conditions met, drawing polygon...")
+      debugLog("All conditions met, drawing polygon...")
       // Small delay to ensure map is fully rendered
       setTimeout(() => {
         if (mapInstanceRef.current) {
-          console.log("Drawing polygon now")
+          debugLog("Drawing polygon now")
           // Clear existing polygon
           if (polygonRef.current) {
             polygonRef.current.setMap(null)
@@ -295,7 +299,7 @@ export default function ViewZone() {
   // Draw polygon when map finishes loading
   useEffect(() => {
     if (!mapLoading && zone && zone.coordinates && zone.coordinates.length >= 3 && mapInstanceRef.current && window.google) {
-      console.log("Map finished loading, drawing polygon...")
+      debugLog("Map finished loading, drawing polygon...")
       setTimeout(() => {
         if (mapInstanceRef.current) {
           if (polygonRef.current) {
@@ -441,4 +445,5 @@ export default function ViewZone() {
     </div>
   )
 }
+
 

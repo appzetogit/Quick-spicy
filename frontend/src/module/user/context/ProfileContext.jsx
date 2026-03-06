@@ -1,5 +1,9 @@
-import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
+﻿import { createContext, useContext, useState, useEffect, useMemo, useCallback } from "react"
 import { authAPI, userAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const ProfileContext = createContext(null)
 
@@ -38,7 +42,7 @@ export function ProfileProvider({ children }) {
       try {
         return JSON.parse(userStr)
       } catch (e) {
-        console.error("Error parsing user_user from localStorage:", e)
+        debugError("Error parsing user_user from localStorage:", e)
       }
     }
     
@@ -48,7 +52,7 @@ export function ProfileProvider({ children }) {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error("Error parsing userProfile from localStorage:", e)
+        debugError("Error parsing userProfile from localStorage:", e)
       }
     }
     
@@ -163,27 +167,27 @@ export function ProfileProvider({ children }) {
           setAddresses(normalizedAddresses)
           localStorage.setItem("userAddresses", JSON.stringify(normalizedAddresses))
         } catch (addressError) {
-          console.error("Error fetching addresses:", addressError)
+          debugError("Error fetching addresses:", addressError)
           // Try to load from localStorage as fallback
           const saved = localStorage.getItem("userAddresses")
           if (saved) {
             try {
               setAddresses(dedupeAddressesByLabel(JSON.parse(saved)))
             } catch (e) {
-              console.error("Error parsing saved addresses:", e)
+              debugError("Error parsing saved addresses:", e)
             }
           }
         }
       } catch (error) {
         // Silently handle error - use existing profile from localStorage
-        console.error("Error fetching user profile:", error)
+        debugError("Error fetching user profile:", error)
         // Try to load from localStorage as fallback
         const saved = localStorage.getItem("userAddresses")
         if (saved) {
           try {
             setAddresses(dedupeAddressesByLabel(JSON.parse(saved)))
           } catch (e) {
-            console.error("Error parsing saved addresses:", e)
+            debugError("Error parsing saved addresses:", e)
           }
         }
       } finally {
@@ -224,7 +228,7 @@ export function ProfileProvider({ children }) {
         return normalizedNewAddress
       }
     } catch (error) {
-      console.error("Error adding address:", error)
+      debugError("Error adding address:", error)
       throw error
     }
   }, [])
@@ -246,7 +250,7 @@ export function ProfileProvider({ children }) {
         return normalizedUpdatedAddress
       }
     } catch (error) {
-      console.error("Error updating address:", error)
+      debugError("Error updating address:", error)
       throw error
     }
   }, [])
@@ -260,7 +264,7 @@ export function ProfileProvider({ children }) {
         return newAddresses
       })
     } catch (error) {
-      console.error("Error deleting address:", error)
+      debugError("Error deleting address:", error)
       throw error
     }
   }, [])
@@ -456,39 +460,40 @@ export function useProfile() {
   if (!context) {
     // Return fallback values instead of throwing error
     // This prevents crashes when ProfileProvider is not available
-    console.warn("useProfile called outside ProfileProvider - using fallback values")
+    debugWarn("useProfile called outside ProfileProvider - using fallback values")
     return {
       userProfile: null,
       loading: false,
-      updateUserProfile: () => console.warn("ProfileProvider not available"),
+      updateUserProfile: () => debugWarn("ProfileProvider not available"),
       addresses: [],
       paymentMethods: [],
       favorites: [],
-      addAddress: () => console.warn("ProfileProvider not available"),
-      updateAddress: () => console.warn("ProfileProvider not available"),
-      deleteAddress: () => console.warn("ProfileProvider not available"),
-      setDefaultAddress: () => console.warn("ProfileProvider not available"),
+      addAddress: () => debugWarn("ProfileProvider not available"),
+      updateAddress: () => debugWarn("ProfileProvider not available"),
+      deleteAddress: () => debugWarn("ProfileProvider not available"),
+      setDefaultAddress: () => debugWarn("ProfileProvider not available"),
       getDefaultAddress: () => null,
       getAddressById: () => null,
-      addPaymentMethod: () => console.warn("ProfileProvider not available"),
-      updatePaymentMethod: () => console.warn("ProfileProvider not available"),
-      deletePaymentMethod: () => console.warn("ProfileProvider not available"),
-      setDefaultPaymentMethod: () => console.warn("ProfileProvider not available"),
+      addPaymentMethod: () => debugWarn("ProfileProvider not available"),
+      updatePaymentMethod: () => debugWarn("ProfileProvider not available"),
+      deletePaymentMethod: () => debugWarn("ProfileProvider not available"),
+      setDefaultPaymentMethod: () => debugWarn("ProfileProvider not available"),
       getDefaultPaymentMethod: () => null,
       getPaymentMethodById: () => null,
-      addFavorite: () => console.warn("ProfileProvider not available"),
-      removeFavorite: () => console.warn("ProfileProvider not available"),
+      addFavorite: () => debugWarn("ProfileProvider not available"),
+      removeFavorite: () => debugWarn("ProfileProvider not available"),
       isFavorite: () => false,
       getFavorites: () => [],
       dishFavorites: [],
-      addDishFavorite: () => console.warn("ProfileProvider not available"),
-      removeDishFavorite: () => console.warn("ProfileProvider not available"),
+      addDishFavorite: () => debugWarn("ProfileProvider not available"),
+      removeDishFavorite: () => debugWarn("ProfileProvider not available"),
       isDishFavorite: () => false,
       getDishFavorites: () => [],
       vegMode: false,
-      setVegMode: () => console.warn("ProfileProvider not available")
+      setVegMode: () => debugWarn("ProfileProvider not available")
     }
   }
   return context
 }
+
 

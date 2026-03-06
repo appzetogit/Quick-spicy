@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Search,
@@ -51,6 +51,10 @@ import { Input } from "@/components/ui/input"
 import { sidebarMenuData } from "../data/sidebarMenu"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Icon mapping
 const iconMap = {
@@ -127,7 +131,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
           }
         }
       } catch (error) {
-        console.error('Error loading logo:', error)
+        debugError('Error loading logo:', error)
       }
     }
 
@@ -167,7 +171,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         return JSON.parse(saved)
       }
     } catch (e) {
-      console.error('Error loading sidebar collapsed state:', e)
+      debugError('Error loading sidebar collapsed state:', e)
     }
     return false
   }
@@ -182,7 +186,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         onCollapseChange(isCollapsed)
       }
     } catch (e) {
-      console.error('Error saving sidebar collapsed state:', e)
+      debugError('Error saving sidebar collapsed state:', e)
     }
   }, [isCollapsed, onCollapseChange])
 
@@ -205,7 +209,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         return JSON.parse(saved)
       }
     } catch (e) {
-      console.error('Error loading sidebar state:', e)
+      debugError('Error loading sidebar state:', e)
     }
     const state = {}
     sidebarMenuData.forEach((item) => {
@@ -322,7 +326,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
     try {
       localStorage.setItem('adminSidebarExpanded', JSON.stringify(expandedSections))
     } catch (e) {
-      console.error('Error saving sidebar state:', e)
+      debugError('Error saving sidebar state:', e)
     }
   }, [expandedSections])
 
@@ -692,3 +696,4 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
     </>
   )
 }
+

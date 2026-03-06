@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { Search, Download, Plus, Eye, Edit3, ChevronDown, Settings, ArrowUpDown, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const initialPackages = [
   { id: 1, name: "Pro", price: "$ 1,199.00", duration: "365 Days", subscribers: 0, active: true },
@@ -35,7 +39,7 @@ export default function SubscriptionPackages() {
       alert("No data to export");
       return;
     }
-    console.log(`Exporting as ${format}`, filtered);
+    debugLog(`Exporting as ${format}`, filtered);
   };
 
   const toggleColumn = (columnKey) => {
@@ -76,7 +80,7 @@ export default function SubscriptionPackages() {
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-xl lg:text-2xl font-bold text-slate-900 flex items-center gap-2">
           <span role="img" aria-label="subscription">
-            📦
+            ðŸ“¦
           </span>
           <span>Subscription Package List</span>
           <span className="inline-flex items-center justify-center text-[11px] font-semibold rounded-full bg-slate-100 text-slate-700 px-2 py-0.5">
@@ -379,7 +383,7 @@ function OverviewCard({ title, amount, previous, bgColor }) {
     <div className={`${bgColor} rounded-xl px-6 py-5 flex flex-col items-center justify-between`}>
       <div className="mb-4 flex items-center justify-center w-14 h-14 rounded-full bg-white shadow-sm">
         <span role="img" aria-label={title} className="text-xl">
-          💳
+          ðŸ’³
         </span>
       </div>
       <p className="text-sm font-semibold text-slate-700 mb-1">{title}</p>
@@ -406,3 +410,4 @@ function ToggleSwitch({ enabled, onToggle }) {
     </button>
   );
 }
+

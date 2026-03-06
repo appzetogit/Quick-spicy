@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { 
   Search, 
   Settings, 
@@ -23,6 +23,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function EarningAddonHistory() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -51,9 +55,9 @@ export default function EarningAddonHistory() {
   const fetchHistory = async () => {
     try {
       setIsLoading(true)
-      console.log('🔄 Fetching earning addon history...')
+      debugLog('ðŸ”„ Fetching earning addon history...')
       const response = await adminAPI.getEarningAddonHistory()
-      console.log('📦 API Response:', {
+      debugLog('ðŸ“¦ API Response:', {
         success: response.data.success,
         message: response.data.message,
         dataKeys: response.data.data ? Object.keys(response.data.data) : [],
@@ -63,11 +67,11 @@ export default function EarningAddonHistory() {
       
       if (response.data.success) {
         const historyData = response.data.data.history || []
-        console.log('✅ Earning Addon History fetched:', historyData.length, 'records')
+        debugLog('âœ… Earning Addon History fetched:', historyData.length, 'records')
         
         // Log sample data for debugging
         if (historyData.length > 0) {
-          console.log('📋 Sample history record:', {
+          debugLog('ðŸ“‹ Sample history record:', {
             deliveryman: historyData[0].deliveryman,
             offerTitle: historyData[0].offerTitle,
             status: historyData[0].status,
@@ -78,18 +82,18 @@ export default function EarningAddonHistory() {
         
         setHistory(historyData)
         if (historyData.length === 0) {
-          console.log('ℹ️ No history records found in database')
+          debugLog('â„¹ï¸ No history records found in database')
           toast.info("No earning addon history found. History will appear when delivery boys complete offers.")
         } else {
-          console.log(`✅ Successfully loaded ${historyData.length} history records`)
+          debugLog(`âœ… Successfully loaded ${historyData.length} history records`)
         }
       } else {
-        console.error('❌ API returned unsuccessful response:', response.data)
+        debugError('âŒ API returned unsuccessful response:', response.data)
         toast.error(response.data.message || "Failed to fetch earning addon history")
       }
     } catch (error) {
-      console.error("❌ Error fetching earning addon history:", error)
-      console.error("Error details:", {
+      debugError("âŒ Error fetching earning addon history:", error)
+      debugError("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -144,7 +148,7 @@ export default function EarningAddonHistory() {
       setCreditNotes("")
       fetchHistory()
     } catch (error) {
-      console.error("Error crediting earning:", error)
+      debugError("Error crediting earning:", error)
       toast.error(error.response?.data?.message || "Failed to credit earning")
     }
   }
@@ -159,7 +163,7 @@ export default function EarningAddonHistory() {
       toast.success("Earning cancelled successfully")
       fetchHistory()
     } catch (error) {
-      console.error("Error cancelling earning:", error)
+      debugError("Error cancelling earning:", error)
       toast.error(error.response?.data?.message || "Failed to cancel earning")
     }
   }
@@ -227,13 +231,13 @@ export default function EarningAddonHistory() {
   const handleCheckAllCompletions = async () => {
     try {
       setIsCheckingCompletions(true)
-      console.log('🔄 Checking completions for all delivery partners...')
+      debugLog('ðŸ”„ Checking completions for all delivery partners...')
       
       // Get all delivery partners
       const partnersResponse = await adminAPI.getDeliveryPartners({ limit: 1000 })
       const partners = partnersResponse.data?.data?.deliveryPartners || []
       
-      console.log(`📋 Found ${partners.length} delivery partners to check`)
+      debugLog(`ðŸ“‹ Found ${partners.length} delivery partners to check`)
       
       let totalCompletions = 0
       let checkedCount = 0
@@ -246,16 +250,16 @@ export default function EarningAddonHistory() {
             const completions = response.data.data.completionsFound || 0
             if (completions > 0) {
               totalCompletions += completions
-              console.log(`✅ Found ${completions} completions for ${partner.name}`)
+              debugLog(`âœ… Found ${completions} completions for ${partner.name}`)
             }
           }
           checkedCount++
         } catch (error) {
-          console.error(`Error checking ${partner.name}:`, error)
+          debugError(`Error checking ${partner.name}:`, error)
         }
       }
       
-      console.log(`✅ Checked ${checkedCount} delivery partners, found ${totalCompletions} new completions`)
+      debugLog(`âœ… Checked ${checkedCount} delivery partners, found ${totalCompletions} new completions`)
       
       if (totalCompletions > 0) {
         toast.success(`Found ${totalCompletions} new completion(s)! Refreshing history...`)
@@ -265,7 +269,7 @@ export default function EarningAddonHistory() {
         toast.info("No new completions found. All delivery partners are up to date.")
       }
     } catch (error) {
-      console.error("Error checking completions:", error)
+      debugError("Error checking completions:", error)
       toast.error("Failed to check completions: " + (error.response?.data?.message || error.message))
     } finally {
       setIsCheckingCompletions(false)
@@ -417,7 +421,7 @@ export default function EarningAddonHistory() {
                     <tr>
                       <td colSpan={Object.values(visibleColumns).filter(v => v).length} className="px-6 py-12 text-center">
                         <div className="flex flex-col items-center gap-2">
-                          <div className="text-slate-400 text-4xl mb-2">📋</div>
+                          <div className="text-slate-400 text-4xl mb-2">ðŸ“‹</div>
                           <p className="text-slate-500 font-medium">No earning addon history found</p>
                           <p className="text-sm text-slate-400 mt-1">
                             {searchQuery ? 'Try adjusting your search query' : 'History will appear when delivery boys complete earning addon offers'}
@@ -471,7 +475,7 @@ export default function EarningAddonHistory() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
                               <DollarSign className="w-4 h-4 text-emerald-500" />
-                              <span className="text-sm font-medium text-slate-900">₹{item.totalEarning?.toFixed(2) || item.earningAmount?.toFixed(2) || '0.00'}</span>
+                              <span className="text-sm font-medium text-slate-900">â‚¹{item.totalEarning?.toFixed(2) || item.earningAmount?.toFixed(2) || '0.00'}</span>
                             </div>
                           </td>
                         )}
@@ -581,7 +585,7 @@ export default function EarningAddonHistory() {
                   <div className="flex-1">
                     <p className="text-xs font-medium text-emerald-700 uppercase tracking-wide mb-1">Amount to Credit</p>
                     <p className="text-2xl font-bold text-emerald-600">
-                      ₹{selectedHistory.totalEarning?.toFixed(2) || selectedHistory.earningAmount?.toFixed(2) || '0.00'}
+                      â‚¹{selectedHistory.totalEarning?.toFixed(2) || selectedHistory.earningAmount?.toFixed(2) || '0.00'}
                     </p>
                   </div>
                 </div>
@@ -683,4 +687,5 @@ export default function EarningAddonHistory() {
     </div>
   )
 }
+
 

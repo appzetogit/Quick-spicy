@@ -1,5 +1,9 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { locationAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 /**
  * useLocation - Clean, Production-Ready Location Hook
@@ -108,7 +112,7 @@ export function useLocationSimple() {
 
       return ""
     } catch (err) {
-      console.error("Error extracting area from response:", err)
+      debugError("Error extracting area from response:", err)
       return ""
     }
   }
@@ -160,7 +164,7 @@ export function useLocationSimple() {
         formattedAddress: result.formatted_address || "",
       }
     } catch (err) {
-      console.error("Reverse geocoding error:", err)
+      debugError("Reverse geocoding error:", err)
       throw err
     }
   }
@@ -264,7 +268,7 @@ export function useLocationSimple() {
           const cachedLocation = JSON.parse(cached)
           setLocation(cachedLocation)
         } catch (parseErr) {
-          console.error("Failed to parse cached location:", parseErr)
+          debugError("Failed to parse cached location:", parseErr)
         }
       }
       
@@ -284,7 +288,7 @@ export function useLocationSimple() {
         setLocation(cachedLocation)
         setLoading(false)
       } catch (err) {
-        console.error("Failed to parse cached location:", err)
+        debugError("Failed to parse cached location:", err)
       }
     } else {
       setLoading(false)
@@ -315,4 +319,5 @@ export function useLocationSimple() {
     requestLocation,
   }
 }
+
 

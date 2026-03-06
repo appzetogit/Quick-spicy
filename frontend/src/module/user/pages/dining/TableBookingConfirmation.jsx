@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { ArrowLeft, Calendar, Users, MapPin, Ticket, ChevronRight, Edit2, ShieldCheck, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -7,6 +7,10 @@ import { diningAPI, authAPI } from "@/lib/api"
 import { useEffect } from "react"
 import { toast } from "sonner"
 import Loader from "@/components/Loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TableBookingConfirmation() {
     const location = useLocation()
@@ -36,7 +40,7 @@ export default function TableBookingConfirmation() {
                     setUser(userData)
                 }
             } catch (error) {
-                console.error("Error fetching user:", error)
+                debugError("Error fetching user:", error)
                 // If not logged in, navigate to sign-in but the ProtectedRoute should handle this
             } finally {
                 setLoading(false)
@@ -73,7 +77,7 @@ export default function TableBookingConfirmation() {
                 navigate("/dining/book-success", { state: { booking: response.data.data } })
             }
         } catch (error) {
-            console.error("Booking error:", error)
+            debugError("Booking error:", error)
             toast.error(error.response?.data?.message || "Failed to confirm booking")
         } finally {
             setBookingInProgress(false)
@@ -242,3 +246,4 @@ export default function TableBookingConfirmation() {
         </AnimatedPage>
     )
 }
+

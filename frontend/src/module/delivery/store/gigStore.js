@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Gig Booking State Management using Zustand
  * Manages gig slots, bookings, user level, and online status
@@ -8,10 +12,10 @@ import { persist } from 'zustand/middleware'
 
 // User level configuration
 export const USER_LEVELS = {
-  Blue: { days: 1, color: '#3b82f6', icon: '💙' },
-  Brown: { days: 2, color: '#92400e', icon: '🤎' },
-  Silver: { days: 3, color: '#6b7280', icon: '💿' },
-  Diamond: { days: 4, color: '#60a5fa', icon: '💎' }
+  Blue: { days: 1, color: '#3b82f6', icon: 'ðŸ’™' },
+  Brown: { days: 2, color: '#92400e', icon: 'ðŸ¤Ž' },
+  Silver: { days: 3, color: '#6b7280', icon: 'ðŸ’¿' },
+  Diamond: { days: 4, color: '#60a5fa', icon: 'ðŸ’Ž' }
 }
 
 // Default state
@@ -353,7 +357,8 @@ export const initializeOnlineStatus = () => {
       useGigStore.setState({ isOnline: true })
     }
   } catch (error) {
-    console.error('Error initializing online status:', error)
+    debugError('Error initializing online status:', error)
   }
 }
+
 

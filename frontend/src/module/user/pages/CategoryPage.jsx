@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react"
+﻿import { useState, useMemo, useRef, useEffect } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
@@ -15,13 +15,17 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Filter options
 const filterOptions = [
   { id: 'under-30-mins', label: 'Under 30 mins' },
   { id: 'price-match', label: 'Price Match', hasIcon: true },
   { id: 'flat-50-off', label: 'Flat 50% OFF', hasIcon: true },
-  { id: 'under-250', label: 'Under ₹250' },
+  { id: 'under-250', label: 'Under â‚¹250' },
   { id: 'rating-4-plus', label: 'Rating 4.0+' },
 ]
 
@@ -183,7 +187,7 @@ export default function CategoryPage() {
           setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
         }
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        debugError('Error fetching categories:', error)
         // Keep default "All" category on error
         setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
       } finally {
@@ -302,9 +306,9 @@ export default function CategoryPage() {
             if (!value) return false
 
             const defaultOffers = [
-              "Flat ₹50 OFF above ₹199",
+              "Flat â‚¹50 OFF above â‚¹199",
               "Flat 50% OFF",
-              "Flat ₹40 OFF above ₹149"
+              "Flat â‚¹40 OFF above â‚¹149"
             ]
             const defaultDeliveryTimes = ["25-30 mins", "20-25 mins", "30-35 mins"]
             const defaultDistances = ["1.2 km", "1 km", "0.8 km"]
@@ -428,7 +432,7 @@ export default function CategoryPage() {
                 categoryMatches: {},
               }
             } catch (error) {
-              console.warn(`Failed to fetch menu for restaurant ${restaurant.restaurantId}:`, error)
+              debugWarn(`Failed to fetch menu for restaurant ${restaurant.restaurantId}:`, error)
               return {
                 ...restaurant,
                 menu: null,
@@ -488,7 +492,7 @@ export default function CategoryPage() {
           setRestaurantsData([])
         }
       } catch (error) {
-        console.error('Error fetching restaurants:', error)
+        debugError('Error fetching restaurants:', error)
         setRestaurantsData([])
       } finally {
         setLoadingRestaurants(false)
@@ -851,7 +855,7 @@ export default function CategoryPage() {
                     ) : (
                       <div className={`w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center border-2 transition-all ${isSelected ? 'border-[#EB590E] shadow-lg bg-[#FFF2EB] dark:bg-[#EB590E]/20' : 'border-transparent'
                         }`}>
-                        <span className="text-xl md:text-2xl">🍽️</span>
+                        <span className="text-xl md:text-2xl">ðŸ½ï¸</span>
                       </div>
                     )}
                     <span className={`text-xs md:text-sm font-medium whitespace-nowrap ${isSelected ? 'text-[#EB590E] dark:text-[#EB590E]' : 'text-gray-600 dark:text-gray-400'
@@ -925,7 +929,7 @@ export default function CategoryPage() {
                 { id: 'distance-under-1km', label: 'Under 1km', icon: MapPin },
                 { id: 'distance-under-2km', label: 'Under 2km', icon: MapPin },
                 { id: 'flat-50-off', label: 'Flat 50% OFF' },
-                { id: 'under-250', label: 'Under ₹250' },
+                { id: 'under-250', label: 'Under â‚¹250' },
               ].map((filter) => {
                 const Icon = filter.icon
                 const isActive = activeFilters.has(filter.id)
@@ -989,7 +993,7 @@ export default function CategoryPage() {
                                   e.target.style.display = 'none'
                                   const placeholder = document.createElement('div')
                                   placeholder.className = 'w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl'
-                                  placeholder.textContent = '🍽️'
+                                  placeholder.textContent = 'ðŸ½ï¸'
                                   e.target.parentElement.appendChild(placeholder)
                                 }
                               }}
@@ -1004,13 +1008,13 @@ export default function CategoryPage() {
                                 e.target.style.display = 'none'
                                 const placeholder = document.createElement('div')
                                 placeholder.className = 'w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl'
-                                placeholder.textContent = '🍽️'
+                                placeholder.textContent = 'ðŸ½ï¸'
                                 e.target.parentElement.appendChild(placeholder)
                               }}
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl">
-                              🍽️
+                              ðŸ½ï¸
                             </div>
                           )}
 
@@ -1087,7 +1091,7 @@ export default function CategoryPage() {
                                 e.target.style.display = 'none'
                                 const placeholder = document.createElement('div')
                                 placeholder.className = 'w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl'
-                                placeholder.textContent = '🍽️'
+                                placeholder.textContent = 'ðŸ½ï¸'
                                 e.target.parentElement.appendChild(placeholder)
                               }
                             }}
@@ -1102,13 +1106,13 @@ export default function CategoryPage() {
                               e.target.style.display = 'none'
                               const placeholder = document.createElement('div')
                               placeholder.className = 'w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl'
-                              placeholder.textContent = '🍽️'
+                              placeholder.textContent = 'ðŸ½ï¸'
                               e.target.parentElement.appendChild(placeholder)
                             }}
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-800 text-6xl">
-                            🍽️
+                            ðŸ½ï¸
                           </div>
                         )}
 
@@ -1116,7 +1120,7 @@ export default function CategoryPage() {
                         {(restaurant.categoryDishName || restaurant.featuredDish) && (
                           <div className="absolute top-3 left-3">
                             <div className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm md:text-base font-medium">
-                              {restaurant.categoryDishName || restaurant.featuredDish} · ₹{restaurant.categoryDishPrice || restaurant.featuredPrice}
+                              {restaurant.categoryDishName || restaurant.featuredDish} Â· â‚¹{restaurant.categoryDishPrice || restaurant.featuredPrice}
                             </div>
                           </div>
                         )}
@@ -1428,7 +1432,7 @@ export default function CategoryPage() {
                               : 'border-gray-200 dark:border-gray-700 hover:border-green-600'
                               }`}
                           >
-                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹200</span>
+                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹200</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('under-250')}
@@ -1437,7 +1441,7 @@ export default function CategoryPage() {
                               : 'border-gray-200 dark:border-gray-700 hover:border-green-600'
                               }`}
                           >
-                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('under-250') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹250</span>
+                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('under-250') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹250</span>
                           </button>
                           <button
                             onClick={() => toggleFilter('price-under-500')}
@@ -1446,7 +1450,7 @@ export default function CategoryPage() {
                               : 'border-gray-200 dark:border-gray-700 hover:border-green-600'
                               }`}
                           >
-                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹500</span>
+                            <span className={`text-sm md:text-base font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹500</span>
                           </button>
                         </div>
                       </div>
@@ -1571,3 +1575,4 @@ export default function CategoryPage() {
     </div>
   )
 }
+

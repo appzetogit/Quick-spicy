@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { MapPin, Plus, Search, Edit, Trash2, Eye, Map, Bike } from "lucide-react"
 import { adminAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ZoneSetup() {
   const navigate = useNavigate()
@@ -21,7 +25,7 @@ export default function ZoneSetup() {
         setZones(response.data.data.zones)
       }
     } catch (error) {
-      console.error("Error fetching zones:", error)
+      debugError("Error fetching zones:", error)
       setZones([])
     } finally {
       setLoading(false)
@@ -38,7 +42,7 @@ export default function ZoneSetup() {
       alert("Zone deleted successfully!")
       fetchZones()
     } catch (error) {
-      console.error("Error deleting zone:", error)
+      debugError("Error deleting zone:", error)
       alert(error.response?.data?.message || "Failed to delete zone")
     }
   }
@@ -188,3 +192,4 @@ export default function ZoneSetup() {
     </div>
   )
 }
+

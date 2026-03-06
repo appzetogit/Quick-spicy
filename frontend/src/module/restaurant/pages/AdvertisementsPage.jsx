@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -16,6 +16,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdvertisementsPage() {
   const navigate = useNavigate()
@@ -236,9 +240,9 @@ export default function AdvertisementsPage() {
                             {[
                               { icon: Eye, label: "View Ads", action: () => navigate(`/restaurant/advertisements/${ad.id}`) },
                               { icon: Edit, label: "Edit Ads", action: () => navigate(`/restaurant/advertisements/${ad.id}/edit`) },
-                              { icon: Pause, label: "Pause Ads", action: () => console.log("Pause:", ad.id) },
-                              { icon: Copy, label: "Copy Ads", action: () => console.log("Copy:", ad.id) },
-                              { icon: Trash2, label: "Delete Ads", action: () => console.log("Delete:", ad.id), isDanger: true }
+                              { icon: Pause, label: "Pause Ads", action: () => debugLog("Pause:", ad.id) },
+                              { icon: Copy, label: "Copy Ads", action: () => debugLog("Copy:", ad.id) },
+                              { icon: Trash2, label: "Delete Ads", action: () => debugLog("Delete:", ad.id), isDanger: true }
                             ].map((option, idx) => {
                               const IconComponent = option.icon
                               return (
@@ -318,4 +322,5 @@ export default function AdvertisementsPage() {
     </div>
   )
 }
+
 

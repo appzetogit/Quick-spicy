@@ -1,6 +1,10 @@
-import { MapPin, Loader2, AlertCircle } from "lucide-react"
+﻿import { MapPin, Loader2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useLocationSimple } from "../hooks/useLocationSimple"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 /**
  * LocationDisplay Component
@@ -41,7 +45,7 @@ export default function LocationDisplay({
       try {
         await requestLocation()
       } catch (err) {
-        console.error("Failed to get location:", err)
+        debugError("Failed to get location:", err)
       }
     }
   }
@@ -183,4 +187,5 @@ export function FullLocationDisplay({ className = "" }) {
     </div>
   )
 }
+
 

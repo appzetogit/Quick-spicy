@@ -1,9 +1,13 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Search, Percent, ChevronDown, Check, X, Tag, Calendar, Edit, Trash2 } from "lucide-react"
 import BottomNavOrders from "../components/BottomNavOrders"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function CreatePercentageDiscount() {
   const navigate = useNavigate()
@@ -56,11 +60,11 @@ export default function CreatePercentageDiscount() {
     
     if (discountType === "flat") {
       // Format: FLATOFF{amount}ON{roundedPrice}
-      // Example: FLATOFF50ON250 (₹50 off on ₹250)
+      // Example: FLATOFF50ON250 (â‚¹50 off on â‚¹250)
       return `FLATOFF${discountValue}ON${roundedPrice}`
     } else {
       // Format: GETOFF{percentage}ON{roundedPrice}
-      // Example: GETOFF10ON250 (10% off on ₹250)
+      // Example: GETOFF10ON250 (10% off on â‚¹250)
       return `GETOFF${discountValue}ON${roundedPrice}`
     }
   }
@@ -107,15 +111,15 @@ export default function CreatePercentageDiscount() {
             }
           })
           
-          console.log(`[FRONTEND] Extracted ${allItems.length} menu items`)
+          debugLog(`[FRONTEND] Extracted ${allItems.length} menu items`)
           allItems.forEach((item, idx) => {
-            console.log(`[FRONTEND] Menu item ${idx}: id=${item.id}, name=${item.name}`)
+            debugLog(`[FRONTEND] Menu item ${idx}: id=${item.id}, name=${item.name}`)
           })
           
           setMenuItems(allItems)
         }
       } catch (error) {
-        console.error("Error fetching menu items:", error)
+        debugError("Error fetching menu items:", error)
         setMenuItems([])
       } finally {
         setLoadingMenu(false)
@@ -128,55 +132,55 @@ export default function CreatePercentageDiscount() {
   // Fetch coupons for each menu item
   useEffect(() => {
     const fetchCouponsForItems = async () => {
-      console.log(`[COUPONS] useEffect triggered, menuItems.length: ${menuItems.length}`)
+      debugLog(`[COUPONS] useEffect triggered, menuItems.length: ${menuItems.length}`)
       
       if (menuItems.length === 0) {
-        console.log(`[COUPONS] No menu items, skipping coupon fetch`)
+        debugLog(`[COUPONS] No menu items, skipping coupon fetch`)
         return
   }
 
-      console.log(`[COUPONS] Fetching coupons for ${menuItems.length} items`)
-      console.log(`[COUPONS] Menu items:`, menuItems.map(item => ({ id: item.id, name: item.name })))
+      debugLog(`[COUPONS] Fetching coupons for ${menuItems.length} items`)
+      debugLog(`[COUPONS] Menu items:`, menuItems.map(item => ({ id: item.id, name: item.name })))
       
       const couponsMap = {}
       
       for (const item of menuItems) {
         if (!item.id) {
-          console.log(`[COUPONS] ⚠️ Skipping item without id:`, item)
+          debugLog(`[COUPONS] âš ï¸ Skipping item without id:`, item)
           continue
         }
         
-        console.log(`[COUPONS] 🔍 Fetching coupons for itemId: "${item.id}", name: "${item.name}"`)
+        debugLog(`[COUPONS] ðŸ” Fetching coupons for itemId: "${item.id}", name: "${item.name}"`)
         
         try {
           const url = `/restaurant/offers/item/${item.id}/coupons`
-          console.log(`[COUPONS] API URL: ${url}`)
+          debugLog(`[COUPONS] API URL: ${url}`)
           
           const response = await restaurantAPI.getCouponsByItemId(item.id)
-          console.log(`[COUPONS] 📦 Full response:`, response)
-          console.log(`[COUPONS] 📦 Response.data:`, response?.data)
-          console.log(`[COUPONS] 📦 Response.data.data:`, response?.data?.data)
-          console.log(`[COUPONS] 📦 Response.data.data.coupons:`, response?.data?.data?.coupons)
+          debugLog(`[COUPONS] ðŸ“¦ Full response:`, response)
+          debugLog(`[COUPONS] ðŸ“¦ Response.data:`, response?.data)
+          debugLog(`[COUPONS] ðŸ“¦ Response.data.data:`, response?.data?.data)
+          debugLog(`[COUPONS] ðŸ“¦ Response.data.data.coupons:`, response?.data?.data?.coupons)
           
           if (response?.data?.success) {
             const coupons = response?.data?.data?.coupons || []
             couponsMap[item.id] = coupons
-            console.log(`[COUPONS] ✅ Found ${coupons.length} coupons for itemId "${item.id}":`, coupons)
+            debugLog(`[COUPONS] âœ… Found ${coupons.length} coupons for itemId "${item.id}":`, coupons)
       } else {
             couponsMap[item.id] = []
-            console.log(`[COUPONS] ❌ No coupons found for itemId "${item.id}". Response:`, response?.data)
+            debugLog(`[COUPONS] âŒ No coupons found for itemId "${item.id}". Response:`, response?.data)
           }
         } catch (error) {
-          console.error(`[COUPONS] ❌ Error fetching coupons for item "${item.id}":`, error)
-          console.error(`[COUPONS] Error response:`, error?.response)
-          console.error(`[COUPONS] Error response.data:`, error?.response?.data)
-          console.error(`[COUPONS] Error message:`, error?.message)
+          debugError(`[COUPONS] âŒ Error fetching coupons for item "${item.id}":`, error)
+          debugError(`[COUPONS] Error response:`, error?.response)
+          debugError(`[COUPONS] Error response.data:`, error?.response?.data)
+          debugError(`[COUPONS] Error message:`, error?.message)
           couponsMap[item.id] = []
         }
       }
       
-      console.log(`[COUPONS] 🎯 Final coupons map:`, couponsMap)
-      console.log(`[COUPONS] 🎯 Setting itemCoupons state with ${Object.keys(couponsMap).length} items`)
+      debugLog(`[COUPONS] ðŸŽ¯ Final coupons map:`, couponsMap)
+      debugLog(`[COUPONS] ðŸŽ¯ Setting itemCoupons state with ${Object.keys(couponsMap).length} items`)
       setItemCoupons(couponsMap)
     }
     
@@ -191,14 +195,14 @@ export default function CreatePercentageDiscount() {
           setLoadingOffers(true)
           // Always fetch ALL offers (both percentage and flat-price) for running offers tab
           // Don't filter by discountType - show all offers regardless of status
-          console.log(`[RUNNING-OFFERS] Fetching all offers...`)
+          debugLog(`[RUNNING-OFFERS] Fetching all offers...`)
           const response = await restaurantAPI.getOffers({})
-          console.log(`[RUNNING-OFFERS] API Response:`, response?.data)
+          debugLog(`[RUNNING-OFFERS] API Response:`, response?.data)
           
           if (response?.data?.success) {
             const offers = response.data.data.offers || []
-            console.log(`[RUNNING-OFFERS] ✅ Fetched ${offers.length} offers`)
-            console.log(`[RUNNING-OFFERS] Offer details:`, offers.map(o => ({
+            debugLog(`[RUNNING-OFFERS] âœ… Fetched ${offers.length} offers`)
+            debugLog(`[RUNNING-OFFERS] Offer details:`, offers.map(o => ({
               id: o._id,
               discountType: o.discountType,
               status: o.status,
@@ -207,12 +211,12 @@ export default function CreatePercentageDiscount() {
             })))
             setRunningOffers(offers)
           } else {
-            console.error(`[RUNNING-OFFERS] ❌ API Error:`, response?.data)
+            debugError(`[RUNNING-OFFERS] âŒ API Error:`, response?.data)
             setRunningOffers([])
           }
         } catch (error) {
-          console.error("[RUNNING-OFFERS] ❌ Error fetching running offers:", error)
-          console.error("[RUNNING-OFFERS] Error details:", error?.response?.data || error?.message)
+          debugError("[RUNNING-OFFERS] âŒ Error fetching running offers:", error)
+          debugError("[RUNNING-OFFERS] Error details:", error?.response?.data || error?.message)
           setRunningOffers([])
         } finally {
           setLoadingOffers(false)
@@ -489,7 +493,7 @@ export default function CreatePercentageDiscount() {
         endDate: endDate,
         }
       
-      console.log(`[OFFER-CREATE] Creating offer with data:`, {
+      debugLog(`[OFFER-CREATE] Creating offer with data:`, {
         discountType: finalDiscountType,
         formDiscountType,
         couponCode,
@@ -509,30 +513,30 @@ export default function CreatePercentageDiscount() {
       }
 
       if (response?.data?.success) {
-        console.log(`[OFFER-CREATE] ✅ Offer created successfully:`, response?.data?.data?.offer)
-        console.log(`[OFFER-CREATE] Offer discountType:`, response?.data?.data?.offer?.discountType)
+        debugLog(`[OFFER-CREATE] âœ… Offer created successfully:`, response?.data?.data?.offer)
+        debugLog(`[OFFER-CREATE] Offer discountType:`, response?.data?.data?.offer?.discountType)
         alert(makeOfferModal.editingOffer ? "Offer updated successfully!" : "Offer activated successfully!")
         closeMakeOfferModal()
         
         // Always refresh running offers, regardless of current tab
-        console.log(`[OFFER-CREATE] Refreshing running offers...`)
+        debugLog(`[OFFER-CREATE] Refreshing running offers...`)
         try {
           const refreshResponse = await restaurantAPI.getOffers({})
-          console.log(`[OFFER-CREATE] Refresh response:`, refreshResponse?.data)
+          debugLog(`[OFFER-CREATE] Refresh response:`, refreshResponse?.data)
           if (refreshResponse?.data?.success) {
             const refreshedOffers = refreshResponse.data.data.offers || []
-            console.log(`[OFFER-CREATE] ✅ Updated running offers: ${refreshedOffers.length} offers`)
-            console.log(`[OFFER-CREATE] Offer types in refresh:`, refreshedOffers.map(o => o.discountType))
+            debugLog(`[OFFER-CREATE] âœ… Updated running offers: ${refreshedOffers.length} offers`)
+            debugLog(`[OFFER-CREATE] Offer types in refresh:`, refreshedOffers.map(o => o.discountType))
             setRunningOffers(refreshedOffers)
           }
         } catch (refreshError) {
-          console.error(`[OFFER-CREATE] Error refreshing offers:`, refreshError)
+          debugError(`[OFFER-CREATE] Error refreshing offers:`, refreshError)
         }
       } else {
         throw new Error(response?.data?.message || "Failed to save offer")
       }
     } catch (error) {
-      console.error("Error saving offer:", error)
+      debugError("Error saving offer:", error)
       alert(error?.response?.data?.message || error?.message || "Failed to save offer. Please try again.")
     } finally {
       setActivatingOffer(false)
@@ -560,7 +564,7 @@ export default function CreatePercentageDiscount() {
         throw new Error(response?.data?.message || "Failed to delete offer")
       }
     } catch (error) {
-      console.error("Error deleting offer:", error)
+      debugError("Error deleting offer:", error)
       alert(error?.response?.data?.message || error?.message || "Failed to delete offer. Please try again.")
     } finally {
       setDeletingOfferId(null)
@@ -591,7 +595,7 @@ export default function CreatePercentageDiscount() {
         throw new Error(response?.data?.message || `Failed to ${action} offer`)
       }
     } catch (error) {
-      console.error(`Error ${action}ing offer:`, error)
+      debugError(`Error ${action}ing offer:`, error)
       alert(error?.response?.data?.message || error?.message || `Failed to ${action} offer. Please try again.`)
     } finally {
       setTogglingOfferId(null)
@@ -647,7 +651,7 @@ export default function CreatePercentageDiscount() {
         throw new Error(response?.data?.message || "Failed to activate offer")
       }
     } catch (error) {
-      console.error("Error activating offer:", error)
+      debugError("Error activating offer:", error)
       alert(error?.response?.data?.message || error?.message || "Failed to activate offer. Please try again.")
     } finally {
       setActivatingOffer(false)
@@ -772,7 +776,7 @@ export default function CreatePercentageDiscount() {
                           )}
               <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold text-gray-900">
-                              ₹{item.price || 0}
+                              â‚¹{item.price || 0}
                             </span>
                 </div>
               </div>
@@ -916,11 +920,11 @@ export default function CreatePercentageDiscount() {
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-gray-900 truncate">{item.itemName}</p>
                               <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-gray-400 line-through">₹{item.originalPrice}</span>
-                                <span className="text-xs font-semibold text-green-600">₹{item.discountedPrice}</span>
+                                <span className="text-xs text-gray-400 line-through">â‚¹{item.originalPrice}</span>
+                                <span className="text-xs font-semibold text-green-600">â‚¹{item.discountedPrice}</span>
                                 <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">
                                   {offer.discountType === "flat-price" 
-                                    ? `₹${item.originalPrice - item.discountedPrice} OFF`
+                                    ? `â‚¹${item.originalPrice - item.discountedPrice} OFF`
                                     : `${item.discountPercentage}% OFF`}
                                 </span>
                   </div>
@@ -1123,7 +1127,7 @@ export default function CreatePercentageDiscount() {
                     </div>
                     {offerFormData.percentage && makeOfferModal.item && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Original: ₹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} → Discounted: ₹{getDiscountedPrice(makeOfferModal.item, offerFormData.percentage)}
+                        Original: â‚¹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} â†’ Discounted: â‚¹{getDiscountedPrice(makeOfferModal.item, offerFormData.percentage)}
                       </p>
                     )}
                   </div>
@@ -1133,10 +1137,10 @@ export default function CreatePercentageDiscount() {
                 {offerFormData.discountType === "flat" && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Flat Discount Amount (₹)
+                      Flat Discount Amount (â‚¹)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">₹</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">â‚¹</span>
                       <input
                         type="number"
                         min="0"
@@ -1149,7 +1153,7 @@ export default function CreatePercentageDiscount() {
                     </div>
                     {offerFormData.flatAmount && makeOfferModal.item && (
                       <p className="text-xs text-gray-500 mt-1">
-                        Original: ₹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} → Discounted: ₹{getFlatDiscountedPrice(makeOfferModal.item, offerFormData.flatAmount)}
+                        Original: â‚¹{makeOfferModal.item.price || makeOfferModal.item.originalPrice} â†’ Discounted: â‚¹{getFlatDiscountedPrice(makeOfferModal.item, offerFormData.flatAmount)}
                       </p>
                     )}
                   </div>
@@ -1247,3 +1251,4 @@ export default function CreatePercentageDiscount() {
     </div>
   )
 }
+

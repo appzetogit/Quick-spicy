@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
@@ -7,6 +7,10 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const cuisinesOptions = [
   "North Indian",
@@ -129,9 +133,9 @@ export default function AddRestaurant() {
   const languageTabs = [
     { key: "default", label: "Default" },
     { key: "en", label: "English(EN)" },
-    { key: "bn", label: "Bengali - বাংলা(BN)" },
-    { key: "ar", label: "Arabic - العربية (AR)" },
-    { key: "es", label: "Spanish - español(ES)" },
+    { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+    { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
   ]
 
   // Upload handler for images
@@ -142,7 +146,7 @@ export default function AddRestaurant() {
       return { url: d.url, publicId: d.publicId }
     } catch (err) {
       const errorMsg = err?.response?.data?.message || err?.response?.data?.error || err?.message || "Failed to upload image"
-      console.error("Upload error:", errorMsg, err)
+      debugError("Upload error:", errorMsg, err)
       throw new Error(`Image upload failed: ${errorMsg}`)
     }
   }
@@ -372,7 +376,7 @@ export default function AddRestaurant() {
         throw new Error(response.data.message || "Failed to create restaurant")
       }
     } catch (error) {
-      console.error("Error creating restaurant:", error)
+      debugError("Error creating restaurant:", error)
       const errorMsg = error?.response?.data?.message || error?.message || "Failed to create restaurant. Please try again."
       toast.error(errorMsg)
       setFormErrors({ submit: errorMsg })
@@ -795,7 +799,7 @@ export default function AddRestaurant() {
           <Input value={step4.featuredDish || ""} onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value.replace(/[^A-Za-z ]/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., Butter Chicken Special" />
         </div>
         <div>
-          <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
+          <Label className="text-xs text-gray-700">Featured Dish Price (â‚¹)*</Label>
           <Input type="text" inputMode="numeric" value={step4.featuredPrice || ""} onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value.replace(/\D/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., 249" />
         </div>
         <div>
@@ -908,3 +912,4 @@ export default function AddRestaurant() {
     </div>
   )
 }
+

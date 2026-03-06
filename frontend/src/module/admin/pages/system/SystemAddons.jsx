@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Settings, Key, Save, Loader2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const InputField = ({ label, value, onChange, type = "text", placeholder = "" }) => {
   return (
@@ -86,7 +90,7 @@ export default function SystemAddons() {
         }))
       }
     } catch (error) {
-      console.error("Error loading environment variables:", error)
+      debugError("Error loading environment variables:", error)
       // Don't show error toast on initial load if endpoint doesn't exist yet
       if (error.response?.status !== 404) {
         toast.error("Failed to load environment variables")
@@ -115,13 +119,13 @@ export default function SystemAddons() {
           const { clearGoogleMapsApiKeyCache } = await import('@/lib/utils/googleMapsApiKey.js');
           clearGoogleMapsApiKeyCache();
         } catch (cacheError) {
-          console.warn("Failed to clear cache:", cacheError);
+          debugWarn("Failed to clear cache:", cacheError);
         }
       } else {
         toast.error(response.data.message || "Failed to save environment variables")
       }
     } catch (error) {
-      console.error("Error saving environment variables:", error)
+      debugError("Error saving environment variables:", error)
       toast.error(error.response?.data?.message || "Failed to save environment variables")
     } finally {
       setIsSaving(false)
@@ -378,3 +382,4 @@ export default function SystemAddons() {
     </div>
   )
 }
+

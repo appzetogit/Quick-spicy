@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from "react-router-dom"
+﻿import { useNavigate, useLocation } from "react-router-dom"
 import { useEffect, useState } from "react"
 import { User } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
@@ -16,6 +16,10 @@ import {
   WalletIcon as WalletSolid,
   ClockIcon as ClockSolid,
 } from "@heroicons/react/24/solid"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function BottomNavigation() {
   const navigate = useNavigate()
@@ -60,7 +64,7 @@ export default function BottomNavigation() {
             error.code !== 'ERR_NETWORK' && 
             error.message !== 'Network Error' &&
             !error.message?.includes('timeout')) {
-          console.error("Error fetching profile image for navigation:", error)
+          debugError("Error fetching profile image for navigation:", error)
         }
       }
     }
@@ -139,3 +143,4 @@ export default function BottomNavigation() {
     </div>
   )
 }
+

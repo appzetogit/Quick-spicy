@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -11,6 +11,10 @@ import {
   ThumbsDown,
 } from "lucide-react"
 import BottomPopup from "@/module/delivery/components/BottomPopup"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Using placeholder for restaurant review banner
 const restaurantReviewBanner = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1200&h=400&fit=crop"
 
@@ -258,7 +262,7 @@ export default function RatingsReviews() {
           <button
             onClick={() => {
               setShowNotHelpfulPopup(false)
-              console.log("Contact support")
+              debugLog("Contact support")
             }}
             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors"
           >
@@ -269,3 +273,4 @@ export default function RatingsReviews() {
     </div>
   )
 }
+

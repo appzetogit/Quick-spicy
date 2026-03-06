@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Eye, Settings, Building, ArrowUpDown, FileText, FileSpreadsheet, Code, Check, Columns, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportTransactionsToExcel, exportTransactionsToPDF } from "../../components/transactions/transactionsExportUtils"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantWithdraws() {
   const [activeTab, setActiveTab] = useState("All")
@@ -41,11 +45,11 @@ export default function RestaurantWithdraws() {
       if (response.data?.success) {
         setWithdraws(response.data.data?.requests || [])
       } else {
-        console.error('Failed to fetch withdrawals:', response.data?.message)
+        debugError('Failed to fetch withdrawals:', response.data?.message)
         toast.error('Failed to fetch withdrawal requests')
       }
     } catch (error) {
-      console.error('Error fetching withdrawals:', error)
+      debugError('Error fetching withdrawals:', error)
       toast.error('Failed to fetch withdrawal requests')
     } finally {
       setLoading(false)
@@ -110,7 +114,7 @@ export default function RestaurantWithdraws() {
         toast.error(response.data?.message || 'Failed to approve withdrawal request')
       }
     } catch (error) {
-      console.error('Error approving withdrawal:', error)
+      debugError('Error approving withdrawal:', error)
       toast.error(error.response?.data?.message || 'Failed to approve withdrawal request')
     } finally {
       setProcessingAction(null)
@@ -135,7 +139,7 @@ export default function RestaurantWithdraws() {
         toast.error(response.data?.message || 'Failed to reject withdrawal request')
       }
     } catch (error) {
-      console.error('Error rejecting withdrawal:', error)
+      debugError('Error rejecting withdrawal:', error)
       toast.error(error.response?.data?.message || 'Failed to reject withdrawal request')
     } finally {
       setProcessingAction(null)
@@ -160,8 +164,8 @@ export default function RestaurantWithdraws() {
   }
 
   const formatCurrency = (amount) => {
-    if (!amount) return '₹0.00'
-    return `₹${parseFloat(amount).toLocaleString('en-IN', {
+    if (!amount) return 'â‚¹0.00'
+    return `â‚¹${parseFloat(amount).toLocaleString('en-IN', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     })}`
@@ -565,3 +569,4 @@ export default function RestaurantWithdraws() {
     </div>
   )
 }
+

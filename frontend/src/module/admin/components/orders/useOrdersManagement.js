@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { exportToCSV, exportToExcel, exportToPDF, exportToJSON } from "./ordersExportUtils"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const toNumber = (value) => {
   const parsed = Number(value)
@@ -362,7 +366,7 @@ export function useOrdersManagement(orders, statusKey, title) {
       const filename = `Invoice_${orderId}_${new Date().toISOString().split("T")[0]}.pdf`
       doc.save(filename)
     } catch (error) {
-      console.error("Error generating PDF invoice:", error)
+      debugError("Error generating PDF invoice:", error)
       alert("Failed to download PDF invoice. Please try again.")
     }
   }
@@ -417,3 +421,4 @@ export function useOrdersManagement(orders, statusKey, title) {
     resetColumns,
   }
 }
+

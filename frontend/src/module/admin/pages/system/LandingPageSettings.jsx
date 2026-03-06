@@ -1,6 +1,10 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { Monitor, Info, X, ChevronRight, RotateCcw, Save } from "lucide-react";
 import mobileImage1 from "../../assets/Transaction-report-icons/mobile_image1.png";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function LandingPageSettings({ type = "admin" }) {
   const isAdmin = type === "admin";
@@ -76,9 +80,9 @@ export default function LandingPageSettings({ type = "admin" }) {
   const languages = [
     { id: "default", label: "Default" },
     { id: "en", label: "English(EN)" },
-    { id: "bn", label: "Bengali - বাংলা(BN)" },
-    { id: "ar", label: "Arabic - العربية (AR)" },
-    { id: "es", label: "Spanish - español(ES)" },
+    { id: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+    { id: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+    { id: "es", label: "Spanish - espaÃ±ol(ES)" },
   ];
 
   const handleImageUpload = (e, setter, field) => {
@@ -137,7 +141,7 @@ export default function LandingPageSettings({ type = "admin" }) {
 
   const handleSave = () => {
     // Handle save logic here
-    console.log("Saving...");
+    debugLog("Saving...");
   };
 
   if (isAdmin) {
@@ -1849,3 +1853,4 @@ export default function LandingPageSettings({ type = "admin" }) {
     </>
   );
 }
+

@@ -1,10 +1,14 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Loader2 } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function CreateSupportTicket() {
   const navigate = useNavigate()
@@ -67,7 +71,7 @@ export default function CreateSupportTicket() {
         requestData.priority = formData.priority
       }
 
-      console.log('Sending ticket creation request:', requestData)
+      debugLog('Sending ticket creation request:', requestData)
 
       const response = await deliveryAPI.createSupportTicket(requestData)
 
@@ -78,9 +82,9 @@ export default function CreateSupportTicket() {
         toast.error(response?.data?.message || "Failed to create ticket")
       }
     } catch (error) {
-      console.error("Error creating ticket:", error)
-      console.error("Error response:", error?.response?.data)
-      console.error("Request data:", {
+      debugError("Error creating ticket:", error)
+      debugError("Error response:", error?.response?.data)
+      debugError("Request data:", {
         subject: formData.subject.trim(),
         description: formData.description.trim(),
         category: formData.category,
@@ -259,4 +263,5 @@ export default function CreateSupportTicket() {
     </div>
   )
 }
+
 

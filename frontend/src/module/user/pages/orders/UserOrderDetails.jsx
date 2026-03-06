@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import {
   ArrowLeft,
@@ -18,6 +18,10 @@ import { toast } from "sonner"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function UserOrderDetails() {
   const navigate = useNavigate()
@@ -56,12 +60,12 @@ export default function UserOrderDetails() {
               setRestaurant(restaurantResponse.data.restaurant)
             }
           } catch (restaurantError) {
-            console.warn("Failed to fetch restaurant details:", restaurantError)
+            debugWarn("Failed to fetch restaurant details:", restaurantError)
             // Don't show error toast, just log it - order details can still be shown
           }
         }
       } catch (error) {
-        console.error("Error fetching order details:", error)
+        debugError("Error fetching order details:", error)
         toast.error(
           error?.response?.data?.message || "Failed to load order details"
         )
@@ -265,8 +269,8 @@ export default function UserOrderDetails() {
       const tableData = items.map(item => [
         item.name || 'Item',
         String(item.quantity || item.qty || 1),
-        `₹${Number(item.price || 0).toFixed(2)}`,
-        `₹${Number((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}`
+        `â‚¹${Number(item.price || 0).toFixed(2)}`,
+        `â‚¹${Number((item.price || 0) * (item.quantity || item.qty || 1)).toFixed(2)}`
       ])
 
       autoTable(doc, {
@@ -291,7 +295,7 @@ export default function UserOrderDetails() {
       doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.text('Total:', 145, finalY + 10, { align: 'right' })
-      doc.text(`₹${Number(pricing.total || 0).toFixed(2)}`, 195, finalY + 10, { align: 'right' })
+      doc.text(`â‚¹${Number(pricing.total || 0).toFixed(2)}`, 195, finalY + 10, { align: 'right' })
 
       // Save PDF instantly
       const fileName = `Order_Summary_${orderIdDisplay}_${Date.now()}.pdf`
@@ -299,7 +303,7 @@ export default function UserOrderDetails() {
 
       toast.success("Summary downloaded successfully!")
     } catch (error) {
-      console.error("Error generating PDF:", error)
+      debugError("Error generating PDF:", error)
       toast.error("Failed to download summary")
     }
   }
@@ -396,7 +400,7 @@ export default function UserOrderDetails() {
                 </span>
               </div>
               <span className="text-sm text-gray-800 font-medium">
-                ₹{(item.price || 0).toFixed(2)}
+                â‚¹{(item.price || 0).toFixed(2)}
               </span>
             </div>
           ))}
@@ -424,18 +428,18 @@ export default function UserOrderDetails() {
               <div>
                 {pricing.originalItemTotal && (
                   <span className="text-gray-400 line-through mr-1">
-                    ₹{Number(pricing.originalItemTotal).toFixed(2)}
+                    â‚¹{Number(pricing.originalItemTotal).toFixed(2)}
                   </span>
                 )}
                 <span className="text-gray-800">
-                  ₹{Number(pricing.subtotal || pricing.total || 0).toFixed(2)}
+                  â‚¹{Number(pricing.subtotal || pricing.total || 0).toFixed(2)}
                 </span>
               </div>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">GST (govt. taxes)</span>
               <span className="text-gray-800">
-                ₹{Number(pricing.tax || 0).toFixed(2)}
+                â‚¹{Number(pricing.tax || 0).toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between">
@@ -446,26 +450,26 @@ export default function UserOrderDetails() {
                 </span>
               )}
               <span className="text-[#EB590E] font-medium uppercase">
-                {pricing.deliveryFee ? `₹${Number(pricing.deliveryFee).toFixed(2)}` : "Free"}
+                {pricing.deliveryFee ? `â‚¹${Number(pricing.deliveryFee).toFixed(2)}` : "Free"}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Platform fee</span>
               <span className="text-gray-800">
-                ₹{Number(pricing.platformFee || 0).toFixed(2)}
+                â‚¹{Number(pricing.platformFee || 0).toFixed(2)}
               </span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Subscription / other fees</span>
               <span className="text-gray-800">
-                ₹{Number(pricing.subscriptionFee || 0).toFixed(2)}
+                â‚¹{Number(pricing.subscriptionFee || 0).toFixed(2)}
               </span>
             </div>
 
             <div className="border-t border-gray-100 my-2 pt-2 flex justify-between items-center">
               <span className="font-bold text-gray-800">Paid</span>
               <span className="font-bold text-gray-800">
-                ₹{Number(pricing.total || 0).toFixed(2)}
+                â‚¹{Number(pricing.total || 0).toFixed(2)}
               </span>
             </div>
           </div>
@@ -489,9 +493,9 @@ export default function UserOrderDetails() {
               </div>
 
               <div className="flex items-center justify-center gap-2 pt-1 text-[#EB590E] font-bold text-sm">
-                <span>🎉</span>
+                <span>ðŸŽ‰</span>
                 <span>
-                  You saved ₹{Number(savings).toFixed(2)} on this order!
+                  You saved â‚¹{Number(savings).toFixed(2)} on this order!
                 </span>
               </div>
             </div>
@@ -589,7 +593,7 @@ export default function UserOrderDetails() {
               const orderMongoId = order._id || orderId
 
               if (!orderMongoId) {
-                console.error("Order ID not available:", {
+                debugError("Order ID not available:", {
                   order: order ? { _id: order._id, orderId: order.orderId } : null,
                   routeOrderId: orderId
                 })
@@ -602,7 +606,7 @@ export default function UserOrderDetails() {
                 ? orderMongoId.toString()
                 : String(orderMongoId)
 
-              console.log("Navigating to complaint page with orderId:", orderIdString)
+              debugLog("Navigating to complaint page with orderId:", orderIdString)
               navigate(`/user/complaints/submit/${encodeURIComponent(orderIdString)}`)
             }}
             className="w-full bg-orange-50 border border-orange-200 text-orange-700 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors"
@@ -615,5 +619,6 @@ export default function UserOrderDetails() {
     </div>
   )
 }
+
 
 

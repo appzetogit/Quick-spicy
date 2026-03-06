@@ -1,9 +1,13 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Eye, Settings, ArrowUpDown, Loader2, Star, Building2, User, FileText, Phone, Mail, MapPin, ShieldX, Trash2, Plus, ArrowRight } from "lucide-react"
 import { adminAPI, restaurantAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportRestaurantsToPDF } from "../../components/restaurants/restaurantsExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DiningList() {
     const navigate = useNavigate()
@@ -29,7 +33,7 @@ export default function DiningList() {
                     // Try admin API first
                     response = await adminAPI.getRestaurants()
                 } catch (adminErr) {
-                    console.log("Admin restaurants endpoint not available, using fallback")
+                    debugLog("Admin restaurants endpoint not available, using fallback")
                     response = await restaurantAPI.getRestaurants()
                 }
 
@@ -59,7 +63,7 @@ export default function DiningList() {
                     setRestaurants([])
                 }
             } catch (err) {
-                console.error("Error fetching restaurants:", err)
+                debugError("Error fetching restaurants:", err)
                 setError(err.message || "Failed to fetch restaurants")
                 setRestaurants([])
             } finally {
@@ -84,7 +88,7 @@ export default function DiningList() {
                     setCategories(cats)
                 }
             } catch (err) {
-                console.error("Error fetching categories:", err)
+                debugError("Error fetching categories:", err)
             } finally {
                 setCategoryLoading(false)
             }
@@ -122,7 +126,7 @@ export default function DiningList() {
     }
 
     const renderStars = (rating) => {
-        return "★".repeat(Math.floor(rating)) + "☆".repeat(5 - Math.floor(rating))
+        return "â˜…".repeat(Math.floor(rating)) + "â˜†".repeat(5 - Math.floor(rating))
     }
 
     const handleDiningToggle = async (restaurant) => {
@@ -140,7 +144,7 @@ export default function DiningList() {
             })
             // Could show success toast here
         } catch (error) {
-            console.error("Failed to update dining settings", error)
+            debugError("Failed to update dining settings", error)
             // Revert on error
             setRestaurants(prev => prev.map(r =>
                 r.id === restaurant.id
@@ -169,7 +173,7 @@ export default function DiningList() {
                 maxGuests: guests
             })
         } catch (error) {
-            console.error("Failed to update max guests", error)
+            debugError("Failed to update max guests", error)
             // Revert would require tracking previous value better
         }
     }
@@ -460,7 +464,7 @@ export default function DiningList() {
                                         setIsEditModalOpen(false)
                                         // toast.success("Settings updated")
                                     } catch (err) {
-                                        console.error("Update failed", err)
+                                        debugError("Update failed", err)
                                     } finally {
                                         setLoading(false)
                                     }
@@ -476,3 +480,4 @@ export default function DiningList() {
         </div>
     )
 }
+

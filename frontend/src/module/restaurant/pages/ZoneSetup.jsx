@@ -1,10 +1,14 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { MapPin, Search, Save, Loader2, ArrowLeft } from "lucide-react"
 import RestaurantNavbar from "../components/RestaurantNavbar"
 import { restaurantAPI } from "@/lib/api"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ZoneSetup() {
   const navigate = useNavigate()
@@ -102,28 +106,28 @@ export default function ZoneSetup() {
         setRestaurantData(data)
       }
     } catch (error) {
-      console.error("Error fetching restaurant data:", error)
+      debugError("Error fetching restaurant data:", error)
     }
   }
 
   const loadGoogleMaps = async () => {
     try {
-      console.log("📍 Starting Google Maps load...")
+      debugLog("ðŸ“ Starting Google Maps load...")
       
       // Fetch API key from database
       let apiKey = null
       try {
         apiKey = await getGoogleMapsApiKey()
-        console.log("📍 API Key received:", apiKey ? `Yes (${apiKey.substring(0, 10)}...)` : "No")
+        debugLog("ðŸ“ API Key received:", apiKey ? `Yes (${apiKey.substring(0, 10)}...)` : "No")
         
         if (!apiKey || apiKey.trim() === "") {
-          console.error("❌ API key is empty or not found in database")
+          debugError("âŒ API key is empty or not found in database")
           setMapLoading(false)
           alert("Google Maps API key not found in database. Please contact administrator to add the API key in admin panel.")
           return
         }
       } catch (apiKeyError) {
-        console.error("❌ Error fetching API key from database:", apiKeyError)
+        debugError("âŒ Error fetching API key from database:", apiKeyError)
         setMapLoading(false)
         alert("Failed to fetch Google Maps API key from database. Please check your connection or contact administrator.")
         return
@@ -135,7 +139,7 @@ export default function ZoneSetup() {
       let retries = 0
       const maxRetries = 100 // Wait up to 10 seconds
       
-      console.log("📍 Waiting for Google Maps to load from main.jsx...")
+      debugLog("ðŸ“ Waiting for Google Maps to load from main.jsx...")
       while (!window.google && retries < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 100))
         retries++
@@ -150,7 +154,7 @@ export default function ZoneSetup() {
       }
 
       if (!mapRef.current) {
-        console.error("❌ mapRef.current is still null after waiting")
+        debugError("âŒ mapRef.current is still null after waiting")
         setMapLoading(false)
         alert("Failed to initialize map container. Please refresh the page.")
         return
@@ -158,14 +162,14 @@ export default function ZoneSetup() {
 
       // If Google Maps is already loaded, use it directly
       if (window.google && window.google.maps) {
-        console.log("✅ Google Maps already loaded from main.jsx, initializing map...")
+        debugLog("âœ… Google Maps already loaded from main.jsx, initializing map...")
         initializeMap(window.google)
         return
       }
 
       // If Google Maps is not loaded yet and we have an API key, use Loader as fallback
       if (apiKey) {
-        console.log("📍 Google Maps not loaded from main.jsx, loading with Loader...")
+        debugLog("ðŸ“ Google Maps not loaded from main.jsx, loading with Loader...")
         const loader = new Loader({
           apiKey: apiKey,
           version: "weekly",
@@ -173,15 +177,15 @@ export default function ZoneSetup() {
         })
 
         const google = await loader.load()
-        console.log("✅ Google Maps loaded via Loader, initializing map...")
+        debugLog("âœ… Google Maps loaded via Loader, initializing map...")
         initializeMap(google)
       } else {
-        console.error("❌ No API key available")
+        debugError("âŒ No API key available")
         setMapLoading(false)
         alert("Google Maps API key not found. Please contact administrator.")
       }
     } catch (error) {
-      console.error("❌ Error loading Google Maps:", error)
+      debugError("âŒ Error loading Google Maps:", error)
       setMapLoading(false)
       alert(`Failed to load Google Maps: ${error.message}. Please refresh the page or contact administrator.`)
     }
@@ -190,12 +194,12 @@ export default function ZoneSetup() {
   const initializeMap = (google) => {
     try {
       if (!mapRef.current) {
-        console.error("❌ mapRef.current is null in initializeMap")
+        debugError("âŒ mapRef.current is null in initializeMap")
         setMapLoading(false)
         return
       }
 
-      console.log("📍 Initializing map...")
+      debugLog("ðŸ“ Initializing map...")
       // Initial location (India center)
       const initialLocation = { lat: 20.5937, lng: 78.9629 }
 
@@ -218,7 +222,7 @@ export default function ZoneSetup() {
       })
 
       mapInstanceRef.current = map
-      console.log("✅ Map initialized successfully")
+      debugLog("âœ… Map initialized successfully")
 
       // Add click listener to place marker
       map.addListener('click', (event) => {
@@ -246,9 +250,9 @@ export default function ZoneSetup() {
       })
 
       setMapLoading(false)
-      console.log("✅ Map loading complete")
+      debugLog("âœ… Map loading complete")
     } catch (error) {
-      console.error("❌ Error in initializeMap:", error)
+      debugError("âŒ Error in initializeMap:", error)
       setMapLoading(false)
       alert("Failed to initialize map. Please refresh the page.")
     }
@@ -364,7 +368,7 @@ export default function ZoneSetup() {
         throw new Error("Failed to save location")
       }
     } catch (error) {
-      console.error("Error saving location:", error)
+      debugError("Error saving location:", error)
       alert(error.response?.data?.message || "Failed to save location. Please try again.")
     } finally {
       setSaving(false)
@@ -469,3 +473,4 @@ export default function ZoneSetup() {
     </div>
   )
 }
+

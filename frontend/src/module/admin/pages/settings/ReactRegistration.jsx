@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Upload, X, RotateCcw, Plus, Save, Info } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ReactRegistration() {
   const [activeTab, setActiveTab] = useState("hero-section")
@@ -56,7 +60,7 @@ export default function ReactRegistration() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", { heroImage, activeTab })
+    debugLog("Form submitted:", { heroImage, activeTab })
   }
 
   return (
@@ -387,3 +391,4 @@ export default function ReactRegistration() {
     </div>
   )
 }
+

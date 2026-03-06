@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { FileText, Calendar, Package } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -11,6 +11,10 @@ import RefundModal from "../../components/orders/RefundModal"
 import { useOrdersManagement } from "../../components/orders/useOrdersManagement"
 import { Loader2 } from "lucide-react"
 import alertSound from "@/assets/audio/alert.mp3"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Status configuration with titles, colors, and icons
 const statusConfig = {
@@ -108,7 +112,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         fallbackAudioRef.current.play().catch(() => {})
       }
     } catch (error) {
-      console.warn("Ring sound could not be played:", error)
+      debugWarn("Ring sound could not be played:", error)
     }
   }, [])
 
@@ -210,12 +214,12 @@ export default function OrdersPage({ statusKey = "all" }) {
         isFirstLoadRef.current = false
         setOrders(nextOrders)
       } else {
-        console.error("Failed to fetch orders:", response.data)
+        debugError("Failed to fetch orders:", response.data)
         if (!silent) toast.error("Failed to fetch orders")
         setOrders([])
       }
     } catch (error) {
-      console.error("Error fetching orders:", error)
+      debugError("Error fetching orders:", error)
       if (!silent) {
         toast.error(error.response?.data?.message || "Failed to fetch orders")
       }
@@ -258,7 +262,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         toast.error(response.data?.message || "Failed to accept order")
       }
     } catch (error) {
-      console.error("Error accepting order:", error)
+      debugError("Error accepting order:", error)
       toast.error(error.response?.data?.message || "Failed to accept order")
     } finally {
       setProcessingActionOrderId(null)
@@ -289,7 +293,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         toast.error(response.data?.message || "Failed to reject order")
       }
     } catch (error) {
-      console.error("Error rejecting order:", error)
+      debugError("Error rejecting order:", error)
       toast.error(error.response?.data?.message || "Failed to reject order")
     } finally {
       setProcessingActionOrderId(null)
@@ -319,7 +323,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         toast.error(response.data?.message || "Failed to delete order")
       }
     } catch (error) {
-      console.error("Error deleting order:", error)
+      debugError("Error deleting order:", error)
       toast.error(error.response?.data?.message || "Failed to delete order")
     } finally {
       setDeletingOrderId(null)
@@ -354,12 +358,12 @@ export default function OrdersPage({ statusKey = "all" }) {
     const orderIdToUse = order.id || order._id || order.orderId
     
     if (!orderIdToUse) {
-      console.error('❌ No orderId found in order object:', order)
+      debugError('âŒ No orderId found in order object:', order)
       toast.error('Order ID not found. Please refresh the page and try again.')
       return
     }
     
-    console.log('🔍 Order details for refund:', {
+    debugLog('ðŸ” Order details for refund:', {
       orderIdString: order.orderId,
       mongoId: order.id,
       orderIdToUse,
@@ -370,7 +374,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       setProcessingRefund(orderIdToUse)
       
-      console.log('🔍 Processing refund for order:', {
+      debugLog('ðŸ” Processing refund for order:', {
         orderId: order.orderId,
         id: order.id,
         _id: order._id,
@@ -381,13 +385,13 @@ export default function OrdersPage({ statusKey = "all" }) {
       
       // Include refundAmount in request body if provided (ensure it's a number)
       const requestData = refundAmount !== null ? { refundAmount: parseFloat(refundAmount) } : {}
-      console.log('📤 Request data being sent:', requestData)
+      debugLog('ðŸ“¤ Request data being sent:', requestData)
       const response = await adminAPI.processRefund(orderIdToUse, requestData)
       
       if (response.data?.success) {
         const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
         toast.success(response.data?.message || (isWalletPayment 
-          ? `Wallet refund of ₹${refundAmount || order.totalAmount} processed successfully for order ${order.orderId}`
+          ? `Wallet refund of â‚¹${refundAmount || order.totalAmount} processed successfully for order ${order.orderId}`
           : `Refund initiated successfully for order ${order.orderId}`))
         // Update the order in the local state immediately to show "Refunded" status
         setOrders(prevOrders => 
@@ -403,7 +407,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         toast.error(response.data?.message || "Failed to process refund")
       }
     } catch (error) {
-      console.error("❌ Error processing refund:", error)
+      debugError("âŒ Error processing refund:", error)
       
       // Log full error details for debugging
       const errorDetails = {
@@ -423,7 +427,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         },
         stack: error.stack
       }
-      console.error("❌ Error details:", JSON.stringify(errorDetails, null, 2))
+      debugError("âŒ Error details:", JSON.stringify(errorDetails, null, 2))
       
       // Show more specific error message
       let errorMessage = "Failed to process refund"
@@ -449,7 +453,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         errorMessage = error.message || "Failed to process refund"
       }
       
-      console.error("❌ Final error message:", errorMessage)
+      debugError("âŒ Final error message:", errorMessage)
       toast.error(errorMessage)
     } finally {
       setProcessingRefund(null)
@@ -559,3 +563,4 @@ export default function OrdersPage({ statusKey = "all" }) {
     </div>
   )
 }
+

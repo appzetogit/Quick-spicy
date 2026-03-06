@@ -1,5 +1,9 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { exportToExcel, exportToPDF } from "./ordersExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export function useGenericTableManagement(data, title, searchFields = []) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -143,8 +147,8 @@ export function useGenericTableManagement(data, title, searchFields = []) {
         const tableData = order.items.map((item) => [
           item.quantity || 1,
           item.name || item.itemName || item.title || 'Unknown Item',
-          `₹${(item.price || 0).toFixed(2)}`,
-          `₹${((item.quantity || 1) * (item.price || 0)).toFixed(2)}`
+          `â‚¹${(item.price || 0).toFixed(2)}`,
+          `â‚¹${((item.quantity || 1) * (item.price || 0)).toFixed(2)}`
         ])
         
         autoTable(doc, {
@@ -188,7 +192,7 @@ export function useGenericTableManagement(data, title, searchFields = []) {
         doc.setTextColor(30, 30, 30)
         doc.setFont(undefined, 'bold')
         const totalAmount = typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : order.totalAmount
-        doc.text(`Total Amount: ₹${totalAmount}`, 14, startY)
+        doc.text(`Total Amount: â‚¹${totalAmount}`, 14, startY)
         startY += 8
       }
       
@@ -211,7 +215,7 @@ export function useGenericTableManagement(data, title, searchFields = []) {
       const filename = `Invoice_${orderId}_${new Date().toISOString().split("T")[0]}.pdf`
       doc.save(filename)
     } catch (error) {
-      console.error("Error generating PDF invoice:", error)
+      debugError("Error generating PDF invoice:", error)
       alert("Failed to download PDF invoice. Please try again.")
     }
   }
@@ -252,3 +256,4 @@ export function useGenericTableManagement(data, title, searchFields = []) {
     resetColumns,
   }
 }
+

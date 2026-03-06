@@ -1,6 +1,10 @@
-import { useState, useRef } from "react"
+﻿import { useState, useRef } from "react"
 import { Upload, Heart, Star, Calendar, CheckCircle2, X } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Using placeholders for advertisement images
 const profilePlaceholder = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=400&fit=crop"
 const coverPlaceholder = "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1200&h=400&fit=crop"
@@ -30,9 +34,9 @@ export default function NewAdvertisement() {
   const languageTabs = [
     { key: "default", label: "Default" },
     { key: "en", label: "English(EN)" },
-    { key: "bn", label: "Bengali - বাংলা(BN)" },
-    { key: "ar", label: "Arabic - العربية (AR)" },
-    { key: "es", label: "Spanish - español(ES)" },
+    { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾(BN)" },
+    { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
   ]
 
   const handleInputChange = (field, value) => {
@@ -143,7 +147,7 @@ export default function NewAdvertisement() {
       await new Promise(resolve => setTimeout(resolve, 1000))
       
       // Here you would typically send the data to your API
-      console.log("Form submitted:", {
+      debugLog("Form submitted:", {
         ...formData,
         profileImage,
         coverImage
@@ -156,7 +160,7 @@ export default function NewAdvertisement() {
         setShowSuccessDialog(false)
       }, 3000)
     } catch (error) {
-      console.error("Error submitting form:", error)
+      debugError("Error submitting form:", error)
       setFormErrors({ submit: "Failed to create advertisement. Please try again." })
     } finally {
       setIsSubmitting(false)
@@ -259,7 +263,7 @@ export default function NewAdvertisement() {
                         }`}
                       >
                         <option value="">Select Restaurant</option>
-                        <option value="cafe-monarch">Café Monarch</option>
+                        <option value="cafe-monarch">CafÃ© Monarch</option>
                         <option value="hungry-puppets">Hungry Puppets</option>
                       </select>
                       {formErrors.restaurant && (
@@ -581,3 +585,4 @@ export default function NewAdvertisement() {
     </div>
   )
 }
+

@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Calendar, Eye, FileDown, FileSpreadsheet, FileText, X, Mail, Phone, MapPin, Package, IndianRupee, Calendar as CalendarIcon, User, CheckCircle, XCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportCustomersToCSV, exportCustomersToExcel, exportCustomersToPDF } from "../components/customers/customersExportUtils"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Customers() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -108,7 +112,7 @@ export default function Customers() {
           setTotalCustomers(0)
         }
       } catch (error) {
-        console.error('Error fetching customers:', error)
+        debugError('Error fetching customers:', error)
         toast.error('Failed to load customers')
         setCustomers([])
         setTotalCustomers(0)
@@ -142,7 +146,7 @@ export default function Customers() {
       await adminAPI.updateUserStatus(customerId, newStatus)
       toast.success(`User ${newStatus ? 'activated' : 'deactivated'} successfully`)
     } catch (error) {
-      console.error('Error updating status:', error)
+      debugError('Error updating status:', error)
       toast.error('Failed to update status')
       // Revert optimistic update
       setCustomers(customers.map(c =>
@@ -167,7 +171,7 @@ export default function Customers() {
         setShowUserDetails(false)
       }
     } catch (error) {
-      console.error('Error fetching user details:', error)
+      debugError('Error fetching user details:', error)
       toast.error('Failed to load user details')
       setShowUserDetails(false)
     } finally {
@@ -201,7 +205,7 @@ export default function Customers() {
           break
       }
     } catch (error) {
-      console.error("Export error:", error)
+      debugError("Export error:", error)
       toast.error("Failed to export customers")
     }
   }
@@ -406,7 +410,7 @@ export default function Customers() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                            <span className="text-sm">👤</span>
+                            <span className="text-sm">ðŸ‘¤</span>
                           </div>
                           <span className="text-sm font-medium text-slate-900">{customer.name}</span>
                         </div>
@@ -421,7 +425,7 @@ export default function Customers() {
                         <span className="text-sm text-slate-700">{customer.totalOrder || 0}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-slate-900">₹ {(customer.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span className="text-sm font-medium text-slate-900">â‚¹ {(customer.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">{customer.joiningDate}</span>
@@ -533,7 +537,7 @@ export default function Customers() {
                     <span className="text-xs font-semibold text-slate-700">Total Spent</span>
                   </div>
                   <p className="text-xl font-bold text-green-600">
-                    ₹{(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    â‚¹{(userDetails.totalOrderAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="bg-purple-50 rounded-lg p-3">
@@ -591,7 +595,7 @@ export default function Customers() {
                           <p className="text-xs text-slate-600">{order.restaurantName}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-semibold text-slate-900">₹{(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          <p className="text-sm font-semibold text-slate-900">â‚¹{(order.total || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                           <p className="text-xs text-slate-600 capitalize">{order.status}</p>
                         </div>
                       </div>
@@ -632,3 +636,4 @@ export default function Customers() {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { Search, ArrowUpDown, Settings, Folder, ChevronDown, Eye, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import apiClient from "@/lib/api/axios"
@@ -17,6 +17,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SafetyEmergencyReports() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -57,8 +61,8 @@ export default function SafetyEmergencyReports() {
         setTotalPages(1)
       }
     } catch (error) {
-      console.error('Error fetching safety emergency reports:', error)
-      console.error('Error response:', error.response)
+      debugError('Error fetching safety emergency reports:', error)
+      debugError('Error response:', error.response)
       setReports([])
       setTotalPages(1)
       const errorMessage = error.response?.data?.message || 
@@ -86,7 +90,7 @@ export default function SafetyEmergencyReports() {
         fetchReports()
       }
     } catch (error) {
-      console.error('Error updating status:', error)
+      debugError('Error updating status:', error)
       toast.error('Failed to update status')
     }
   }
@@ -102,7 +106,7 @@ export default function SafetyEmergencyReports() {
         fetchReports()
       }
     } catch (error) {
-      console.error('Error updating priority:', error)
+      debugError('Error updating priority:', error)
       toast.error('Failed to update priority')
     }
   }
@@ -120,7 +124,7 @@ export default function SafetyEmergencyReports() {
         fetchReports()
       }
     } catch (error) {
-      console.error('Error deleting report:', error)
+      debugError('Error deleting report:', error)
       toast.error('Failed to delete safety emergency report')
     }
   }
@@ -539,4 +543,5 @@ export default function SafetyEmergencyReports() {
     </div>
   )
 }
+
 

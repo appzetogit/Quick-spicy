@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react"
+﻿import { useState, useEffect, useRef, useMemo } from "react"
 import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Tag, UtensilsCrossed, Trophy, ChefHat, Megaphone, Search } from "lucide-react"
 import api from "@/lib/api"
 import { adminAPI } from "@/lib/api"
@@ -8,6 +8,10 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function LandingPageManagement() {
   const [activeTab, setActiveTab] = useState('banners')
@@ -112,7 +116,7 @@ export default function LandingPageManagement() {
 
     // Debug logging in development
     if (import.meta.env.DEV) {
-      console.log('[LandingPageManagement] Token check:', {
+      debugLog('[LandingPageManagement] Token check:', {
         token: adminToken ? 'exists' : 'missing',
         tokenLength: adminToken?.length || 0,
         path: window.location.pathname
@@ -121,7 +125,7 @@ export default function LandingPageManagement() {
 
     if (!adminToken || adminToken.trim() === '' || adminToken === 'null' || adminToken === 'undefined') {
       // Token not found, return config without auth header (will be handled by error)
-      console.warn('[LandingPageManagement] Admin token not found!')
+      debugWarn('[LandingPageManagement] Admin token not found!')
       return additionalConfig
     }
 
@@ -225,7 +229,7 @@ export default function LandingPageManagement() {
 
       // Debug: Log the config to verify Authorization header is set
       if (import.meta.env.DEV) {
-        console.log('[uploadBanners] Request config:', {
+        debugLog('[uploadBanners] Request config:', {
           hasAuthHeader: !!config.headers?.Authorization,
           authHeaderPrefix: config.headers?.Authorization?.substring(0, 20),
           hasFormData: formData instanceof FormData
@@ -259,7 +263,7 @@ export default function LandingPageManagement() {
 
       setBannersUploadProgress({ current: 0, total: 0 })
     } catch (err) {
-      console.error('Error uploading banners:', err)
+      debugError('Error uploading banners:', err)
 
       // Handle 401 unauthorized errors - don't show token-related errors
       if (err.response?.status === 401 || err.message === 'Authentication token not found') {
@@ -748,7 +752,7 @@ export default function LandingPageManagement() {
         await fetchExploreMore()
       }
     } catch (err) {
-      console.error('Upload failed', err)
+      debugError('Upload failed', err)
       setErrorSafely(err.response?.data?.message || 'Failed to update icon')
     } finally {
       setExploreIconsUploading(prev => ({ ...prev, [itemId]: false }))
@@ -2005,7 +2009,7 @@ export default function LandingPageManagement() {
                               </div>
                               <div className="flex-1">
                                 <h3 className="font-semibold text-slate-900">{item.restaurant?.name || 'N/A'}</h3>
-                                <p className="text-xs text-slate-500">Rating: {item.restaurant?.rating || 0}★</p>
+                                <p className="text-xs text-slate-500">Rating: {item.restaurant?.rating || 0}â˜…</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <Label className="text-xs">Rank:</Label>
@@ -2122,7 +2126,7 @@ export default function LandingPageManagement() {
                               </div>
                               <div className="p-2">
                                 <h3 className="font-semibold text-slate-900 mb-0.5 text-sm line-clamp-1">{item.restaurant?.name || 'N/A'}</h3>
-                                <p className="text-[10px] text-slate-500 mb-2">Rating: {item.restaurant?.rating || 0}★</p>
+                                <p className="text-[10px] text-slate-500 mb-2">Rating: {item.restaurant?.rating || 0}â˜…</p>
                                 <div className="flex items-center justify-between gap-1">
                                   <div className="flex items-center gap-0.5">
                                     <button onClick={() => handleGourmetOrderChange(item._id, 'up')} disabled={index === 0} className="p-1 rounded hover:bg-slate-100 disabled:opacity-50">
@@ -2263,7 +2267,7 @@ export default function LandingPageManagement() {
                               </p>
                               {restaurant.rating && (
                                 <div className="flex items-center gap-1 mt-1">
-                                  <span className="text-xs text-slate-400">★</span>
+                                  <span className="text-xs text-slate-400">â˜…</span>
                                   <span className="text-xs text-slate-600">{restaurant.rating}</span>
                                 </div>
                               )}
@@ -2330,4 +2334,5 @@ export default function LandingPageManagement() {
     </div >
   )
 }
+
 

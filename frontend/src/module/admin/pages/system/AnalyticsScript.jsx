@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Lightbulb, ChevronDown } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const marketingTools = [
   {
@@ -76,12 +80,12 @@ export default function AnalyticsScript() {
   }
 
   const handleView = (id) => {
-    console.log("View tool:", id)
+    debugLog("View tool:", id)
   }
 
   const handleHowItWorks = (e) => {
     e.preventDefault()
-    console.log("How it works clicked")
+    debugLog("How it works clicked")
   }
 
   return (
@@ -145,3 +149,4 @@ export default function AnalyticsScript() {
     </div>
   )
 }
+

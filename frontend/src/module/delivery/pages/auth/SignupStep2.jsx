@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Upload, X, Check } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
 import apiClient from "@/lib/api/axios"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SignupStep2() {
   const navigate = useNavigate()
@@ -19,7 +23,7 @@ export default function SignupStep2() {
       try {
         return JSON.parse(saved)
       } catch (e) {
-        console.error("Error parsing saved docs:", e)
+        debugError("Error parsing saved docs:", e)
       }
     }
     return {
@@ -100,7 +104,7 @@ export default function SignupStep2() {
       }
       input.click()
     } catch (error) {
-      console.error("Browser camera fallback failed:", error)
+      debugError("Browser camera fallback failed:", error)
     }
   }
 
@@ -143,7 +147,7 @@ export default function SignupStep2() {
 
       onSelectFile(selectedFile)
     } catch (error) {
-      console.error("openCamera bridge failed:", error)
+      debugError("openCamera bridge failed:", error)
       openBrowserCameraFallback({ onSelectFile })
     }
   }
@@ -223,7 +227,7 @@ export default function SignupStep2() {
         toast.success(`${docType.replace(/([A-Z])/g, ' $1').trim()} uploaded successfully`)
       }
     } catch (error) {
-      console.error(`Error uploading ${docType}:`, error)
+      debugError(`Error uploading ${docType}:`, error)
       toast.error(`Failed to upload ${docType.replace(/([A-Z])/g, ' $1').trim()}`)
     } finally {
       setUploading(prev => ({ ...prev, [docType]: false }))
@@ -268,7 +272,7 @@ export default function SignupStep2() {
         }, 1000)
       }
     } catch (error) {
-      console.error("Error submitting documents:", error)
+      debugError("Error submitting documents:", error)
       const message = error?.response?.data?.message || "Failed to submit documents. Please try again."
       toast.error(message)
     } finally {
@@ -436,3 +440,4 @@ export default function SignupStep2() {
     </div>
   )
 }
+

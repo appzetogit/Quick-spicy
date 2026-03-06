@@ -1,14 +1,18 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Eye, Trash2, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDeliverymenToExcel, exportDeliverymenToPDF } from "../../components/deliveryman/deliverymanExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const formatCurrency = (amount) => {
   const numericAmount = Number(amount)
-  if (!Number.isFinite(numericAmount)) return "₹0.00"
-  return `₹${numericAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (!Number.isFinite(numericAmount)) return "â‚¹0.00"
+  return `â‚¹${numericAmount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export default function DeliverymanList() {
@@ -112,7 +116,7 @@ export default function DeliverymanList() {
         setDeliverymen([])
       }
     } catch (err) {
-      console.error("Error fetching delivery partners:", err)
+      debugError("Error fetching delivery partners:", err)
       
       // Better error handling
       let errorMessage = "Failed to fetch delivery partners. Please try again."
@@ -178,7 +182,7 @@ export default function DeliverymanList() {
         alert("Failed to load details")
       }
     } catch (err) {
-      console.error("Error fetching details:", err)
+      debugError("Error fetching details:", err)
       alert(err.response?.data?.message || "Failed to load details")
     } finally {
       setLoading(false)
@@ -206,7 +210,7 @@ export default function DeliverymanList() {
       // Show success message
       alert(`Successfully deleted ${selectedDeliveryman.name}`)
     } catch (err) {
-      console.error("Error deleting delivery partner:", err)
+      debugError("Error deleting delivery partner:", err)
       alert(err.response?.data?.message || "Failed to delete delivery partner. Please try again.")
     } finally {
       setProcessing(false)
@@ -444,7 +448,7 @@ export default function DeliverymanList() {
                                 />
                               ) : (
                                 <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center flex-shrink-0">
-                                  <span className="text-sm">👤</span>
+                                  <span className="text-sm">ðŸ‘¤</span>
                                 </div>
                               )}
                               <div className="flex items-center gap-2">
@@ -1013,3 +1017,4 @@ export default function DeliverymanList() {
     </div>
   )
 }
+

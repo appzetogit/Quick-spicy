@@ -1,7 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+﻿import { useCallback, useEffect, useRef, useState } from "react"
 import { IndianRupee, Loader2, Wallet } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DeliveryCashLimit() {
   const [loading, setLoading] = useState(true)
@@ -24,7 +28,7 @@ export default function DeliveryCashLimit() {
       setDeliveryCashLimit(limit !== undefined && limit !== null ? String(limit) : "")
       setDeliveryWithdrawalLimit(wl !== undefined && wl !== null ? String(wl) : "100")
     } catch (error) {
-      console.error("Error fetching delivery cash limit:", error)
+      debugError("Error fetching delivery cash limit:", error)
       if (!isMountedRef.current) return
       if (!silent) {
         toast.error(error.response?.data?.message || "Failed to load delivery cash limit")
@@ -56,7 +60,7 @@ export default function DeliveryCashLimit() {
       toast.success("Delivery cash limit updated successfully")
       await fetchLimit({ silent: true })
     } catch (error) {
-      console.error("Error saving delivery cash limit:", error)
+      debugError("Error saving delivery cash limit:", error)
       toast.error(error.response?.data?.message || "Failed to update delivery cash limit")
     } finally {
       setSaving(false)
@@ -81,7 +85,7 @@ export default function DeliveryCashLimit() {
       toast.success("Withdrawal limit updated successfully")
       await fetchLimit({ silent: true })
     } catch (error) {
-      console.error("Error saving withdrawal limit:", error)
+      debugError("Error saving withdrawal limit:", error)
       toast.error(error.response?.data?.message || "Failed to update withdrawal limit")
     } finally {
       setSavingWithdrawal(false)
@@ -160,7 +164,7 @@ export default function DeliveryCashLimit() {
                     {loading && (
                       <p className="text-xs text-emerald-700/80 mt-1 flex items-center gap-2">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Loading current limit…
+                        Loading current limitâ€¦
                       </p>
                     )}
                   </div>
@@ -204,7 +208,7 @@ export default function DeliveryCashLimit() {
                     {loading && (
                       <p className="text-xs text-amber-700/80 mt-1 flex items-center gap-2">
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Loading…
+                        Loadingâ€¦
                       </p>
                     )}
                   </div>
@@ -225,4 +229,5 @@ export default function DeliveryCashLimit() {
     </div>
   )
 }
+
 

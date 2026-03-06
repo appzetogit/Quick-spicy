@@ -1,8 +1,12 @@
-import { useState, useRef, useEffect } from "react";
+﻿import { useState, useRef, useEffect } from "react";
 import { Info, Phone, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminAPI } from "@/lib/api";
 import { clearCache, updateFavicon, updateTitle } from "@/lib/utils/businessSettings";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function BusinessSetup() {
   const [loading, setLoading] = useState(true);
@@ -57,7 +61,7 @@ export default function BusinessSetup() {
         }
       }
     } catch (error) {
-      console.error("Error fetching business settings:", error);
+      debugError("Error fetching business settings:", error);
       toast.error(error?.response?.data?.message || "Failed to load business settings");
     } finally {
       setLoading(false);
@@ -139,7 +143,7 @@ export default function BusinessSetup() {
       // Dispatch event to notify other components (like AdminNavbar)
       window.dispatchEvent(new Event('businessSettingsUpdated'));
     } catch (error) {
-      console.error("Error saving business settings:", error);
+      debugError("Error saving business settings:", error);
       toast.error(error?.response?.data?.message || "Failed to save business settings");
     } finally {
       setSaving(false);
@@ -457,7 +461,7 @@ export default function BusinessSetup() {
                     </select>
                     <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
-                      ▾
+                      â–¾
                     </span>
                   </div>
                   <input
@@ -702,3 +706,4 @@ function ToggleSwitch({ initial = false }) {
     </button>
   );
 }
+

@@ -1,10 +1,14 @@
-import { useState, useRef, useEffect } from "react"
+﻿import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate, useParams } from "react-router-dom"
 import Lenis from "lenis"
 import { ArrowLeft, Send, MoreVertical } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ChatDetailPage() {
   const navigate = useNavigate()
@@ -65,7 +69,7 @@ export default function ChatDetailPage() {
   const handleSend = () => {
     if (message.trim()) {
       // Add message logic here
-      console.log("Sending message:", message)
+      debugLog("Sending message:", message)
       setMessage("")
       scrollToBottom()
     }
@@ -165,4 +169,5 @@ export default function ChatDetailPage() {
     </div>
   )
 }
+
 

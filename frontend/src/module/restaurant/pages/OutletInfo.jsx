@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -27,6 +27,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { restaurantAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const CUISINES_STORAGE_KEY = "restaurant_cuisines"
 
@@ -111,7 +115,7 @@ export default function OutletInfo() {
                 }
               }
             } catch (error) {
-              console.error("Error loading cuisines from storage:", error)
+              debugError("Error loading cuisines from storage:", error)
             }
           }
           
@@ -143,7 +147,7 @@ export default function OutletInfo() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Continue with default values if fetch fails
       } finally {
@@ -202,7 +206,7 @@ export default function OutletInfo() {
           }
         }
       } catch (error) {
-        console.error("Error loading cuisines from storage:", error)
+        debugError("Error loading cuisines from storage:", error)
       }
     }
 
@@ -252,7 +256,7 @@ export default function OutletInfo() {
         }
       }
     } catch (error) {
-      console.error("Error uploading profile image:", error)
+      debugError("Error uploading profile image:", error)
       alert("Failed to upload image. Please try again.")
     } finally {
       setUploadingImage(false)
@@ -317,7 +321,7 @@ export default function OutletInfo() {
           const errorMessage = error?.response?.data?.message || error?.message || "Unknown error"
           const fileName = files[i]?.name || `Image ${i + 1}`
           failedUploads.push({ fileName, error: errorMessage })
-          console.error(`Error uploading image ${i + 1} (${fileName}):`, {
+          debugError(`Error uploading image ${i + 1} (${fileName}):`, {
             error: errorMessage,
             status: error?.response?.status,
             data: error?.response?.data
@@ -355,7 +359,7 @@ export default function OutletInfo() {
             toast.warning(`Uploaded ${uploadedImageData.length} of ${files.length} image(s)`)
           }
         } catch (updateError) {
-          console.error("Error updating profile with images:", updateError)
+          debugError("Error updating profile with images:", updateError)
           toast.error("Images uploaded but failed to save. Please try again.")
           // Continue anyway - images are uploaded, just not in correct order
         }
@@ -386,7 +390,7 @@ export default function OutletInfo() {
         toast.error("Failed to upload all images. Please check file size (max 5MB) and format (JPG, PNG, WEBP), then try again.")
       }
     } catch (error) {
-      console.error("Error uploading menu images:", error)
+      debugError("Error uploading menu images:", error)
       const errorMessage = error?.response?.data?.message || error?.message || "Unknown error"
       toast.error(`Failed to upload images: ${errorMessage}`)
     } finally {
@@ -462,8 +466,8 @@ export default function OutletInfo() {
           }
         }
       } catch (apiError) {
-        console.error("API Error deleting cover image:", apiError)
-        console.error("API Error details:", {
+        debugError("API Error deleting cover image:", apiError)
+        debugError("API Error details:", {
           message: apiError.message,
           code: apiError.code,
           response: apiError.response?.data,
@@ -478,8 +482,8 @@ export default function OutletInfo() {
         throw apiError
       }
     } catch (error) {
-      console.error("Error deleting cover image:", error)
-      console.error("Error details:", {
+      debugError("Error deleting cover image:", error)
+      debugError("Error details:", {
         message: error.message,
         code: error.code,
         response: error.response?.data,
@@ -523,7 +527,7 @@ export default function OutletInfo() {
             }
           }
         } catch (refreshError) {
-          console.error("Error refreshing data:", refreshError)
+          debugError("Error refreshing data:", refreshError)
         }
       }
     } finally {
@@ -572,7 +576,7 @@ export default function OutletInfo() {
         throw new Error("Invalid response from server")
       }
     } catch (error) {
-      console.error("Error updating restaurant name:", error)
+      debugError("Error updating restaurant name:", error)
       alert(`Failed to update restaurant name: ${error.response?.data?.message || error.message || "Please try again."}`)
     }
   }
@@ -889,3 +893,4 @@ export default function OutletInfo() {
     </div>
   )
 }
+

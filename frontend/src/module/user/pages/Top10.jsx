@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Star, Clock, Bookmark, BadgePercent, Trophy, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import { toast } from "sonner"
 
 // Import banner
 import top10Banner from "@/assets/top10pagebanner.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Top10() {
   const navigate = useNavigate()
@@ -31,7 +35,7 @@ export default function Top10() {
           setTop10Restaurants([])
         }
       } catch (err) {
-        console.error('Error fetching Top 10 restaurants:', err)
+        debugError('Error fetching Top 10 restaurants:', err)
         const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load Top 10 restaurants'
         setError(errorMessage)
         toast.error(errorMessage)
@@ -207,4 +211,5 @@ export default function Top10() {
     </div>
   )
 }
+
 

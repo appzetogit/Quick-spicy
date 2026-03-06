@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Wallet State Management Utility
  * Centralized management for wallet balances, transactions, and withdrawals
@@ -55,7 +59,7 @@ export const getWalletState = () => {
     setWalletState(DEFAULT_WALLET_STATE)
     return DEFAULT_WALLET_STATE
   } catch (error) {
-    console.error('Error reading wallet state from localStorage:', error)
+    debugError('Error reading wallet state from localStorage:', error)
     return DEFAULT_WALLET_STATE
   }
 }
@@ -70,7 +74,7 @@ export const setWalletState = (state) => {
     // Dispatch custom event for other components
     window.dispatchEvent(new CustomEvent('walletStateUpdated'))
   } catch (error) {
-    console.error('Error saving wallet state to localStorage:', error)
+    debugError('Error saving wallet state to localStorage:', error)
   }
 }
 
@@ -282,4 +286,5 @@ export const getPaidOrderIds = () => {
     .filter(t => t.type === 'payment' && t.status === 'Completed' && t.orderId)
     .map(t => t.orderId)
 }
+
 

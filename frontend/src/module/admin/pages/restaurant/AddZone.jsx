@@ -1,9 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react"
+﻿import { useState, useEffect, useRef, useCallback } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { MapPin, ArrowLeft, Save, X, Hand, Shapes, Search } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { Loader } from "@googlemaps/js-api-loader"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AddZone() {
   const navigate = useNavigate()
@@ -79,14 +83,14 @@ export default function AddZone() {
   // Draw existing polygon when in edit mode and coordinates are loaded
   useEffect(() => {
     if (isEditMode && coordinates.length >= 3 && mapInstanceRef.current && window.google && !mapLoading) {
-      console.log("Drawing existing polygon in edit mode, coordinates:", coordinates.length)
+      debugLog("Drawing existing polygon in edit mode, coordinates:", coordinates.length)
       setTimeout(() => {
         if (mapInstanceRef.current && window.google) {
           // Ensure drawing mode is off when editing existing polygon
           if (drawingManagerRef.current) {
             drawingManagerRef.current.setDrawingMode(null)
             setIsDrawing(false)
-            console.log("Drawing mode disabled, polygon is editable")
+            debugLog("Drawing mode disabled, polygon is editable")
           }
           drawExistingPolygon(window.google, mapInstanceRef.current, coordinates)
         }
@@ -106,7 +110,7 @@ export default function AddZone() {
         setExistingZones(zones)
       }
     } catch (error) {
-      console.error("Error fetching existing zones:", error)
+      debugError("Error fetching existing zones:", error)
       setExistingZones([])
     }
   }
@@ -128,7 +132,7 @@ export default function AddZone() {
         }
       }
     } catch (error) {
-      console.error("Error fetching zone:", error)
+      debugError("Error fetching zone:", error)
       alert("Failed to load zone")
       navigate("/admin/zone-setup")
     } finally {
@@ -170,7 +174,7 @@ export default function AddZone() {
         setMapLoading(false)
       }
     } catch (error) {
-      console.error("Error loading Google Maps:", error)
+      debugError("Error loading Google Maps:", error)
       setMapLoading(false)
     }
   }
@@ -285,7 +289,7 @@ export default function AddZone() {
           pathMarkersRef.current = pathMarkers
         }
         
-        console.log("Coordinates set:", coords)
+        debugLog("Coordinates set:", coords)
         setCoordinates(coords)
         
         // Make polygon editable
@@ -438,11 +442,11 @@ export default function AddZone() {
 
   const drawExistingPolygon = (google, map, coords) => {
     if (!coords || coords.length < 3) {
-      console.log("drawExistingPolygon: Not enough coordinates", coords?.length)
+      debugLog("drawExistingPolygon: Not enough coordinates", coords?.length)
       return
     }
 
-    console.log("drawExistingPolygon: Drawing polygon with", coords.length, "coordinates")
+    debugLog("drawExistingPolygon: Drawing polygon with", coords.length, "coordinates")
 
     // Clear existing polygon
     if (polygonRef.current) {
@@ -460,14 +464,14 @@ export default function AddZone() {
       const lat = typeof coord === 'object' ? (coord.latitude || coord.lat) : null
       const lng = typeof coord === 'object' ? (coord.longitude || coord.lng) : null
       if (lat === null || lng === null) {
-        console.error("Invalid coordinate in drawExistingPolygon:", coord)
+        debugError("Invalid coordinate in drawExistingPolygon:", coord)
         return null
       }
       return new google.maps.LatLng(lat, lng)
     }).filter(Boolean)
 
     if (path.length < 3) {
-      console.error("Not enough valid coordinates after conversion")
+      debugError("Not enough valid coordinates after conversion")
       return
     }
 
@@ -490,13 +494,13 @@ export default function AddZone() {
     // Ensure polygon is editable
     polygon.setEditable(true)
     polygon.setDraggable(false)
-    console.log("Polygon created and set to editable:", polygon.getEditable())
+    debugLog("Polygon created and set to editable:", polygon.getEditable())
 
     // Fit map to polygon bounds
     const bounds = new google.maps.LatLngBounds()
     path.forEach(latLng => bounds.extend(latLng))
     map.fitBounds(bounds)
-    console.log("Map fitted to polygon bounds")
+    debugLog("Map fitted to polygon bounds")
 
     // Add markers for each point
     const markers = []
@@ -522,7 +526,7 @@ export default function AddZone() {
       }
     })
     pathMarkersRef.current = markers
-    console.log("drawExistingPolygon: Polygon and markers created successfully")
+    debugLog("drawExistingPolygon: Polygon and markers created successfully")
 
     // Function to update markers when polygon is edited
     const updateMarkersFromPolygon = () => {
@@ -556,7 +560,7 @@ export default function AddZone() {
       }
       
       pathMarkersRef.current = newMarkers
-      console.log("Markers updated after polygon edit, new count:", newMarkers.length)
+      debugLog("Markers updated after polygon edit, new count:", newMarkers.length)
     }
 
     // Update coordinates and markers when polygon is edited
@@ -570,7 +574,7 @@ export default function AddZone() {
     google.maps.event.addListener(polygonPath, 'insert_at', handlePolygonEdit)
     google.maps.event.addListener(polygonPath, 'remove_at', handlePolygonEdit)
     
-    console.log("Event listeners attached for polygon editing")
+    debugLog("Event listeners attached for polygon editing")
   }
 
   const toggleDrawingMode = () => {
@@ -653,22 +657,22 @@ export default function AddZone() {
         isActive: true
       }
 
-      console.log("Sending zone data:", zoneData)
+      debugLog("Sending zone data:", zoneData)
 
       if (isEditMode && id) {
         // Update existing zone
         const response = await adminAPI.updateZone(id, zoneData)
-        console.log("Zone updated successfully:", response)
+        debugLog("Zone updated successfully:", response)
         alert("Zone updated successfully!")
       } else {
         // Create new zone
         const response = await adminAPI.createZone(zoneData)
-        console.log("Zone created successfully:", response)
+        debugLog("Zone created successfully:", response)
         alert("Zone created successfully!")
       }
       navigate("/admin/zone-setup")
     } catch (error) {
-      console.error("Error creating zone:", error)
+      debugError("Error creating zone:", error)
       
       // Handle different types of errors
       let errorMessage = "Failed to create zone. Please try again."
@@ -676,15 +680,15 @@ export default function AddZone() {
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error' || !error.response) {
         // Network error - backend not running or CORS issue
         errorMessage = "Cannot connect to server. Please make sure the backend server is running."
-        console.error("Network error: Backend server might not be running")
+        debugError("Network error: Backend server might not be running")
       } else if (error.response) {
         // API error with response
         errorMessage = error.response.data?.message || 
                       error.response.data?.error || 
                       error.message || 
                       `Server error: ${error.response.status}`
-        console.error("API error:", error.response.data)
-        console.error("Error status:", error.response.status)
+        debugError("API error:", error.response.data)
+        debugError("Error status:", error.response.status)
       } else {
         // Other errors
         errorMessage = error.message || errorMessage
@@ -887,4 +891,5 @@ export default function AddZone() {
     </div>
   )
 }
+
 

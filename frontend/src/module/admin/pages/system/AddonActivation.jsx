@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { ChevronDown, Settings } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const addons = [
   {
@@ -57,11 +61,11 @@ export default function AddonActivation() {
   }
 
   const handleView = (id) => {
-    console.log("View addon:", id)
+    debugLog("View addon:", id)
   }
 
   const handleSettings = (id) => {
-    console.log("Settings for addon:", id)
+    debugLog("Settings for addon:", id)
   }
 
   return (
@@ -127,3 +131,4 @@ export default function AddonActivation() {
     </div>
   )
 }
+

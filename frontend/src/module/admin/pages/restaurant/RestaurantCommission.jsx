@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { 
   Search, Plus, Edit, Trash2, ArrowUpDown, 
   DollarSign, Percent, Loader2, X, Building2, IndianRupee
@@ -8,6 +8,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { adminAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantCommission() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -91,15 +95,15 @@ export default function RestaurantCommission() {
         setCommissions([])
       }
     } catch (error) {
-      console.error('Error fetching commissions:', error)
+      debugError('Error fetching commissions:', error)
       
       // Handle network errors
       if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         toast.error(`Cannot connect to backend server. Please ensure the backend is running on ${API_BASE_URL.replace('/api', '')}`)
-        console.error('💡 Backend connection issue. Check:')
-        console.error('   1. Is backend server running? (npm start in backend folder)')
-        console.error(`   2. Is backend running on ${API_BASE_URL.replace('/api', '')}?`)
-        console.error('   3. Check browser console for CORS errors')
+        debugError('ðŸ’¡ Backend connection issue. Check:')
+        debugError('   1. Is backend server running? (npm start in backend folder)')
+        debugError(`   2. Is backend running on ${API_BASE_URL.replace('/api', '')}?`)
+        debugError('   3. Check browser console for CORS errors')
       } else {
         toast.error(error.response?.data?.message || 'Failed to fetch commissions')
       }
@@ -128,7 +132,7 @@ export default function RestaurantCommission() {
         setApprovedRestaurants([])
       }
     } catch (error) {
-      console.error('Error fetching approved restaurants:', error)
+      debugError('Error fetching approved restaurants:', error)
       
       // Handle network errors silently (already handled in fetchCommissions)
       if (error.code !== 'ERR_NETWORK' && error.message !== 'Network Error') {
@@ -143,7 +147,7 @@ export default function RestaurantCommission() {
       await fetchCommissions()
       toast.success('Commission status updated successfully')
     } catch (error) {
-      console.error('Error toggling status:', error)
+      debugError('Error toggling status:', error)
       toast.error(error.response?.data?.message || 'Failed to update status')
     }
   }
@@ -218,7 +222,7 @@ export default function RestaurantCommission() {
         setIsAddEditOpen(true)
       }
     } catch (error) {
-      console.error('Error fetching commission:', error)
+      debugError('Error fetching commission:', error)
       toast.error(error.response?.data?.message || 'Failed to load commission')
     } finally {
       setLoading(false)
@@ -241,7 +245,7 @@ export default function RestaurantCommission() {
       setIsDeleteOpen(false)
       setSelectedCommission(null)
     } catch (error) {
-      console.error('Error deleting commission:', error)
+      debugError('Error deleting commission:', error)
       toast.error(error.response?.data?.message || 'Failed to delete commission')
     } finally {
       setDeleting(false)
@@ -299,7 +303,7 @@ export default function RestaurantCommission() {
       setSelectedCommission(null)
       setSelectedRestaurant(null)
     } catch (error) {
-      console.error('Error saving commission:', error)
+      debugError('Error saving commission:', error)
       toast.error(error.response?.data?.message || 'Failed to save commission')
     } finally {
       setSaving(false)
@@ -553,7 +557,7 @@ export default function RestaurantCommission() {
                     className="w-full px-3 py-2 text-sm border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="percentage">Percentage (%)</option>
-                    <option value="amount">Fixed Amount (₹)</option>
+                    <option value="amount">Fixed Amount (â‚¹)</option>
                   </select>
                 </div>
                 <div>
@@ -643,4 +647,5 @@ export default function RestaurantCommission() {
     </div>
   )
 }
+
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -13,6 +13,10 @@ import {
   calculateDeliveryBalances 
 } from "../utils/deliveryWalletState"
 import { formatCurrency } from "../../restaurant/utils/currency"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function MyAccount() {
   const navigate = useNavigate()
@@ -85,7 +89,7 @@ export default function MyAccount() {
               <Button 
                 onClick={() => {
                   // TODO: Process payment
-                  console.log("Pay Now clicked")
+                  debugLog("Pay Now clicked")
                   alert("Payment processing feature coming soon")
                 }}
                 className="bg-[#ff8100] hover:bg-[#e67300] text-white font-semibold px-3 py-2 md:px-4 md:py-2 rounded-lg text-xs md:text-sm w-full md:w-auto"
@@ -185,7 +189,7 @@ export default function MyAccount() {
                     <Button
                       onClick={() => {
                         // Handle OK action
-                        console.log("Adjust Payments confirmed")
+                        debugLog("Adjust Payments confirmed")
                         setShowConfirmDialog(false)
                         // TODO: Add actual adjustment logic here
                       }}
@@ -204,4 +208,5 @@ export default function MyAccount() {
     </div>
   )
 }
+
 

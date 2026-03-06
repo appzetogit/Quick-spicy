@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom"
+﻿import { Link, useNavigate } from "react-router-dom"
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { Star, Clock, MapPin, ArrowDownUp, Timer, ArrowRight, ChevronDown, Bookmark, Share2, Plus, Minus, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -19,6 +19,10 @@ import OptimizedImage from "@/components/OptimizedImage"
 import api from "@/lib/api"
 import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Under250() {
   const { location } = useLocation()
@@ -149,7 +153,7 @@ export default function Under250() {
           setBannerImage(null)
         }
       } catch (error) {
-        console.error('Error fetching under 250 banners:', error)
+        debugError('Error fetching under 250 banners:', error)
         setBannerImage(null)
       } finally {
         setLoadingBanner(false)
@@ -159,7 +163,7 @@ export default function Under250() {
     fetchBanners()
   }, [])
 
-  // Fetch restaurants with dishes under ₹250 from backend
+  // Fetch restaurants with dishes under â‚¹250 from backend
   useEffect(() => {
     const fetchRestaurantsUnder250 = async () => {
       try {
@@ -172,7 +176,7 @@ export default function Under250() {
           setUnder250Restaurants([])
         }
       } catch (error) {
-        console.error('Error fetching restaurants under 250:', error)
+        debugError('Error fetching restaurants under 250:', error)
         setUnder250Restaurants([])
       } finally {
         setLoadingRestaurants(false)
@@ -207,7 +211,7 @@ export default function Under250() {
           setCategories(defaultCategories)
         }
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        debugError('Error fetching categories:', error)
         // Fallback to default categories on error
         const defaultCategories = [
           { id: 1, name: "Biryani", image: foodImages[0] },
@@ -601,7 +605,7 @@ export default function Under250() {
           <div className="flex justify-center items-center py-12">
             <div className="text-gray-500 dark:text-gray-400">
               {under250Restaurants.length === 0
-                ? "No restaurants with dishes under ₹250 found."
+                ? "No restaurants with dishes under â‚¹250 found."
                 : "No restaurants match the selected filters."}
             </div>
           </div>
@@ -711,7 +715,7 @@ export default function Under250() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <p className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 dark:text-white">
-                                    ₹{Math.round(item.price)}
+                                    â‚¹{Math.round(item.price)}
                                   </p>
                                   {item.bestPrice && (
                                     <p className="text-xs md:text-sm lg:text-base text-gray-500 dark:text-gray-400">Best price</p>
@@ -1061,11 +1065,11 @@ export default function Under250() {
                     <div className="flex items-center gap-1 md:gap-2">
                       {selectedItem.originalPrice && selectedItem.originalPrice > selectedItem.price && (
                         <span className="text-sm md:text-base lg:text-lg line-through text-red-200">
-                          ₹{Math.round(selectedItem.originalPrice)}
+                          â‚¹{Math.round(selectedItem.originalPrice)}
                         </span>
                       )}
                       <span className="text-base md:text-lg lg:text-xl font-bold">
-                        ₹{Math.round(selectedItem.price)}
+                        â‚¹{Math.round(selectedItem.price)}
                       </span>
                     </div>
                   </Button>
@@ -1081,3 +1085,4 @@ export default function Under250() {
     </div>
   )
 }
+

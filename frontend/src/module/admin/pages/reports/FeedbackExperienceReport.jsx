@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Filter, Star, RefreshCw, Calendar, Trash2, Eye, User, Mail, Phone, MessageSquare } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function FeedbackExperienceReport() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -45,7 +49,7 @@ export default function FeedbackExperienceReport() {
         setStatistics(response.data.data.statistics || null)
       }
     } catch (error) {
-      console.error('Error fetching feedback experiences:', error)
+      debugError('Error fetching feedback experiences:', error)
       if (error.response?.status !== 401) {
         toast.error('Failed to fetch feedback experiences')
       }
@@ -121,7 +125,7 @@ export default function FeedbackExperienceReport() {
       toast.success('Feedback deleted successfully')
       fetchFeedbackExperiences()
     } catch (error) {
-      console.error('Error deleting feedback:', error)
+      debugError('Error deleting feedback:', error)
       if (error.response?.status !== 401) {
         toast.error('Failed to delete feedback')
       }
@@ -555,4 +559,5 @@ export default function FeedbackExperienceReport() {
     </div>
   )
 }
+
 

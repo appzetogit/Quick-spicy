@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -33,6 +33,10 @@ import quickSpicyLogo from "@/assets/quicky-spicy-logo.png";
 import { adminAPI } from "@/lib/api";
 import { clearModuleAuth } from "@/lib/utils/auth";
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminNavbar({ onMenuClick }) {
   const navigate = useNavigate();
@@ -52,7 +56,7 @@ export default function AdminNavbar({ onMenuClick }) {
           setAdminData(adminUser);
         }
       } catch (error) {
-        console.error('Error loading admin data:', error);
+        debugError('Error loading admin data:', error);
       }
     };
 
@@ -84,7 +88,7 @@ export default function AdminNavbar({ onMenuClick }) {
           }
         }
       } catch (error) {
-        console.warn('Error loading business settings in navbar:', error);
+        debugWarn('Error loading business settings in navbar:', error);
       }
     };
 
@@ -146,7 +150,7 @@ export default function AdminNavbar({ onMenuClick }) {
         await adminAPI.logout();
       } catch (apiError) {
         // Continue with logout even if API call fails (network issues, etc.)
-        console.warn("Logout API call failed, continuing with local cleanup:", apiError);
+        debugWarn("Logout API call failed, continuing with local cleanup:", apiError);
       }
 
       // Clear admin authentication data from localStorage
@@ -165,7 +169,7 @@ export default function AdminNavbar({ onMenuClick }) {
       navigate('/admin/login', { replace: true });
     } catch (error) {
       // Even if there's an error, we should still clear local data and logout
-      console.error("Error during logout:", error);
+      debugError("Error during logout:", error);
 
       // Clear local data anyway
       clearModuleAuth('admin');
@@ -434,3 +438,4 @@ export default function AdminNavbar({ onMenuClick }) {
     </>
   );
 }
+

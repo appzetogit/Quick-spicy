@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Star, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import { toast } from "sonner"
 
 // Import banner image
 import offerBanner from "@/assets/offerpagebanner.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Offers() {
   const navigate = useNavigate()
@@ -30,8 +34,8 @@ export default function Offers() {
           setGroupedOffers(data.groupedByOffer || {})
         }
       } catch (err) {
-        console.error('Error fetching offers:', err)
-        console.error('Error details:', err?.response?.data || err?.message)
+        debugError('Error fetching offers:', err)
+        debugError('Error details:', err?.response?.data || err?.message)
         const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load offers'
         setError(errorMessage)
         toast.error(errorMessage)
@@ -131,7 +135,7 @@ export default function Offers() {
                           {dish.restaurantName}
                         </h3>
                         <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1 mb-1">
-                          {dish.dishName} - ₹{dish.discountedPrice}
+                          {dish.dishName} - â‚¹{dish.discountedPrice}
                         </p>
                         <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-xs">
                           <Clock className="h-3 w-3" />
@@ -156,3 +160,4 @@ export default function Offers() {
     </div>
   )
 }
+

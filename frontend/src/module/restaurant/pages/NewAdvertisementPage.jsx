@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -13,6 +13,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import BottomNavbar from "../components/BottomNavbar"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function NewAdvertisementPage() {
   const navigate = useNavigate()
@@ -364,7 +368,7 @@ export default function NewAdvertisementPage() {
           </Button>
           <Button
             onClick={() => {
-              console.log("Create ad:", formData)
+              debugLog("Create ad:", formData)
               // Navigate to advertisements list after creation
               navigate("/restaurant/advertisements")
             }}
@@ -380,4 +384,5 @@ export default function NewAdvertisementPage() {
     </div>
   )
 }
+
 

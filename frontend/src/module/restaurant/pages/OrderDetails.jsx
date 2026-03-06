@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate, useParams } from "react-router-dom"
 import Lenis from "lenis"
@@ -16,6 +16,10 @@ import {
   XCircle,
   Loader2,
 } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Mock order data - fallback for testing
 const getMockOrderData = (orderId) => {
@@ -221,7 +225,7 @@ export default function OrderDetails() {
           throw new Error('Order not found')
         }
       } catch (err) {
-        console.error('Error fetching order:', err)
+        debugError('Error fetching order:', err)
         setError(err.response?.data?.message || err.message || 'Failed to fetch order')
         
         // Try fallback to mock data for testing
@@ -379,7 +383,7 @@ export default function OrderDetails() {
       `${item.quantity}x`,
       item.name,
       item.type || "-",
-      `₹${item.price}`
+      `â‚¹${item.price}`
     ])
 
     // Use autoTable with the doc instance
@@ -415,11 +419,11 @@ export default function OrderDetails() {
     doc.setFontSize(10)
     doc.setFont("helvetica", "normal")
     doc.text("Item Subtotal:", 15, yPosition)
-    doc.text(`₹${orderData.billing.itemSubtotal}`, pageWidth - 15, yPosition, { align: "right" })
+    doc.text(`â‚¹${orderData.billing.itemSubtotal}`, pageWidth - 15, yPosition, { align: "right" })
     yPosition += 6
 
     doc.text("Taxes:", 15, yPosition)
-    doc.text(`₹${orderData.billing.taxes}`, pageWidth - 15, yPosition, { align: "right" })
+    doc.text(`â‚¹${orderData.billing.taxes}`, pageWidth - 15, yPosition, { align: "right" })
     yPosition += 6
 
     // Dashed line for total
@@ -431,7 +435,7 @@ export default function OrderDetails() {
     doc.setFont("helvetica", "bold")
     doc.setFontSize(11)
     doc.text("Total Bill:", 15, yPosition)
-    doc.text(`₹${orderData.billing.total}`, pageWidth - 15, yPosition, { align: "right" })
+    doc.text(`â‚¹${orderData.billing.total}`, pageWidth - 15, yPosition, { align: "right" })
     yPosition += 6
 
     doc.setFontSize(9)
@@ -517,8 +521,8 @@ export default function OrderDetails() {
     setShowToast(true)
     setTimeout(() => setShowToast(false), 2000)
     } catch (error) {
-      console.error("Error generating PDF:", error)
-      console.error("Error details:", error.message, error.stack)
+      debugError("Error generating PDF:", error)
+      debugError("Error details:", error.message, error.stack)
       setToastMessage(`Failed: ${error.message || "Unknown error"}`)
       setShowToast(true)  
       setTimeout(() => setShowToast(false), 3000)
@@ -709,14 +713,14 @@ export default function OrderDetails() {
             <div key={index} className="bg-white rounded-lg p-4">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-green-100 rounded flex items-center justify-center mt-0.5">
-                  <span className="text-green-600 text-xs">▲</span>
+                  <span className="text-green-600 text-xs">â–²</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-sm font-semibold text-gray-900">
                       {item.quantity} x {item.name}
                     </p>
-                    <p className="text-sm font-semibold text-gray-900">₹{item.price}</p>
+                    <p className="text-sm font-semibold text-gray-900">â‚¹{item.price}</p>
                   </div>
                   {item.type && (
                     <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -737,11 +741,11 @@ export default function OrderDetails() {
           <div className="bg-white  rounded-lg p-4">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-600">Item subtotal</span>
-              <span className="text-sm text-gray-900">₹{orderData.billing.itemSubtotal}</span>
+              <span className="text-sm text-gray-900">â‚¹{orderData.billing.itemSubtotal}</span>
             </div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm text-gray-600">Taxes</span>
-              <span className="text-sm text-gray-900">₹{orderData.billing.taxes}</span>
+              <span className="text-sm text-gray-900">â‚¹{orderData.billing.taxes}</span>
             </div>
             <div className="my-3"></div>
             <div className="flex items-center justify-between">
@@ -751,7 +755,7 @@ export default function OrderDetails() {
                   {orderData.billing.paymentStatus}
                 </span>
               </div>
-              <span className="text-sm font-semibold text-gray-900">₹{orderData.billing.total}</span>
+              <span className="text-sm font-semibold text-gray-900">â‚¹{orderData.billing.total}</span>
             </div>
           </div>
         </div>
@@ -824,3 +828,4 @@ export default function OrderDetails() {
     </div>
   )
 }
+

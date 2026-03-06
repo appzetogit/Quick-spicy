@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { toast } from "sonner"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
 import { Textarea } from "@/components/ui/textarea"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RefundPolicy() {
   const [loading, setLoading] = useState(true)
@@ -62,7 +66,7 @@ export default function RefundPolicy() {
         })
       }
     } catch (error) {
-      console.error('Error fetching refund data:', error)
+      debugError('Error fetching refund data:', error)
       toast.error('Failed to load refund policy')
     } finally {
       setLoading(false)
@@ -94,7 +98,7 @@ export default function RefundPolicy() {
         })
       }
     } catch (error) {
-      console.error('Error saving refund policy:', error)
+      debugError('Error saving refund policy:', error)
       toast.error(error.response?.data?.message || 'Failed to save refund policy')
     } finally {
       setSaving(false)
@@ -154,3 +158,4 @@ export default function RefundPolicy() {
     </div>
   )
 }
+

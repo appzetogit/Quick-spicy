@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
 import { ArrowLeft, Truck, X, CheckCircle, AlertCircle } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_outlet_timings"
 const DELIVERY_STATUS_KEY = "restaurant_delivery_status"
@@ -48,7 +52,7 @@ export default function DeliverySettings() {
     } catch (error) {
       // Only log error if it's not a network/timeout error (backend might be down/slow)
       if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error("Error loading delivery status:", error)
+        debugError("Error loading delivery status:", error)
       }
     }
   }, [])
@@ -110,7 +114,7 @@ export default function DeliverySettings() {
         }
       })
     } catch (error) {
-      console.error("Error checking outlet timings:", error)
+      debugError("Error checking outlet timings:", error)
       return false
     }
   }
@@ -134,7 +138,7 @@ export default function DeliverySettings() {
         showToast("Delivery is now OFF - Not receiving orders")
       }
     } catch (error) {
-      console.error("Error saving delivery status:", error)
+      debugError("Error saving delivery status:", error)
       showToast("Error updating delivery status")
     }
   }
@@ -372,3 +376,4 @@ export default function DeliverySettings() {
     </div>
   )
 }
+

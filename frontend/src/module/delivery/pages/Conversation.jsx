@@ -1,4 +1,4 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import { 
@@ -7,6 +7,10 @@ import {
   Search
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Conversation() {
   const navigate = useNavigate()
@@ -85,7 +89,7 @@ export default function Conversation() {
                 className="bg-white shadow-sm border border-gray-100 hover:shadow-md transition-shadow cursor-pointer"
                 onClick={() => {
                   // Navigate to chat detail page
-                  console.log("Open conversation:", conversation.id)
+                  debugLog("Open conversation:", conversation.id)
                 }}
               >
                 <CardContent className="px-2 md:px-4 py-1.5 md:py-3 gap-0">
@@ -132,4 +136,5 @@ export default function Conversation() {
     </div>
   )
 }
+
 

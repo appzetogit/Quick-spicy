@@ -1,8 +1,12 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * OLA Maps Integration - Simple Example Component
  * 
- * यह component OLA Maps API का उपयोग करके user की current location fetch करता है
- * और coordinates को readable address में convert करता है।
+ * à¤¯à¤¹ component OLA Maps API à¤•à¤¾ à¤‰à¤ªà¤¯à¥‹à¤— à¤•à¤°à¤•à¥‡ user à¤•à¥€ current location fetch à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆ
+ * à¤”à¤° coordinates à¤•à¥‹ readable address à¤®à¥‡à¤‚ convert à¤•à¤°à¤¤à¤¾ à¤¹à¥ˆà¥¤
  * 
  * Usage:
  * import UserLocationExample from './examples/UserLocationExample'
@@ -29,7 +33,7 @@ const UserLocationExample = () => {
           fetchReadableAddress(latitude, longitude);
         },
         (error) => {
-          console.error("Error getting location:", error);
+          debugError("Error getting location:", error);
           setAddress("Location permission denied.");
           setError(error.message);
           setLoading(false);
@@ -75,7 +79,7 @@ const UserLocationExample = () => {
         setError(response.data?.message || "Invalid response from API");
       }
     } catch (error) {
-      console.error("OLA Maps API Error:", error);
+      debugError("OLA Maps API Error:", error);
       setAddress("Address dhundne mein problem hui.");
       setError(error.message || "API call failed");
     } finally {
@@ -142,4 +146,5 @@ const UserLocationExample = () => {
 };
 
 export default UserLocationExample;
+
 

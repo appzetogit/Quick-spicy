@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+﻿import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { MapPin, ChevronDown, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, Clock, Bookmark, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -9,6 +9,10 @@ import { useLocation as useLocationHook } from "../hooks/useLocation"
 import { useProfile } from "../context/ProfileContext"
 import { FaLocationDot } from "react-icons/fa6"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DiningCategory() {
   const { category } = useParams()
@@ -46,7 +50,7 @@ export default function DiningCategory() {
               location: r.location?.addressLine1 || r.address || "Indore",
               distance: "2.5 km", // Placeholder as we don't have user geo-coords to calc
               cuisine: Array.isArray(r.cuisines) ? r.cuisines[0] : (r.cuisine || "Multi-cuisine"),
-              price: r.costForTwo ? `₹${r.costForTwo} for two` : "Price not available",
+              price: r.costForTwo ? `â‚¹${r.costForTwo} for two` : "Price not available",
               image: r.coverImage || r.profileImage?.url || r.logo || "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&h=600&fit=crop",
               offer: r.discount ? `Flat ${r.discount}% OFF` : "Great Offers",
               deliveryTime: r.deliveryTime ? `${r.deliveryTime} mins` : "30-40 mins",
@@ -57,7 +61,7 @@ export default function DiningCategory() {
           setRestaurants(mappedData)
         }
       } catch (err) {
-        console.error("Failed to fetch restaurants", err)
+        debugError("Failed to fetch restaurants", err)
         setError("Failed to load restaurants")
       } finally {
         setIsLoading(false)
@@ -301,7 +305,7 @@ export default function DiningCategory() {
                         {/* Featured Dish Badge - Top Left */}
                         <div className="absolute top-3 left-3">
                           <div className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium">
-                            {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
+                            {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
                           </div>
                         </div>
 
@@ -566,7 +570,7 @@ export default function DiningCategory() {
                           : 'border-gray-200 hover:border-[#EB590E]'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under ₹200</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under â‚¹200</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('price-under-500')}
@@ -575,7 +579,7 @@ export default function DiningCategory() {
                           : 'border-gray-200 hover:border-[#EB590E]'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under ₹500</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-[#EB590E]' : 'text-gray-700'}`}>Under â‚¹500</span>
                       </button>
                     </div>
                   </div>
@@ -632,4 +636,5 @@ export default function DiningCategory() {
     </AnimatedPage>
   )
 }
+
 

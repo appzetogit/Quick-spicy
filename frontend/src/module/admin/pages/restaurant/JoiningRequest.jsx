@@ -1,9 +1,13 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { 
   Search, Filter, Eye, Check, X, UtensilsCrossed, ArrowUpDown, Loader2,
   FileText, Image as ImageIcon, ExternalLink, CreditCard, Calendar, Star, Building2, User, Phone, Mail, MapPin, Clock
 } from "lucide-react"
 import { adminAPI, restaurantAPI } from "../../../../lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function JoiningRequest() {
   const [activeTab, setActiveTab] = useState("pending")
@@ -70,7 +74,7 @@ export default function JoiningRequest() {
         }
       }
     } catch (err) {
-      console.error("Error fetching restaurant requests:", err)
+      debugError("Error fetching restaurant requests:", err)
       setError(err.message || "Failed to fetch restaurant requests")
       if (activeTab === "pending") {
         setPendingRequests([])
@@ -156,7 +160,7 @@ export default function JoiningRequest() {
         
         alert(`Successfully approved ${request.restaurantName}'s join request!`)
       } catch (err) {
-        console.error("Error approving request:", err)
+        debugError("Error approving request:", err)
         alert(err.response?.data?.message || "Failed to approve request. Please try again.")
       } finally {
         setProcessing(false)
@@ -189,7 +193,7 @@ export default function JoiningRequest() {
       
       alert(`Successfully rejected ${selectedRequest.restaurantName}'s join request!`)
     } catch (err) {
-      console.error("Error rejecting request:", err)
+      debugError("Error rejecting request:", err)
       alert(err.response?.data?.message || "Failed to reject request. Please try again.")
     } finally {
       setProcessing(false)
@@ -211,7 +215,7 @@ export default function JoiningRequest() {
     try {
       // First, use fullData if available (has all details from API)
       if (request.fullData) {
-        console.log("Using fullData from request:", request.fullData)
+        debugLog("Using fullData from request:", request.fullData)
         setRestaurantDetails(request.fullData)
         setLoadingDetails(false)
         return
@@ -228,7 +232,7 @@ export default function JoiningRequest() {
             response = await adminAPI.getRestaurantById(restaurantId)
           }
         } catch (err) {
-          console.log("Admin API failed, trying restaurant API:", err)
+          debugLog("Admin API failed, trying restaurant API:", err)
         }
         
         // Fallback to regular restaurant API
@@ -236,7 +240,7 @@ export default function JoiningRequest() {
           try {
             response = await restaurantAPI.getRestaurantById(restaurantId)
           } catch (err) {
-            console.log("Restaurant API also failed:", err)
+            debugLog("Restaurant API also failed:", err)
           }
         }
       }
@@ -256,7 +260,7 @@ export default function JoiningRequest() {
         setRestaurantDetails(request)
       }
     } catch (err) {
-      console.error("Error fetching restaurant details:", err)
+      debugError("Error fetching restaurant details:", err)
       // Use the request data we already have
       setRestaurantDetails(request)
     } finally {
@@ -825,7 +829,7 @@ export default function JoiningRequest() {
                             <p className="text-xs text-slate-500 mb-1">Featured Dish</p>
                             <p className="text-sm font-medium text-slate-900">{restaurantDetails.featuredDish}</p>
                             {restaurantDetails.featuredPrice && (
-                              <p className="text-xs text-green-600 mt-1">₹{restaurantDetails.featuredPrice}</p>
+                              <p className="text-xs text-green-600 mt-1">â‚¹{restaurantDetails.featuredPrice}</p>
                             )}
                           </div>
                         )}
@@ -1172,3 +1176,4 @@ export default function JoiningRequest() {
     </div>
   )
 }
+

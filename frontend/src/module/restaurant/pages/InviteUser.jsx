@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -29,29 +29,33 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Country codes
 const countryCodes = [
-  { code: "+1", country: "US/CA", flag: "🇺🇸" },
-  { code: "+44", country: "UK", flag: "🇬🇧" },
-  { code: "+91", country: "IN", flag: "🇮🇳" },
-  { code: "+86", country: "CN", flag: "🇨🇳" },
-  { code: "+81", country: "JP", flag: "🇯🇵" },
-  { code: "+49", country: "DE", flag: "🇩🇪" },
-  { code: "+33", country: "FR", flag: "🇫🇷" },
-  { code: "+39", country: "IT", flag: "🇮🇹" },
-  { code: "+34", country: "ES", flag: "🇪🇸" },
-  { code: "+61", country: "AU", flag: "🇦🇺" },
-  { code: "+7", country: "RU", flag: "🇷🇺" },
-  { code: "+55", country: "BR", flag: "🇧🇷" },
-  { code: "+52", country: "MX", flag: "🇲🇽" },
-  { code: "+82", country: "KR", flag: "🇰🇷" },
-  { code: "+65", country: "SG", flag: "🇸🇬" },
-  { code: "+971", country: "AE", flag: "🇦🇪" },
-  { code: "+966", country: "SA", flag: "🇸🇦" },
-  { code: "+27", country: "ZA", flag: "🇿🇦" },
-  { code: "+31", country: "NL", flag: "🇳🇱" },
-  { code: "+46", country: "SE", flag: "🇸🇪" },
+  { code: "+1", country: "US/CA", flag: "ðŸ‡ºðŸ‡¸" },
+  { code: "+44", country: "UK", flag: "ðŸ‡¬ðŸ‡§" },
+  { code: "+91", country: "IN", flag: "ðŸ‡®ðŸ‡³" },
+  { code: "+86", country: "CN", flag: "ðŸ‡¨ðŸ‡³" },
+  { code: "+81", country: "JP", flag: "ðŸ‡¯ðŸ‡µ" },
+  { code: "+49", country: "DE", flag: "ðŸ‡©ðŸ‡ª" },
+  { code: "+33", country: "FR", flag: "ðŸ‡«ðŸ‡·" },
+  { code: "+39", country: "IT", flag: "ðŸ‡®ðŸ‡¹" },
+  { code: "+34", country: "ES", flag: "ðŸ‡ªðŸ‡¸" },
+  { code: "+61", country: "AU", flag: "ðŸ‡¦ðŸ‡º" },
+  { code: "+7", country: "RU", flag: "ðŸ‡·ðŸ‡º" },
+  { code: "+55", country: "BR", flag: "ðŸ‡§ðŸ‡·" },
+  { code: "+52", country: "MX", flag: "ðŸ‡²ðŸ‡½" },
+  { code: "+82", country: "KR", flag: "ðŸ‡°ðŸ‡·" },
+  { code: "+65", country: "SG", flag: "ðŸ‡¸ðŸ‡¬" },
+  { code: "+971", country: "AE", flag: "ðŸ‡¦ðŸ‡ª" },
+  { code: "+966", country: "SA", flag: "ðŸ‡¸ðŸ‡¦" },
+  { code: "+27", country: "ZA", flag: "ðŸ‡¿ðŸ‡¦" },
+  { code: "+31", country: "NL", flag: "ðŸ‡³ðŸ‡±" },
+  { code: "+46", country: "SE", flag: "ðŸ‡¸ðŸ‡ª" },
 ]
 
 export default function InviteUser() {
@@ -235,7 +239,7 @@ export default function InviteUser() {
         throw new Error("Invalid response from server")
       }
     } catch (error) {
-      console.error("Error adding user:", error)
+      debugError("Error adding user:", error)
       const errorMessage = error.response?.data?.message || error.message || "Failed to add user. Please try again."
       alert(errorMessage)
     }
@@ -486,3 +490,4 @@ export default function InviteUser() {
     </div>
   )
 }
+

@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Delivery Order Status Utility Functions
  * Centralized management for delivery order status across the delivery module
@@ -24,7 +28,7 @@ export const getDeliveryOrderStatus = (orderId) => {
     const savedStatus = localStorage.getItem(`delivery_order_status_${orderId}`)
     return savedStatus || DELIVERY_ORDER_STATUS.ACCEPTED
   } catch (error) {
-    console.error('Error reading delivery order status from localStorage:', error)
+    debugError('Error reading delivery order status from localStorage:', error)
     return DELIVERY_ORDER_STATUS.ACCEPTED
   }
 }
@@ -44,7 +48,7 @@ export const saveDeliveryOrderStatus = (orderId, status) => {
       detail: { orderId, status } 
     }))
   } catch (error) {
-    console.error('Error saving delivery order status to localStorage:', error)
+    debugError('Error saving delivery order status to localStorage:', error)
   }
 }
 
@@ -178,7 +182,7 @@ export const getAllDeliveryOrders = () => {
     
     return Array.from(ordersMap.values())
   } catch (error) {
-    console.error('Error getting all delivery orders:', error)
+    debugError('Error getting all delivery orders:', error)
     return []
   }
 }
@@ -206,4 +210,5 @@ export const getDeliveryOrdersCount = (status = null) => {
     cancelled: orders.filter(o => normalizeDeliveryStatus(o.status) === DELIVERY_ORDER_STATUS.CANCELLED).length
   }
 }
+
 

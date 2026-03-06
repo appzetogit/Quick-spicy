@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { 
   ArrowLeft,
@@ -9,6 +9,10 @@ import {
 } from "lucide-react"
 import { formatCurrency } from "../../restaurant/utils/currency"
 import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Payout() {
   const navigate = useNavigate()
@@ -60,7 +64,7 @@ export default function Payout() {
         
         setWithdrawals(formattedTransactions)
       } catch (error) {
-        console.error('Error loading withdrawal transactions:', error)
+        debugError('Error loading withdrawal transactions:', error)
         setWithdrawals([])
       } finally {
         setLoading(false)
@@ -207,4 +211,5 @@ export default function Payout() {
     </div>
   )
 }
+
 

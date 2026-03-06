@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { ArrowLeft, PenSquare, Check, Loader2 } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import { useState } from "react"
 import { toast } from "sonner"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function SendFeedback() {
   const [feedback, setFeedback] = useState("")
@@ -35,7 +39,7 @@ export default function SendFeedback() {
         }, 3000)
       }
     } catch (error) {
-      console.error('Error submitting feedback:', error)
+      debugError('Error submitting feedback:', error)
       toast.error(error.response?.data?.message || 'Failed to submit feedback. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -136,4 +140,5 @@ export default function SendFeedback() {
     </AnimatedPage>
   )
 }
+
 

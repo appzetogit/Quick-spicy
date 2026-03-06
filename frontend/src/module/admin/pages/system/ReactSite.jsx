@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { X, Monitor } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ReactSite() {
   const [reactLicenseCode, setReactLicenseCode] = useState("")
@@ -8,7 +12,7 @@ export default function ReactSite() {
 
   const handleSave = (e) => {
     e.preventDefault()
-    console.log("Saving React Site:", { reactLicenseCode, reactDomain })
+    debugLog("Saving React Site:", { reactLicenseCode, reactDomain })
     alert("React Site settings saved successfully!")
   }
 
@@ -89,3 +93,4 @@ export default function ReactSite() {
     </div>
   )
 }
+

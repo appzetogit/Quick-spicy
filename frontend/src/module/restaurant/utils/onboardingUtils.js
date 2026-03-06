@@ -1,4 +1,8 @@
-import { api } from "@/lib/api"
+﻿import { api } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const ONBOARDING_STORAGE_KEY = "restaurant_onboarding_data"
 
@@ -180,9 +184,10 @@ export const checkOnboardingStatus = async () => {
         return parsed.currentStep || 1
       }
     } catch (localErr) {
-      console.error("Failed to check localStorage:", localErr)
+      debugError("Failed to check localStorage:", localErr)
     }
     // Default to step 1 if everything fails
     return 1
   }
 }
+

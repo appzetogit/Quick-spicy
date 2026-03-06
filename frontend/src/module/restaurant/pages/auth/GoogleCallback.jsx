@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { setAuthData } from "@/lib/utils/auth"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantGoogleCallback() {
   const navigate = useNavigate()
@@ -68,7 +72,7 @@ export default function RestaurantGoogleCallback() {
           navigate("/restaurant")
         }, 1200)
       } catch (err) {
-        console.error("Restaurant Google auth error:", err)
+        debugError("Restaurant Google auth error:", err)
         setStatus("error")
         setError(
           err.message || "An error occurred during Google authentication. Please try again."
@@ -150,5 +154,6 @@ export default function RestaurantGoogleCallback() {
     </div>
   )
 }
+
 
 

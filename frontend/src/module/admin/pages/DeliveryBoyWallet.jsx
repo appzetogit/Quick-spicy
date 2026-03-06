@@ -1,11 +1,15 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Search, PiggyBank, Loader2, Package } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const formatCurrency = (amount) => {
-  if (amount == null) return "₹0.00"
-  return `₹${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  if (amount == null) return "â‚¹0.00"
+  return `â‚¹${Number(amount).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
 export default function DeliveryBoyWallet() {
@@ -36,7 +40,7 @@ export default function DeliveryBoyWallet() {
         setWallets([])
       }
     } catch (err) {
-      console.error("Error fetching delivery boy wallets:", err)
+      debugError("Error fetching delivery boy wallets:", err)
       toast.error(err?.response?.data?.message || "Failed to fetch delivery boy wallets")
       setWallets([])
     } finally {
@@ -92,7 +96,7 @@ export default function DeliveryBoyWallet() {
           {loading ? (
             <div className="py-20 text-center">
               <Loader2 className="w-8 h-8 animate-spin text-emerald-600 mx-auto mb-4" />
-              <p className="text-slate-600">Loading wallets…</p>
+              <p className="text-slate-600">Loading walletsâ€¦</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -126,8 +130,8 @@ export default function DeliveryBoyWallet() {
                     wallets.map((w, i) => (
                       <tr key={w.walletId || w.deliveryId} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{(page - 1) * limit + i + 1}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{w.name || "—"}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{w.deliveryIdString || "—"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{w.name || "â€”"}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{w.deliveryIdString || "â€”"}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.remainingCashLimit)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.pocketBalance)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.cashCollected)}</td>
@@ -146,7 +150,7 @@ export default function DeliveryBoyWallet() {
           {pages > 1 && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
               <p className="text-sm text-slate-600">
-                Page {page} of {pages} · {total} total
+                Page {page} of {pages} Â· {total} total
               </p>
               <div className="flex gap-2">
                 <button
@@ -171,3 +175,4 @@ export default function DeliveryBoyWallet() {
     </div>
   )
 }
+

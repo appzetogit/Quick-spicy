@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import OrdersTopbar from "../../components/orders/OrdersTopbar"
 import DispatchOrdersTable from "../../components/orders/DispatchOrdersTable"
 import DispatchFilterPanel from "../../components/orders/DispatchFilterPanel"
@@ -8,6 +8,10 @@ import { useGenericTableManagement } from "../../components/orders/useGenericTab
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function OngoingOrders() {
   const [orders, setOrders] = useState([])
@@ -53,8 +57,8 @@ export default function OngoingOrders() {
           }
         }
       } catch (error) {
-        console.error("Error fetching ongoing orders:", error)
-        console.error("Error details:", {
+        debugError("Error fetching ongoing orders:", error)
+        debugError("Error details:", {
           message: error.message,
           code: error.code,
           response: error.response ? {
@@ -198,3 +202,4 @@ export default function OngoingOrders() {
     </div>
   )
 }
+

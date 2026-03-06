@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import {
   ArrowLeft,
@@ -9,6 +9,10 @@ import {
 } from "lucide-react"
 import { formatCurrency } from "../../restaurant/utils/currency"
 import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function LimitSettlement() {
   const navigate = useNavigate()
@@ -51,7 +55,7 @@ export default function LimitSettlement() {
 
         setTransactions(formatted)
       } catch (error) {
-        console.error("Error loading limit settlement transactions:", error)
+        debugError("Error loading limit settlement transactions:", error)
         setTransactions([])
       } finally {
         setLoading(false)
@@ -170,5 +174,6 @@ export default function LimitSettlement() {
     </div>
   )
 }
+
 
 

@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { ArrowLeft, Truck, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
@@ -6,6 +6,10 @@ import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Shipping() {
   const [loading, setLoading] = useState(true)
@@ -26,7 +30,7 @@ export default function Shipping() {
         setShippingData(response.data.data)
       }
     } catch (error) {
-      console.error('Error fetching shipping data:', error)
+      debugError('Error fetching shipping data:', error)
       setShippingData({
         title: 'Shipping Policy',
         content: '<p>Unable to load shipping policy at the moment. Please try again later.</p>'
@@ -100,4 +104,5 @@ export default function Shipping() {
     </AnimatedPage>
   )
 }
+
 

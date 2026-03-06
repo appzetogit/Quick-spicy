@@ -1,8 +1,12 @@
-import { useState, useMemo, useEffect, useCallback } from "react"
+﻿import { useState, useMemo, useEffect, useCallback } from "react"
 import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const createFoodForm = () => ({
   restaurantId: "",
@@ -152,7 +156,7 @@ export default function FoodsList() {
             })
           }
         } catch (error) {
-          console.warn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
+          debugWarn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
         }
       }
 
@@ -164,7 +168,7 @@ export default function FoodsList() {
       )
       setImageVersion(Date.now())
     } catch (error) {
-      console.error("Error fetching foods:", error)
+      debugError("Error fetching foods:", error)
       toast.error("Failed to load foods from restaurants")
       setFoods([])
       setRestaurantsForFilter([])
@@ -485,7 +489,7 @@ export default function FoodsList() {
       setImagePreviewUrl("")
       await fetchAllFoods()
     } catch (error) {
-      console.error("Error saving food:", error)
+      debugError("Error saving food:", error)
       toast.error(error?.response?.data?.message || "Failed to save food")
     } finally {
       setSubmittingFood(false)
@@ -554,7 +558,7 @@ export default function FoodsList() {
       setFoods(foods.filter(f => f.id !== id))
       toast.success("Food item deleted successfully")
     } catch (error) {
-      console.error("Error deleting food:", error)
+      debugError("Error deleting food:", error)
       toast.error(error?.response?.data?.message || "Failed to delete food item")
     } finally {
       setDeleting(false)
@@ -823,7 +827,7 @@ export default function FoodsList() {
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 border border-slate-200 rounded-lg p-4">
                 <p><span className="font-semibold text-slate-700">Restaurant:</span> <span className="text-slate-900">{selectedFood.restaurantName || "-"}</span></p>
-                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">₹{selectedFood.price}</span></p>
+                <p><span className="font-semibold text-slate-700">Price:</span> <span className="text-slate-900">â‚¹{selectedFood.price}</span></p>
                 <p><span className="font-semibold text-slate-700">Category:</span> <span className="text-slate-900">{selectedFood.sectionName || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Food Type:</span> <span className="text-slate-900">{selectedFood.foodType || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Approval:</span> <span className="text-slate-900 capitalize">{selectedFood.approvalStatus || "-"}</span></p>
@@ -1004,3 +1008,4 @@ export default function FoodsList() {
     </div>
   )
 }
+

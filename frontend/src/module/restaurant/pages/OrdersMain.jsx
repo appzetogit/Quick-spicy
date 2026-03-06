@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { checkOnboardingStatus, isRestaurantOnboardingComplete } from "../utils/onboardingUtils"
 import { motion, AnimatePresence } from "framer-motion"
@@ -12,6 +12,10 @@ import { restaurantAPI, diningAPI } from "@/lib/api"
 import { useRestaurantNotifications } from "../hooks/useRestaurantNotifications"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_online_status"
 
@@ -83,7 +87,7 @@ function CompletedOrders({ onSelectOrder }) {
         if (!isMounted) return
 
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error('Error fetching completed orders:', error)
+          debugError('Error fetching completed orders:', error)
         }
 
         if (isMounted) {
@@ -216,7 +220,7 @@ function CompletedOrders({ onSelectOrder }) {
                       <div className="flex items-baseline gap-1">
                         <span className="text-[11px] text-gray-500">Amount</span>
                         <span className="text-xs font-medium text-black">
-                          ₹{order.amount.toFixed(2)}
+                          â‚¹{order.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -291,7 +295,7 @@ function CancelledOrders({ onSelectOrder }) {
         if (!isMounted) return
 
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error('Error fetching cancelled orders:', error)
+          debugError('Error fetching cancelled orders:', error)
         }
 
         if (isMounted) {
@@ -439,7 +443,7 @@ function CancelledOrders({ onSelectOrder }) {
                       <div className="flex items-baseline gap-1">
                         <span className="text-[11px] text-gray-500">Amount</span>
                         <span className="text-xs font-medium text-black">
-                          ₹{order.amount.toFixed(2)}
+                          â‚¹{order.amount.toFixed(2)}
                         </span>
                       </div>
                     </div>
@@ -475,7 +479,7 @@ function TableBookings() {
           }
         }
       } catch (error) {
-        console.error("Error fetching table bookings:", error)
+        debugError("Error fetching table bookings:", error)
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -634,7 +638,7 @@ export default function OrdersMain() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant status:", error)
+          debugError("Error fetching restaurant status:", error)
         }
         // Set loading to false so UI doesn't stay in loading state
         setRestaurantStatus(prev => ({ ...prev, isLoading: false }))
@@ -680,7 +684,7 @@ export default function OrdersMain() {
     } catch (error) {
       // Don't log network/timeout errors (backend might be down)
       if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error("Error reverifying restaurant:", error)
+        debugError("Error reverifying restaurant:", error)
       }
 
       // Handle 401 Unauthorized errors (token expired/invalid)
@@ -728,7 +732,7 @@ export default function OrdersMain() {
   // Show new order popup when real order notification arrives from Socket.IO
   useEffect(() => {
     if (newOrder) {
-      console.log('📦 New order received via Socket.IO:', newOrder)
+      debugLog('ðŸ“¦ New order received via Socket.IO:', newOrder)
       const orderId = newOrder.orderId || newOrder.orderMongoId
       if (orderId && !shownOrdersRef.current.has(orderId)) {
         shownOrdersRef.current.add(orderId)
@@ -789,7 +793,7 @@ export default function OrdersMain() {
               payment: latestConfirmedOrder.payment
             }
 
-            console.log('📦 Found confirmed order (fallback):', orderForPopup)
+            debugLog('ðŸ“¦ Found confirmed order (fallback):', orderForPopup)
             shownOrdersRef.current.add(orderId)
             setPopupOrder(orderForPopup)
             setShowNewOrderPopup(true)
@@ -800,7 +804,7 @@ export default function OrdersMain() {
         // Don't log 401 errors - axios interceptor handles token refresh/redirect
         // Only log other errors (500, network errors, etc.)
         if (error.response?.status !== 401) {
-          console.error('Error checking confirmed orders:', error)
+          debugError('Error checking confirmed orders:', error)
         }
       }
     }
@@ -819,7 +823,7 @@ export default function OrdersMain() {
     if (showNewOrderPopup && !isMuted) {
       if (audioRef.current) {
         audioRef.current.loop = true
-        audioRef.current.play().catch(err => console.log("Audio play failed:", err))
+        audioRef.current.play().catch(err => debugLog("Audio play failed:", err))
       }
     } else if (audioRef.current) {
       audioRef.current.pause()
@@ -946,10 +950,10 @@ export default function OrdersMain() {
       try {
         const orderId = orderToAccept.orderMongoId || orderToAccept.orderId
         const response = await restaurantAPI.acceptOrder(orderId, prepTime)
-        console.log('✅ Order accepted:', orderId)
+        debugLog('âœ… Order accepted:', orderId)
         toast.success('Order accepted successfully')
       } catch (error) {
-        console.error('❌ Error accepting order:', error)
+        debugError('âŒ Error accepting order:', error)
         const errorMessage = error.response?.data?.message ||
           error.message ||
           'Failed to accept order. Please try again.'
@@ -996,9 +1000,9 @@ export default function OrdersMain() {
       try {
         const orderId = orderToReject.orderMongoId || orderToReject.orderId
         await restaurantAPI.rejectOrder(orderId, rejectReason)
-        console.log('✅ Order rejected:', orderId)
+        debugLog('âœ… Order rejected:', orderId)
       } catch (error) {
-        console.error('❌ Error rejecting order:', error)
+        debugError('âŒ Error rejecting order:', error)
         alert('Failed to reject order. Please try again.')
         return
       }
@@ -1043,7 +1047,7 @@ export default function OrdersMain() {
       setOrderToCancel(null)
       setCancelReason("")
     } catch (error) {
-      console.error('❌ Error cancelling order:', error)
+      debugError('âŒ Error cancelling order:', error)
       toast.error(error.response?.data?.message || 'Failed to cancel order')
     }
   }
@@ -1061,7 +1065,7 @@ export default function OrdersMain() {
       if (!isMuted) {
         audioRef.current.pause()
       } else {
-        audioRef.current.play().catch(err => console.log("Audio play failed:", err))
+        audioRef.current.play().catch(err => debugLog("Audio play failed:", err))
       }
     }
   }
@@ -1069,7 +1073,7 @@ export default function OrdersMain() {
   // Handle PDF download
   const handlePrint = async () => {
     if (!newOrder) {
-      console.warn('No order data available for PDF generation')
+      debugWarn('No order data available for PDF generation')
       return
     }
 
@@ -1132,8 +1136,8 @@ export default function OrdersMain() {
         const tableData = orderToPrint.items.map(item => [
           item.name || 'Item',
           item.quantity || 1,
-          `₹${(item.price || 0).toFixed(2)}`,
-          `₹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}`
+          `â‚¹${(item.price || 0).toFixed(2)}`,
+          `â‚¹${((item.price || 0) * (item.quantity || 1)).toFixed(2)}`
         ])
 
         autoTable(doc, {
@@ -1157,7 +1161,7 @@ export default function OrdersMain() {
       // Total
       doc.setFont('helvetica', 'bold')
       doc.setFontSize(12)
-      doc.text(`Total: ₹${(orderToPrint.total || 0).toFixed(2)}`, 20, yPos)
+      doc.text(`Total: â‚¹${(orderToPrint.total || 0).toFixed(2)}`, 20, yPos)
 
       // Payment status
       yPos += 10
@@ -1185,7 +1189,7 @@ export default function OrdersMain() {
       if (orderToPrint.sendCutlery) {
         yPos += 15
         doc.setFont('helvetica', 'normal')
-        doc.text('✓ Send cutlery requested', 20, yPos)
+        doc.text('âœ“ Send cutlery requested', 20, yPos)
       }
 
       // Footer
@@ -1203,9 +1207,9 @@ export default function OrdersMain() {
       const fileName = `Order-${orderToPrint.orderId || 'Receipt'}-${Date.now()}.pdf`
       doc.save(fileName)
 
-      console.log('✅ PDF generated successfully:', fileName)
+      debugLog('âœ… PDF generated successfully:', fileName)
     } catch (error) {
-      console.error('❌ Error generating PDF:', error)
+      debugError('âŒ Error generating PDF:', error)
       alert('Failed to generate PDF. Please try again.')
     }
   }
@@ -1667,7 +1671,7 @@ export default function OrdersMain() {
                                       {item.quantity} x {item.name}
                                     </p>
                                     <p className="text-xs text-gray-600 ml-2">
-                                      ₹{item.price * item.quantity}
+                                      â‚¹{item.price * item.quantity}
                                     </p>
                                   </div>
                                 </div>
@@ -1700,7 +1704,7 @@ export default function OrdersMain() {
                       <span className="text-sm font-semibold text-gray-900">Total bill</span>
                     </div>
                     <span className="text-base font-bold text-gray-900">
-                      ₹{(popupOrder || newOrder)?.total || 0}
+                      â‚¹{(popupOrder || newOrder)?.total || 0}
                     </span>
                   </div>
 
@@ -1784,7 +1788,7 @@ export default function OrdersMain() {
                         onTouchCancel={handleAcceptSwipeEnd}
                         disabled={isAcceptingOrder}
                       >
-                        <span className="text-lg font-bold">›</span>
+                        <span className="text-lg font-bold">â€º</span>
                       </motion.button>
                     </div>
 
@@ -2009,7 +2013,7 @@ export default function OrdersMain() {
                   <p className="text-[11px] text-gray-500 mt-1">
                     {selectedOrder.type}
                     {selectedOrder.tableOrToken
-                      ? ` • ${selectedOrder.tableOrToken}`
+                      ? ` â€¢ ${selectedOrder.tableOrToken}`
                       : ""}
                   </p>
                 </div>
@@ -2108,7 +2112,7 @@ function ResendNotificationButton({ orderId, mongoId, onSuccess }) {
         toast.error(response.data?.message || 'Failed to send notification');
       }
     } catch (error) {
-      console.error('Error resending notification:', error);
+      debugError('Error resending notification:', error);
       toast.error(error.response?.data?.message || 'Failed to send notification. Please try again.');
     } finally {
       setLoading(false);
@@ -2258,7 +2262,7 @@ function OrderCard({
             <div className="flex flex-col gap-1">
               <p className="text-[11px] text-gray-500">
                 {type}
-                {tableOrToken ? ` • ${tableOrToken}` : ""}
+                {tableOrToken ? ` â€¢ ${tableOrToken}` : ""}
               </p>
               {/* Delivery Assignment Status - Only show for preparing orders */}
               {isPreparing && (
@@ -2377,7 +2381,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
         // 404 means no orders found (normal)
         // ERR_NETWORK means backend is down (expected in dev)
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404 && error.response?.status !== 401) {
-          console.error('Error fetching preparing orders:', error)
+          debugError('Error fetching preparing orders:', error)
         }
 
         if (isMounted) {
@@ -2443,10 +2447,10 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
           // Mark as ready when ETA time has elapsed (with 2 second buffer)
           if (elapsedSeconds >= totalETASeconds - 2) {
             try {
-              console.log(`🔄 Auto-marking order ${order.orderId} as ready (ETA reached 0)`)
+              debugLog(`ðŸ”„ Auto-marking order ${order.orderId} as ready (ETA reached 0)`)
               markedReadyOrdersRef.current.add(orderKey) // Mark as processing
               await restaurantAPI.markOrderReady(order.mongoId || order.orderId)
-              console.log(`✅ Order ${order.orderId} marked as ready`)
+              debugLog(`âœ… Order ${order.orderId} marked as ready`)
               // Order will be removed from preparing list on next fetch
             } catch (error) {
               const status = error.response?.status
@@ -2456,7 +2460,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
               if (status === 400 && (msg.includes('cannot be marked as ready') || msg.includes('current status'))) {
                 // Keep in markedReadyOrdersRef so we don't retry; order will disappear on next fetch
               } else {
-                console.error(`❌ Failed to auto-mark order ${order.orderId} as ready:`, error)
+                debugError(`âŒ Failed to auto-mark order ${order.orderId} as ready:`, error)
                 markedReadyOrdersRef.current.delete(orderKey)
               }
               // Don't show error toast - it will retry on next check (for non-idempotent errors)
@@ -2638,7 +2642,7 @@ function ReadyOrders({ onSelectOrder }) {
 
         // Don't log network errors repeatedly - they're expected if backend is down
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error('Error fetching ready orders:', error)
+          debugError('Error fetching ready orders:', error)
         }
 
         if (isMounted) {
@@ -2756,7 +2760,7 @@ const OutForDeliveryOrders = ({ onSelectOrder }) => {
 
         // Don't log network errors repeatedly - they're expected if backend is down
         if (error.code !== 'ERR_NETWORK' && error.response?.status !== 404) {
-          console.error('Error fetching out for delivery orders:', error)
+          debugError('Error fetching out for delivery orders:', error)
         }
 
         if (isMounted) {
@@ -2863,3 +2867,4 @@ function EmptyState({ message = "Temporarily closed" }) {
     </div>
   )
 }
+

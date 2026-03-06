@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
 import {
@@ -21,6 +21,10 @@ import { restaurantAPI } from "@/lib/api"
 import OptimizedImage from "@/components/OptimizedImage"
 import { clearModuleAuth } from "@/lib/utils/auth"
 import { firebaseAuth } from "@/lib/firebase"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "restaurant_owner_contact"
 
@@ -87,7 +91,7 @@ export default function EditOwner() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Fallback to localStorage
         try {
@@ -98,7 +102,7 @@ export default function EditOwner() {
             setFormData(parsed)
           }
         } catch (e) {
-          console.error("Error loading owner data from localStorage:", e)
+          debugError("Error loading owner data from localStorage:", e)
         }
       } finally {
         setLoading(false)
@@ -153,7 +157,7 @@ export default function EditOwner() {
             formData.photo = imageData.url
           }
         } catch (error) {
-          console.error("Error uploading profile image:", error)
+          debugError("Error uploading profile image:", error)
           alert("Failed to upload profile image. Please try again.")
           setSaving(false)
           return
@@ -181,7 +185,7 @@ export default function EditOwner() {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(formData))
         } catch (e) {
-          console.error("Error saving to localStorage:", e)
+          debugError("Error saving to localStorage:", e)
         }
         
         // Dispatch event to notify parent page
@@ -198,7 +202,7 @@ export default function EditOwner() {
         throw new Error("Invalid response from server")
       }
     } catch (error) {
-      console.error("Error saving owner data:", error)
+      debugError("Error saving owner data:", error)
       alert(`Failed to save owner details: ${error.response?.data?.message || error.message || "Please try again."}`)
     } finally {
       setSaving(false)
@@ -223,7 +227,7 @@ export default function EditOwner() {
         }
       } catch (firebaseError) {
         // Continue even if Firebase logout fails
-        console.warn("Firebase logout failed, continuing with cleanup:", firebaseError)
+        debugWarn("Firebase logout failed, continuing with cleanup:", firebaseError)
       }
 
       // Clear restaurant module authentication data
@@ -250,7 +254,7 @@ export default function EditOwner() {
         navigate("/restaurant/welcome", { replace: true })
       }, 300)
     } catch (error) {
-      console.error("Error deleting account:", error)
+      debugError("Error deleting account:", error)
       alert(`Failed to delete account: ${error.response?.data?.message || error.message || "Please try again."}`)
       setIsDeleting(false)
     }
@@ -420,3 +424,4 @@ export default function EditOwner() {
     </div>
   )
 }
+

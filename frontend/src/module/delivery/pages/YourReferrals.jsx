@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { ArrowLeft, Headphones, ArrowRight, Phone } from "lucide-react"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const STORAGE_KEY = "appzeto_food_referrals"
 
@@ -25,7 +29,7 @@ export default function YourReferrals() {
           setReferrals(parsedReferrals)
         }
       } catch (error) {
-        console.error("Error parsing referrals from localStorage:", error)
+        debugError("Error parsing referrals from localStorage:", error)
       }
     }
   }
@@ -88,7 +92,7 @@ export default function YourReferrals() {
       <div className="bg-white px-4 py-6">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <p className="text-center text-sm text-gray-600 mb-2">Your referral earnings</p>
-          <p className="text-center text-4xl font-bold text-gray-900">₹{earnings}</p>
+          <p className="text-center text-4xl font-bold text-gray-900">â‚¹{earnings}</p>
         </div>
       </div>
 
@@ -151,7 +155,7 @@ export default function YourReferrals() {
 
                   {/* Earn Upto Section */}
                   <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <p className="text-base font-semibold text-gray-900 mb-2">Earn upto ₹6,000</p>
+                    <p className="text-base font-semibold text-gray-900 mb-2">Earn upto â‚¹6,000</p>
                     <div className="bg-yellow-100 rounded-lg p-3 flex items-start gap-2 mb-4">
                       <div className="w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                         <span className="text-xs font-bold text-white">i</span>
@@ -224,4 +228,5 @@ export default function YourReferrals() {
     </div>
   )
 }
+
 

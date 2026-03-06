@@ -1,7 +1,11 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Outlet } from "react-router-dom"
 import AdminSidebar from "./AdminSidebar"
 import AdminNavbar from "./AdminNavbar"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -15,7 +19,7 @@ export default function AdminLayout() {
         setIsSidebarCollapsed(JSON.parse(saved))
       }
     } catch (e) {
-      console.error('Error loading sidebar collapsed state:', e)
+      debugError('Error loading sidebar collapsed state:', e)
     }
   }, [])
 
@@ -56,3 +60,4 @@ export default function AdminLayout() {
     </div>
   );
 }
+

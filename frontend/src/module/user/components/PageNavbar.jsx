@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { useState, useEffect, useRef, useMemo } from "react"
 import { ChevronDown, ShoppingCart, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,7 @@ export default function PageNavbar({
   const enableLocationDebugLogs = false
   const debugLog = (...args) => {
     if (enableLocationDebugLogs && import.meta.env.DEV) {
-      console.log(...args)
+      debugLog(...args)
     }
   }
 
@@ -57,7 +57,7 @@ export default function PageNavbar({
         }
 
         if (!isGranted) {
-          debugLog("📍 Geolocation permission not granted; waiting for user action")
+          debugLog("ðŸ“ Geolocation permission not granted; waiting for user action")
           return
         }
         const fetchedLocation = await requestLocationRef.current()
@@ -66,7 +66,7 @@ export default function PageNavbar({
         if (fetchedLocation &&
           fetchedLocation.formattedAddress !== "Select location" &&
           fetchedLocation.city !== "Current Location") {
-          debugLog("✅ Location fetched successfully:", fetchedLocation)
+          debugLog("âœ… Location fetched successfully:", fetchedLocation)
         } else {
           debugLog("Location fetch returned placeholder, user may need to select manually")
         }
@@ -118,7 +118,7 @@ export default function PageNavbar({
           }
         }
       } catch (error) {
-        console.error('Error loading logo:', error)
+        debugError('Error loading logo:', error)
       }
     }
 
@@ -200,7 +200,7 @@ export default function PageNavbar({
     let subLocation = ""
 
     // Debug: Log the entire location object
-    debugLog("🔍 PageNavbar - Full Location Object:", {
+    debugLog("ðŸ” PageNavbar - Full Location Object:", {
       location,
       address: location?.address,
       formattedAddress: location?.formattedAddress,
@@ -229,7 +229,7 @@ export default function PageNavbar({
         location.area.toLowerCase() !== location?.city?.toLowerCase()) {
         mainLocation = `${location.mainTitle}, ${location.area}`;
       }
-      debugLog("✅✅✅ ZOMATO-STYLE: Using mainTitle for display:", mainLocation);
+      debugLog("âœ…âœ…âœ… ZOMATO-STYLE: Using mainTitle for display:", mainLocation);
     }
 
     // Priority 1: Use formattedAddress if it contains complete detailed address (has multiple parts)
@@ -239,7 +239,7 @@ export default function PageNavbar({
 
       // Check if formattedAddress has complete address (4+ parts means it has POI, building, area, city, state)
       if (formattedParts.length >= 4) {
-        debugLog("🔍 Using formattedAddress (complete address detected):", location.formattedAddress)
+        debugLog("ðŸ” Using formattedAddress (complete address detected):", location.formattedAddress)
 
         // Extract locality parts (everything before city)
         // Find city index
@@ -268,14 +268,14 @@ export default function PageNavbar({
           const localityParts = formattedParts.slice(0, cityIndex)
           if (localityParts.length > 0) {
             mainLocation = localityParts.join(', ')
-            debugLog("✅✅✅ Extracted locality from complete formattedAddress:", mainLocation)
+            debugLog("âœ…âœ…âœ… Extracted locality from complete formattedAddress:", mainLocation)
           }
         } else {
           // If city not found, take first 3-4 parts (usually POI, building, floor, area)
           const localityParts = formattedParts.slice(0, Math.min(4, formattedParts.length - 2))
           if (localityParts.length > 0) {
             mainLocation = localityParts.join(', ')
-            debugLog("✅✅✅ Using first parts from formattedAddress:", mainLocation)
+            debugLog("âœ…âœ…âœ… Using first parts from formattedAddress:", mainLocation)
           }
         }
       }
@@ -285,7 +285,7 @@ export default function PageNavbar({
     // This is more reliable as it's already processed by useLocation hook
     // Address field contains: "Mama Loca Cafe, 501 Princess Center, 5th Floor, New Palasia"
     if (!mainLocation && location?.address && !isCoordinates(location.address) && location.address !== "Select location") {
-      debugLog("🔍 Processing address field (Priority 2):", location.address)
+      debugLog("ðŸ” Processing address field (Priority 2):", location.address)
 
       // Check if address already contains locality (not just city)
       const addressParts = location.address.split(',').map(p => p.trim()).filter(p => p.length > 0)
@@ -298,7 +298,7 @@ export default function PageNavbar({
       // If address doesn't contain city name, it's likely the locality
       if (!cityInAddress && addressParts.length > 0) {
         mainLocation = location.address
-        debugLog("✅ Using address field as locality:", mainLocation)
+        debugLog("âœ… Using address field as locality:", mainLocation)
       } else {
         // Address contains city, extract locality parts before city
         const filteredParts = addressParts.filter(part => {
@@ -315,10 +315,10 @@ export default function PageNavbar({
 
         if (cityIndex > 0) {
           mainLocation = filteredParts.slice(0, cityIndex).join(', ')
-          debugLog("✅ Extracted locality from address field:", mainLocation)
+          debugLog("âœ… Extracted locality from address field:", mainLocation)
         } else if (filteredParts.length >= 3) {
           mainLocation = filteredParts.slice(0, 3).join(', ')
-          debugLog("✅ Using first 3 parts from address:", mainLocation)
+          debugLog("âœ… Using first 3 parts from address:", mainLocation)
         }
       }
     }
@@ -327,9 +327,9 @@ export default function PageNavbar({
     if (!mainLocation && location?.formattedAddress &&
       !isCoordinates(location.formattedAddress) &&
       location.formattedAddress !== "Select location") {
-      debugLog("🔍 Processing formattedAddress (Priority 2):", location.formattedAddress)
+      debugLog("ðŸ” Processing formattedAddress (Priority 2):", location.formattedAddress)
       const parts = location.formattedAddress.split(',').map(part => part.trim()).filter(part => part.length > 0)
-      debugLog("📋 Address parts:", parts)
+      debugLog("ðŸ“‹ Address parts:", parts)
 
       // Remove pincode and country from parts (they're usually at the end)
       const filteredParts = parts.filter(part => {
@@ -344,7 +344,7 @@ export default function PageNavbar({
         if (part.toLowerCase() === "india" || part.length > 25) return false
         return true
       })
-      debugLog("📋 Filtered parts (without pincode/country):", filteredParts)
+      debugLog("ðŸ“‹ Filtered parts (without pincode/country):", filteredParts)
 
       // Extract locality parts (building, floor, area) - usually first 3 parts before city
       // Format: "Princess center, 5th Floor, New Palasia, Indore, Madhya Pradesh 452001"
@@ -358,7 +358,7 @@ export default function PageNavbar({
         cityIndex = filteredParts.findIndex(part =>
           part.toLowerCase() === location.city.toLowerCase()
         )
-        debugLog(`📍 City index (exact match with "${location.city}"):`, cityIndex)
+        debugLog(`ðŸ“ City index (exact match with "${location.city}"):`, cityIndex)
       }
 
       // Method 2: Check common city names (case-insensitive)
@@ -367,7 +367,7 @@ export default function PageNavbar({
         cityIndex = filteredParts.findIndex(part =>
           commonCities.some(city => part.toLowerCase() === city.toLowerCase())
         )
-        debugLog("📍 City index (common cities):", cityIndex)
+        debugLog("ðŸ“ City index (common cities):", cityIndex)
       }
 
       // Method 3: Check if part contains state name (usually comes after city)
@@ -380,7 +380,7 @@ export default function PageNavbar({
         if (stateIndex > 0) {
           // City is usually one position before state
           cityIndex = stateIndex - 1
-          debugLog("📍 City index (before state):", cityIndex)
+          debugLog("ðŸ“ City index (before state):", cityIndex)
         }
       }
 
@@ -394,7 +394,7 @@ export default function PageNavbar({
         )
         if (stateIndex > 0) {
           cityIndex = stateIndex - 1
-          debugLog("📍 City index (before state name):", cityIndex)
+          debugLog("ðŸ“ City index (before state name):", cityIndex)
         }
       }
 
@@ -403,7 +403,7 @@ export default function PageNavbar({
         const localityParts = filteredParts.slice(0, cityIndex)
         if (localityParts.length > 0) {
           mainLocation = localityParts.join(', ')
-          debugLog("✅✅✅ Using exact locality from formattedAddress:", mainLocation)
+          debugLog("âœ…âœ…âœ… Using exact locality from formattedAddress:", mainLocation)
         } else {
           debugLog("No locality parts found before city")
         }
@@ -420,22 +420,22 @@ export default function PageNavbar({
           const localityParts = filteredParts.slice(0, Math.min(3, stateIndex))
           if (localityParts.length > 0) {
             mainLocation = localityParts.join(', ')
-            debugLog("✅✅✅ Using parts before state from formattedAddress:", mainLocation)
+            debugLog("âœ…âœ…âœ… Using parts before state from formattedAddress:", mainLocation)
           }
         }
 
         // If still no mainLocation, use first 3 parts as fallback
         if (!mainLocation && filteredParts.length >= 3) {
           mainLocation = filteredParts.slice(0, 3).join(', ')
-          debugLog("✅✅✅ Using first 3 parts from formattedAddress (fallback):", mainLocation)
+          debugLog("âœ…âœ…âœ… Using first 3 parts from formattedAddress (fallback):", mainLocation)
         } else if (!mainLocation && filteredParts.length >= 2) {
           mainLocation = filteredParts.slice(0, 2).join(', ')
-          debugLog("✅ Using first 2 parts from formattedAddress (fallback):", mainLocation)
+          debugLog("âœ… Using first 2 parts from formattedAddress (fallback):", mainLocation)
         } else if (!mainLocation && filteredParts.length >= 1) {
           const firstPart = filteredParts[0]
           if (!isCoordinates(firstPart) && firstPart.length > 2) {
             mainLocation = firstPart
-            debugLog("✅ Using first part from formattedAddress (fallback):", mainLocation)
+            debugLog("âœ… Using first part from formattedAddress (fallback):", mainLocation)
           }
         }
       }
@@ -443,7 +443,7 @@ export default function PageNavbar({
       if (!mainLocation) {
         debugLog("Could not extract locality from formattedAddress")
       } else {
-        debugLog("🎯🎯🎯 Final mainLocation extracted:", mainLocation)
+        debugLog("ðŸŽ¯ðŸŽ¯ðŸŽ¯ Final mainLocation extracted:", mainLocation)
       }
     }
     // Priority 2: Use address field if formattedAddress not available or didn't work
@@ -451,9 +451,9 @@ export default function PageNavbar({
       location?.address &&
       !isCoordinates(location.address) &&
       location.address !== "Select location") {
-      debugLog("🔍 Processing address field:", location.address)
+      debugLog("ðŸ” Processing address field:", location.address)
       const parts = location.address.split(',').map(part => part.trim()).filter(part => part.length > 0)
-      debugLog("📋 Address parts:", parts)
+      debugLog("ðŸ“‹ Address parts:", parts)
 
       // Remove pincode, country, and placeholder values
       const filteredParts = parts.filter(part => {
@@ -462,14 +462,14 @@ export default function PageNavbar({
         if (part.toLowerCase() === "select location" || part.toLowerCase() === "current location") return false
         return true
       })
-      debugLog("📋 Filtered parts:", filteredParts)
+      debugLog("ðŸ“‹ Filtered parts:", filteredParts)
 
       // If filtered parts is empty or only has placeholder, skip this priority
       if (filteredParts.length === 0 ||
         (filteredParts.length === 1 &&
           (filteredParts[0].toLowerCase() === "select location" ||
             filteredParts[0].toLowerCase() === "current location"))) {
-        debugLog("⚠️ Address field only contains placeholder, skipping")
+        debugLog("âš ï¸ Address field only contains placeholder, skipping")
         // Don't set mainLocation, continue to next priority
       } else {
 
@@ -502,14 +502,14 @@ export default function PageNavbar({
           const localityParts = filteredParts.slice(0, cityIndex)
           if (localityParts.length > 0) {
             mainLocation = localityParts.join(', ')
-            debugLog("✅ Using exact locality from address:", mainLocation)
+            debugLog("âœ… Using exact locality from address:", mainLocation)
           }
         } else if (filteredParts.length >= 3) {
           mainLocation = filteredParts.slice(0, 3).join(', ')
-          debugLog("✅ Using first 3 parts from address:", mainLocation)
+          debugLog("âœ… Using first 3 parts from address:", mainLocation)
         } else if (filteredParts.length >= 2) {
           mainLocation = filteredParts.slice(0, 2).join(', ')
-          debugLog("✅ Using first 2 parts from address:", mainLocation)
+          debugLog("âœ… Using first 2 parts from address:", mainLocation)
         } else if (filteredParts.length >= 1) {
           const firstPart = filteredParts[0]
           if (!isCoordinates(firstPart) &&
@@ -517,7 +517,7 @@ export default function PageNavbar({
             firstPart.toLowerCase() !== "select location" &&
             firstPart.toLowerCase() !== "current location") {
             mainLocation = firstPart
-            debugLog("✅ Using first part from address:", mainLocation)
+            debugLog("âœ… Using first part from address:", mainLocation)
           }
         }
       }
@@ -540,15 +540,15 @@ export default function PageNavbar({
         // If we have 3+ parts, take first 3 (usually building, floor, area)
         if (filteredParts.length >= 3) {
           mainLocation = filteredParts.slice(0, 3).join(', ')
-          debugLog("✅ Using first 3 parts as fallback:", mainLocation)
+          debugLog("âœ… Using first 3 parts as fallback:", mainLocation)
         } else if (filteredParts.length >= 2) {
           mainLocation = filteredParts.slice(0, 2).join(', ')
-          debugLog("✅ Using first 2 parts as fallback:", mainLocation)
+          debugLog("âœ… Using first 2 parts as fallback:", mainLocation)
         } else if (filteredParts.length >= 1) {
           const firstPart = filteredParts[0]
           if (!isCoordinates(firstPart) && firstPart.length > 2) {
             mainLocation = firstPart
-            debugLog("✅ Using first part as fallback:", mainLocation)
+            debugLog("âœ… Using first part as fallback:", mainLocation)
           }
         }
       }
@@ -560,7 +560,7 @@ export default function PageNavbar({
       location?.formattedAddress &&
       !isCoordinates(location.formattedAddress) &&
       location.formattedAddress !== "Select location") {
-      debugLog("🔄🔄🔄 FORCE EXTRACTING from formattedAddress (last resort):", location.formattedAddress)
+      debugLog("ðŸ”„ðŸ”„ðŸ”„ FORCE EXTRACTING from formattedAddress (last resort):", location.formattedAddress)
       const parts = location.formattedAddress.split(',').map(p => p.trim()).filter(p => p.length > 0)
       const filteredParts = parts.filter(part => {
         if (/^\d{6}$/.test(part)) return false
@@ -574,19 +574,19 @@ export default function PageNavbar({
         const thirdPart = filteredParts[2].toLowerCase()
         if (thirdPart === "indore" || thirdPart === location?.city?.toLowerCase()) {
           mainLocation = filteredParts.slice(0, 2).join(', ')
-          debugLog("✅✅✅ FORCE: Using first 2 parts (3rd is city):", mainLocation)
+          debugLog("âœ…âœ…âœ… FORCE: Using first 2 parts (3rd is city):", mainLocation)
         } else {
           mainLocation = filteredParts.slice(0, 3).join(', ')
-          debugLog("✅✅✅ FORCE: Using first 3 parts:", mainLocation)
+          debugLog("âœ…âœ…âœ… FORCE: Using first 3 parts:", mainLocation)
         }
       } else if (filteredParts.length >= 2) {
         mainLocation = filteredParts.slice(0, 2).join(', ')
-        debugLog("✅✅✅ FORCE: Using first 2 parts:", mainLocation)
+        debugLog("âœ…âœ…âœ… FORCE: Using first 2 parts:", mainLocation)
       } else if (filteredParts.length >= 1) {
         const firstPart = filteredParts[0]
         if (!isCoordinates(firstPart) && firstPart.length > 2 && firstPart.toLowerCase() !== location?.city?.toLowerCase()) {
           mainLocation = firstPart
-          debugLog("✅✅✅ FORCE: Using first part:", mainLocation)
+          debugLog("âœ…âœ…âœ… FORCE: Using first part:", mainLocation)
         }
       }
     }
@@ -598,10 +598,10 @@ export default function PageNavbar({
       if (location?.city && location.city.trim() !== "" && location.city !== "Unknown City" &&
         location.area.toLowerCase() !== location.city.toLowerCase()) {
         mainLocation = `${location.area}, ${location.city}`
-        debugLog("✅ Using area + city:", mainLocation)
+        debugLog("âœ… Using area + city:", mainLocation)
       } else {
         mainLocation = location.area
-        debugLog("✅ Using area name:", mainLocation)
+        debugLog("âœ… Using area name:", mainLocation)
       }
     }
     // Priority 6: Use city ONLY if nothing else worked (last resort)
@@ -612,12 +612,12 @@ export default function PageNavbar({
       location.city !== "Current Location" &&
       location.city !== "Select location") {
       mainLocation = location.city
-      debugLog("⚠️⚠️⚠️ FALLBACK: Using city (no locality found):", mainLocation)
+      debugLog("âš ï¸âš ï¸âš ï¸ FALLBACK: Using city (no locality found):", mainLocation)
     }
     // Final fallback: Show "Select location" instead of coordinates
     else if (!mainLocation) {
       mainLocation = "Select location"
-      debugLog("⚠️ No valid location found, showing placeholder")
+      debugLog("âš ï¸ No valid location found, showing placeholder")
     }
 
     // If mainLocation is still coordinates, replace with area or city
@@ -629,23 +629,23 @@ export default function PageNavbar({
       } else {
         mainLocation = "Select location"
       }
-      debugLog("⚠️ Replaced coordinates with:", mainLocation)
+      debugLog("âš ï¸ Replaced coordinates with:", mainLocation)
     }
 
     // Final check: If mainLocation is just city name, try one more time to extract from formattedAddress
     if (mainLocation && (mainLocation.toLowerCase() === location?.city?.toLowerCase() || mainLocation === "Indore")) {
-      debugLog("🔄🔄🔄 MainLocation is city, trying to extract locality one more time...")
+      debugLog("ðŸ”„ðŸ”„ðŸ”„ MainLocation is city, trying to extract locality one more time...")
 
       // First priority: Check if area is available in location object
       if (location?.area && location.area.trim() !== "" &&
         location.area.toLowerCase() !== location?.city?.toLowerCase() &&
         !isCoordinates(location.area)) {
         mainLocation = `${location.area}, ${location.city}`
-        debugLog("✅✅✅ Using area from location object:", mainLocation)
+        debugLog("âœ…âœ…âœ… Using area from location object:", mainLocation)
       } else if (location?.formattedAddress && !isCoordinates(location.formattedAddress)) {
         // Second priority: Extract area from formattedAddress (before city)
         const parts = location.formattedAddress.split(',').map(p => p.trim()).filter(p => p.length > 0)
-        debugLog("🔍 Extracting area from formattedAddress parts:", parts)
+        debugLog("ðŸ” Extracting area from formattedAddress parts:", parts)
 
         // Find city index
         let cityIndex = -1
@@ -667,13 +667,13 @@ export default function PageNavbar({
               !extractedArea.toLowerCase().includes("madhya") &&
               !extractedArea.toLowerCase().includes("pradesh")) {
               mainLocation = `${extractedArea}, ${location.city}`
-              debugLog("✅✅✅ Extracted area from formattedAddress (before city):", mainLocation)
+              debugLog("âœ…âœ…âœ… Extracted area from formattedAddress (before city):", mainLocation)
             } else if (areaParts.length >= 2) {
               // Take last 2 parts before city
               const lastTwoParts = areaParts.slice(-2)
               if (lastTwoParts.every(p => p.toLowerCase() !== location.city.toLowerCase())) {
                 mainLocation = lastTwoParts.join(', ')
-                debugLog("✅✅✅ Extracted area (2 parts) from formattedAddress:", mainLocation)
+                debugLog("âœ…âœ…âœ… Extracted area (2 parts) from formattedAddress:", mainLocation)
               }
             }
           }
@@ -692,7 +692,7 @@ export default function PageNavbar({
             if (extractedArea && extractedArea.toLowerCase() !== location.city.toLowerCase() &&
               extractedArea.length > 2 && !extractedArea.match(/^\d+/)) {
               mainLocation = `${extractedArea}, ${location.city}`
-              debugLog("✅✅✅ Extracted area (first part) from formattedAddress:", mainLocation)
+              debugLog("âœ…âœ…âœ… Extracted area (first part) from formattedAddress:", mainLocation)
             }
           }
         }
@@ -706,7 +706,7 @@ export default function PageNavbar({
         location.area.toLowerCase() !== location.city.toLowerCase() &&
         !isCoordinates(location.area)) {
         mainLocation = `${location.area}, ${location.city}`
-        debugLog("✅✅✅ Added area to city display:", mainLocation)
+        debugLog("âœ…âœ…âœ… Added area to city display:", mainLocation)
       }
       // If area field is empty, try to extract from formattedAddress one more time
       else if (location?.formattedAddress && !isCoordinates(location.formattedAddress)) {
@@ -722,7 +722,7 @@ export default function PageNavbar({
               !part.toLowerCase().includes("pradesh") &&
               part.toLowerCase() !== "india") {
               mainLocation = `${part}, ${location.city}`
-              debugLog("✅✅✅ Last resort: Extracted area from formattedAddress:", mainLocation)
+              debugLog("âœ…âœ…âœ… Last resort: Extracted area from formattedAddress:", mainLocation)
               break
             }
           }
@@ -747,7 +747,7 @@ export default function PageNavbar({
       if (location?.formattedAddress) {
         const parts = location.formattedAddress.split(',').map(part => part.trim()).filter(part => part.length > 0)
 
-        debugLog("📍 Extracting city/state from formattedAddress:", {
+        debugLog("ðŸ“ Extracting city/state from formattedAddress:", {
           formattedAddress: location.formattedAddress,
           parts: parts,
           partsLength: parts.length
@@ -759,14 +759,14 @@ export default function PageNavbar({
           // Method 1: Find pincode index (6-digit number)
           const pincodeIndex = parts.findIndex(part => /^\d{6}$/.test(part))
 
-          debugLog("📍 Pincode index:", pincodeIndex)
+          debugLog("ðŸ“ Pincode index:", pincodeIndex)
 
           if (pincodeIndex > 1 && pincodeIndex !== -1) {
             // City is 2 positions before pincode, State is 1 position before pincode
             const cityPart = parts[pincodeIndex - 2]
             const statePart = parts[pincodeIndex - 1]
 
-            debugLog("📍 Extracted from pincode position:", { cityPart, statePart, pincodeIndex })
+            debugLog("ðŸ“ Extracted from pincode position:", { cityPart, statePart, pincodeIndex })
 
             // Validate: both should be non-empty and not numbers
             if (cityPart && statePart &&
@@ -775,7 +775,7 @@ export default function PageNavbar({
               cityPart.length > 2 &&
               statePart.length > 2) {
               subLocation = `${cityPart}, ${statePart}`
-              debugLog("✅ Using extracted city/state (pincode method):", subLocation)
+              debugLog("âœ… Using extracted city/state (pincode method):", subLocation)
             }
           }
 
@@ -785,7 +785,7 @@ export default function PageNavbar({
             const lastPart = parts[parts.length - 1]
             const secondLastPart = parts[parts.length - 2]
 
-            debugLog("📍 Trying India method:", { lastPart, secondLastPart })
+            debugLog("ðŸ“ Trying India method:", { lastPart, secondLastPart })
 
             // If last part is "India" and second last is pincode (6-digit)
             if (lastPart === "India" && /^\d{6}$/.test(secondLastPart)) {
@@ -798,7 +798,7 @@ export default function PageNavbar({
               const cityPart = parts[parts.length - 4]
               const statePart = parts[parts.length - 3]
 
-              debugLog("📍 Extracted from India position:", { cityPart, statePart })
+              debugLog("ðŸ“ Extracted from India position:", { cityPart, statePart })
 
               if (cityPart && statePart &&
                 !cityPart.match(/^\d+$/) &&
@@ -806,7 +806,7 @@ export default function PageNavbar({
                 cityPart.length > 2 &&
                 statePart.length > 2) {
                 subLocation = `${cityPart}, ${statePart}`
-                debugLog("✅ Using extracted city/state (India method):", subLocation)
+                debugLog("âœ… Using extracted city/state (India method):", subLocation)
               }
             }
           }
@@ -821,7 +821,7 @@ export default function PageNavbar({
               const cityPart = parts[4]
               const statePart = parts[5]
 
-              debugLog("📍 Direct extraction (index method):", { cityPart, statePart, pincodeIndex })
+              debugLog("ðŸ“ Direct extraction (index method):", { cityPart, statePart, pincodeIndex })
 
               if (cityPart && statePart &&
                 !cityPart.match(/^\d+$/) &&
@@ -829,7 +829,7 @@ export default function PageNavbar({
                 cityPart.length > 2 &&
                 statePart.length > 2) {
                 subLocation = `${cityPart}, ${statePart}`
-                debugLog("✅ Using extracted city/state (direct index method):", subLocation)
+                debugLog("âœ… Using extracted city/state (direct index method):", subLocation)
               }
             }
           }
@@ -844,7 +844,7 @@ export default function PageNavbar({
             const cityPart = parts[4]
             const statePart = parts[5]
 
-            debugLog("📍 Simple fallback (parts[4] and parts[5]):", {
+            debugLog("ðŸ“ Simple fallback (parts[4] and parts[5]):", {
               cityPart,
               statePart,
               partsLength: parts.length,
@@ -858,9 +858,9 @@ export default function PageNavbar({
               cityPart.length > 1 &&
               statePart.length > 1) {
               subLocation = `${cityPart}, ${statePart}`
-              debugLog("✅ Using extracted city/state (simple fallback):", subLocation)
+              debugLog("âœ… Using extracted city/state (simple fallback):", subLocation)
             } else {
-              debugLog("⚠️ Validation failed for parts[4] and parts[5]:", { cityPart, statePart })
+              debugLog("âš ï¸ Validation failed for parts[4] and parts[5]:", { cityPart, statePart })
             }
           }
         }
@@ -869,7 +869,7 @@ export default function PageNavbar({
       // Also try from address field if formattedAddress didn't work
       if (!subLocation && location?.address && location.address !== location?.formattedAddress) {
         const parts = location.address.split(',').map(part => part.trim()).filter(part => part.length > 0)
-        debugLog("📍 Trying address field:", { address: location.address, parts })
+        debugLog("ðŸ“ Trying address field:", { address: location.address, parts })
 
         if (parts.length >= 4) {
           const pincodeIndex = parts.findIndex(part => /^\d{6}$/.test(part))
@@ -882,7 +882,7 @@ export default function PageNavbar({
               cityPart.length > 2 &&
               statePart.length > 2) {
               subLocation = `${cityPart}, ${statePart}`
-              debugLog("✅ Using extracted city/state from address field:", subLocation)
+              debugLog("âœ… Using extracted city/state from address field:", subLocation)
             }
           }
         }
@@ -891,12 +891,12 @@ export default function PageNavbar({
       // If still empty, leave it empty
       if (!subLocation) {
         subLocation = ""
-        debugLog("⚠️ Could not extract city/state from address")
+        debugLog("âš ï¸ Could not extract city/state from address")
       }
     }
 
     // Debug log
-    debugLog("📍 PageNavbar Location Display:", {
+    debugLog("ðŸ“ PageNavbar Location Display:", {
       location: location,
       city: location?.city,
       state: location?.state,
@@ -927,7 +927,7 @@ export default function PageNavbar({
             cityPart.length > 1 &&
             statePart.length > 1) {
             subLocation = `${cityPart}, ${statePart}`
-            debugLog("✅✅✅ FORCED extraction - New subLocation:", subLocation)
+            debugLog("âœ…âœ…âœ… FORCED extraction - New subLocation:", subLocation)
           }
         }
       }
@@ -1080,5 +1080,6 @@ export default function PageNavbar({
     </nav>
   )
 }
+
 
 

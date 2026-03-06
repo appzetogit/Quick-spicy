@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Filter, Briefcase, RefreshCw, Settings, ArrowUpDown, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function RestaurantReport() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -28,7 +32,7 @@ export default function RestaurantReport() {
           setZones(response.data.data.zones)
         }
       } catch (error) {
-        console.error("Error fetching zones:", error)
+        debugError("Error fetching zones:", error)
       }
     }
     fetchZones()
@@ -59,7 +63,7 @@ export default function RestaurantReport() {
           }
         }
       } catch (error) {
-        console.error("Error fetching restaurant report:", error)
+        debugError("Error fetching restaurant report:", error)
         toast.error("Failed to fetch restaurant report")
         setRestaurants([])
       } finally {
@@ -118,11 +122,11 @@ export default function RestaurantReport() {
 
   const renderStars = (rating, reviews) => {
     if (rating === 0) {
-      return "★0"
+      return "â˜…0"
     }
     const fullStars = Math.floor(rating)
     const hasHalfStar = rating % 1 !== 0
-    return "★".repeat(fullStars) + (hasHalfStar ? "½" : "") + "☆".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
+    return "â˜…".repeat(fullStars) + (hasHalfStar ? "Â½" : "") + "â˜†".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
   }
 
   if (loading) {
@@ -415,7 +419,7 @@ export default function RestaurantReport() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`text-sm font-medium ${
-                          restaurant.totalAdminCommission.startsWith('₹-') || restaurant.totalAdminCommission.startsWith('-₹')
+                          restaurant.totalAdminCommission.startsWith('â‚¹-') || restaurant.totalAdminCommission.startsWith('-â‚¹')
                             ? 'text-red-600'
                             : 'text-slate-900'
                         }`}>
@@ -464,3 +468,4 @@ export default function RestaurantReport() {
     </div>
   )
 }
+

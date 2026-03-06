@@ -1,4 +1,4 @@
-// @FeedNavbar.jsx
+﻿// @FeedNavbar.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -6,6 +6,10 @@ import { HelpCircle, ArrowRight, Phone, Ambulance, AlertTriangle, Shield, Shield
 import { toast } from "sonner";
 import { deliveryAPI } from "@/lib/api";
 import { useCompanyName } from "@/lib/hooks/useCompanyName";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const LS_KEY = "app:isOnline";
 const TOAST_ID_KEY = "feedNavbar-onlineStatus";
@@ -140,7 +144,7 @@ export default function FeedNavbar({ className = "" }) {
               const mightBeSwapped = (lat >= 68 && lat <= 98 && lng >= 8 && lng <= 38);
               
               if (mightBeSwapped) {
-                console.warn('⚠️ Saved coordinates might be swapped in FeedNavbar - correcting:', {
+                debugWarn('âš ï¸ Saved coordinates might be swapped in FeedNavbar - correcting:', {
                   original: [lat, lng],
                   corrected: [lng, lat]
                 });
@@ -152,7 +156,7 @@ export default function FeedNavbar({ className = "" }) {
           }
         }
       } catch (err) {
-        console.warn('Error reading location from localStorage:', err);
+        debugWarn('Error reading location from localStorage:', err);
       }
       
       // If no saved location, try to get current location
@@ -171,12 +175,12 @@ export default function FeedNavbar({ className = "" }) {
           // Validate coordinates
           if (typeof latitude !== 'number' || typeof longitude !== 'number' ||
               latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
-            console.warn('⚠️ Invalid coordinates from geolocation:', { latitude, longitude });
+            debugWarn('âš ï¸ Invalid coordinates from geolocation:', { latitude, longitude });
             latitude = null;
             longitude = null;
           }
         } catch (geoError) {
-          console.warn('Could not get current location:', geoError);
+          debugWarn('Could not get current location:', geoError);
         }
       }
       
@@ -185,7 +189,7 @@ export default function FeedNavbar({ className = "" }) {
           latitude >= -90 && latitude <= 90 && 
           longitude >= -180 && longitude <= 180) {
         await deliveryAPI.updateLocation(latitude, longitude, next);
-        console.log('✅ Online status and location updated in backend:', { 
+        debugLog('âœ… Online status and location updated in backend:', { 
           isOnline: next, 
           latitude, 
           longitude,
@@ -193,10 +197,10 @@ export default function FeedNavbar({ className = "" }) {
         });
       } else {
         await deliveryAPI.updateOnlineStatus(next);
-        console.log('✅ Online status updated in backend (location not available):', next);
+        debugLog('âœ… Online status updated in backend (location not available):', next);
       }
     } catch (error) {
-      console.error('❌ Error updating online status in backend:', error);
+      debugError('âŒ Error updating online status in backend:', error);
       // Revert state if backend update fails
       setIsOnline(!next);
       toast.error('Failed to update status. Please try again.');
@@ -259,7 +263,7 @@ export default function FeedNavbar({ className = "" }) {
         }
       } catch (error) {
         // Silently fail - use default empty numbers
-        console.error("Error fetching emergency help:", error);
+        debugError("Error fetching emergency help:", error);
       }
     };
 
@@ -346,7 +350,7 @@ export default function FeedNavbar({ className = "" }) {
             error.code !== 'ERR_NETWORK' && 
             error.message !== 'Network Error' &&
             !error.message?.includes('timeout')) {
-          console.error("Error fetching profile image for navbar:", error);
+          debugError("Error fetching profile image for navbar:", error);
         }
       }
     };
@@ -537,3 +541,4 @@ export default function FeedNavbar({ className = "" }) {
     </>
   );
 }
+

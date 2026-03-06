@@ -1,6 +1,10 @@
-import { useState, useMemo } from "react"
+﻿import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Edit, Trash2, Calendar, RefreshCw } from "lucide-react"
 import { cashbackDummy } from "../data/cashbackDummy"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Cashback() {
   const [activeLanguage, setActiveLanguage] = useState("default")
@@ -22,9 +26,9 @@ export default function Cashback() {
   const languageTabs = [
     { key: "default", label: "Default" },
     { key: "en", label: "English(EN)" },
-    { key: "bn", label: "Bengali - বাংলা (BN)" },
-    { key: "ar", label: "Arabic - العربية (AR)" },
-    { key: "es", label: "Spanish - español(ES)" },
+    { key: "bn", label: "Bengali - à¦¬à¦¾à¦‚à¦²à¦¾ (BN)" },
+    { key: "ar", label: "Arabic - Ø§Ù„Ø¹Ø±Ø¨ÙŠØ© (AR)" },
+    { key: "es", label: "Spanish - espaÃ±ol(ES)" },
   ]
 
   const filteredCashbacks = useMemo(() => {
@@ -54,7 +58,7 @@ export default function Cashback() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", formData)
+    debugLog("Form submitted:", formData)
     alert("Cashback offer created successfully!")
   }
 
@@ -366,3 +370,4 @@ export default function Cashback() {
     </div>
   )
 }
+

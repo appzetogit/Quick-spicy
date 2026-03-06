@@ -1,10 +1,14 @@
-import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Code, Check, Columns, Loader2, Eye } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReviewsToCSV, exportReviewsToExcel, exportReviewsToPDF, exportReviewsToJSON } from "../../components/deliveryman/deliverymanExportUtils"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DeliverymanReviews() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -100,29 +104,29 @@ export default function DeliverymanReviews() {
     const fetchReviews = async () => {
       try {
         setIsLoading(true)
-        console.log('🔍 Fetching deliveryman reviews...')
+        debugLog('ðŸ” Fetching deliveryman reviews...')
         const response = await adminAPI.getDeliverymanReviews({ limit: 1000 })
         
-        console.log('✅ Deliveryman reviews response:', response?.data)
+        debugLog('âœ… Deliveryman reviews response:', response?.data)
         
         if (response?.data?.success && response?.data?.data?.reviews) {
           setReviews(response.data.data.reviews)
-          console.log(`✅ Loaded ${response.data.data.reviews.length} reviews`)
+          debugLog(`âœ… Loaded ${response.data.data.reviews.length} reviews`)
         } else {
-          console.error('❌ Unexpected response structure:', response?.data)
+          debugError('âŒ Unexpected response structure:', response?.data)
           setReviews([])
           toast.error('Failed to load reviews: Unexpected response format')
         }
       } catch (error) {
-        console.error('❌ Error fetching deliveryman reviews:', {
+        debugError('âŒ Error fetching deliveryman reviews:', {
           message: error?.message,
           response: error?.response?.data,
           status: error?.response?.status,
           url: error?.config?.url,
           method: error?.config?.method
         })
-        console.error('❌ Full error response data:', JSON.stringify(error?.response?.data, null, 2))
-        console.error('❌ Error stack:', error?.stack)
+        debugError('âŒ Full error response data:', JSON.stringify(error?.response?.data, null, 2))
+        debugError('âŒ Error stack:', error?.stack)
         setReviews([])
         const errorMessage = error?.response?.data?.message || 
                            error?.response?.data?.error ||
@@ -517,3 +521,4 @@ export default function DeliverymanReviews() {
     </div>
   )
 }
+

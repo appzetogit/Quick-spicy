@@ -1,7 +1,11 @@
-import { useEffect, useMemo, useState } from "react"
+﻿import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, RefreshCw, X } from "lucide-react"
 import { restaurantAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const DISMISSED_KEY = "restaurant_dismissed_notifications"
 
@@ -38,7 +42,7 @@ export default function Notifications() {
       setOrders(rows)
     } catch (error) {
       if (error.response?.status !== 401) {
-        console.error("Error fetching notifications:", error)
+        debugError("Error fetching notifications:", error)
       }
       setOrders([])
     } finally {
@@ -154,3 +158,4 @@ export default function Notifications() {
     </div>
   )
 }
+

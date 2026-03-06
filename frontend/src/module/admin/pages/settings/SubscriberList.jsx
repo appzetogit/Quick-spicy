@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { Search, Download, ChevronDown, Settings, ArrowUpDown, FileText, FileSpreadsheet, Code, Check, Columns, Eye } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -6,6 +6,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import burgerIcon from "../../assets/Dashboard-icons/image13.png";
 import leafIcon from "../../assets/Dashboard-icons/image14.png";
 import chefIcon from "../../assets/Dashboard-icons/image16.png";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const statsCards = [
   { id: 1, label: "Total Subscribed User", value: 3, bg: "bg-sky-50" },
@@ -81,7 +85,7 @@ export default function SubscriberList() {
       alert("No data to export");
       return;
     }
-    console.log(`Exporting as ${format}`, filteredRows);
+    debugLog(`Exporting as ${format}`, filteredRows);
   };
 
   const toggleColumn = (columnKey) => {
@@ -122,7 +126,7 @@ export default function SubscriberList() {
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-xl lg:text-2xl font-bold text-slate-900 flex items-center gap-2">
           <span role="img" aria-label="subscribed">
-            📋
+            ðŸ“‹
           </span>
           <span>Subscribed Restaurant List</span>
         </h1>
@@ -132,7 +136,7 @@ export default function SubscriberList() {
             <option value="all-zones">{zoneFilter}</option>
           </select>
           <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
-            ▾
+            â–¾
           </span>
         </div>
       </div>
@@ -149,7 +153,7 @@ export default function SubscriberList() {
                 {card.label}
               </p>
               <div className="w-8 h-8 rounded-full bg-white shadow-sm flex items-center justify-center">
-                <span className="text-lg">📊</span>
+                <span className="text-lg">ðŸ“Š</span>
               </div>
             </div>
             <p className="text-2xl font-bold text-slate-900">{card.value}</p>
@@ -163,7 +167,7 @@ export default function SubscriberList() {
           <div className="flex-1 px-5 py-3 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-slate-700">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-50 text-sky-600 text-lg">
-                ⬜
+                â¬œ
               </span>
               <div>
                 <p className="font-semibold">TOTAL TRANSACTIONS</p>
@@ -175,7 +179,7 @@ export default function SubscriberList() {
           <div className="flex-1 px-5 py-3 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-slate-700">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-50 text-emerald-600 text-lg">
-                💰
+                ðŸ’°
               </span>
               <div>
                 <p className="font-semibold">TOTAL EARNING</p>
@@ -189,7 +193,7 @@ export default function SubscriberList() {
           <div className="flex-1 px-5 py-3 flex items-center justify-between text-xs">
             <div className="flex items-center gap-2 text-slate-700">
               <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-amber-50 text-amber-600 text-lg">
-                📈
+                ðŸ“ˆ
               </span>
               <div>
                 <p className="font-semibold">EARNED THIS MONTH</p>
@@ -218,7 +222,7 @@ export default function SubscriberList() {
                 <option>All</option>
               </select>
               <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 pointer-events-none">
-                ▾
+                â–¾
               </span>
             </div>
 
@@ -383,7 +387,7 @@ export default function SubscriberList() {
                               {row.name}
                             </span>
                             <span className="text-xs text-amber-500">
-                              ★ 0
+                              â˜… 0
                             </span>
                           </div>
                         </div>
@@ -510,3 +514,4 @@ function StatusPill({ label, variant }) {
     </span>
   );
 }
+

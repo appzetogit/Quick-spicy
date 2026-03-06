@@ -1,7 +1,11 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { ArrowLeft, Info } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ManageOutlets() {
   const navigate = useNavigate()
@@ -47,7 +51,7 @@ export default function ManageOutlets() {
         setTimeout(() => setShowToast(false), 5000)
         break
       default:
-        console.log(`${option} clicked`)
+        debugLog(`${option} clicked`)
     }
   }
 
@@ -129,4 +133,5 @@ export default function ManageOutlets() {
     </div>
   )
 }
+
 

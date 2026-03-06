@@ -1,7 +1,11 @@
-import { useState, useMemo } from "react";
+﻿import { useState, useMemo } from "react";
 import { Search, Download, Plus, Edit3, ChevronDown, Settings, ArrowUpDown, FileText, FileSpreadsheet, Code, Check, Columns, Trash2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const initialTaxes = [
   { id: 1, name: "GST", rate: "15%", active: true },
@@ -32,7 +36,7 @@ export default function CreateTaxes() {
       alert("No data to export");
       return;
     }
-    console.log(`Exporting as ${format}`, filtered);
+    debugLog(`Exporting as ${format}`, filtered);
   };
 
   const toggleColumn = (columnKey) => {
@@ -298,3 +302,4 @@ function ToggleSwitch({ enabled, onToggle }) {
     </button>
   );
 }
+

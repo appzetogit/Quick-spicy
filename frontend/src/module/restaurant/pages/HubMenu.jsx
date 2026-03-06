@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react"
+﻿import { useState, useMemo, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Search, 
@@ -24,6 +24,10 @@ import BottomNavOrders from "../components/BottomNavOrders"
 import { useNavigate } from "react-router-dom"
 import { restaurantAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const getUploadErrorMessage = (error, fileName = "image") => {
   const message =
@@ -47,7 +51,7 @@ export default function HubMenu() {
         return saved
       }
     } catch (error) {
-      console.warn("Failed to load hub menu active tab:", error)
+      debugWarn("Failed to load hub menu active tab:", error)
     }
     return "all"
   })
@@ -192,7 +196,7 @@ export default function HubMenu() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-        console.error('Error fetching restaurant data:', error)
+        debugError('Error fetching restaurant data:', error)
         }
         // Continue with default values if fetch fails
       }
@@ -214,7 +218,7 @@ export default function HubMenu() {
 
       // Never let silent/background refresh replace local edits that are not yet synced.
       if (!showLoading && hasUnsavedLocalChanges) {
-        console.log('Skipping background menu refresh because local menu changes are not synced yet')
+        debugLog('Skipping background menu refresh because local menu changes are not synced yet')
         return
       }
 
@@ -239,7 +243,7 @@ export default function HubMenu() {
     } catch (error) {
       // Only log and show toast if it's not a network/timeout error
       if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-      console.error('Error fetching menu:', error)
+      debugError('Error fetching menu:', error)
         toast.error('Failed to load menu')
       } else if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
         // Silently handle network errors - backend is not running
@@ -260,13 +264,13 @@ export default function HubMenu() {
   // Refresh menu when page comes into focus (e.g., when user switches from admin panel)
   useEffect(() => {
     const handleFocus = () => {
-      console.log('Page focused - refreshing menu to check for approval updates')
+      debugLog('Page focused - refreshing menu to check for approval updates')
       fetchMenu(false) // Refresh without showing loading spinner
     }
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('Page visible - refreshing menu to check for approval updates')
+        debugLog('Page visible - refreshing menu to check for approval updates')
         fetchMenu(false) // Refresh without showing loading spinner
       }
     }
@@ -285,7 +289,7 @@ export default function HubMenu() {
     const interval = setInterval(() => {
       // Only refresh if page is visible and not loading
       if (document.visibilityState === 'visible' && !loadingMenu) {
-        console.log('Periodic refresh - checking for approval updates')
+        debugLog('Periodic refresh - checking for approval updates')
         fetchMenu(false) // Refresh without showing loading spinner
       }
     }, 30000) // 30 seconds
@@ -389,12 +393,12 @@ export default function HubMenu() {
           
           await restaurantAPI.updateMenu({ sections: normalizedSections })
           lastSyncedMenuRef.current = serializeMenuSections(normalizedSections)
-          console.log('✅ Menu saved successfully with', normalizedSections.length, 'sections')
+          debugLog('âœ… Menu saved successfully with', normalizedSections.length, 'sections')
         } catch (error) {
-          console.error('Error saving menu:', error)
+          debugError('Error saving menu:', error)
           // Check if it's a network error (backend not running)
           if (error.code === 'ERR_NETWORK' || error.message === 'Network Error') {
-            console.warn('Backend server may not be running. Menu changes will be saved when connection is restored.')
+            debugWarn('Backend server may not be running. Menu changes will be saved when connection is restored.')
             // Don't show error toast for network errors during auto-save to avoid spam
             // The user will see the error when they manually try to save
           } else {
@@ -427,7 +431,7 @@ export default function HubMenu() {
       const sortedAddons = [...data].sort((a, b) => getAddonCreatedMs(b) - getAddonCreatedMs(a))
       setAddons(sortedAddons)
     } catch (error) {
-      console.error('Error fetching add-ons:', error)
+      debugError('Error fetching add-ons:', error)
       toast.error('Failed to load add-ons')
       setAddons([])
     } finally {
@@ -445,7 +449,7 @@ export default function HubMenu() {
     try {
       localStorage.setItem("restaurant_hub_menu_active_tab", activeTab)
     } catch (error) {
-      console.warn("Failed to persist hub menu active tab:", error)
+      debugWarn("Failed to persist hub menu active tab:", error)
     }
   }, [activeTab])
 
@@ -545,7 +549,7 @@ export default function HubMenu() {
               })
             } catch (folderUploadError) {
               // Fallback: retry without folder in case provider/account rejects custom folder.
-              console.warn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
+              debugWarn(`Retrying upload without folder for ${file.name}:`, folderUploadError)
               uploadResponse = await uploadAPI.uploadMedia(file)
             }
             const imageUrl = uploadResponse?.data?.data?.url || uploadResponse?.data?.url
@@ -553,7 +557,7 @@ export default function HubMenu() {
               uploadedImageUrls.push(imageUrl)
             }
           } catch (uploadError) {
-            console.error(`Error uploading image ${i + 1}:`, uploadError)
+            debugError(`Error uploading image ${i + 1}:`, uploadError)
             toast.error(getUploadErrorMessage(uploadError, file.name))
             setUploadingAddonImages(false)
             return
@@ -601,7 +605,7 @@ export default function HubMenu() {
       // Refresh add-ons list
       fetchAddons(true)
     } catch (error) {
-      console.error('Error saving add-on:', error)
+      debugError('Error saving add-on:', error)
       toast.error(error?.response?.data?.message || (editingAddon ? 'Failed to update add-on' : 'Failed to add add-on'))
     } finally {
       setUploadingAddonImages(false)
@@ -634,7 +638,7 @@ export default function HubMenu() {
       toast.success('Add-on deleted successfully')
       fetchAddons(true)
     } catch (error) {
-      console.error('Error deleting add-on:', error)
+      debugError('Error deleting add-on:', error)
       toast.error(error?.response?.data?.message || 'Failed to delete add-on')
     }
   }
@@ -887,7 +891,7 @@ export default function HubMenu() {
       setCustomDateTime('')
       setSwitchingOffTarget(null)
     } catch (error) {
-      console.error('Error scheduling item availability:', error)
+      debugError('Error scheduling item availability:', error)
       toast.error(error.response?.data?.message || 'Failed to schedule item availability')
     } finally {
       setIsScheduling(false)
@@ -939,7 +943,7 @@ export default function HubMenu() {
       window.dispatchEvent(new CustomEvent('foodsChanged'))
       window.dispatchEvent(new Event('storage'))
     } catch (error) {
-      console.error('Error updating category:', error)
+      debugError('Error updating category:', error)
       alert('Error updating category name')
       return
     }
@@ -1012,7 +1016,7 @@ export default function HubMenu() {
         toast.error(response.data?.message || 'Failed to add category')
       }
     } catch (error) {
-      console.error('Error adding category:', error)
+      debugError('Error adding category:', error)
       toast.error(error.response?.data?.message || 'Failed to add category')
     }
     
@@ -1038,7 +1042,7 @@ export default function HubMenu() {
       setMenuData(updatedSections)
       toast.success('Category deleted successfully')
     } catch (error) {
-      console.error('Error deleting category:', error)
+      debugError('Error deleting category:', error)
       toast.error('Failed to delete category')
       return
     }
@@ -1261,7 +1265,7 @@ export default function HubMenu() {
                         {addon.description && (
                           <p className="text-sm text-gray-600 mb-2">{addon.description}</p>
                         )}
-                        <p className="text-base font-bold text-gray-900">₹{addon.price}</p>
+                        <p className="text-base font-bold text-gray-900">â‚¹{addon.price}</p>
                         {isRejectedApproval(addon.approvalStatus) && addon.rejectionReason && (
                           <p className="text-xs text-red-600 mt-1">Reason: {addon.rejectionReason}</p>
                         )}
@@ -1400,7 +1404,7 @@ export default function HubMenu() {
                                 </span>
                               )}
                             </div>
-                            <p className="text-sm font-medium text-gray-700 mb-3">₹{item.price}</p>
+                            <p className="text-sm font-medium text-gray-700 mb-3">â‚¹{item.price}</p>
                             {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
                               <p className="text-xs text-red-600 -mt-2 mb-3">Reason: {item.rejectionReason}</p>
                             )}
@@ -2160,7 +2164,7 @@ export default function HubMenu() {
                                       {item.name}
                                     </h4>
                                   </div>
-                                  <p className="text-sm font-medium text-gray-700">₹{item.price}</p>
+                                  <p className="text-sm font-medium text-gray-700">â‚¹{item.price}</p>
                                   {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
                                     <p className="text-xs text-red-600 mt-1">Reason: {item.rejectionReason}</p>
                                   )}
@@ -2274,7 +2278,7 @@ export default function HubMenu() {
                 {/* Price Field */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (₹) <span className="text-red-500">*</span>
+                    Price (â‚¹) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -2372,3 +2376,4 @@ export default function HubMenu() {
     </div>
   )
 }
+

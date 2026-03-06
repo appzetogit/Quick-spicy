@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronDown, Loader2, Gift, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -6,6 +6,10 @@ import { useProgressStore } from "../store/progressStore"
 import FeedNavbar from "../components/FeedNavbar"
 import { deliveryAPI } from "@/lib/api"
 import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function TripHistory() {
   const navigate = useNavigate()
@@ -59,7 +63,7 @@ export default function TripHistory() {
           setTrips([])
         }
       } catch (error) {
-        console.error("Error fetching trip history:", error)
+        debugError("Error fetching trip history:", error)
         setError("Failed to load trip history. Please try again.")
         setTrips([])
       } finally {
@@ -124,7 +128,7 @@ export default function TripHistory() {
             setHasViewedBonus(true)
           }
         } catch (error) {
-          console.error('Error fetching bonus transactions:', error)
+          debugError('Error fetching bonus transactions:', error)
           setBonusTransactions([])
         } finally {
           setBonusLoading(false)
@@ -142,7 +146,7 @@ export default function TripHistory() {
         const transactions = await fetchWalletTransactions({ type: 'bonus', limit: 100 })
         setBonusTransactions(transactions)
       } catch (error) {
-        console.error('Error checking bonus transactions:', error)
+        debugError('Error checking bonus transactions:', error)
       }
     }
 
@@ -367,7 +371,7 @@ export default function TripHistory() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs text-gray-500">Amount</p>
-                    <p className="text-sm font-semibold text-black mt-1">₹{trip.amount}</p>
+                    <p className="text-sm font-semibold text-black mt-1">â‚¹{trip.amount}</p>
                   </div>
                 </div>
               </div>
@@ -440,7 +444,7 @@ export default function TripHistory() {
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1">
                             <p className="text-lg font-bold text-black">
-                              ₹{transaction.amount?.toFixed(2) || '0.00'}
+                              â‚¹{transaction.amount?.toFixed(2) || '0.00'}
                             </p>
                             <p className="text-sm text-gray-600 mt-1">
                               {transaction.description || transaction.metadata?.reference || 'Bonus'}
@@ -486,4 +490,5 @@ export default function TripHistory() {
     </div>
   )
 }
+
 

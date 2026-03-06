@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { restaurantAPI } from "@/lib/api"
 import {
@@ -15,6 +15,10 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function DiningRestaurantDetails() {
     const { diningType, slug } = useParams() // Get params from URL
@@ -50,7 +54,7 @@ export default function DiningRestaurantDetails() {
                 }
             } catch (err) {
                 // If 404, we might need to search list. For now, simple error.
-                console.error("Failed to load restaurant", err)
+                debugError("Failed to load restaurant", err)
 
                 // FAILSAFE: If API by slug fails, let's try to get list and find match (temporary fix for development if slug isn't unique ID)
                 // In a real app, backend should support slug lookup reliably.
@@ -157,7 +161,7 @@ export default function DiningRestaurantDetails() {
                         <span>{formattedDistance}</span>
                         <span className="w-1 h-1 rounded-full bg-gray-400"></span>
                         {/* Cost For Two */}
-                        <span>{restaurant.costForTwo ? `₹${restaurant.costForTwo} for two` : "₹1400 for two"}</span>
+                        <span>{restaurant.costForTwo ? `â‚¹${restaurant.costForTwo} for two` : "â‚¹1400 for two"}</span>
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -354,3 +358,4 @@ export default function DiningRestaurantDetails() {
         </div>
     )
 }
+

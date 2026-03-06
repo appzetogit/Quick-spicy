@@ -1,5 +1,9 @@
-import { useState } from "react"
+﻿import { useState } from "react"
 import { Plus, Trash2, Settings, ChevronDown } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 const defaultFields = [
   "Restaurant Name", "Restaurant Logo", "Owner Last Name",
@@ -77,7 +81,7 @@ export default function JoinUsPageSetup() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    console.log("Form submitted:", { activeTab, customFields })
+    debugLog("Form submitted:", { activeTab, customFields })
     alert("Join Request Form Setup saved successfully!")
   }
 
@@ -329,3 +333,4 @@ export default function JoinUsPageSetup() {
     </div>
   )
 }
+

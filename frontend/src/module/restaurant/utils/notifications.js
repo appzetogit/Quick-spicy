@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Notifications Utility Functions
  * Centralized management for notifications
@@ -26,8 +30,9 @@ export const getUnreadNotificationCount = () => {
     
     return unreadCount + staticUnread
   } catch (error) {
-    console.error('Error getting unread notification count:', error)
+    debugError('Error getting unread notification count:', error)
     return 0
   }
 }
+
 

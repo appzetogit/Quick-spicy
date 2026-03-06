@@ -10,6 +10,10 @@ import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { restaurantAPI, adminAPI } from "@/lib/api"
 
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Filter options
 const filterOptions = [
   { id: 'under-30-mins', label: 'Under 30 mins' },
@@ -88,7 +92,7 @@ export default function SearchResults() {
           setCategoryKeywords(keywordsMap)
         }
       } catch (error) {
-        console.error('Error fetching categories:', error)
+        debugError('Error fetching categories:', error)
         // Keep default "All" category on error
       } finally {
         setLoadingCategories(false)
@@ -173,7 +177,7 @@ export default function SearchResults() {
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true)
-        console.log('🔄 Fetching restaurants from API...')
+        debugLog('🔄 Fetching restaurants from API...')
         // Optional: Add zoneId if available (for sorting/filtering, but show all restaurants)
         const params = {}
         if (zoneId) {
@@ -181,16 +185,16 @@ export default function SearchResults() {
         }
         const response = await restaurantAPI.getRestaurants(params)
 
-        console.log('📦 Full API Response:', response)
-        console.log('📦 Response Data:', response?.data)
+        debugLog('📦 Full API Response:', response)
+        debugLog('📦 Response Data:', response?.data)
 
         if (response.data && response.data.success && response.data.data && response.data.data.restaurants) {
           const restaurantsArray = response.data.data.restaurants
-          console.log(`✅ Got ${restaurantsArray.length} restaurants from API`)
+          debugLog(`✅ Got ${restaurantsArray.length} restaurants from API`)
 
           // Check if we have actual data or just defaults
           if (restaurantsArray.length > 0) {
-            console.log('📋 First restaurant sample:', {
+            debugLog('📋 First restaurant sample:', {
               id: restaurantsArray[0]._id || restaurantsArray[0].restaurantId,
               name: restaurantsArray[0].name,
               rating: restaurantsArray[0].rating,
@@ -361,7 +365,7 @@ export default function SearchResults() {
               }
             } catch (error) {
               // If menu fetch fails, keep restaurant without menu data
-              console.warn(`Failed to fetch menu for restaurant ${restaurant.restaurantId}:`, error)
+              debugWarn(`Failed to fetch menu for restaurant ${restaurant.restaurantId}:`, error)
               return {
                 ...restaurant,
                 menu: null,
@@ -374,7 +378,7 @@ export default function SearchResults() {
           // Wait for all menu fetches to complete
           const transformedRestaurants = await Promise.all(menuPromises)
 
-          console.log(`✅ Final transformed restaurants: ${transformedRestaurants.length}`)
+          debugLog(`✅ Final transformed restaurants: ${transformedRestaurants.length}`)
           setRestaurantsData(transformedRestaurants)
 
           // Prefer real categories derived from menu sections that are common across restaurants.
@@ -450,7 +454,7 @@ export default function SearchResults() {
             setCategoryKeywords(dynamicKeywords)
           }
         } else {
-          console.warn('⚠️ No restaurants in API response. Response structure:', {
+          debugWarn('⚠️ No restaurants in API response. Response structure:', {
             hasData: !!response.data,
             hasSuccess: response.data?.success,
             hasDataField: !!response.data?.data,
@@ -460,8 +464,8 @@ export default function SearchResults() {
           setRestaurantsData([])
         }
       } catch (error) {
-        console.error('❌ Error fetching restaurants:', error)
-        console.error('❌ Error response:', error.response?.data)
+        debugError('❌ Error fetching restaurants:', error)
+        debugError('❌ Error response:', error.response?.data)
         setRestaurantsData([])
       } finally {
         setLoadingRestaurants(false)
@@ -1095,3 +1099,4 @@ export default function SearchResults() {
     </div>
   )
 }
+

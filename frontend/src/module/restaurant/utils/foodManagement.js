@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Food Management Utility Functions
  * Centralized management for restaurant foods across the restaurant module
@@ -10,7 +14,7 @@ const DEFAULT_FOODS = [
   {
     id: 1,
     name: "Medu Vada",
-    nameArabic: "ميدو فادا",
+    nameArabic: "Ù…ÙŠØ¯Ùˆ ÙØ§Ø¯Ø§",
     image: "https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=200&h=200&fit=crop",
     category: "Varieties",
     rating: 0.0,
@@ -155,7 +159,7 @@ export const getAllFoods = () => {
     setAllFoods(DEFAULT_FOODS)
     return DEFAULT_FOODS
   } catch (error) {
-    console.error('Error reading foods from localStorage:', error)
+    debugError('Error reading foods from localStorage:', error)
     return DEFAULT_FOODS
   }
 }
@@ -168,7 +172,7 @@ const setAllFoods = (foods) => {
   try {
     localStorage.setItem(FOODS_STORAGE_KEY, JSON.stringify(foods))
   } catch (error) {
-    console.error('Error saving foods to localStorage:', error)
+    debugError('Error saving foods to localStorage:', error)
   }
 }
 
@@ -185,7 +189,7 @@ export const getFoodById = (id) => {
     const food = foods.find(f => f.id === parseInt(id) || f.id === id)
     return food || null
   } catch (error) {
-    console.error('Error getting food by ID:', error)
+    debugError('Error getting food by ID:', error)
     return null
   }
 }
@@ -209,7 +213,7 @@ const getNextFoodId = () => {
     localStorage.setItem(FOOD_ID_COUNTER_KEY, nextId.toString())
     return nextId
   } catch (error) {
-    console.error('Error getting next food ID:', error)
+    debugError('Error getting next food ID:', error)
     // Fallback: use timestamp
     return Date.now()
   }
@@ -276,7 +280,7 @@ export const saveFood = (foodData) => {
     
     return savedFood
   } catch (error) {
-    console.error('Error saving food:', error)
+    debugError('Error saving food:', error)
     return null
   }
 }
@@ -306,7 +310,7 @@ export const deleteFood = (id) => {
     
     return false
   } catch (error) {
-    console.error('Error deleting food:', error)
+    debugError('Error deleting food:', error)
     return false
   }
 }
@@ -327,8 +331,9 @@ export const updateFoodStock = (id, stock) => {
     }
     return false
   } catch (error) {
-    console.error('Error updating food stock:', error)
+    debugError('Error updating food stock:', error)
     return false
   }
 }
+
 

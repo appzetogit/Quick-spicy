@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { ArrowLeft, AlertTriangle, Phone, Shield, Loader2 } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import { useState } from "react"
 import { toast } from "sonner"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function ReportSafetyEmergency() {
   const [report, setReport] = useState("")
@@ -35,7 +39,7 @@ export default function ReportSafetyEmergency() {
         }, 5000)
       }
     } catch (error) {
-      console.error('Error submitting safety emergency report:', error)
+      debugError('Error submitting safety emergency report:', error)
       toast.error(error.response?.data?.message || 'Failed to submit safety emergency report. Please try again.')
     } finally {
       setIsSubmitting(false)
@@ -164,4 +168,5 @@ export default function ReportSafetyEmergency() {
     </AnimatedPage>
   )
 }
+
 

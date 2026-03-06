@@ -1,6 +1,10 @@
-import { useEffect, useRef, useState } from "react"
+﻿import { useEffect, useRef, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { X, ChevronDown } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 /**
  * BottomPopup Component
@@ -58,7 +62,7 @@ export default function BottomPopup({
     }
     setIsCollapsed(prev => {
       const newState = !prev
-      console.log('🔄 Collapse toggle:', prev, '->', newState)
+      debugLog('ðŸ”„ Collapse toggle:', prev, '->', newState)
       return newState
     })
   }
@@ -302,7 +306,7 @@ export default function BottomPopup({
                 type="button"
                 className="flex flex-col items-center pt-3 pb-2 cursor-pointer select-none bg-white sticky top-0 z-10 w-full border-0 outline-none p-0"
                 onClick={(e) => {
-                  console.log('🖱️ Handle clicked, current collapsed:', isCollapsed)
+                  debugLog('ðŸ–±ï¸ Handle clicked, current collapsed:', isCollapsed)
                   e.stopPropagation()
                   e.preventDefault()
                   handleCollapseToggle(e)
@@ -313,7 +317,7 @@ export default function BottomPopup({
                 }}
                 onTouchEnd={(e) => {
                   // Handle touch end for mobile collapse toggle
-                  console.log('👆 Handle touched, current collapsed:', isCollapsed)
+                  debugLog('ðŸ‘† Handle touched, current collapsed:', isCollapsed)
                   e.stopPropagation()
                   e.preventDefault()
                   handleCollapseToggle(e)
@@ -375,3 +379,4 @@ export default function BottomPopup({
     </AnimatePresence>
   )
 }
+

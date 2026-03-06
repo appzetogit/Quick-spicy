@@ -1,3 +1,7 @@
+﻿const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 /**
  * Delivery Notifications Utility Functions
  * Centralized management for delivery notifications
@@ -18,7 +22,7 @@ export const getDeliveryNotifications = () => {
     // Return default notifications if none exist
     return []
   } catch (error) {
-    console.error('Error reading delivery notifications from localStorage:', error)
+    debugError('Error reading delivery notifications from localStorage:', error)
     return []
   }
 }
@@ -33,7 +37,7 @@ export const saveDeliveryNotifications = (notifications) => {
     // Dispatch custom event for other components
     window.dispatchEvent(new CustomEvent('deliveryNotificationsUpdated'))
   } catch (error) {
-    console.error('Error saving delivery notifications to localStorage:', error)
+    debugError('Error saving delivery notifications to localStorage:', error)
   }
 }
 
@@ -46,7 +50,7 @@ export const getUnreadDeliveryNotificationCount = () => {
     const notifications = getDeliveryNotifications()
     return notifications.filter(n => !n.read).length
   } catch (error) {
-    console.error('Error getting unread notification count:', error)
+    debugError('Error getting unread notification count:', error)
     return 0
   }
 }
@@ -79,4 +83,5 @@ export const markDeliveryNotificationAsRead = (notificationId) => {
     saveDeliveryNotifications(notifications)
   }
 }
+
 

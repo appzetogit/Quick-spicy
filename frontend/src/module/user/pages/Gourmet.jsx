@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Star, Clock, Bookmark, BadgePercent, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,10 @@ import { toast } from "sonner"
 
 // Import banner
 import gourmetBanner from "@/assets/groumetpagebanner.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Gourmet() {
   const navigate = useNavigate()
@@ -31,7 +35,7 @@ export default function Gourmet() {
           setGourmetRestaurants([])
         }
       } catch (err) {
-        console.error('Error fetching Gourmet restaurants:', err)
+        debugError('Error fetching Gourmet restaurants:', err)
         const errorMessage = err?.response?.data?.message || err?.message || 'Failed to load Gourmet restaurants'
         setError(errorMessage)
         toast.error(errorMessage)
@@ -209,4 +213,5 @@ export default function Gourmet() {
     </div>
   )
 }
+
 

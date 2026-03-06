@@ -1,9 +1,13 @@
-import { useState, useEffect, useMemo } from "react"
+﻿import { useState, useEffect, useMemo } from "react"
 import { Search, Plus, Edit, Trash2, ToggleLeft, ToggleRight, Settings, ArrowUpDown, Check, Columns, Package } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function EarningAddon() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -44,13 +48,13 @@ export default function EarningAddon() {
       const response = await adminAPI.getEarningAddons()
       if (response.data.success) {
         const addons = response.data.data.earningAddons || []
-        console.log('📦 Fetched earning addons:', addons)
+        debugLog('ðŸ“¦ Fetched earning addons:', addons)
         // Log redemption counts for debugging
         addons.forEach(addon => {
-          console.log(`📊 Addon "${addon.title}":`, {
+          debugLog(`ðŸ“Š Addon "${addon.title}":`, {
             currentRedemptions: addon.currentRedemptions,
             maxRedemptions: addon.maxRedemptions,
-            display: `${addon.currentRedemptions || 0} / ${addon.maxRedemptions || '∞'}`
+            display: `${addon.currentRedemptions || 0} / ${addon.maxRedemptions || 'âˆž'}`
           })
         })
         setEarningAddons(addons)
@@ -58,8 +62,8 @@ export default function EarningAddon() {
         toast.error(response.data.message || "Failed to fetch earning addons")
       }
     } catch (error) {
-      console.error("Error fetching earning addons:", error)
-      console.error("Error details:", {
+      debugError("Error fetching earning addons:", error)
+      debugError("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -167,23 +171,23 @@ export default function EarningAddon() {
         maxRedemptions: formData.maxRedemptions && formData.maxRedemptions.trim() ? parseInt(formData.maxRedemptions) : null,
       }
 
-      console.log('Submitting earning addon:', { isEditMode, payload })
+      debugLog('Submitting earning addon:', { isEditMode, payload })
 
       if (isEditMode && selectedAddon) {
         const response = await adminAPI.updateEarningAddon(selectedAddon._id, payload)
-        console.log('Update response:', response.data)
+        debugLog('Update response:', response.data)
         toast.success("Earning addon updated successfully")
       } else {
         const response = await adminAPI.createEarningAddon(payload)
-        console.log('Create response:', response.data)
+        debugLog('Create response:', response.data)
         toast.success("Earning addon created successfully")
       }
 
       handleCloseDialog()
       fetchEarningAddons()
     } catch (error) {
-      console.error("Error saving earning addon:", error)
-      console.error("Error details:", {
+      debugError("Error saving earning addon:", error)
+      debugError("Error details:", {
         message: error.message,
         response: error.response?.data,
         status: error.response?.status,
@@ -221,7 +225,7 @@ export default function EarningAddon() {
       toast.success("Earning addon deleted successfully")
       fetchEarningAddons()
     } catch (error) {
-      console.error("Error deleting earning addon:", error)
+      debugError("Error deleting earning addon:", error)
       toast.error(error.response?.data?.message || "Failed to delete earning addon")
     }
   }
@@ -233,7 +237,7 @@ export default function EarningAddon() {
       toast.success(`Earning addon ${newStatus === 'active' ? 'activated' : 'deactivated'}`)
       fetchEarningAddons()
     } catch (error) {
-      console.error("Error toggling status:", error)
+      debugError("Error toggling status:", error)
       toast.error(error.response?.data?.message || "Failed to update status")
     }
   }
@@ -276,7 +280,7 @@ export default function EarningAddon() {
     const config = statusConfig[status] || statusConfig.inactive
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}>
-        {config.label} {isValid && status === 'active' && "✓"}
+        {config.label} {isValid && status === 'active' && "âœ“"}
       </span>
     )
   }
@@ -418,7 +422,7 @@ export default function EarningAddon() {
                         {visibleColumns.earningAmount && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-1">
-                              <span className="text-sm font-semibold text-emerald-500">₹</span>
+                              <span className="text-sm font-semibold text-emerald-500">â‚¹</span>
                               <span className="text-sm font-medium text-slate-900">{addon.earningAmount?.toFixed(2)}</span>
                             </div>
                           </td>
@@ -445,7 +449,7 @@ export default function EarningAddon() {
                         {visibleColumns.redemptions && (
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className="text-sm text-slate-700">
-                              {addon.currentRedemptions || 0} / {addon.maxRedemptions || '∞'}
+                              {addon.currentRedemptions || 0} / {addon.maxRedemptions || 'âˆž'}
                             </span>
                           </td>
                         )}
@@ -513,7 +517,7 @@ export default function EarningAddon() {
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm"
-                placeholder="e.g., Complete 50 orders and earn ₹500"
+                placeholder="e.g., Complete 50 orders and earn â‚¹500"
               />
             </div>
 
@@ -538,10 +542,10 @@ export default function EarningAddon() {
               </div>
               <div className="space-y-1.5">
                 <label className="block text-sm font-semibold text-slate-700">
-                  Earning Amount (₹) <span className="text-red-500">*</span>
+                  Earning Amount (â‚¹) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-emerald-500">₹</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-emerald-500">â‚¹</span>
                   <input
                     type="number"
                     required
@@ -677,3 +681,4 @@ export default function EarningAddon() {
     </div>
   )
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+﻿import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -26,6 +26,10 @@ import {
 import { Activity, ArrowUpRight, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, Plus } from "lucide-react"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { adminAPI } from "@/lib/api"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function AdminHome() {
   const navigate = useNavigate()
@@ -42,17 +46,17 @@ export default function AdminHome() {
         const response = await adminAPI.getDashboardStats()
         if (response.data?.success && response.data?.data) {
           setDashboardData(response.data.data)
-          console.log('✅ Dashboard stats fetched:', response.data.data)
-          console.log('💰 Commission:', response.data.data.commission)
-          console.log('💳 Platform Fee:', response.data.data.platformFee)
-          console.log('🚚 Delivery Fee:', response.data.data.deliveryFee)
-          console.log('🧾 GST:', response.data.data.gst)
-          console.log('💵 Total Admin Earnings:', response.data.data.totalAdminEarnings)
+          debugLog('âœ… Dashboard stats fetched:', response.data.data)
+          debugLog('ðŸ’° Commission:', response.data.data.commission)
+          debugLog('ðŸ’³ Platform Fee:', response.data.data.platformFee)
+          debugLog('ðŸšš Delivery Fee:', response.data.data.deliveryFee)
+          debugLog('ðŸ§¾ GST:', response.data.data.gst)
+          debugLog('ðŸ’µ Total Admin Earnings:', response.data.data.totalAdminEarnings)
         } else {
-          console.error('❌ Invalid response format:', response.data)
+          debugError('âŒ Invalid response format:', response.data)
         }
       } catch (error) {
-        console.error('❌ Error fetching dashboard stats:', error)
+        debugError('âŒ Error fetching dashboard stats:', error)
       } finally {
         setIsLoading(false)
       }
@@ -191,7 +195,7 @@ export default function AdminHome() {
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <MetricCard
               title="Gross revenue"
-              value={`₹${revenueTotal.toLocaleString("en-IN")}`}
+              value={`â‚¹${revenueTotal.toLocaleString("en-IN")}`}
               helper="Rolling 12 months"
               icon={<ShoppingBag className="h-5 w-5 text-emerald-600" />}
               accent="bg-emerald-200/40"
@@ -199,7 +203,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Commission earned"
-              value={`₹${commissionTotal.toLocaleString("en-IN")}`}
+              value={`â‚¹${commissionTotal.toLocaleString("en-IN")}`}
               helper="Restaurant commission"
               icon={<ArrowUpRight className="h-5 w-5 text-indigo-600" />}
               accent="bg-indigo-200/40"
@@ -215,7 +219,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Platform fee"
-              value={`₹${platformFeeTotal.toLocaleString("en-IN")}`}
+              value={`â‚¹${platformFeeTotal.toLocaleString("en-IN")}`}
               helper="Total platform fees"
               icon={<CreditCard className="h-5 w-5 text-purple-600" />}
               accent="bg-purple-200/40"
@@ -223,7 +227,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Delivery fee"
-              value={`₹${deliveryFeeTotal.toLocaleString("en-IN")}`}
+              value={`â‚¹${deliveryFeeTotal.toLocaleString("en-IN")}`}
               helper="Total delivery fees"
               icon={<Truck className="h-5 w-5 text-blue-600" />}
               accent="bg-blue-200/40"
@@ -231,7 +235,7 @@ export default function AdminHome() {
             />
             <MetricCard
               title="GST"
-              value={`₹${gstTotal.toLocaleString("en-IN")}`}
+              value={`â‚¹${gstTotal.toLocaleString("en-IN")}`}
               helper="Total GST collected"
               icon={<Receipt className="h-5 w-5 text-orange-600" />}
               accent="bg-orange-200/40"
@@ -239,8 +243,8 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Total revenue"
-              value={`₹${totalAdminEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-              helper={`Commission ₹${commissionTotal.toFixed(2)} + Platform ₹${platformFeeTotal.toFixed(2)} + Delivery ₹${deliveryFeeTotal.toFixed(2)} + GST ₹${gstTotal.toFixed(2)}`}
+              value={`â‚¹${totalAdminEarnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              helper={`Commission â‚¹${commissionTotal.toFixed(2)} + Platform â‚¹${platformFeeTotal.toFixed(2)} + Delivery â‚¹${deliveryFeeTotal.toFixed(2)} + GST â‚¹${gstTotal.toFixed(2)}`}
               icon={<DollarSign className="h-5 w-5 text-green-600" />}
               accent="bg-green-200/40"
               path="/admin/transaction-report"
@@ -558,3 +562,4 @@ function MetricCard({ title, value, helper, icon, accent, path }) {
     </Card>
   )
 }
+

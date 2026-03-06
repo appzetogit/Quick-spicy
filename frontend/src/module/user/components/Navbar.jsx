@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom"
+﻿import { Link } from "react-router-dom"
 import { useState, useEffect } from "react"
 import { MapPin, ShoppingCart, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,10 @@ import { useLocation } from "../hooks/useLocation"
 import { useCart } from "../context/CartContext"
 import { useLocationSelector } from "./UserLayout"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function Navbar() {
   const { location, loading } = useLocation()
@@ -46,7 +50,7 @@ export default function Navbar() {
           }
         }
       } catch (error) {
-        console.error('Error loading logo:', error)
+        debugError('Error loading logo:', error)
       }
     }
     loadLogo()
@@ -201,3 +205,4 @@ export default function Navbar() {
     </nav>
   )
 }
+

@@ -1,10 +1,14 @@
-import { useState, useEffect } from "react"
+﻿import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useLocation, useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronDown, ChevronRight, Filter, Info, X } from "lucide-react"
 import BottomNavOrders from "../components/BottomNavOrders"
 import { restaurantAPI } from "@/lib/api"
 import growCustomerBaseIcon from "@/assets/hub/icons/growyourcustomerbase.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 export default function CreateOffers() {
   const navigate = useNavigate()
@@ -34,7 +38,7 @@ export default function CreateOffers() {
       } catch (error) {
         // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
-          console.error("Error fetching restaurant data:", error)
+          debugError("Error fetching restaurant data:", error)
         }
         // Continue with default values if fetch fails
       } finally {
@@ -250,9 +254,9 @@ export default function CreateOffers() {
               {/* Metrics */}
               <div className="space-y-0 divide-y divide-gray-100">
                 {[
-                  { label: "Gross sales from offers", value: "₹0", change: "0%" },
+                  { label: "Gross sales from offers", value: "â‚¹0", change: "0%" },
                   { label: "Orders from offers", value: "0", change: "0%" },
-                  { label: "Discount given", value: "₹0", change: "0%" },
+                  { label: "Discount given", value: "â‚¹0", change: "0%" },
                   { label: "Effective discount", value: "0.0%", change: "0%" },
                   { label: "Menu to order", value: "0.0%", change: "0%" },
                 ].map((metric, index) => (
@@ -541,3 +545,4 @@ export default function CreateOffers() {
     </div>
   )
 }
+

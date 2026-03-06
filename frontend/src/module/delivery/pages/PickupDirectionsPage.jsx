@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+﻿import { useEffect, useRef, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet'
@@ -14,6 +14,10 @@ import {
   ArrowRight,
   CheckCircle2
 } from "lucide-react"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 
 // Fix Leaflet default icon issue
 delete (L.Icon.Default.prototype)._getIconUrl
@@ -123,7 +127,7 @@ export default function PickupDirectionsPage() {
               currentLocation = [restaurant.lat, restaurant.lng]
             }
           } catch (error) {
-            console.error('Error fetching route:', error)
+            debugError('Error fetching route:', error)
             routes.push([currentLocation, [restaurant.lat, restaurant.lng]])
             currentLocation = [restaurant.lat, restaurant.lng]
           }
@@ -433,7 +437,7 @@ export default function PickupDirectionsPage() {
             +
           </button>
           <button className="w-10 h-10 bg-white rounded-lg shadow-lg flex items-center justify-center text-gray-700 text-xl font-semibold">
-            −
+            âˆ’
           </button>
         </div>
 
@@ -746,4 +750,5 @@ export default function PickupDirectionsPage() {
     </motion.div>
   )
 }
+
 

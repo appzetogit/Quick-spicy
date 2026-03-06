@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from "react"
+﻿import { useState, useCallback, useEffect, useMemo, useRef } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { MapPin, Search, Mic, SlidersHorizontal, Star, X, ArrowDownUp, Timer, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, Clock, Bookmark, Check } from "lucide-react"
@@ -14,6 +14,10 @@ import api from "@/lib/api"
 import PageNavbar from "../components/PageNavbar"
 import OptimizedImage from "@/components/OptimizedImage"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
+const debugLog = (...args) => {}
+const debugWarn = (...args) => {}
+const debugError = (...args) => {}
+
 // Using placeholders for dining card images
 const diningCard1 = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop"
 const diningCard2 = "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=300&fit=crop"
@@ -92,7 +96,7 @@ export default function Dining() {
           setDiningHeroBanner(diningBanner)
         }
       } catch (error) {
-        console.error("Failed to fetch dining hero banner", error)
+        debugError("Failed to fetch dining hero banner", error)
         setDiningHeroBanner(diningBanner)
       }
     }
@@ -118,7 +122,7 @@ export default function Dining() {
         if (rests.data.success && rests.data.data.length > 0) setRestaurantList(rests.data.data)
         if (offers.data.success && offers.data.data.length > 0) setBankOfferItems(offers.data.data)
       } catch (error) {
-        console.error("Failed to fetch dining data", error)
+        debugError("Failed to fetch dining data", error)
       } finally {
         setLoading(false)
       }
@@ -724,7 +728,7 @@ export default function Dining() {
                             transition={{ duration: 0.3 }}
                           >
                             <div className="bg-gray-800/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium shadow-lg">
-                              {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
+                              {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
                             </div>
                           </motion.div>
 
@@ -935,7 +939,7 @@ export default function Dining() {
                           {/* Featured Dish Badge - Top Left */}
                           <div className="absolute top-3 left-3">
                             <div className="bg-gray-800/80 backdrop-blur-sm text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium">
-                              {restaurant.featuredDish} · ₹{restaurant.featuredPrice}
+                              {restaurant.featuredDish} Â· â‚¹{restaurant.featuredPrice}
                             </div>
                           </div>
 
@@ -1201,7 +1205,7 @@ export default function Dining() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹200</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹200</span>
                       </button>
                       <button
                         onClick={() => toggleFilter('price-under-500')}
@@ -1210,7 +1214,7 @@ export default function Dining() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-green-500'
                           }`}
                       >
-                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under ₹500</span>
+                        <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300'}`}>Under â‚¹500</span>
                       </button>
                     </div>
                   </div>
@@ -1267,4 +1271,5 @@ export default function Dining() {
     </AnimatedPage>
   )
 }
+
 
