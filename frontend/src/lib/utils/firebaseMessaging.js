@@ -12,6 +12,7 @@ const DEFAULT_FIREBASE_CONFIG = {
 };
 
 const tokenCachePrefix = "fcm_web_registered_token_";
+const pushSoundEnabledStorageKey = "push_sound_enabled";
 let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
@@ -87,6 +88,21 @@ function ensurePushSoundAudio() {
   return pushSoundAudio;
 }
 
+function createPushPlaybackAudio() {
+  const baseAudio = ensurePushSoundAudio();
+  if (!baseAudio) return null;
+
+  const playbackAudio = new Audio(pushNotificationSound);
+  playbackAudio.preload = "auto";
+  playbackAudio.volume = 1;
+  return playbackAudio;
+}
+
+export function isPushSoundEnabled() {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(pushSoundEnabledStorageKey) === "true";
+}
+
 async function triggerWebViewNativeNotification(payload = {}) {
   if (typeof window === "undefined") return false;
 
@@ -135,7 +151,7 @@ async function playPushSound(payload = {}) {
 
     if (usedNativeBridge) return;
 
-    const audio = ensurePushSoundAudio();
+    const audio = createPushPlaybackAudio();
     if (!audio || !pushSoundUnlocked) return;
     audio.currentTime = 0;
     await audio.play();
@@ -157,6 +173,8 @@ function setupPushSoundUnlock() {
       audio.currentTime = 0;
       audio.muted = false;
       pushSoundUnlocked = true;
+      localStorage.setItem(pushSoundEnabledStorageKey, "true");
+      window.dispatchEvent(new CustomEvent("push-sound-enabled"));
     } catch {
       // Will retry on next gesture.
     }
@@ -171,6 +189,33 @@ function setupPushSoundUnlock() {
   window.addEventListener("pointerdown", unlock, { passive: true });
   window.addEventListener("keydown", unlock, { passive: true });
   window.addEventListener("touchstart", unlock, { passive: true });
+}
+
+export async function enablePushNotificationSound() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    const audio = ensurePushSoundAudio();
+    if (!audio) return false;
+    audio.muted = true;
+    await audio.play();
+    audio.pause();
+    audio.currentTime = 0;
+    audio.muted = false;
+    pushSoundUnlocked = true;
+    localStorage.setItem(pushSoundEnabledStorageKey, "true");
+    window.dispatchEvent(new CustomEvent("push-sound-enabled"));
+
+    const previewAudio = createPushPlaybackAudio();
+    if (previewAudio) {
+      previewAudio.currentTime = 0;
+      await previewAudio.play();
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function getFirebasePublicEnv() {
@@ -339,6 +384,10 @@ export async function registerWebPushForCurrentModule(pathname = window.location
   if (!accessToken) return;
 
   if (!isSupportedBrowser() || !isSecureContextForPush()) return;
+
+  if (isPushSoundEnabled()) {
+    pushSoundUnlocked = true;
+  }
 
   if (registrationInFlight) return registrationInFlight;
 

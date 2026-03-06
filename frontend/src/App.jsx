@@ -3,6 +3,7 @@ import { useEffect, Suspense, lazy } from "react"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AuthRedirect from "@/components/AuthRedirect"
 import Loader from "@/components/Loader"
+import PushSoundEnableButton from "@/components/PushSoundEnableButton"
 import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 
 // Lazy Loading Components
@@ -146,6 +147,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <PushSoundEnableButton />
       <Suspense fallback={<Loader />}>
         <Routes>
           <Route path="/user" element={<Navigate to="/" replace />} />
