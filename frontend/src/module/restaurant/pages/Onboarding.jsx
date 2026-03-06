@@ -382,6 +382,18 @@ export default function RestaurantOnboarding() {
     offer: "",
   })
   const previewUrlCacheRef = useRef(new Map())
+  const menuImagesInputRef = useRef(null)
+  const profileImageInputRef = useRef(null)
+  const panImageInputRef = useRef(null)
+  const gstImageInputRef = useRef(null)
+  const fssaiImageInputRef = useRef(null)
+  const [sourcePicker, setSourcePicker] = useState({
+    isOpen: false,
+    title: "",
+    onSelectFile: null,
+    fileNamePrefix: "camera-image",
+    fallbackInputRef: null,
+  })
 
   const getPreviewImageUrl = (value) => {
     if (!value) return null
@@ -402,6 +414,128 @@ export default function RestaurantOnboarding() {
     }
 
     return null
+  }
+
+  const getExtensionFromMimeType = (mimeType) => {
+    const normalized = String(mimeType || "").toLowerCase()
+    if (normalized.includes("png")) return "png"
+    if (normalized.includes("webp")) return "webp"
+    if (normalized.includes("heic")) return "heic"
+    if (normalized.includes("heif")) return "heif"
+    return "jpg"
+  }
+
+  const convertBase64ToFile = (base64Value, mimeType = "image/jpeg", fileNamePrefix = "camera") => {
+    if (!base64Value || typeof base64Value !== "string") {
+      throw new Error("Invalid base64 image data")
+    }
+
+    let pureBase64 = base64Value
+    if (base64Value.includes(",")) {
+      pureBase64 = base64Value.split(",")[1]
+    }
+
+    const byteCharacters = atob(pureBase64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i += 1) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+
+    const byteArray = new Uint8Array(byteNumbers)
+    const normalizedMimeType = mimeType || "image/jpeg"
+    const extension = getExtensionFromMimeType(normalizedMimeType)
+    const fileName = `${fileNamePrefix}-${Date.now()}.${extension}`
+    const blob = new Blob([byteArray], { type: normalizedMimeType })
+    return new File([blob], fileName, { type: normalizedMimeType })
+  }
+
+  const openBrowserCameraFallback = ({ onSelectFile }) => {
+    try {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/*"
+      input.capture = "environment"
+      input.onchange = (event) => {
+        const file = event?.target?.files?.[0] || null
+        if (file) onSelectFile(file)
+      }
+      input.click()
+    } catch (error) {
+      console.error("Browser camera fallback failed:", error)
+    }
+  }
+
+  const openImageSourcePicker = ({ title, onSelectFile, fileNamePrefix, fallbackInputRef }) => {
+    setSourcePicker({
+      isOpen: true,
+      title: title || "Select image source",
+      onSelectFile,
+      fileNamePrefix: fileNamePrefix || "camera-image",
+      fallbackInputRef: fallbackInputRef || null,
+    })
+  }
+
+  const closeImageSourcePicker = () => {
+    setSourcePicker((prev) => ({ ...prev, isOpen: false }))
+  }
+
+  const handlePickFromDevice = () => {
+    const fallbackRef = sourcePicker.fallbackInputRef
+    closeImageSourcePicker()
+    fallbackRef?.current?.click()
+  }
+
+  const handlePickFromCamera = async () => {
+    const pickerConfig = {
+      onSelectFile: sourcePicker.onSelectFile,
+      fileNamePrefix: sourcePicker.fileNamePrefix,
+    }
+    closeImageSourcePicker()
+    await openCameraFromFlutter(pickerConfig)
+  }
+
+  const openCameraFromFlutter = async ({ onSelectFile, fileNamePrefix }) => {
+    try {
+      const hasBridge =
+        typeof window !== "undefined" &&
+        window.flutter_inappwebview &&
+        typeof window.flutter_inappwebview.callHandler === "function"
+
+      if (!hasBridge) {
+        openBrowserCameraFallback({ onSelectFile })
+        return
+      }
+
+      const result = await window.flutter_inappwebview.callHandler("openCamera", {
+        source: "camera",
+        accept: "image/*",
+        multiple: false,
+        quality: 0.8,
+      })
+
+      if (!result || !result.success) return
+
+      let selectedFile = null
+      if (isUploadableFile(result.file)) {
+        selectedFile = result.file
+      } else if (result.base64) {
+        selectedFile = convertBase64ToFile(
+          result.base64,
+          result.mimeType || "image/jpeg",
+          fileNamePrefix || "camera-image"
+        )
+      }
+
+      if (!selectedFile || !String(selectedFile.type || "").startsWith("image/")) {
+        toast.error("Failed to capture image from camera")
+        return
+      }
+
+      onSelectFile(selectedFile)
+    } catch (error) {
+      console.error("openCamera bridge failed:", error)
+      openBrowserCameraFallback({ onSelectFile })
+    }
   }
 
 
@@ -1413,19 +1547,33 @@ export default function RestaurantOnboarding() {
                 </span>
               </div>
             </div>
-            <label
-              htmlFor="menuImagesInput"
-              className="inline-flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white text-black  border-black text-xs font-medium cursor-pointer     w-full items-center"
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full text-xs"
+              onClick={() =>
+                openImageSourcePicker({
+                  title: "Menu images",
+                  fileNamePrefix: "restaurant-menu",
+                  fallbackInputRef: menuImagesInputRef,
+                  onSelectFile: (file) =>
+                    setStep2((prev) => ({
+                      ...prev,
+                      menuImages: [...(prev.menuImages || []), file],
+                    })),
+                })
+              }
             >
-              <Upload className="w-4.5 h-4.5" />
-              <span>Upload</span>
-            </label>
+              <Upload className="w-4 h-4 mr-1.5" />
+              Upload
+            </Button>
             <input
               id="menuImagesInput"
               type="file"
               multiple
               accept={LOCAL_IMAGE_FILE_ACCEPT}
               className="hidden"
+              ref={menuImagesInputRef}
               onChange={(e) => {
                 const files = Array.from(e.target.files || [])
                 if (!files.length) return
@@ -1556,18 +1704,32 @@ export default function RestaurantOnboarding() {
             </div>
 
           </div>
-          <label
-            htmlFor="profileImageInput"
-            className="inline-flex justify-center items-center gap-1.5 px-3 py-1.5 rounded-sm bg-white text-black  border-black text-xs font-medium cursor-pointer     w-full items-center"
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full text-xs"
+            onClick={() =>
+              openImageSourcePicker({
+                title: "Restaurant profile image",
+                fileNamePrefix: "restaurant-profile",
+                onSelectFile: (file) =>
+                  setStep2((prev) => ({
+                    ...prev,
+                    profileImage: file,
+                  })),
+                fallbackInputRef: profileImageInputRef,
+              })
+            }
           >
-            <Upload className="w-4.5 h-4.5" />
-            <span>Upload</span>
-          </label>
+            <Upload className="w-4 h-4 mr-1.5" />
+            Upload
+          </Button>
           <input
             id="profileImageInput"
             type="file"
             accept={LOCAL_IMAGE_FILE_ACCEPT}
             className="hidden"
+            ref={profileImageInputRef}
             onChange={(e) => {
               const file = e.target.files?.[0] || null
               if (file) {
@@ -1694,13 +1856,34 @@ export default function RestaurantOnboarding() {
         </div>
         <div>
           <Label className="text-xs text-gray-700">PAN image</Label>
-          <Input
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-2 w-full text-xs"
+            onClick={() =>
+              openImageSourcePicker({
+                title: "PAN document image",
+                fileNamePrefix: "pan-document",
+                onSelectFile: (file) =>
+                  setStep3((prev) => ({
+                    ...prev,
+                    panImage: file,
+                  })),
+                fallbackInputRef: panImageInputRef,
+              })
+            }
+          >
+            <Upload className="w-4 h-4 mr-1.5" />
+            Upload
+          </Button>
+          <input
             type="file"
             accept={GALLERY_IMAGE_ACCEPT}
+            className="hidden"
+            ref={panImageInputRef}
             onChange={(e) =>
-              setStep3({ ...step3, panImage: e.target.files?.[0] || null })
+              setStep3((prev) => ({ ...prev, panImage: e.target.files?.[0] || null }))
             }
-            className="mt-1 bg-white text-sm text-black placeholder-black"
           />
         </div>
       </section>
@@ -1756,13 +1939,34 @@ export default function RestaurantOnboarding() {
               className="bg-white text-sm"
               placeholder="Registered address"
             />
-            <Input
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full text-xs"
+              onClick={() =>
+                openImageSourcePicker({
+                  title: "GST document image",
+                  fileNamePrefix: "gst-document",
+                  onSelectFile: (file) =>
+                    setStep3((prev) => ({
+                      ...prev,
+                      gstImage: file,
+                    })),
+                  fallbackInputRef: gstImageInputRef,
+                })
+              }
+            >
+              <Upload className="w-4 h-4 mr-1.5" />
+              Upload
+            </Button>
+            <input
               type="file"
               accept={GALLERY_IMAGE_ACCEPT}
+              className="hidden"
+              ref={gstImageInputRef}
               onChange={(e) =>
-                setStep3({ ...step3, gstImage: e.target.files?.[0] || null })
+                setStep3((prev) => ({ ...prev, gstImage: e.target.files?.[0] || null }))
               }
-              className="bg-white text-sm"
             />
           </div>
         )}
@@ -1823,13 +2027,34 @@ export default function RestaurantOnboarding() {
             </Popover>
           </div>
         </div>
-        <Input
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full text-xs"
+          onClick={() =>
+            openImageSourcePicker({
+              title: "FSSAI document image",
+              fileNamePrefix: "fssai-document",
+              onSelectFile: (file) =>
+                setStep3((prev) => ({
+                  ...prev,
+                  fssaiImage: file,
+                })),
+              fallbackInputRef: fssaiImageInputRef,
+            })
+          }
+        >
+          <Upload className="w-4 h-4 mr-1.5" />
+          Upload
+        </Button>
+        <input
           type="file"
           accept={GALLERY_IMAGE_ACCEPT}
+          className="hidden"
+          ref={fssaiImageInputRef}
           onChange={(e) =>
-            setStep3({ ...step3, fssaiImage: e.target.files?.[0] || null })
+            setStep3((prev) => ({ ...prev, fssaiImage: e.target.files?.[0] || null }))
           }
-          className="bg-white text-sm"
         />
       </section>
 
@@ -2017,6 +2242,23 @@ export default function RestaurantOnboarding() {
             renderStep()
           )}
         </main>
+
+        {sourcePicker.isOpen && (
+          <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
+            <div className="w-full max-w-sm bg-white rounded-lg p-4 space-y-3">
+              <h3 className="text-sm font-semibold text-black">{sourcePicker.title || "Select image source"}</h3>
+              <Button type="button" className="w-full" onClick={handlePickFromCamera}>
+                Use Camera
+              </Button>
+              <Button type="button" variant="outline" className="w-full" onClick={handlePickFromDevice}>
+                Upload from Device
+              </Button>
+              <Button type="button" variant="ghost" className="w-full text-gray-700" onClick={closeImageSourcePicker}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="px-4 sm:px-6 pb-2 text-xs text-red-600">
