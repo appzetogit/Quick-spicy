@@ -3,12 +3,17 @@ import io from 'socket.io-client';
 import { API_BASE_URL } from '@/lib/api/config';
 import bikeLogo from '@/assets/bikelogo.png';
 import { RouteBasedAnimationController } from '@/module/user/utils/routeBasedAnimation';
-import { decodePolyline, extractPolylineFromDirections, findNearestPointOnPolyline } from '@/module/delivery/utils/liveTrackingPolyline';
+import {
+  buildVisibleRouteFromRiderPosition,
+  decodePolyline,
+  extractPolylineFromDirections,
+  findNearestPointOnPolyline
+} from '@/module/delivery/utils/liveTrackingPolyline';
 import { subscribeOrderTracking } from '@/lib/realtimeTracking';
 import './DeliveryTrackingMap.css';
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugWarn = () => {}
+const debugError = () => {}
 
 
 // Helper function to calculate Haversine distance
@@ -22,6 +27,13 @@ function calculateHaversineDistance(lat1, lng1, lat2, lng2) {
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+function routeEndsNearTarget(routePoints, target, thresholdMeters = 150) {
+  if (!Array.isArray(routePoints) || routePoints.length === 0 || !target) return false;
+  const lastPoint = routePoints[routePoints.length - 1];
+  if (!lastPoint || !Number.isFinite(lastPoint.lat) || !Number.isFinite(lastPoint.lng)) return false;
+  return calculateHaversineDistance(lastPoint.lat, lastPoint.lng, target.lat, target.lng) <= thresholdMeters;
 }
 
 const DeliveryTrackingMap = ({
@@ -47,8 +59,10 @@ const DeliveryTrackingMap = ({
   const [isMapLoaded, setIsMapLoaded] = useState(false);
   const [currentLocation, setCurrentLocation] = useState(null);
   const [deliveryBoyLocation, setDeliveryBoyLocation] = useState(null);
+  const currentLocationRef = useRef(null);
   const routePolylineRef = useRef(null);
-  const routePolylinePointsRef = useRef(null); // Store decoded polyline points for route-based animation
+  const routePolylinePointsRef = useRef(null); // Full route from Firebase/Directions for route-based animation
+  const visibleRoutePolylinePointsRef = useRef(null); // Remaining route rendered on the map
   const animationControllerRef = useRef(null); // Route-based animation controller
   const lastRouteUpdateRef = useRef(null);
   const userHasInteractedRef = useRef(false);
@@ -56,6 +70,8 @@ const DeliveryTrackingMap = ({
   const mapInitializedRef = useRef(false);
   const directionsCacheRef = useRef(new Map()); // Cache for Directions API calls
   const lastRouteRequestRef = useRef({ start: null, end: null, timestamp: 0 });
+  const customerMarkerRef = useRef(null);
+  const restaurantMarkerRef = useRef(null);
 
   const backendUrl = API_BASE_URL.replace('/api', '');
   const ENABLE_GOOGLE_DIRECTIONS = import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true';
@@ -73,6 +89,10 @@ const DeliveryTrackingMap = ({
     if (typeof onTrackingData !== 'function') return;
     onTrackingData(payload);
   }, [onTrackingData]);
+
+  useEffect(() => {
+    currentLocationRef.current = currentLocation;
+  }, [currentLocation]);
 
   const isOrderPickedUp = useMemo(() => {
     const currentPhase = order?.deliveryState?.currentPhase;
@@ -379,23 +399,13 @@ const DeliveryTrackingMap = ({
       .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
   }, []);
 
-  const renderFirebaseRoute = useCallback((rawRoute) => {
+  const renderVisibleRoute = useCallback((rawRoute) => {
     const normalizedPoints = normalizeRoutePoints(rawRoute);
     if (normalizedPoints.length < 2) return false;
-
-    routePolylinePointsRef.current = normalizedPoints;
+    visibleRoutePolylinePointsRef.current = normalizedPoints;
 
     if (!isMapLoaded || !mapInstance.current || !window.google?.maps) {
       return true;
-    }
-
-    if (animationControllerRef.current) {
-      animationControllerRef.current.updatePolyline(normalizedPoints);
-    } else if (bikeMarkerRef.current) {
-      animationControllerRef.current = new RouteBasedAnimationController(
-        bikeMarkerRef.current,
-        normalizedPoints
-      );
     }
 
     if (routePolylineRef.current) {
@@ -418,6 +428,36 @@ const DeliveryTrackingMap = ({
 
     return true;
   }, [isMapLoaded, normalizeRoutePoints, routeColor]);
+
+  const updateRenderedRouteForLocation = useCallback((location, routeOverride = null) => {
+    const baseRoute = routeOverride || routePolylinePointsRef.current;
+    const normalizedBaseRoute = normalizeRoutePoints(baseRoute);
+
+    if (normalizedBaseRoute.length < 2) return false;
+
+    routePolylinePointsRef.current = normalizedBaseRoute;
+
+    if (animationControllerRef.current) {
+      animationControllerRef.current.updatePolyline(normalizedBaseRoute);
+    } else if (bikeMarkerRef.current) {
+      animationControllerRef.current = new RouteBasedAnimationController(
+        bikeMarkerRef.current,
+        normalizedBaseRoute
+      );
+    }
+
+    if (!location || !Number.isFinite(location.lat) || !Number.isFinite(location.lng)) {
+      return renderVisibleRoute(normalizedBaseRoute);
+    }
+
+    const routeState = buildVisibleRouteFromRiderPosition(normalizedBaseRoute, location, {
+      offRouteThresholdMeters: 35
+    });
+
+    return renderVisibleRoute(routeState.visiblePolyline.length > 1
+      ? routeState.visiblePolyline
+      : normalizedBaseRoute);
+  }, [normalizeRoutePoints, renderVisibleRoute]);
 
   const getStoredRoutePoints = useCallback(() => {
     const routeCoordinates = isOrderPickedUp
@@ -457,8 +497,8 @@ const DeliveryTrackingMap = ({
   useEffect(() => {
     if (!isMapLoaded) return;
     if (!routePolylinePointsRef.current || routePolylinePointsRef.current.length < 2) return;
-    renderFirebaseRoute(routePolylinePointsRef.current);
-  }, [isMapLoaded, renderFirebaseRoute, routeColor]);
+    updateRenderedRouteForLocation(currentLocation, routePolylinePointsRef.current);
+  }, [isMapLoaded, updateRenderedRouteForLocation, routeColor, currentLocation]);
 
   useEffect(() => {
     if (!isMapLoaded || !mapInstance.current || !window.google?.maps) return;
@@ -475,20 +515,8 @@ const DeliveryTrackingMap = ({
       );
     }
 
-    if (routePolylineRef.current) {
-      routePolylineRef.current.setMap(null);
-    }
-
-    routePolylineRef.current = new window.google.maps.Polyline({
-      path: storedPoints,
-      geodesic: true,
-      strokeColor: routeColor,
-      strokeOpacity: 0.8,
-      strokeWeight: 4,
-      map: mapInstance.current,
-      zIndex: 1
-    });
-  }, [getStoredRoutePoints, isMapLoaded, routeColor]);
+    updateRenderedRouteForLocation(currentLocation, storedPoints);
+  }, [getStoredRoutePoints, isMapLoaded, routeColor, currentLocation, updateRenderedRouteForLocation]);
 
   // Check if delivery partner is assigned (memoized to avoid dependency issues)
   // MUST be defined BEFORE any useEffect that uses it
@@ -559,6 +587,12 @@ const DeliveryTrackingMap = ({
     // Default: Show restaurant to customer
     return { start: restaurantCoords, end: customerCoords };
   }, [order, deliveryBoyLocation, restaurantCoords, customerCoords]);
+
+  const desiredRoute = useMemo(() => getRouteToShow(), [getRouteToShow]);
+  const routeMatchesDesiredTarget = useCallback((routePoints, target) => {
+    if (!Array.isArray(routePoints) || routePoints.length < 2 || !target) return false;
+    return routeEndsNearTarget(routePoints, target);
+  }, []);
 
   // Move bike smoothly with rotation
   const moveBikeSmoothly = useCallback((lat, lng, heading) => {
@@ -714,33 +748,9 @@ const DeliveryTrackingMap = ({
           const nearest = findNearestPointOnPolyline(routePolylinePointsRef.current, { lat, lng });
 
           if (nearest && nearest.nearestPoint) {
-            // Calculate progress on route (0 to 1) based on distance traveled
-
-            // Calculate cumulative distance to nearest point for accurate progress
-            let distanceToNearest = 0;
-            for (let i = 0; i < nearest.segmentIndex; i++) {
-              const p1 = routePolylinePointsRef.current[i];
-              const p2 = routePolylinePointsRef.current[i + 1];
-              distanceToNearest += calculateHaversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-            }
-
-            // Add distance within current segment
-            const segmentStart = routePolylinePointsRef.current[nearest.segmentIndex];
-            const segmentEnd = routePolylinePointsRef.current[nearest.segmentIndex + 1] || segmentStart;
-            const segmentDistance = calculateHaversineDistance(segmentStart.lat, segmentStart.lng, segmentEnd.lat, segmentEnd.lng);
-            const segmentProgress = calculateHaversineDistance(segmentStart.lat, segmentStart.lng, nearest.nearestPoint.lat, nearest.nearestPoint.lng) / (segmentDistance || 1);
-            distanceToNearest += segmentDistance * segmentProgress;
-
-            // Calculate total route distance
-            let totalDistance = 0;
-            for (let i = 0; i < routePolylinePointsRef.current.length - 1; i++) {
-              const p1 = routePolylinePointsRef.current[i];
-              const p2 = routePolylinePointsRef.current[i + 1];
-              totalDistance += calculateHaversineDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-            }
-
-            // Calculate progress (0 to 1)
-            let progress = totalDistance > 0 ? Math.min(1, Math.max(0, distanceToNearest / totalDistance)) : 0;
+            let progress = nearest.totalDistance > 0
+              ? Math.min(1, Math.max(0, nearest.distanceAlongRoute / nearest.totalDistance))
+              : 0;
 
             // Ensure progress doesn't go backwards (only forward movement) - Rapido/Zomato style
             if (animationControllerRef.current && animationControllerRef.current.lastProgress !== undefined) {
@@ -755,13 +765,16 @@ const DeliveryTrackingMap = ({
               }
             }
 
+            updateRenderedRouteForLocation({ lat, lng });
+
             // Use route-based animation controller if available
             if (animationControllerRef.current) {
               debugLog('ðŸ›µ Route-based animation (Rapido/Zomato style):', {
                 progress,
                 segmentIndex: nearest.segmentIndex,
-                onRoute: true,
-                snappedToRoad: true
+                onRoute: nearest.distance <= 35,
+                snappedToRoad: true,
+                distanceFromRoute: nearest.distance
               });
               animationControllerRef.current.updatePosition(progress, heading || 0);
               animationControllerRef.current.lastProgress = progress;
@@ -818,7 +831,7 @@ const DeliveryTrackingMap = ({
     } catch (error) {
       debugError('âŒ Error moving bike:', error);
     }
-  }, [isMapLoaded, bikeLogo]);
+  }, [isMapLoaded, bikeLogo, updateRenderedRouteForLocation]);
 
   // Initialize Socket.io connection
   useEffect(() => {
@@ -872,24 +885,12 @@ const DeliveryTrackingMap = ({
           if (Array.isArray(rawPolyline) && rawPolyline.length > 1) {
             const normalized = normalizeRoutePoints(rawPolyline);
             if (normalized.length > 1) {
-              const nearest = findNearestPointOnPolyline(normalized, location);
-              if (nearest?.nearestPoint && Number.isInteger(nearest.segmentIndex)) {
-                const reduced = [nearest.nearestPoint, ...normalized.slice(nearest.segmentIndex + 1)];
-                renderFirebaseRoute(reduced.length > 1 ? reduced : normalized);
-              } else {
-                renderFirebaseRoute(normalized);
-              }
+              updateRenderedRouteForLocation(location, normalized);
             }
           } else if (typeof rawPolyline === 'string' && rawPolyline.trim()) {
             const decoded = decodePolyline(rawPolyline);
             if (decoded.length > 1) {
-              const nearest = findNearestPointOnPolyline(decoded, location);
-              if (nearest?.nearestPoint && Number.isInteger(nearest.segmentIndex)) {
-                const reduced = [nearest.nearestPoint, ...decoded.slice(nearest.segmentIndex + 1)];
-                renderFirebaseRoute(reduced.length > 1 ? reduced : decoded);
-              } else {
-                renderFirebaseRoute(decoded);
-              }
+              updateRenderedRouteForLocation(location, decoded);
             }
           }
         },
@@ -904,7 +905,7 @@ const DeliveryTrackingMap = ({
         if (typeof unsub === 'function') unsub();
       });
     };
-  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly, renderFirebaseRoute, normalizeRoutePoints, getDistanceToCustomerMeters, emitTrackingData]);
+  }, [trackingIdsKey, trackingIds, isMapLoaded, moveBikeSmoothly, updateRenderedRouteForLocation, normalizeRoutePoints, getDistanceToCustomerMeters, emitTrackingData]);
 
   // Initialize Socket.io connection (fallback)
   useEffect(() => {
@@ -997,6 +998,7 @@ const DeliveryTrackingMap = ({
         } else if (animationControllerRef.current) {
           animationControllerRef.current.updatePolyline(data.points);
         }
+        updateRenderedRouteForLocation(currentLocationRef.current, data.points);
       }
     };
 
@@ -1057,7 +1059,7 @@ const DeliveryTrackingMap = ({
         socketRef.current.disconnect();
       }
     };
-  }, [backendUrl, moveBikeSmoothly, trackingIdsKey, requestCurrentLocationForTrackingIds, customerCoords, emitTrackingData]);
+  }, [backendUrl, moveBikeSmoothly, trackingIdsKey, requestCurrentLocationForTrackingIds, customerCoords, emitTrackingData, updateRenderedRouteForLocation]);
   // Initialize Google Map (only once - prevent re-initialization)
   useEffect(() => {
     if (!mapRef.current || !restaurantCoords || !customerCoords || mapInitializedRef.current) return;
@@ -1262,44 +1264,42 @@ const DeliveryTrackingMap = ({
           directionsRendererRef.current = null;
         }
 
-        // Add restaurant marker with home icon (only once)
-        if (!mapInstance.current._restaurantMarker) {
-          const restaurantHomeIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+        // Add restaurant marker (only once)
+        if (!restaurantMarkerRef.current) {
+          const restaurantPinIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="50" viewBox="0 0 40 50">
-              <!-- Pin shape -->
               <path d="M20 0 C9 0 0 9 0 20 C0 35 20 50 20 50 C20 50 40 35 40 20 C40 9 31 0 20 0 Z" fill="#22c55e" stroke="#ffffff" stroke-width="2"/>
-              <!-- Home icon -->
-              <path d="M20 12 L12 18 L12 28 L16 28 L16 24 L24 24 L24 28 L28 28 L28 18 Z" fill="white" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M16 24 L16 20 L20 17 L24 20 L24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <rect x="12" y="14" width="16" height="12" rx="2.5" fill="white"/>
+              <path d="M15 12 L25 12" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
+              <path d="M17 18 L23 18" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
+              <path d="M17 22 L23 22" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
             </svg>
           `);
 
-          mapInstance.current._restaurantMarker = new window.google.maps.Marker({
+          restaurantMarkerRef.current = new window.google.maps.Marker({
             position: { lat: restaurantCoords.lat, lng: restaurantCoords.lng },
             map: mapInstance.current,
             icon: {
-              url: restaurantHomeIconUrl,
+              url: restaurantPinIconUrl,
               scaledSize: new window.google.maps.Size(40, 50),
               anchor: new window.google.maps.Point(20, 50),
               origin: new window.google.maps.Point(0, 0)
             },
-            zIndex: window.google.maps.Marker.MAX_ZINDEX + 1
+            zIndex: window.google.maps.Marker.MAX_ZINDEX + 1,
+            title: "Restaurant"
           });
         }
 
-        // Add customer marker with a clear location pin icon (only once)
-        if (!mapInstance.current._customerMarker) {
+        // Add customer/drop marker (only once)
+        if (!customerMarkerRef.current) {
           const customerLocationIconUrl = 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="50" viewBox="0 0 40 50">
-              <!-- Pin shape -->
               <path d="M20 0 C9 0 0 9 0 20 C0 35 20 50 20 50 C20 50 40 35 40 20 C40 9 31 0 20 0 Z" fill="#ef4444" stroke="#ffffff" stroke-width="2"/>
-              <!-- User/location glyph -->
-              <circle cx="20" cy="15" r="4.2" fill="white"/>
-              <path d="M12.5 26.5c0-4.4 3.3-7 7.5-7s7.5 2.6 7.5 7" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 11 L12.5 17.2 L14.4 17.2 L14.4 28 L18.5 28 L18.5 22.6 L21.5 22.6 L21.5 28 L25.6 28 L25.6 17.2 L27.5 17.2 Z" fill="white"/>
             </svg>
           `);
 
-          mapInstance.current._customerMarker = new window.google.maps.Marker({
+          customerMarkerRef.current = new window.google.maps.Marker({
             position: { lat: customerCoords.lat, lng: customerCoords.lng },
             map: mapInstance.current,
             icon: {
@@ -1415,6 +1415,18 @@ const DeliveryTrackingMap = ({
     }
   }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, restaurantCoords, customerCoords]); // Removed dependencies that cause re-initialization
 
+  useEffect(() => {
+    if (restaurantMarkerRef.current && restaurantCoords) {
+      restaurantMarkerRef.current.setPosition(restaurantCoords);
+    }
+  }, [restaurantCoords]);
+
+  useEffect(() => {
+    if (customerMarkerRef.current && customerCoords) {
+      customerMarkerRef.current.setPosition(customerCoords);
+    }
+  }, [customerCoords]);
+
   // Memoize restaurant and customer coordinates to avoid dependency issues
   const restaurantLat = restaurantCoords?.lat;
   const restaurantLng = restaurantCoords?.lng;
@@ -1475,13 +1487,23 @@ const DeliveryTrackingMap = ({
       return;
     }
 
-    if (routePolylinePointsRef.current && routePolylinePointsRef.current.length > 1) {
+    const hasReusableRoute =
+      routePolylinePointsRef.current &&
+      routePolylinePointsRef.current.length > 1 &&
+      routeMatchesDesiredTarget(routePolylinePointsRef.current, desiredRoute?.end);
+
+    if (hasReusableRoute) {
       lastRouteUpdateRef.current = now;
-      renderFirebaseRoute(routePolylinePointsRef.current);
+      updateRenderedRouteForLocation(currentLocation, routePolylinePointsRef.current);
       return;
     }
 
-    const route = getRouteToShow();
+    if (!hasReusableRoute) {
+      routePolylinePointsRef.current = null;
+      visibleRoutePolylinePointsRef.current = null;
+    }
+
+    const route = desiredRoute;
     if (route.start && route.end) {
       lastRouteUpdateRef.current = now;
       drawRoute(route.start, route.end);
@@ -1517,7 +1539,7 @@ const DeliveryTrackingMap = ({
         }
       }
     }
-  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, getRouteToShow, drawRoute, hasDeliveryPartner, routeColor, renderFirebaseRoute]);
+  }, [isMapLoaded, deliveryBoyLat, deliveryBoyLng, order?.deliveryState?.currentPhase, order?.deliveryState?.status, restaurantLat, restaurantLng, customerCoords?.lat, customerCoords?.lng, moveBikeSmoothly, desiredRoute, drawRoute, hasDeliveryPartner, routeColor, currentLocation, updateRenderedRouteForLocation, routeMatchesDesiredTarget]);
 
   // Update bike when REAL location changes (from socket)
   useEffect(() => {

@@ -31,6 +31,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useOrders } from "../../context/OrdersContext"
 import { useProfile } from "../../context/ProfileContext"
+import { useLocation as useUserLocation } from "../../hooks/useLocation"
 import DeliveryTrackingMap from "../../components/DeliveryTrackingMap"
 import { orderAPI, restaurantAPI } from "@/lib/api"
 import circleIcon from "@/assets/circleicon.png"
@@ -75,7 +76,7 @@ const AnimatedCheckmark = ({ delay = 0 }) => (
 )
 
 // Real Delivery Map Component with User Live Location
-const DeliveryMap = ({ orderId, order, isVisible }) => {
+const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null, userLiveCoords = null, userLocationAccuracy = null }) => {
   const toPointFromGeoJSON = (coords) => {
     if (!Array.isArray(coords) || coords.length < 2) return null;
     const lng = Number(coords[0]);
@@ -140,6 +141,14 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
     const fromCoords = toPointFromGeoJSON(coords);
     if (fromCoords) return fromCoords;
 
+    if (
+      fallbackCustomerCoords &&
+      Number.isFinite(fallbackCustomerCoords.lat) &&
+      Number.isFinite(fallbackCustomerCoords.lng)
+    ) {
+      return fallbackCustomerCoords;
+    }
+
     return null;
   };
 
@@ -186,6 +195,8 @@ const DeliveryMap = ({ orderId, order, isVisible }) => {
         orderTrackingIds={orderTrackingIdsList}
         restaurantCoords={restaurantCoords}
         customerCoords={customerCoords}
+        userLiveCoords={userLiveCoords}
+        userLocationAccuracy={userLocationAccuracy}
         deliveryBoyData={deliveryBoyData}
         order={order}
       />
@@ -326,6 +337,7 @@ export default function OrderTracking() {
   const confirmed = searchParams.get("confirmed") === "true"
   const { getOrderById } = useOrders()
   const { profile, getDefaultAddress } = useProfile()
+  const { location: userLiveLocation } = useUserLocation()
 
   // State for order data
   const [order, setOrder] = useState(null)
@@ -344,6 +356,46 @@ export default function OrderTracking() {
   const lastRealtimeRefreshRef = useRef(0)
 
   const defaultAddress = getDefaultAddress()
+  const fallbackCustomerCoords = useMemo(() => {
+    const orderCoords = order?.address?.coordinates || order?.address?.location?.coordinates
+    if (Array.isArray(orderCoords) && orderCoords.length >= 2) {
+      const lng = Number(orderCoords[0])
+      const lat = Number(orderCoords[1])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng }
+      }
+    }
+
+    const defaultCoords = defaultAddress?.location?.coordinates
+    if (Array.isArray(defaultCoords) && defaultCoords.length >= 2) {
+      const lng = Number(defaultCoords[0])
+      const lat = Number(defaultCoords[1])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng }
+      }
+    }
+
+    const liveLat = Number(userLiveLocation?.latitude)
+    const liveLng = Number(userLiveLocation?.longitude)
+    if (Number.isFinite(liveLat) && Number.isFinite(liveLng)) {
+      return { lat: liveLat, lng: liveLng }
+    }
+
+    return null
+  }, [
+    order?.address?.coordinates,
+    order?.address?.location?.coordinates,
+    defaultAddress?.location?.coordinates,
+    userLiveLocation?.latitude,
+    userLiveLocation?.longitude
+  ])
+
+  const userLiveCoords = useMemo(() => {
+    const lat = Number(userLiveLocation?.latitude)
+    const lng = Number(userLiveLocation?.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+    return { lat, lng }
+  }, [userLiveLocation?.latitude, userLiveLocation?.longitude])
 
   const isAdminAccepted = useMemo(() => {
     const status = order?.status
@@ -1023,6 +1075,9 @@ export default function OrderTracking() {
         orderId={orderId}
         order={order}
         isVisible={!showConfirmation && order !== null}
+        fallbackCustomerCoords={fallbackCustomerCoords}
+        userLiveCoords={userLiveCoords}
+        userLocationAccuracy={userLiveLocation?.accuracy ?? null}
       />
 
       {/* Scrollable Content */}

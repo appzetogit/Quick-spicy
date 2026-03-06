@@ -229,7 +229,7 @@ export async function upsertActiveOrderTracking({
     };
 
     if (polyline) payload.polyline = polyline;
-    if (Array.isArray(routeCoordinates) && routeCoordinates.length > 0 && routeCoordinates.length <= 50) {
+    if (Array.isArray(routeCoordinates) && routeCoordinates.length > 0) {
       payload.route_coordinates = routeCoordinates;
     }
     if (restaurant) {
@@ -333,8 +333,12 @@ export async function updateActiveOrderLocation(orderId, locationPayload, option
         status: normalized.status || 'assigned',
         timestamp: toNumberOrNull(normalized.timestamp) || Date.now(),
         progress: toNumberOrNull(normalized.progress),
+        polyline: normalized.polyline || null,
         distance_to_customer_km: toNumberOrNull(normalized.distance_to_customer_km),
         distance_to_customer_m: toNumberOrNull(normalized.distance_to_customer_m),
+        route_coordinates: Array.isArray(normalized.route_coordinates)
+          ? normalized.route_coordinates
+          : [],
         last_updated: Date.now()
       })
     ]);

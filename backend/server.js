@@ -526,6 +526,25 @@ function getCustomerCoordsFromOrder(order) {
   return { lat, lng };
 }
 
+function getActiveRouteCoordinatesFromOrder(order) {
+  const phase = String(order?.deliveryState?.currentPhase || '').toLowerCase();
+  const routeCoordinates =
+    phase === 'en_route_to_delivery' || phase === 'at_delivery' || order?.status === 'out_for_delivery'
+      ? order?.deliveryState?.routeToDelivery?.coordinates
+      : order?.deliveryState?.routeToPickup?.coordinates;
+
+  if (!Array.isArray(routeCoordinates) || routeCoordinates.length < 2) return [];
+
+  return routeCoordinates
+    .map((coord) => {
+      const lat = Number(coord?.[0]);
+      const lng = Number(coord?.[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return [lat, lng];
+    })
+    .filter(Boolean);
+}
+
 function toFiniteNumber(value) {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
@@ -545,13 +564,13 @@ io.on('connection', (socket) => {
     let order = null;
     if (mongoose.Types.ObjectId.isValid(inputId)) {
       order = await Order.findById(inputId)
-        .select('orderId _id address deliveryState.currentLocation deliveryPartnerId')
+        .select('orderId _id status address deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
         .lean();
     }
 
     if (!order) {
       order = await Order.findOne({ orderId: inputId })
-        .select('orderId _id address deliveryState.currentLocation deliveryPartnerId')
+        .select('orderId _id status address deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
         .lean();
     }
 
@@ -591,6 +610,8 @@ io.on('connection', (socket) => {
         lng,
         heading: toFiniteNumber(tracking?.heading) || 0,
         progress: toFiniteNumber(tracking?.progress),
+        polyline: typeof tracking?.polyline === 'string' ? tracking.polyline : null,
+        route_coordinates: Array.isArray(tracking?.route_coordinates) ? tracking.route_coordinates : [],
         distanceToCustomerKm,
         distanceToCustomerM,
         timestamp: toFiniteNumber(tracking?.timestamp) || Date.now()
@@ -645,6 +666,7 @@ io.on('connection', (socket) => {
           heading: data.heading || 0,
           timestamp,
           status: 'on_the_way',
+          route_coordinates: getActiveRouteCoordinatesFromOrder(trackedOrder),
           distance_to_customer_km: distanceToCustomerKm,
           distance_to_customer_m: distanceToCustomerM
         }),
@@ -665,6 +687,7 @@ io.on('connection', (socket) => {
         lat: data.lat,
         lng: data.lng,
         heading: data.heading || 0,
+        route_coordinates: getActiveRouteCoordinatesFromOrder(trackedOrder),
         distanceToCustomerKm,
         distanceToCustomerM,
         timestamp
@@ -728,6 +751,7 @@ io.on('connection', (socket) => {
             lat,
             lng,
             heading: toFiniteNumber(order.deliveryState.currentLocation.bearing) || 0,
+            route_coordinates: getActiveRouteCoordinatesFromOrder(order),
             distanceToCustomerKm,
             distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
             timestamp: Date.now()
@@ -768,6 +792,7 @@ io.on('connection', (socket) => {
             lat,
             lng,
             heading: toFiniteNumber(order.deliveryState.currentLocation.bearing) || 0,
+            route_coordinates: getActiveRouteCoordinatesFromOrder(order),
             distanceToCustomerKm,
             distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
             timestamp: Date.now()

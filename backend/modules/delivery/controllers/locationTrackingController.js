@@ -31,6 +31,18 @@ function calculateDistanceKm(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function serializeRouteCoordinates(points = []) {
+  if (!Array.isArray(points)) return [];
+  return points
+    .map((point) => {
+      const lat = Number(point?.lat ?? point?.[0]);
+      const lng = Number(point?.lng ?? point?.[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return [lat, lng];
+    })
+    .filter(Boolean);
+}
+
 /**
  * Receive GPS update from delivery app
  * POST /api/delivery/location/update
@@ -105,6 +117,8 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         }
       }
     );
+    const cachedRoute = getCachedRoute(orderId);
+    const routeCoordinates = serializeRouteCoordinates(cachedRoute?.points);
 
     await Promise.allSettled([
       updateActiveOrderLocation(orderId, {
@@ -118,6 +132,8 @@ export const receiveLocationUpdate = asyncHandler(async (req, res) => {
         remaining_distance: processedLocation.remainingDistance,
         distance_to_customer_km: distanceToCustomerKm,
         distance_to_customer_m: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
+        polyline: cachedRoute?.polyline || null,
+        route_coordinates: routeCoordinates,
         on_route: processedLocation.onRoute,
         timestamp: processedLocation.timestamp,
         status: 'on_the_way'
@@ -231,7 +247,7 @@ export const initializeRoute = asyncHandler(async (req, res) => {
       boyLng: riderCoords.lng,
       status: 'assigned',
       polyline: route.polyline || null,
-      routeCoordinates: null,
+      routeCoordinates: serializeRouteCoordinates(route.points),
       restaurant: restaurantCoords,
       customer: customerCoords,
       distance: route.totalDistance ? Number((route.totalDistance / 1000).toFixed(3)) : null,

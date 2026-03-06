@@ -39,6 +39,29 @@ function calculateDistanceKm(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+function getActiveRoutePayload(order) {
+  const phase = String(order?.deliveryState?.currentPhase || '').toLowerCase();
+  const routeCoordinates =
+    phase === 'en_route_to_delivery' || phase === 'at_delivery' || order?.status === 'out_for_delivery'
+      ? order?.deliveryState?.routeToDelivery?.coordinates
+      : order?.deliveryState?.routeToPickup?.coordinates;
+
+  if (!Array.isArray(routeCoordinates) || routeCoordinates.length < 2) {
+    return { route_coordinates: [] };
+  }
+
+  const normalized = routeCoordinates
+    .map((coord) => {
+      const lat = Number(coord?.[0]);
+      const lng = Number(coord?.[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      return [lat, lng];
+    })
+    .filter(Boolean);
+
+  return { route_coordinates: normalized };
+}
+
 function shouldSyncRealtime(deliveryId, lat, lng, phase) {
   const key = String(deliveryId || '');
   const now = Date.now();
@@ -156,7 +179,7 @@ export const updateLocation = asyncHandler(async (req, res) => {
         { 'deliveryState.currentPhase': { $exists: false } }
       ]
     })
-      .select('_id orderId status deliveryState.currentPhase address.location.coordinates')
+      .select('_id orderId status deliveryState.currentPhase deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates address.location.coordinates')
       .sort({ updatedAt: -1 })
       .lean();
 
@@ -204,6 +227,7 @@ export const updateLocation = asyncHandler(async (req, res) => {
           : null;
 
       if (shouldSyncRealtime(updatedDelivery._id?.toString(), lat, lng, phase || trackingStatus)) {
+        const activeRoutePayload = getActiveRoutePayload(activeOrder);
         const trackingPayload = {
           boy_id: updatedDelivery._id?.toString(),
           boy_lat: lat,
@@ -213,7 +237,8 @@ export const updateLocation = asyncHandler(async (req, res) => {
           status: trackingStatus,
           timestamp: Date.now(),
           distance_to_customer_km: distanceToCustomerKm,
-          distance_to_customer_m: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null
+          distance_to_customer_m: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
+          ...activeRoutePayload
         };
 
         const trackingIds = [...new Set([

@@ -112,9 +112,6 @@ export function distanceToLineSegment(point, lineStart, lineEnd) {
     yy = lineStart.lng + param * D;
   }
 
-  const dx = point.lat - xx;
-  const dy = point.lng - yy;
-  
   // Convert to meters using Haversine
   return calculateDistance(point.lat, point.lng, xx, yy);
 }
@@ -128,12 +125,29 @@ export function distanceToLineSegment(point, lineStart, lineEnd) {
  */
 export function findNearestPointOnPolyline(polyline, riderPosition) {
   if (!polyline || polyline.length < 2) {
-    return { segmentIndex: 0, nearestPoint: riderPosition, distance: Infinity };
+    return {
+      segmentIndex: 0,
+      nearestPoint: riderPosition,
+      distance: Infinity,
+      segmentProgress: 0,
+      distanceAlongRoute: 0,
+      totalDistance: 0,
+      remainingDistance: 0
+    };
   }
 
   let minDistance = Infinity;
   let nearestSegmentIndex = 0;
   let nearestPoint = polyline[0];
+  let nearestSegmentProgress = 0;
+  const cumulativeDistances = [0];
+
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const start = polyline[i];
+    const end = polyline[i + 1];
+    const segmentDistance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
+    cumulativeDistances[i + 1] = cumulativeDistances[i] + segmentDistance;
+  }
 
   // Check each segment of the polyline
   for (let i = 0; i < polyline.length - 1; i++) {
@@ -159,6 +173,7 @@ export function findNearestPointOnPolyline(polyline, riderPosition) {
       if (lenSq !== 0) {
         param = Math.max(0, Math.min(1, dot / lenSq));
       }
+      nearestSegmentProgress = param;
       
       nearestPoint = {
         lat: segmentStart.lat + param * C,
@@ -167,10 +182,20 @@ export function findNearestPointOnPolyline(polyline, riderPosition) {
     }
   }
 
+  const totalDistance = cumulativeDistances[cumulativeDistances.length - 1] || 0;
+  const segmentStartDistance = cumulativeDistances[nearestSegmentIndex] || 0;
+  const segmentEndDistance = cumulativeDistances[nearestSegmentIndex + 1] || segmentStartDistance;
+  const segmentDistance = Math.max(0, segmentEndDistance - segmentStartDistance);
+  const distanceAlongRoute = segmentStartDistance + (segmentDistance * nearestSegmentProgress);
+
   return {
     segmentIndex: nearestSegmentIndex,
     nearestPoint,
-    distance: minDistance
+    distance: minDistance,
+    segmentProgress: nearestSegmentProgress,
+    distanceAlongRoute,
+    totalDistance,
+    remainingDistance: Math.max(0, totalDistance - distanceAlongRoute)
   };
 }
 
@@ -196,6 +221,69 @@ export function trimPolylineBehindRider(polyline, nearestPoint, segmentIndex) {
   }
 
   return trimmedPolyline;
+}
+
+/**
+ * Build the visible route for a live-tracking map.
+ * When the rider is on-route, only show the remaining route ahead.
+ * When the rider goes off-route, prepend the current rider location so the wrong-way
+ * stretch becomes visible until they rejoin the planned path.
+ * @param {Array<{lat: number, lng: number}>} polyline
+ * @param {{lat: number, lng: number}} riderPosition
+ * @param {{offRouteThresholdMeters?: number}} options
+ * @returns {{
+ *   visiblePolyline: Array<{lat: number, lng: number}>,
+ *   snappedPoint: {lat: number, lng: number} | null,
+ *   isOffRoute: boolean,
+ *   progress: number,
+ *   distanceFromRoute: number,
+ *   remainingDistance: number
+ * }}
+ */
+export function buildVisibleRouteFromRiderPosition(polyline, riderPosition, options = {}) {
+  if (!Array.isArray(polyline) || polyline.length < 2 || !riderPosition) {
+    return {
+      visiblePolyline: Array.isArray(polyline) ? polyline : [],
+      snappedPoint: null,
+      isOffRoute: false,
+      progress: 0,
+      distanceFromRoute: Infinity,
+      remainingDistance: 0
+    };
+  }
+
+  const offRouteThresholdMeters = Number(options.offRouteThresholdMeters) || 35;
+  const nearest = findNearestPointOnPolyline(polyline, riderPosition);
+
+  if (!nearest?.nearestPoint || !Number.isInteger(nearest.segmentIndex)) {
+    return {
+      visiblePolyline: polyline,
+      snappedPoint: null,
+      isOffRoute: false,
+      progress: 0,
+      distanceFromRoute: Infinity,
+      remainingDistance: 0
+    };
+  }
+
+  const trimmedPolyline = trimPolylineBehindRider(polyline, nearest.nearestPoint, nearest.segmentIndex);
+  const isOffRoute = nearest.distance > offRouteThresholdMeters;
+  const progress = nearest.totalDistance > 0
+    ? Math.max(0, Math.min(1, nearest.distanceAlongRoute / nearest.totalDistance))
+    : 0;
+
+  const visiblePolyline = isOffRoute
+    ? [riderPosition, ...trimmedPolyline]
+    : trimmedPolyline;
+
+  return {
+    visiblePolyline,
+    snappedPoint: nearest.nearestPoint,
+    isOffRoute,
+    progress,
+    distanceFromRoute: nearest.distance,
+    remainingDistance: nearest.remainingDistance
+  };
 }
 
 /**
