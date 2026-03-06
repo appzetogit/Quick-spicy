@@ -1,44 +1,86 @@
 import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
-import { X, Search, Clock } from "lucide-react"
+import { X, Search, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { restaurantAPI } from "@/lib/api"
 
-// Import shared food images - prevents duplication
-import { foodImages } from "@/constants/images"
-
-// Recent search suggestions
-const recentSuggestions = [
-  "Biryani", "Cake", "Chhole Bhature", "Chicken Tanduri", "Donuts", "Dosa", "French Fries", "Idli"
-]
-
-// Categories matching the home page browse section - only unique categories
-const categories = [
-  { id: 1, name: "Biryani", image: foodImages[0] },
-  { id: 2, name: "Cake", image: foodImages[1] },
-  { id: 3, name: "Chhole Bhature", image: foodImages[2] },
-  { id: 4, name: "Chicken Tanduri", image: foodImages[3] },
-  { id: 5, name: "Donuts", image: foodImages[4] },
-  { id: 6, name: "Dosa", image: foodImages[5] },
-  { id: 7, name: "French Fries", image: foodImages[6] },
-  { id: 8, name: "Idli", image: foodImages[7] },
-  { id: 9, name: "Momos", image: foodImages[8] },
-  { id: 10, name: "Samosa", image: foodImages[9] },
-  { id: 11, name: "Starters", image: foodImages[10] },
-]
-
-// Use only unique categories (no duplicates)
-const allFoodsWithWhiteBg = categories
+const SEARCH_HISTORY_KEY = "user_recent_searches_v1"
 
 export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchChange }) {
   const navigate = useNavigate()
   const inputRef = useRef(null)
-  const [filteredFoods, setFilteredFoods] = useState(allFoodsWithWhiteBg)
+  const [allFoods, setAllFoods] = useState([])
+  const [filteredFoods, setFilteredFoods] = useState([])
+  const [recentSuggestions, setRecentSuggestions] = useState([])
+  const [loadingFoods, setLoadingFoods] = useState(false)
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus()
     }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const loadRecentSuggestions = () => {
+      try {
+        const raw = localStorage.getItem(SEARCH_HISTORY_KEY)
+        const parsed = raw ? JSON.parse(raw) : []
+        if (Array.isArray(parsed)) {
+          setRecentSuggestions(parsed.filter((item) => typeof item === "string" && item.trim()).slice(0, 8))
+          return
+        }
+      } catch {
+        // Ignore parse errors.
+      }
+      setRecentSuggestions([])
+    }
+
+    const getImageUrl = (value) => {
+      if (!value) return ""
+      if (typeof value === "string") return value
+      if (typeof value === "object") {
+        return (
+          value.url ||
+          value.secure_url ||
+          value.imageUrl ||
+          value.image ||
+          value.src ||
+          ""
+        )
+      }
+      return ""
+    }
+
+    const fetchDishesFromDB = async () => {
+      setLoadingFoods(true)
+      try {
+        const dishesRes = await restaurantAPI.getPublicDishes({ limit: 800 })
+        const dishes =
+          dishesRes?.data?.data?.dishes ||
+          dishesRes?.data?.dishes ||
+          []
+
+        const normalized = (Array.isArray(dishes) ? dishes : [])
+          .filter((dish) => dish?.name)
+          .map((dish, index) => ({
+            id: dish?.id || dish?._id || `dish-${index}`,
+            name: String(dish.name).trim(),
+            image: getImageUrl(dish?.image),
+          }))
+
+        setAllFoods(normalized)
+      } catch {
+        setAllFoods([])
+      } finally {
+        setLoadingFoods(false)
+      }
+    }
+
+    loadRecentSuggestions()
+    fetchDishesFromDB()
   }, [isOpen])
 
   useEffect(() => {
@@ -61,14 +103,25 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
 
   useEffect(() => {
     if (searchValue.trim() === "") {
-      setFilteredFoods(allFoodsWithWhiteBg)
+      setFilteredFoods(allFoods)
     } else {
-      const filtered = allFoodsWithWhiteBg.filter((food) =>
+      const filtered = allFoods.filter((food) =>
         food.name.toLowerCase().includes(searchValue.toLowerCase())
       )
       setFilteredFoods(filtered)
     }
-  }, [searchValue])
+  }, [searchValue, allFoods])
+
+  const saveRecentSearch = (term) => {
+    const value = String(term || "").trim()
+    if (!value) return
+
+    setRecentSuggestions((prev) => {
+      const next = [value, ...prev.filter((item) => item.toLowerCase() !== value.toLowerCase())].slice(0, 8)
+      localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next))
+      return next
+    })
+  }
 
   const handleSuggestionClick = (suggestion) => {
     onSearchChange(suggestion)
@@ -78,6 +131,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     if (searchValue.trim()) {
+      saveRecentSearch(searchValue)
       navigate(`/user/search?q=${encodeURIComponent(searchValue.trim())}`)
       onClose()
       onSearchChange("")
@@ -85,6 +139,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
   }
 
   const handleFoodClick = (food) => {
+    saveRecentSearch(food.name)
     navigate(`/user/search?q=${encodeURIComponent(food.name)}`)
     onClose()
     onSearchChange("")
@@ -176,15 +231,18 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
                   onClick={() => handleFoodClick(food)}
                 >
                   <div className="relative w-full aspect-square rounded-full overflow-hidden transition-all duration-200 shadow-md group-hover:shadow-lg bg-white dark:bg-[#1a1a1a] p-1 sm:p-1.5">
-                    <img
-                      src={food.image}
-                      alt={food.name}
-                      className="w-full h-full object-cover rounded-full"
-                      loading="lazy"
-                      onError={(e) => {
-                        e.target.src = foodImages[0]
-                      }}
-                    />
+                    {food.image ? (
+                      <img
+                        src={food.image}
+                        alt={food.name}
+                        className="w-full h-full object-cover rounded-full"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                        <Search className="h-5 w-5 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                   <div className="px-1 sm:px-2 text-center">
                     <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-orange dark:group-hover:text-orange-400 transition-colors line-clamp-2">
@@ -196,9 +254,22 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
             </div>
           ) : (
             <div className="text-center py-12 sm:py-16">
-              <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">No results found for "{searchValue}"</p>
-              <p className="text-sm sm:text-base text-gray-500 dark:text-gray-500 mt-2">Try a different search term</p>
+              {loadingFoods ? (
+                <>
+                  <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4 animate-spin" />
+                  <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">Loading dishes from database...</p>
+                </>
+              ) : (
+                <>
+                  <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                  <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">
+                    {searchValue.trim() ? `No results found for "${searchValue}"` : "No dishes found in database"}
+                  </p>
+                  <p className="text-sm sm:text-base text-gray-500 dark:text-gray-500 mt-2">
+                    {searchValue.trim() ? "Try a different search term" : "Add menu items in restaurant menus to show here"}
+                  </p>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -242,4 +313,3 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
     </div>
   )
 }
-

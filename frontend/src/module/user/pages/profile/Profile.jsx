@@ -67,6 +67,11 @@ export default function Profile() {
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [referralCopied, setReferralCopied] = useState(false)
 
+  const handleVegModeUpdate = (nextValue) => {
+    setVegMode(nextValue)
+    localStorage.setItem("userVegMode", String(nextValue))
+  }
+
   // Settings states
   const [appearance, setAppearance] = useState(() => {
     // Load theme from localStorage or default to 'light'
@@ -929,7 +934,7 @@ export default function Profile() {
           <div className="space-y-2 px-5 pb-5">
             <button
               onClick={() => {
-                setVegMode(true)
+                handleVegModeUpdate(true)
                 setVegModeOpen(false)
               }}
               className={`w-full p-3 rounded-xl border-2 transition-all flex items-center justify-between ${vegMode
@@ -951,7 +956,7 @@ export default function Profile() {
             </button>
             <button
               onClick={() => {
-                setVegMode(false)
+                handleVegModeUpdate(false)
                 setVegModeOpen(false)
               }}
               className={`w-full p-3 rounded-xl border-2 transition-all flex items-center justify-between ${!vegMode

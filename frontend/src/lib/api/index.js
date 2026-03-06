@@ -635,6 +635,11 @@ export const restaurantAPI = {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.UNDER_250, { params });
   },
 
+  // Get all public dishes (flattened menu items from sections + subsections)
+  getPublicDishes: (params = {}) => {
+    return apiClient.get(API_ENDPOINTS.RESTAURANT.DISHES_PUBLIC, { params });
+  },
+
   // Get restaurant by ID or slug
   getRestaurantById: (id) => {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.BY_ID.replace(":id", id));

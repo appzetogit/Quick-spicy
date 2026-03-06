@@ -77,6 +77,10 @@ export default function Dining() {
   const [bankOfferItems, setBankOfferItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [diningHeroBanner, setDiningHeroBanner] = useState(null)
+  const fallbackDiningCategoryImages = useMemo(
+    () => [diningCard1, diningCard2, diningCard3, diningCard4, diningCard5, diningCard6],
+    []
+  )
 
   useEffect(() => {
     const fetchDiningHeroBanner = async () => {
@@ -121,6 +125,40 @@ export default function Dining() {
     }
     fetchDiningData()
   }, [location?.city])
+
+  const safeCategories = useMemo(() => {
+    return (Array.isArray(categories) ? categories : [])
+      .filter((category) => {
+        const categoryName = String(category?.name || "").trim()
+        return categoryName.length > 0
+      })
+      .map((category, index) => ({
+        ...category,
+        name: String(category?.name || "").trim(),
+        imageUrl: String(category?.imageUrl || "").trim() || fallbackDiningCategoryImages[index % fallbackDiningCategoryImages.length]
+      }))
+  }, [categories, fallbackDiningCategoryImages])
+
+  const safeLimelightItems = useMemo(() => {
+    return (Array.isArray(limelightItems) ? limelightItems : [])
+      .filter((item) => item?.restaurant?.name || item?.tagline)
+      .map((item) => ({
+        ...item,
+        imageUrl: String(item?.imageUrl || "").trim() || diningCard1,
+        tagline: String(item?.tagline || item?.restaurant?.name || "Featured restaurant").trim(),
+        percentageOff: item?.percentageOff || "Special Offer"
+      }))
+  }, [limelightItems])
+
+  const safeMustTryItems = useMemo(() => {
+    return (Array.isArray(mustTryItems) ? mustTryItems : [])
+      .filter((item) => String(item?.name || "").trim().length > 0)
+      .map((item, index) => ({
+        ...item,
+        name: String(item?.name || "").trim(),
+        imageUrl: String(item?.imageUrl || "").trim() || fallbackDiningCategoryImages[index % fallbackDiningCategoryImages.length]
+      }))
+  }, [mustTryItems, fallbackDiningCategoryImages])
 
   const toggleFilter = (filterId) => {
     setActiveFilters(prev => {
@@ -196,14 +234,14 @@ export default function Dining() {
 
   // Auto-play carousel
   useEffect(() => {
-    if (limelightItems.length === 0) return
+    if (safeLimelightItems.length === 0) return
 
     const interval = setInterval(() => {
-      setCurrentRestaurantIndex((prev) => (prev + 1) % limelightItems.length)
+      setCurrentRestaurantIndex((prev) => (prev + 1) % safeLimelightItems.length)
     }, 2000) // Change every 2 seconds
 
     return () => clearInterval(interval)
-  }, [limelightItems.length])
+  }, [safeLimelightItems.length])
 
 
   return (
@@ -297,7 +335,7 @@ export default function Dining() {
           {/* Light blue-grey background container */}
           {/* Modern Grid Layout */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4">
-            {categories.map((category, index) => (
+            {safeCategories.map((category, index) => (
               <Link
                 key={category._id || category.id}
                 to={`/user/dining/${category.name.toLowerCase().replace(/\s+/g, '-')}`}
@@ -351,7 +389,7 @@ export default function Dining() {
               className="flex h-full transition-transform duration-700 ease-in-out"
               style={{ transform: `translateX(-${currentRestaurantIndex * 100}%)` }}
             >
-              {limelightItems.map((restaurant, index) => (
+              {safeLimelightItems.map((restaurant, index) => (
                 <div
                   key={restaurant._id || restaurant.id}
                   className="min-w-full h-full relative flex-shrink-0 w-full"
@@ -410,7 +448,7 @@ export default function Dining() {
 
             {/* Carousel Indicators */}
             <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-10 flex gap-2">
-              {limelightItems.map((_, index) => (
+              {safeLimelightItems.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => setCurrentRestaurantIndex(index)}
@@ -452,7 +490,7 @@ export default function Dining() {
               }
             `}</style>
             <div className="flex gap-4 pb-4 must-tries-scroll" style={{ width: 'max-content' }}>
-              {mustTryItems.map((item, index) => (
+              {safeMustTryItems.map((item, index) => (
                 <motion.div
                   key={item._id || item.id}
                   className="relative flex-shrink-0 rounded-xl overflow-hidden shadow-sm cursor-pointer"

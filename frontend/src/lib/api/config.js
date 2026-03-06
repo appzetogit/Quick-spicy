@@ -251,6 +251,7 @@ export const API_ENDPOINTS = {
     ANALYTICS: "/restaurant/analytics",
     LIST: "/restaurant/list",
     UNDER_250: "/restaurant/under-250",
+    DISHES_PUBLIC: "/restaurant/dishes/public",
     BY_ID: "/restaurant/:id",
     BY_OWNER: "/restaurant/owner/me",
   },

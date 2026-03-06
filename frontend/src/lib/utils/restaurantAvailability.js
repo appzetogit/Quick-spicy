@@ -114,10 +114,12 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
   }
 
   const dayName = DAY_NAMES[now.getDay()]
+  const todayTiming = getTodayTiming(restaurant, dayName)
+
+  // Legacy openDays can get stale; enforce only when no explicit outlet timing exists for today.
   const openDays = Array.isArray(restaurant.openDays) ? restaurant.openDays : []
-  if (openDays.length > 0) {
+  if (!todayTiming && openDays.length > 0) {
     const normalizedOpenDays = new Set(openDays.map((day) => normalizeDay(day)).filter(Boolean))
-    // Only enforce open-days check when we can confidently parse provided values.
     if (normalizedOpenDays.size > 0 && !normalizedOpenDays.has(dayName)) {
       return {
         isOpen: false,
@@ -129,7 +131,6 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     }
   }
 
-  const todayTiming = getTodayTiming(restaurant, dayName)
   if (todayTiming?.isOpen === false) {
     return {
       isOpen: false,
@@ -146,7 +147,12 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
   const openingMinutes = parseTimeToMinutes(openingTime)
   const closingMinutes = parseTimeToMinutes(closingTime)
   const nowMinutes = now.getHours() * 60 + now.getMinutes()
-  const isWithinTimings = isWithinTimeWindow(nowMinutes, openingMinutes, closingMinutes)
+  const hasExplicitWindow = Boolean(openingTime || closingTime)
+  const isWithinTimings = hasExplicitWindow
+    ? (openingMinutes !== null && closingMinutes !== null
+      ? isWithinTimeWindow(nowMinutes, openingMinutes, closingMinutes)
+      : false)
+    : true
 
   return {
     isOpen: isWithinTimings,
@@ -155,6 +161,6 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     isWithinTimings,
     openingTime,
     closingTime,
-    reason: isWithinTimings ? "open" : "outside-hours",
+    reason: isWithinTimings ? "open" : (hasExplicitWindow ? "outside-hours" : "no-timings"),
   }
 }

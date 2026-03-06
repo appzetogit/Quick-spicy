@@ -59,6 +59,8 @@ function CompletedOrders({ onSelectOrder }) {
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
             amount: order.pricing?.total || order.total || 0
+            ,
+            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
           }))
 
           transformedOrders.sort((a, b) => {
@@ -156,6 +158,7 @@ function CompletedOrders({ onSelectOrder }) {
                       tableOrToken: order.tableOrToken,
                       timePlaced: deliveredDate,
                       itemsSummary: order.itemsSummary,
+                      paymentMethod: order.paymentMethod,
                     })
                   }
                   className="w-full text-left flex gap-3 items-stretch"
@@ -264,6 +267,8 @@ function CancelledOrders({ onSelectOrder }) {
             photoUrl: order.items?.[0]?.image || null,
             photoAlt: order.items?.[0]?.name || 'Order',
             amount: order.pricing?.total || order.total || 0
+            ,
+            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
           }))
 
           transformedOrders.sort((a, b) => {
@@ -367,6 +372,7 @@ function CancelledOrders({ onSelectOrder }) {
                       tableOrToken: order.tableOrToken,
                       timePlaced: cancelledDate,
                       itemsSummary: order.itemsSummary,
+                      paymentMethod: order.paymentMethod,
                     })
                   }
                   className="w-full text-left flex gap-3 items-stretch"
@@ -2044,7 +2050,19 @@ export default function OrdersMain() {
                 {selectedOrder.status !== 'ready' && selectedOrder.eta && (
                   <span>ETA: <span className="font-medium text-black">{selectedOrder.eta}</span></span>
                 )}
-                <span>Payment: <span className="font-medium text-black">Paid online</span></span>
+                {(() => {
+                  const raw = selectedOrder.paymentMethod
+                  const normalized = raw != null ? String(raw).toLowerCase().trim() : ""
+                  const isCod = normalized === "cash" || normalized === "cod"
+                  return (
+                    <span>
+                      Payment:{" "}
+                      <span className={`font-medium ${isCod ? "text-amber-700" : "text-black"}`}>
+                        {isCod ? "Cash on Delivery" : "Paid online"}
+                      </span>
+                    </span>
+                  )
+                })()}
               </div>
 
               <button
@@ -2131,6 +2149,7 @@ function OrderCard({
   timePlaced,
   eta,
   itemsSummary,
+  paymentMethod,
   photoUrl,
   photoAlt,
   deliveryPartnerId,
@@ -2173,6 +2192,7 @@ function OrderCard({
             timePlaced,
             eta,
             itemsSummary,
+            paymentMethod,
           })
         }
         className="w-full text-left flex gap-3 items-stretch cursor-pointer"
@@ -2334,7 +2354,8 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
               itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
               photoUrl: order.items?.[0]?.image || null,
               photoAlt: order.items?.[0]?.name || 'Order',
-              deliveryPartnerId: order.deliveryPartnerId || null // Track if delivery partner is assigned
+              deliveryPartnerId: order.deliveryPartnerId || null, // Track if delivery partner is assigned
+              paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
             }
           })
 
@@ -2550,6 +2571,7 @@ function PreparingOrders({ onSelectOrder, onCancel }) {
                 itemsSummary={order.itemsSummary}
                 photoUrl={order.photoUrl}
                 photoAlt={order.photoAlt}
+                paymentMethod={order.paymentMethod}
                 deliveryPartnerId={order.deliveryPartnerId}
                 onSelect={onSelectOrder}
                 onCancel={onCancel}
@@ -2597,7 +2619,8 @@ function ReadyOrders({ onSelectOrder }) {
             eta: null, // Don't show ETA for ready orders
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
-            photoAlt: order.items?.[0]?.name || 'Order'
+            photoAlt: order.items?.[0]?.name || 'Order',
+            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
           }))
 
           if (isMounted) {
@@ -2714,7 +2737,8 @@ const OutForDeliveryOrders = ({ onSelectOrder }) => {
             eta: null,
             itemsSummary: order.items?.map(item => `${item.quantity}x ${item.name}`).join(', ') || 'No items',
             photoUrl: order.items?.[0]?.image || null,
-            photoAlt: order.items?.[0]?.name || 'Order'
+            photoAlt: order.items?.[0]?.name || 'Order',
+            paymentMethod: order.paymentMethod ?? order.payment?.method ?? null
           }))
 
           if (isMounted) {

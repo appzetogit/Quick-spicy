@@ -28,7 +28,12 @@ export default function TableBookingConfirmation() {
             try {
                 const response = await authAPI.getCurrentUser()
                 if (response.data.success) {
-                    setUser(response.data.data)
+                    const userData =
+                        response?.data?.data?.user ||
+                        response?.data?.data ||
+                        response?.data?.user ||
+                        null
+                    setUser(userData)
                 }
             } catch (error) {
                 console.error("Error fetching user:", error)
@@ -43,8 +48,19 @@ export default function TableBookingConfirmation() {
     const handleBooking = async () => {
         try {
             setBookingInProgress(true)
+            const restaurantId =
+                restaurant?._id ||
+                restaurant?.id ||
+                restaurant?.restaurantId ||
+                null
+
+            if (!restaurantId) {
+                toast.error("Unable to proceed. Restaurant ID is missing.")
+                return
+            }
+
             const response = await diningAPI.createBooking({
-                restaurant: restaurant._id,
+                restaurant: restaurantId,
                 guests,
                 date,
                 timeSlot,

@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useState, useRef } from "react"
 import { ChevronDown, ShoppingCart, Wallet, Search, Mic } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -15,10 +15,11 @@ import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSet
 
 export default function DesktopNavbar() {
     const location = useLocation()
+    const navigate = useNavigate()
     const { location: userLocation, loading: locationLoading } = useLocationHook()
     const { getCartCount } = useCart()
     const { openLocationSelector } = useLocationSelector()
-    const { openSearch, closeSearch, searchValue, setSearchValue } = useSearchOverlay()
+    const { setSearchValue } = useSearchOverlay()
     const { vegMode, setVegMode } = useProfile()
     const [heroSearch, setHeroSearch] = useState("")
     const [logoUrl, setLogoUrl] = useState(null)
@@ -214,19 +215,14 @@ export default function DesktopNavbar() {
                                         <Search className="h-4 w-4 text-gray-500 flex-shrink-0 mr-3" />
                                         <Input
                                             value={heroSearch}
-                                            onChange={(e) => setHeroSearch(e.target.value)}
-                                            onFocus={() => {
-                                                if (heroSearch) setSearchValue(heroSearch)
-                                                openSearch()
-                                            }}
-                                            onClick={() => {
-                                                if (heroSearch) setSearchValue(heroSearch)
-                                                openSearch()
+                                            onChange={(e) => {
+                                                const nextValue = e.target.value
+                                                setHeroSearch(nextValue)
+                                                setSearchValue(nextValue)
                                             }}
                                             onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && heroSearch.trim()) {
-                                                    setSearchValue(heroSearch.trim())
-                                                    openSearch()
+                                                if (e.key === "Enter" && heroSearch.trim()) {
+                                                    navigate(`/search?q=${encodeURIComponent(heroSearch.trim())}`)
                                                 }
                                             }}
                                             className="h-6 p-0 border-0 bg-transparent text-sm font-medium placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"

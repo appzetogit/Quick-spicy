@@ -326,6 +326,7 @@ export default function Home() {
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
   const [menuCategories, setMenuCategories] = useState([])
   const [loadingMenuCategories, setLoadingMenuCategories] = useState(false)
+  const [restaurantDietMeta, setRestaurantDietMeta] = useState({})
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
@@ -519,11 +520,14 @@ export default function Home() {
       );
       if (apiItem) {
         // API uses imageUrl, fallback uses image. Prefer API.
-        return { ...item, image: apiItem.imageUrl || item.image };
+        return {
+          ...item,
+          image: normalizeImageUrl(apiItem.imageUrl || apiItem.image || "") || item.image
+        };
       }
       return item;
     });
-  }, [landingExploreMore]);
+  }, [landingExploreMore, normalizeImageUrl]);
 
   const normalizedLandingCategories = useMemo(() => {
     return (landingCategories || []).map((category, index) => ({
@@ -1327,6 +1331,29 @@ export default function Home() {
     }
   }, [normalizeImageUrl, zoneId, extractImages, buildRestaurantImageCandidates])
 
+  const applyFiltersAndRefetch = useCallback(async (
+    nextActiveFilters = activeFilters,
+    nextSortBy = sortBy,
+    nextSelectedCuisine = selectedCuisine
+  ) => {
+    const nextFilterState = {
+      activeFilters: new Set(nextActiveFilters),
+      sortBy: nextSortBy,
+      selectedCuisine: nextSelectedCuisine
+    }
+
+    setAppliedFilters(nextFilterState)
+    setIsLoadingFilterResults(true)
+
+    try {
+      await fetchRestaurants(nextFilterState)
+    } catch (error) {
+      console.error('Error applying filters:', error)
+    } finally {
+      setIsLoadingFilterResults(false)
+    }
+  }, [activeFilters, sortBy, selectedCuisine, fetchRestaurants])
+
   // Fetch restaurants when appliedFilters change
   useEffect(() => {
     fetchRestaurants(appliedFilters)
@@ -1390,6 +1417,7 @@ export default function Home() {
     const fetchMenuCategories = async () => {
       if (!Array.isArray(restaurantsData) || restaurantsData.length === 0) {
         setMenuCategories([])
+        setRestaurantDietMeta({})
         return
       }
 
@@ -1399,19 +1427,46 @@ export default function Home() {
         const menuResponses = await Promise.all(
           restaurantsData.map(async (restaurant) => {
             const id = restaurant?.restaurantId || restaurant?.id
-            if (!id) return null
+            if (!id) return { id: null, menu: null }
             try {
               const response = await restaurantAPI.getMenuByRestaurantId(id)
-              return response?.data?.data?.menu || null
+              return {
+                id: String(id),
+                menu: response?.data?.data?.menu || null
+              }
             } catch {
-              return null
+              return {
+                id: String(id),
+                menu: null
+              }
             }
           })
         )
 
-        menuResponses.forEach((menu) => {
+        const nextDietMeta = {}
+
+        menuResponses.forEach(({ id, menu }) => {
+          let hasVeg = false
+          let hasNonVeg = false
           const sections = Array.isArray(menu?.sections) ? menu.sections : []
           sections.forEach((section) => {
+            const sectionItems = Array.isArray(section?.items) ? section.items : []
+            sectionItems.forEach((item) => {
+              const foodType = String(item?.foodType || "").trim().toLowerCase()
+              if (foodType === "veg") hasVeg = true
+              if (foodType === "non-veg" || foodType === "non veg" || foodType === "nonveg") hasNonVeg = true
+            })
+
+            const subsections = Array.isArray(section?.subsections) ? section.subsections : []
+            subsections.forEach((subsection) => {
+              const subsectionItems = Array.isArray(subsection?.items) ? subsection.items : []
+              subsectionItems.forEach((item) => {
+                const foodType = String(item?.foodType || "").trim().toLowerCase()
+                if (foodType === "veg") hasVeg = true
+                if (foodType === "non-veg" || foodType === "non veg" || foodType === "nonveg") hasNonVeg = true
+              })
+            })
+
             const categoryName = String(section?.name || "").trim()
             if (!categoryName) return
 
@@ -1443,6 +1498,14 @@ export default function Home() {
               categoryMap.get(slug).image = image
             }
           })
+
+          if (id) {
+            nextDietMeta[id] = {
+              hasVeg,
+              hasNonVeg,
+              isPureVeg: hasVeg && !hasNonVeg,
+            }
+          }
         })
 
         const categories = Array.from(categoryMap.values())
@@ -1453,6 +1516,7 @@ export default function Home() {
           }))
 
         setMenuCategories(categories)
+        setRestaurantDietMeta(nextDietMeta)
       } finally {
         setLoadingMenuCategories(false)
       }
@@ -1461,10 +1525,25 @@ export default function Home() {
     fetchMenuCategories()
   }, [restaurantsData, normalizeImageUrl, slugifyCategory])
 
+  const matchesVegMode = useCallback((restaurant) => {
+    if (!vegMode) return true
+
+    const key = String(restaurant?.restaurantId || restaurant?.id || "")
+    const dietMeta = restaurantDietMeta[key]
+    if (!dietMeta) return true
+
+    if (vegModeOption === "pure-veg") {
+      return dietMeta.isPureVeg
+    }
+    return dietMeta.hasVeg
+  }, [vegMode, vegModeOption, restaurantDietMeta])
+
   // Filter restaurants and foods based on active filters
   const filteredRestaurants = useMemo(() => {
     // Use only API data - no mock data fallback
     let filtered = [...restaurantsData]
+
+    filtered = filtered.filter(matchesVegMode)
 
     // Apply filters
     if (activeFilters.has('price-under-200')) {
@@ -1562,7 +1641,7 @@ export default function Home() {
     }
 
     return filtered
-  }, [restaurantsData, activeFilters, selectedCuisine, sortBy, availabilityTick])
+  }, [restaurantsData, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
   const recommendedForYouRestaurants = useMemo(() => {
     const idsInOrder = (recommendedRestaurantIds || []).map((id) => String(id))
@@ -1616,13 +1695,16 @@ export default function Home() {
         return hasIds && idsInOrder.includes(mongoId) && !existingIds.has(mongoId)
       })
 
-    return [...orderedFromSettings, ...fromFetchedMissing].slice(0, 12)
+    return [...orderedFromSettings, ...fromFetchedMissing]
+      .filter(matchesVegMode)
+      .slice(0, 12)
   }, [
     recommendedRestaurantIds,
     recommendedRestaurantsFromSettings,
     restaurantsData,
     extractImages,
-    normalizeImageUrl
+    normalizeImageUrl,
+    matchesVegMode
   ])
 
   // Featured foods removed - will be handled by restaurants data from API
@@ -2295,12 +2377,14 @@ export default function Home() {
                   <Button
                     variant="outline"
                     onClick={() => {
-                      toggleFilter(filter.id)
-                      setIsLoadingFilterResults(true)
-                      // Simulate loading for 1 second
-                      setTimeout(() => {
-                        setIsLoadingFilterResults(false)
-                      }, 500)
+                      const nextFilters = new Set(activeFilters)
+                      if (nextFilters.has(filter.id)) {
+                        nextFilters.delete(filter.id)
+                      } else {
+                        nextFilters.add(filter.id)
+                      }
+                      setActiveFilters(nextFilters)
+                      void applyFiltersAndRefetch(nextFilters, sortBy, selectedCuisine)
                     }
                     }
                     className={`h-7 sm:h-8 px-2 sm:px-3 rounded-md flex items-center gap-1.5 whitespace-nowrap flex-shrink-0 transition-all font-medium ${isActive
@@ -2953,27 +3037,8 @@ export default function Home() {
                 </button>
                 <button
                   onClick={async () => {
-                    // Apply filters
-                    setAppliedFilters({
-                      activeFilters: new Set(activeFilters),
-                      sortBy,
-                      selectedCuisine
-                    })
-                    setIsLoadingFilterResults(true)
                     setIsFilterOpen(false)
-
-                    // Refetch restaurants with new filters
-                    try {
-                      await fetchRestaurants({
-                        activeFilters: new Set(activeFilters),
-                        sortBy,
-                        selectedCuisine
-                      })
-                    } catch (error) {
-                      console.error('Error applying filters:', error)
-                    } finally {
-                      setIsLoadingFilterResults(false)
-                    }
+                    await applyFiltersAndRefetch(activeFilters, sortBy, selectedCuisine)
                   }}
                   className={`flex-1 py-3 font-semibold rounded-xl transition-colors ${activeFilters.size > 0 || sortBy || selectedCuisine
                     ? 'bg-[#EB590E] text-white hover:bg-[#D94F0C]'
@@ -3139,7 +3204,7 @@ export default function Home() {
               onClick={() => {
                 setShowSwitchOffPopup(false)
                 isHandlingSwitchOff.current = false
-                setVegMode(true)
+                setVegModeContext(true)
                 // prevVegMode stays true (from before), which is correct
               }}
               className="fixed inset-0 bg-black/50 z-[9998] backdrop-blur-sm"

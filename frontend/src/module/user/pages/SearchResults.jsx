@@ -10,9 +10,6 @@ import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { restaurantAPI, adminAPI } from "@/lib/api"
 
-// Import shared food images - prevents duplication
-import { foodImages } from "@/constants/images"
-
 // Filter options
 const filterOptions = [
   { id: 'under-30-mins', label: 'Under 30 mins' },
@@ -38,7 +35,7 @@ export default function SearchResults() {
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [categories, setCategories] = useState([
-    { id: 'all', name: "All", image: foodImages[7] }
+    { id: 'all', name: "All", image: "" }
   ])
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
@@ -65,11 +62,11 @@ export default function SearchResults() {
 
           // Transform API categories to match expected format
           const transformedCategories = [
-            { id: 'all', name: "All", image: foodImages[7] },
+            { id: 'all', name: "All", image: "" },
             ...categoriesArray.map((cat) => ({
               id: cat.slug || cat.id,
               name: cat.name,
-              image: cat.image || foodImages[0],
+              image: cat.image || cat.imageUrl || "",
               type: cat.type,
             }))
           ]
@@ -403,12 +400,41 @@ export default function SearchResults() {
             const sourceEntries = Array.from(sectionStatsMap.entries())
               .map(([slug, stats]) => [slug, stats.name])
 
+            const getCategoryImageFromMenus = (slug, categoryName) => {
+              for (const restaurant of transformedRestaurants) {
+                const menuSections = Array.isArray(restaurant?.menu?.sections) ? restaurant.menu.sections : []
+                for (const section of menuSections) {
+                  const sectionSlug = slugify(section?.name || "")
+                  if (sectionSlug !== slug && String(section?.name || "").trim().toLowerCase() !== String(categoryName || "").trim().toLowerCase()) {
+                    continue
+                  }
+
+                  const directItems = Array.isArray(section?.items) ? section.items : []
+                  const directImageItem = directItems.find((item) => item?.image)
+                  if (directImageItem?.image) return directImageItem.image
+
+                  const subsections = Array.isArray(section?.subsections) ? section.subsections : []
+                  for (const subsection of subsections) {
+                    const subItems = Array.isArray(subsection?.items) ? subsection.items : []
+                    const subImageItem = subItems.find((item) => item?.image)
+                    if (subImageItem?.image) return subImageItem.image
+                  }
+
+                  if (restaurant?.image) return restaurant.image
+                  if (Array.isArray(restaurant?.images) && restaurant.images.length > 0) {
+                    return restaurant.images[0]
+                  }
+                }
+              }
+              return ""
+            }
+
             const dynamicCategories = [
-              { id: 'all', name: "All", image: foodImages[7] || foodImages[0] },
+              { id: 'all', name: "All", image: "" },
               ...sourceEntries.map(([slug, name], idx) => ({
                 id: slug,
                 name,
-                image: foodImages[idx % foodImages.length] || foodImages[0],
+                image: getCategoryImageFromMenus(slug, name),
                 type: 'menu-section',
               })),
             ]

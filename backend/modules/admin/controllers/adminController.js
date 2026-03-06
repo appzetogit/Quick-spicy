@@ -38,7 +38,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
     const now = new Date();
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-    // Get total revenue (sum of all completed orders)
+    // Get total revenue (sum of all delivered orders)
     const revenueStats = await Order.aggregate([
       {
         $match: {
@@ -52,18 +52,13 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
           totalRevenue: { $sum: "$pricing.total" },
           last30DaysRevenue: {
             $sum: {
-              $cond: [
-                { $gte: ["$createdAt", last30Days] },
-                "$pricing.total",
-                0,
-              ],
+              $cond: [{ $gte: ["$createdAt", last30Days] }, "$pricing.total", 0],
             },
           },
         },
       },
     ]);
 
-    // Get revenue data from aggregation result
     const revenueData = revenueStats[0] || {
       totalRevenue: 0,
       last30DaysRevenue: 0,

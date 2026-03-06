@@ -391,6 +391,7 @@ export default function Under250() {
     const itemWithRestaurant = {
       ...item,
       restaurant: restaurant.name,
+      restaurantSlug: restaurant.slug || restaurant.restaurantId || "",
       description: item.description || `${item.name} from ${restaurant.name}`,
       customisable: item.customisable || false,
       notEligibleForCoupons: item.notEligibleForCoupons || false,
@@ -409,6 +410,46 @@ export default function Under250() {
       }
       return newSet
     })
+  }
+
+  const handleShareItem = async (item) => {
+    if (!item) return
+
+    const itemId = item.id || item._id
+    const restaurantSlug = item.restaurantSlug || item.slug || ""
+    const shareUrl = restaurantSlug
+      ? `${window.location.origin}/user/restaurants/${restaurantSlug}${itemId ? `?dish=${encodeURIComponent(itemId)}` : ""}`
+      : window.location.href
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: item.name || "Dish",
+          text: `Check out ${item.name || "this dish"} from ${item.restaurant || "Under 250"}`,
+          url: shareUrl,
+        })
+        return
+      }
+
+      await navigator.clipboard.writeText(shareUrl)
+      toast.success("Link copied to clipboard!")
+    } catch (error) {
+      if (error?.name === "AbortError") return
+
+      try {
+        const textArea = document.createElement("textarea")
+        textArea.value = shareUrl
+        textArea.style.position = "fixed"
+        textArea.style.opacity = "0"
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand("copy")
+        document.body.removeChild(textArea)
+        toast.success("Link copied to clipboard!")
+      } catch {
+        toast.error("Failed to share link")
+      }
+    }
   }
 
   // Check if should show grayscale (only when user is out of service)
@@ -878,7 +919,13 @@ export default function Under250() {
                         }`}
                     />
                   </button>
-                  <button className="h-10 w-10 rounded-full border border-white bg-white/90 text-gray-600 hover:bg-white flex items-center justify-center transition-colors">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleShareItem(selectedItem)
+                    }}
+                    className="h-10 w-10 rounded-full border border-white bg-white/90 text-gray-600 hover:bg-white flex items-center justify-center transition-colors"
+                  >
                     <Share2 className="h-5 w-5" />
                   </button>
                 </div>
@@ -915,7 +962,13 @@ export default function Under250() {
                           }`}
                       />
                     </button>
-                    <button className="h-8 w-8 lg:h-10 lg:w-10 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center justify-center transition-colors">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleShareItem(selectedItem)
+                      }}
+                      className="h-8 w-8 lg:h-10 lg:w-10 rounded-full border border-gray-300 dark:border-gray-600 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 flex items-center justify-center transition-colors"
+                    >
                       <Share2 className="h-4 w-4 lg:h-5 lg:w-5" />
                     </button>
                   </div>

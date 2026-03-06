@@ -1101,3 +1101,99 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
   }
 };
 
+// Get all public dishes (flattened from menu sections + subsections)
+export const getPublicDishes = async (req, res) => {
+  try {
+    const { limit = 500 } = req.query;
+    const maxItems = Math.min(Math.max(Number(limit) || 500, 1), 2000);
+
+    const activeRestaurants = await Restaurant.find({ isActive: true })
+      .select("_id profileImage menuImages")
+      .lean();
+
+    const restaurantById = new Map(
+      activeRestaurants.map((restaurant) => [
+        String(restaurant._id),
+        restaurant,
+      ]),
+    );
+
+    const menus = await Menu.find({
+      isActive: true,
+      restaurant: { $in: activeRestaurants.map((restaurant) => restaurant._id) },
+    })
+      .select("restaurant sections")
+      .lean();
+
+    const dishesMap = new Map();
+    const getImage = (item, restaurant) =>
+      item?.image ||
+      (Array.isArray(item?.images) && item.images.length > 0 ? item.images[0] : "") ||
+      restaurant?.profileImage?.url ||
+      restaurant?.menuImages?.[0]?.url ||
+      "";
+
+    for (const menu of menus) {
+      const restaurant = restaurantById.get(String(menu?.restaurant));
+      const sections = Array.isArray(menu?.sections) ? menu.sections : [];
+
+      for (const section of sections) {
+        if (section?.isEnabled === false) continue;
+
+        const sectionItems = Array.isArray(section?.items) ? section.items : [];
+        for (const item of sectionItems) {
+          if (item?.isAvailable === false) continue;
+          const name = String(item?.name || "").trim();
+          if (!name) continue;
+          const key = name.toLowerCase();
+          const image = getImage(item, restaurant);
+
+          if (!dishesMap.has(key)) {
+            dishesMap.set(key, {
+              id: item?.id || key,
+              name,
+              image,
+            });
+          } else if (!dishesMap.get(key).image && image) {
+            dishesMap.get(key).image = image;
+          }
+        }
+
+        const subsections = Array.isArray(section?.subsections) ? section.subsections : [];
+        for (const subsection of subsections) {
+          const subsectionItems = Array.isArray(subsection?.items) ? subsection.items : [];
+          for (const item of subsectionItems) {
+            if (item?.isAvailable === false) continue;
+            const name = String(item?.name || "").trim();
+            if (!name) continue;
+            const key = name.toLowerCase();
+            const image = getImage(item, restaurant);
+
+            if (!dishesMap.has(key)) {
+              dishesMap.set(key, {
+                id: item?.id || key,
+                name,
+                image,
+              });
+            } else if (!dishesMap.get(key).image && image) {
+              dishesMap.get(key).image = image;
+            }
+          }
+        }
+
+        if (dishesMap.size >= maxItems) break;
+      }
+      if (dishesMap.size >= maxItems) break;
+    }
+
+    const dishes = Array.from(dishesMap.values()).slice(0, maxItems);
+    return successResponse(res, 200, "Public dishes retrieved successfully", {
+      dishes,
+      total: dishes.length,
+    });
+  } catch (error) {
+    console.error("Error fetching public dishes:", error);
+    return errorResponse(res, 500, "Failed to fetch public dishes");
+  }
+};
+

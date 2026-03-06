@@ -2174,7 +2174,11 @@ function RestaurantDetailsContent() {
                                             />
                                           </button>
                                           <button
-                                            onClick={(e) => e.stopPropagation()}
+                                            onClick={(e) => {
+                                              e.preventDefault()
+                                              e.stopPropagation()
+                                              handleShareClick(item)
+                                            }}
                                             className="p-1.5 border border-gray-300 dark:border-gray-700 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                                           >
                                             <Share2 size={18} />

@@ -385,11 +385,16 @@ export default function DeliveryHome() {
     transactions: [],
     joiningBonusClaimed: false
   })
+  const [cashLimitWarningMessage, setCashLimitWarningMessage] = useState("")
+  const hasShownCashLimitToastRef = useRef(false)
   const [activeOrder, setActiveOrder] = useState(() => {
     const stored = localStorage.getItem('activeOrder')
     return stored ? JSON.parse(stored) : null
   })
   const [unreadNotificationCount, setUnreadNotificationCount] = useState(() => getUnreadDeliveryNotificationCount())
+  const availableCashLimit = Number(walletState?.availableCashLimit)
+  const isCashLimitBlocked = Number.isFinite(availableCashLimit) && availableCashLimit <= 0
+  const cashLimitBlockedMessage = cashLimitWarningMessage || "Deposit cash to continue"
   
   // Delivery notifications hook
   const { newOrder, clearNewOrder, orderReady, clearOrderReady, isConnected } = useDeliveryNotifications()
@@ -4878,6 +4883,11 @@ export default function DeliveryHome() {
     if (isOnline) {
       goOffline()
     } else {
+      if (isCashLimitBlocked) {
+        toast.error(cashLimitBlockedMessage || "Deposit cash to continue")
+        navigate("/delivery/pocket")
+        return
+      }
       // Check if there are any booked gigs
       // if (bookedGigs.length === 0) {
       //   // Show popup to book gigs
@@ -4893,7 +4903,7 @@ export default function DeliveryHome() {
       //   localStorage.setItem('delivery_online_status', 'true')
       //   window.dispatchEvent(new CustomEvent('deliveryOnlineStatusChanged'))
       // }
-      goOnline();
+      goOnline()
     }
   }
 
@@ -5046,6 +5056,18 @@ export default function DeliveryHome() {
     }
   }, [deliveryStatus])
 
+  useEffect(() => {
+    if (!isCashLimitBlocked) {
+      hasShownCashLimitToastRef.current = false
+      return
+    }
+
+    if (!hasShownCashLimitToastRef.current) {
+      toast.error(cashLimitBlockedMessage, { duration: 3500 })
+      hasShownCashLimitToastRef.current = true
+    }
+  }, [isCashLimitBlocked, cashLimitBlockedMessage])
+
   // Fetch assigned orders from API when delivery person goes online
   const fetchAssignedOrders = useCallback(async () => {
     if (!isOnline) {
@@ -5061,6 +5083,15 @@ export default function DeliveryHome() {
         includeDelivered: false, // Only get active orders
         discover: true // Include unassigned preparing/ready orders for pickup discovery
       })
+
+      const ordersPayload = response?.data?.data || {}
+      if (ordersPayload?.canReceiveNewOrders === false) {
+        setCashLimitWarningMessage(
+          ordersPayload?.cashLimitWarning || "Deposit cash to continue"
+        )
+      } else {
+        setCashLimitWarningMessage("")
+      }
 
       if (response?.data?.success && response?.data?.data?.orders) {
         const orders = response.data.data.orders
@@ -8930,6 +8961,23 @@ export default function DeliveryHome() {
         onEmergencyClick={() => setShowEmergencyPopup(true)}
         onHelpClick={() => setShowHelpPopup(true)}
       />
+
+      {isCashLimitBlocked && (
+        <div className="mx-3 mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium text-red-700">
+              Deposit cash to continue
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate("/delivery/pocket")}
+              className="rounded-md bg-red-600 px-3 py-1 text-xs font-semibold text-white hover:bg-red-700"
+            >
+              Deposit now
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Carousel - Only show if there are slides */}
       {carouselSlides.length > 0 && (
