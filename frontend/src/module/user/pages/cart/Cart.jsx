@@ -568,11 +568,11 @@ export default function Cart() {
                   discountPercentage: coupon.discountPercentage,
                   discountDisplay: coupon.discountType === "percentage"
                     ? `${coupon.discountPercentage}% OFF`
-                    : `â‚¹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} OFF`,
+                    : `${RUPEE_SYMBOL}${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} OFF`,
                   minOrder: coupon.minOrderValue || 0,
                   description: coupon.discountType === "percentage"
                     ? `${coupon.discountPercentage}% OFF with '${coupon.couponCode}'`
-                    : `Save â‚¹${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} with '${coupon.couponCode}'`,
+                    : `Save ${RUPEE_SYMBOL}${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} with '${coupon.couponCode}'`,
                   originalPrice: coupon.originalPrice,
                   discountedPrice: coupon.discountedPrice,
                   customerGroup: coupon.customerGroup || "all",
@@ -759,7 +759,7 @@ export default function Cart() {
     deliveryFeeBreakdown?.source === "distance" &&
     Number.isFinite(Number(deliveryFeeBreakdown?.distanceKm))
   const deliveryFeeBreakdownText = hasDistanceDeliveryBreakdown
-    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: â‚¹${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km Ã— â‚¹${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
+    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ${RUPEE_SYMBOL}${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km x ${RUPEE_SYMBOL}${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
     : null
   const platformFee = pricing?.platformFee || feeSettings.platformFee
   const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
@@ -1233,7 +1233,7 @@ export default function Cart() {
 
       // Check wallet balance if wallet payment selected
       if (selectedPaymentMethod === "wallet" && walletBalance < total) {
-        toast.error(`Insufficient wallet balance. Required: â‚¹${total.toFixed(0)}, Available: â‚¹${walletBalance.toFixed(0)}`)
+        toast.error(`Insufficient wallet balance. Required: ${RUPEE_SYMBOL}${total.toFixed(0)}, Available: ${RUPEE_SYMBOL}${walletBalance.toFixed(0)}`)
         setIsPlacingOrder(false)
         return
       }
@@ -1311,7 +1311,7 @@ export default function Cart() {
         currency: razorpay.currency || 'INR',
         order_id: razorpay.orderId,
         name: companyName,
-        description: `Order ${order.orderId} - â‚¹${(razorpay.amount / 100).toFixed(2)}`,
+        description: `Order ${order.orderId} - ${RUPEE_SYMBOL}${(razorpay.amount / 100).toFixed(2)}`,
         prefill: {
           name: userName,
           email: userEmail,
@@ -1557,7 +1557,7 @@ export default function Cart() {
                         </div>
 
                         <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200 min-w-[50px] md:min-w-[70px] text-right">
-                          â‚¹{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
+                          {RUPEE_SYMBOL}{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
                         </p>
                       </div>
                     </div>
@@ -1681,7 +1681,7 @@ export default function Cart() {
                           {addon.description && (
                             <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{addon.description}</p>
                           )}
-                          <p className="text-xs md:text-sm text-gray-800 dark:text-gray-200 font-semibold mt-0.5">â‚¹{addon.price}</p>
+                          <p className="text-xs md:text-sm text-gray-800 dark:text-gray-200 font-semibold mt-0.5">{RUPEE_SYMBOL}{addon.price}</p>
                         </div>
                       ))}
                     </div>
@@ -1697,7 +1697,7 @@ export default function Cart() {
                       <Tag className="h-4 w-4 md:h-5 md:w-5 text-[#EB590E] dark:text-[#EB590E]" />
                       <div>
                         <p className="text-sm md:text-base font-medium text-orange-800 dark:text-orange-200">'{appliedCoupon.code}' applied</p>
-                        <p className="text-xs md:text-sm text-[#EB590E] dark:text-[#EB590E]">You saved â‚¹{discount}</p>
+                        <p className="text-xs md:text-sm text-[#EB590E] dark:text-[#EB590E]">You saved {RUPEE_SYMBOL}{discount}</p>
                       </div>
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium">Remove</button>
@@ -1731,7 +1731,7 @@ export default function Cart() {
                         <Percent className="h-4 w-4 md:h-5 md:w-5 text-gray-600 dark:text-gray-400" />
                         <div>
                           <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200">
-                            {availableCoupons[0].discountDisplay || `Save â‚¹${availableCoupons[0].discount}`} with '{availableCoupons[0].code}'
+                            {availableCoupons[0].discountDisplay || `Save ${RUPEE_SYMBOL}${availableCoupons[0].discount}`} with '{availableCoupons[0].code}'
                           </p>
                           {availableCoupons[0].customerGroup === "new" && (
                             <p className="text-[11px] md:text-xs text-orange-600 dark:text-orange-400">First-time users only</p>
@@ -1753,7 +1753,7 @@ export default function Cart() {
                         {availableCoupons[0].customerGroup === "new" && userOrderCount > 0
                           ? "Not Eligible"
                           : subtotal < availableCoupons[0].minOrder
-                            ? `Min â‚¹${availableCoupons[0].minOrder}`
+                            ? `Min ${RUPEE_SYMBOL}${availableCoupons[0].minOrder}`
                             : 'APPLY'}
                       </Button>
                     </div>
@@ -1787,7 +1787,7 @@ export default function Cart() {
                           {coupon.customerGroup === "new" && userOrderCount > 0
                             ? "Not Eligible"
                             : subtotal < coupon.minOrder
-                              ? `Min â‚¹${coupon.minOrder}`
+                              ? `Min ${RUPEE_SYMBOL}${coupon.minOrder}`
                               : 'APPLY'}
                         </Button>
                       </div>
@@ -2106,7 +2106,7 @@ export default function Cart() {
               >
                 {(selectedPaymentMethod === "razorpay" || selectedPaymentMethod === "wallet") && (
                   <div className="text-left mr-3 md:mr-4">
-                    <p className="text-sm md:text-base opacity-90">â‚¹{total.toFixed(0)}</p>
+                    <p className="text-sm md:text-base opacity-90">{RUPEE_SYMBOL}{total.toFixed(0)}</p>
                     <p className="text-xs md:text-sm opacity-75">TOTAL</p>
                   </div>
                 )}
@@ -2147,9 +2147,9 @@ export default function Cart() {
                 <div>
                   <p className="text-lg font-semibold text-gray-900">
                     {selectedPaymentMethod === "razorpay"
-                      ? `Pay â‚¹${total.toFixed(2)} online (Razorpay)`
+                      ? `Pay ${RUPEE_SYMBOL}${total.toFixed(2)} online (Razorpay)`
                       : selectedPaymentMethod === "wallet"
-                        ? `Pay â‚¹${total.toFixed(2)} from Wallet`
+                        ? `Pay ${RUPEE_SYMBOL}${total.toFixed(2)} from Wallet`
                         : `Pay on delivery (COD)`}
                   </p>
                 </div>
