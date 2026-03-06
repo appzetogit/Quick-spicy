@@ -19,11 +19,13 @@ let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
 let serviceWorkerMessageListenerAttached = false;
+let serviceWorkerBroadcastChannel = null;
 const MESSAGING_APP_NAME = "web-push-app";
 const recentForegroundNotifications = new Map();
 let pushSoundAudio = null;
 let pushSoundUnlocked = false;
 let pushSoundContext = null;
+const PUSH_DEBUG_PREFIX = "[push-debug]";
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -74,6 +76,7 @@ function wasRecentlyHandled(notificationKey) {
   }
 
   if (recentForegroundNotifications.has(notificationKey)) {
+    console.log(PUSH_DEBUG_PREFIX, "Duplicate notification skipped", { notificationKey });
     return true;
   }
 
@@ -84,7 +87,9 @@ function wasRecentlyHandled(notificationKey) {
 function ensurePushSoundAudio() {
   if (typeof window === "undefined") return null;
   if (!pushSoundAudio) {
-    pushSoundAudio = new Audio(new URL(pushNotificationSoundPath, window.location.origin).toString());
+    const audioUrl = new URL(pushNotificationSoundPath, window.location.origin).toString();
+    console.log(PUSH_DEBUG_PREFIX, "Creating primary push audio", { audioUrl });
+    pushSoundAudio = new Audio(audioUrl);
     pushSoundAudio.preload = "auto";
     pushSoundAudio.volume = 1;
     pushSoundAudio.load();
@@ -98,6 +103,7 @@ function createPushPlaybackAudio() {
       ? pushNotificationSoundPath
       : new URL(pushNotificationSoundPath, window.location.origin).toString();
   const audioSources = [primarySource, fallbackNotificationSound];
+  console.log(PUSH_DEBUG_PREFIX, "Preparing push playback sources", { audioSources });
   return audioSources.map((source) => {
     const playbackAudio = new Audio(source);
     playbackAudio.preload = "auto";
@@ -122,6 +128,7 @@ function getAudioContext() {
 async function playSynthNotificationBeep() {
   const ctx = getAudioContext();
   if (!ctx) return false;
+  console.log(PUSH_DEBUG_PREFIX, "Playing synth notification beep");
 
   if (ctx.state === "suspended") {
     await ctx.resume();
@@ -180,7 +187,9 @@ async function triggerWebViewNativeNotification(payload = {}) {
 
       for (const handlerName of handlerNames) {
         try {
+          console.log(PUSH_DEBUG_PREFIX, "Trying native notification handler", { handlerName, bridgePayload });
           await window.flutter_inappwebview.callHandler(handlerName, bridgePayload);
+          console.log(PUSH_DEBUG_PREFIX, "Native notification handler succeeded", { handlerName });
           return true;
         } catch {
           // Try the next available handler name.
@@ -196,30 +205,48 @@ async function triggerWebViewNativeNotification(payload = {}) {
 
 async function playPushSound(payload = {}) {
   try {
+    console.log(PUSH_DEBUG_PREFIX, "playPushSound called", {
+      notificationKey: getNotificationKey(payload),
+      pushSoundUnlocked,
+      notificationPermission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+      payload,
+    });
     const usedNativeBridge = await triggerWebViewNativeNotification(payload);
 
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+      console.log(PUSH_DEBUG_PREFIX, "Triggering vibration");
       navigator.vibrate([200, 100, 200, 100, 300]);
     }
 
-    if (usedNativeBridge) return;
+    if (usedNativeBridge) {
+      console.log(PUSH_DEBUG_PREFIX, "Push sound handled by native bridge");
+      return;
+    }
 
-    if (!pushSoundUnlocked) return;
+    if (!pushSoundUnlocked) {
+      console.warn(PUSH_DEBUG_PREFIX, "Push sound blocked because sound is not enabled/unlocked");
+      return;
+    }
 
     const players = createPushPlaybackAudio();
     for (const audio of players) {
       try {
         audio.currentTime = 0;
         await audio.play();
+        console.log(PUSH_DEBUG_PREFIX, "Audio playback succeeded", { source: audio.src });
         return;
-      } catch {
+      } catch (error) {
+        console.warn(PUSH_DEBUG_PREFIX, "Audio playback failed", {
+          source: audio.src,
+          error: error?.message || error,
+        });
         // Try next fallback sound source.
       }
     }
 
     await playSynthNotificationBeep();
-  } catch {
-    // Ignore autoplay/playback failures.
+  } catch (error) {
+    console.warn(PUSH_DEBUG_PREFIX, "playPushSound failed", { error: error?.message || error });
   }
 }
 
@@ -230,6 +257,7 @@ function setupPushSoundUnlock() {
     try {
       const audio = ensurePushSoundAudio();
       if (!audio) return;
+      console.log(PUSH_DEBUG_PREFIX, "Attempting passive push sound unlock");
       audio.muted = true;
       await audio.play();
       audio.pause();
@@ -237,9 +265,12 @@ function setupPushSoundUnlock() {
       audio.muted = false;
       pushSoundUnlocked = true;
       localStorage.setItem(pushSoundEnabledStorageKey, "true");
+      console.log(PUSH_DEBUG_PREFIX, "Passive push sound unlock succeeded");
       window.dispatchEvent(new CustomEvent("push-sound-enabled"));
-    } catch {
-      // Will retry on next gesture.
+    } catch (error) {
+      console.warn(PUSH_DEBUG_PREFIX, "Passive push sound unlock failed", {
+        error: error?.message || error,
+      });
     }
 
     if (pushSoundUnlocked) {
@@ -260,6 +291,7 @@ export async function enablePushNotificationSound() {
   try {
     const audio = ensurePushSoundAudio();
     if (!audio) return false;
+    console.log(PUSH_DEBUG_PREFIX, "Manual push sound enable started");
     audio.muted = true;
     await audio.play();
     audio.pause();
@@ -274,22 +306,33 @@ export async function enablePushNotificationSound() {
       try {
         previewAudio.currentTime = 0;
         await previewAudio.play();
+        console.log(PUSH_DEBUG_PREFIX, "Manual sound preview succeeded", { source: previewAudio.src });
         return true;
-      } catch {
+      } catch (error) {
+        console.warn(PUSH_DEBUG_PREFIX, "Manual sound preview failed", {
+          source: previewAudio.src,
+          error: error?.message || error,
+        });
         // Try next preview source.
       }
     }
 
     await playSynthNotificationBeep();
     return true;
-  } catch {
+  } catch (error) {
+    console.warn(PUSH_DEBUG_PREFIX, "Manual push sound enable failed, trying synth beep", {
+      error: error?.message || error,
+    });
     try {
       await playSynthNotificationBeep();
       pushSoundUnlocked = true;
       localStorage.setItem(pushSoundEnabledStorageKey, "true");
       window.dispatchEvent(new CustomEvent("push-sound-enabled"));
       }
-    catch {
+    catch (beepError) {
+      console.warn(PUSH_DEBUG_PREFIX, "Synth beep fallback failed", {
+        error: beepError?.message || beepError,
+      });
       return false;
     }
     return true;
@@ -378,6 +421,7 @@ async function saveTokenByModule(moduleName, token) {
 
 function showForegroundNotification(payload = {}) {
   const notificationKey = getNotificationKey(payload);
+  console.log(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKey, payload });
   if (wasRecentlyHandled(notificationKey)) {
     return;
   }
@@ -401,14 +445,22 @@ function showForegroundNotification(payload = {}) {
 
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
     try {
+      console.log(PUSH_DEBUG_PREFIX, "Showing browser notification from page", {
+        title,
+        body,
+        image,
+        notificationKey,
+      });
       new Notification(title, {
         body,
         icon: "/favicon.ico",
         image,
         tag: notificationKey || undefined,
       });
-    } catch {
-      // Ignore Notification API errors and fallback to toast.
+    } catch (error) {
+      console.warn(PUSH_DEBUG_PREFIX, "Browser notification creation failed", {
+        error: error?.message || error,
+      });
     }
   }
 
@@ -420,20 +472,43 @@ function showForegroundNotification(payload = {}) {
 }
 
 function attachServiceWorkerMessageListener() {
-  if (
-    serviceWorkerMessageListenerAttached ||
-    typeof window === "undefined" ||
-    !("serviceWorker" in navigator)
-  ) {
+  if (serviceWorkerMessageListenerAttached || typeof window === "undefined") {
     return;
   }
 
-  navigator.serviceWorker.addEventListener("message", (event) => {
-    if (event?.data?.type !== "push-notification-received") return;
-    showForegroundNotification(event.data.payload || {});
-  });
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("message", (event) => {
+      if (event?.data?.type !== "push-notification-received") return;
+      console.log(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: event.data.payload });
+      showForegroundNotification(event.data.payload || {});
+    });
+  }
+
+  if (typeof BroadcastChannel !== "undefined") {
+    serviceWorkerBroadcastChannel = new BroadcastChannel("push-notifications");
+    serviceWorkerBroadcastChannel.addEventListener("message", (event) => {
+      if (event?.data?.type !== "push-notification-received") return;
+      console.log(PUSH_DEBUG_PREFIX, "Received BroadcastChannel push message in page", { payload: event.data.payload });
+      showForegroundNotification(event.data.payload || {});
+    });
+  }
 
   serviceWorkerMessageListenerAttached = true;
+}
+
+export function initPushNotificationClient() {
+  if (typeof window === "undefined") return;
+  console.log(PUSH_DEBUG_PREFIX, "Initializing push notification client", {
+    path: window.location.pathname,
+    soundEnabled: isPushSoundEnabled(),
+  });
+
+  if (isPushSoundEnabled()) {
+    pushSoundUnlocked = true;
+  }
+
+  setupPushSoundUnlock();
+  attachServiceWorkerMessageListener();
 }
 
 async function attachForegroundListener(firebaseAppInstance) {
@@ -448,6 +523,7 @@ async function attachForegroundListener(firebaseAppInstance) {
   attachServiceWorkerMessageListener();
 
   onMessage(messaging, (payload) => {
+    console.log(PUSH_DEBUG_PREFIX, "Received Firebase foreground message", { payload });
     showForegroundNotification(payload);
   });
 
@@ -455,6 +531,8 @@ async function attachForegroundListener(firebaseAppInstance) {
 }
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
+  initPushNotificationClient();
+
   const moduleName = normalizeModuleFromPath(pathname);
   if (moduleName === "admin") return;
 
@@ -462,10 +540,6 @@ export async function registerWebPushForCurrentModule(pathname = window.location
   if (!accessToken) return;
 
   if (!isSupportedBrowser() || !isSecureContextForPush()) return;
-
-  if (isPushSoundEnabled()) {
-    pushSoundUnlocked = true;
-  }
 
   if (registrationInFlight) return registrationInFlight;
 
@@ -494,6 +568,10 @@ export async function registerWebPushForCurrentModule(pathname = window.location
     if (!supported) return;
 
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+    console.log(PUSH_DEBUG_PREFIX, "Service worker registered for push", {
+      scope: registration.scope,
+      moduleName,
+    });
     const messaging = getMessaging(app);
 
     const token = await getToken(messaging, {
@@ -502,6 +580,10 @@ export async function registerWebPushForCurrentModule(pathname = window.location
     });
 
     if (!token) return;
+    console.log(PUSH_DEBUG_PREFIX, "FCM token resolved", {
+      moduleName,
+      tokenPreview: `${token.slice(0, 12)}...`,
+    });
 
     const lastSavedToken = getSavedToken(moduleName);
     if (lastSavedToken === token) {

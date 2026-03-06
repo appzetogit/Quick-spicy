@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import AuthRedirect from "@/components/AuthRedirect"
 import Loader from "@/components/Loader"
 import PushSoundEnableButton from "@/components/PushSoundEnableButton"
-import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
+import { initPushNotificationClient, registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -139,6 +139,10 @@ function ScrollToTop() {
 
 export default function App() {
   const location = useLocation()
+
+  useEffect(() => {
+    initPushNotificationClient()
+  }, [])
 
   useEffect(() => {
     registerWebPushForCurrentModule(location.pathname)

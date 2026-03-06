@@ -3,6 +3,9 @@ importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js
 importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js");
 
 const sanitize = (value) => String(value || "").trim().replace(/^['"]|['"]$/g, "");
+const pushBroadcastChannel =
+  typeof BroadcastChannel !== "undefined" ? new BroadcastChannel("push-notifications") : null;
+const PUSH_DEBUG_PREFIX = "[push-sw]";
 const getNotificationKey = (payload) =>
   payload?.data?.notificationId ||
   payload?.data?.messageId ||
@@ -15,6 +18,16 @@ const getNotificationKey = (payload) =>
   ].join("::");
 
 async function notifyOpenClients(payload) {
+  console.log(PUSH_DEBUG_PREFIX, "Broadcasting push to open clients", { payload });
+  try {
+    pushBroadcastChannel?.postMessage({
+      type: "push-notification-received",
+      payload,
+    });
+  } catch {
+    // Ignore BroadcastChannel delivery issues and continue with postMessage.
+  }
+
   const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
   windowClients.forEach((client) => {
     client.postMessage({
@@ -47,6 +60,7 @@ async function loadFirebaseWebConfig() {
       };
 
       if (config.apiKey && config.projectId && config.appId && config.messagingSenderId) {
+        console.log(PUSH_DEBUG_PREFIX, "Loaded Firebase web config");
         return config;
       }
     } catch {
@@ -64,10 +78,12 @@ async function loadFirebaseWebConfig() {
   }
 
   firebase.initializeApp(config);
+  console.log(PUSH_DEBUG_PREFIX, "Firebase messaging service worker initialized");
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage((payload) => {
-    notifyOpenClients(payload);
+    console.log(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
+    self.registration.waitUntil(notifyOpenClients(payload));
 
     if (payload?.notification?.title || payload?.notification?.body) {
       return;
@@ -80,6 +96,12 @@ async function loadFirebaseWebConfig() {
       payload?.data?.imageUrl ||
       undefined;
     const notificationKey = getNotificationKey(payload);
+    console.log(PUSH_DEBUG_PREFIX, "Showing service worker notification", {
+      title,
+      body,
+      image,
+      notificationKey,
+    });
 
     self.registration.showNotification(title, {
       body,
@@ -95,7 +117,22 @@ async function loadFirebaseWebConfig() {
   });
 })();
 
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  try {
+    const payload = event.data.json();
+    console.log(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
+    event.waitUntil(notifyOpenClients(payload));
+  } catch {
+    // Ignore malformed payloads.
+  }
+});
+
 self.addEventListener("notificationclick", (event) => {
+  console.log(PUSH_DEBUG_PREFIX, "Notification click received", {
+    data: event?.notification?.data || {},
+  });
   event.notification.close();
   const rawLink =
     event?.notification?.data?.link ||
