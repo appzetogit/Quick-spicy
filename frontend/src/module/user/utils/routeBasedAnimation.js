@@ -92,7 +92,8 @@ export function animateMarkerSmoothly(marker, currentPos, targetPos, duration = 
     marker.setPosition({ lat: currentLat, lng: currentLng });
     
     // Calculate and update bearing (rotation). Standard google.maps.Marker has no getRotation/setRotation; use _rotation fallback.
-    const getRotation = () => (typeof marker.getRotation === 'function' ? marker.getRotation() : (marker._rotation ? 0)) || 0;
+    const getRotation = () =>
+      (typeof marker.getRotation === 'function' ? marker.getRotation() : marker._rotation) || 0;
     const setRotation = (deg) => {
       if (typeof marker.setRotation === 'function') marker.setRotation(deg);
       else marker._rotation = deg;
@@ -354,4 +355,3 @@ export class RouteBasedAnimationController {
     this.polylinePoints = null;
   }
 }
-
