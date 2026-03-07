@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { restaurantAPI } from "@/lib/api"
-import { setAuthData } from "@/lib/utils/auth"
+import { isModuleAuthenticated, setAuthData } from "@/lib/utils/auth"
 import { Mail, Lock, EyeOff, Eye, CheckSquare, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -22,7 +22,7 @@ export default function RestaurantSignIn() {
 
   // Redirect to restaurant home if already authenticated
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("restaurant_authenticated") === "true"
+    const isAuthenticated = isModuleAuthenticated("restaurant")
     if (isAuthenticated) {
       navigate("/restaurant", { replace: true })
     }

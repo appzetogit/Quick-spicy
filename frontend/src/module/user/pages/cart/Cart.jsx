@@ -1851,11 +1851,7 @@ export default function Cart() {
 
               {/* Delivery Address */}
               <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
-                <button
-                  type="button"
-                  onClick={openLocationSelector}
-                  className="flex items-center justify-between w-full text-left"
-                >
+                <div className="flex items-center justify-between w-full text-left">
                   <div className="flex items-center gap-3 md:gap-4">
                     <MapPin className="h-4 w-4 md:h-5 md:w-5 text-gray-500 dark:text-gray-400" />
                     <div className="flex-1">
@@ -1935,8 +1931,15 @@ export default function Cart() {
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
-                </button>
+                  <button
+                    type="button"
+                    onClick={openLocationSelector}
+                    className="ml-3 flex items-center justify-center self-start rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                    aria-label="Open location selector"
+                  >
+                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Contact */}

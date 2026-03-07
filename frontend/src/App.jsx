@@ -5,6 +5,8 @@ import AuthRedirect from "@/components/AuthRedirect"
 import Loader from "@/components/Loader"
 import PushSoundEnableButton from "@/components/PushSoundEnableButton"
 import { initPushNotificationClient, registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
+import { isModuleAuthenticated } from "@/lib/utils/auth"
+import { useRestaurantNotifications } from "@/module/restaurant/hooks/useRestaurantNotifications"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -137,6 +139,43 @@ function ScrollToTop() {
   return null;
 }
 
+function RestaurantGlobalNotificationListenerInner() {
+  useRestaurantNotifications()
+  return null
+}
+
+function RestaurantGlobalNotificationListener() {
+  const location = useLocation()
+  const isRestaurantRoute =
+    location.pathname.startsWith("/restaurant") &&
+    !location.pathname.startsWith("/restaurants")
+  const isRestaurantAuthRoute =
+    location.pathname === "/restaurant/login" ||
+    location.pathname === "/restaurant/auth/sign-in" ||
+    location.pathname === "/restaurant/signup" ||
+    location.pathname === "/restaurant/signup-email" ||
+    location.pathname === "/restaurant/forgot-password" ||
+    location.pathname === "/restaurant/otp" ||
+    location.pathname === "/restaurant/welcome" ||
+    location.pathname === "/restaurant/auth/google-callback"
+  const isOrderManagedRoute =
+    location.pathname === "/restaurant" ||
+    location.pathname === "/restaurant/orders" ||
+    location.pathname.startsWith("/restaurant/orders/")
+
+  const shouldListen =
+    isRestaurantRoute &&
+    !isRestaurantAuthRoute &&
+    !isOrderManagedRoute &&
+    isModuleAuthenticated("restaurant")
+
+  if (!shouldListen) {
+    return null
+  }
+
+  return <RestaurantGlobalNotificationListenerInner />
+}
+
 export default function App() {
   const location = useLocation()
 
@@ -151,6 +190,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <RestaurantGlobalNotificationListener />
       <PushSoundEnableButton />
       <Suspense fallback={<Loader />}>
         <Routes>

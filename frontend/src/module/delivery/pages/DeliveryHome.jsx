@@ -831,6 +831,40 @@ export default function DeliveryHome() {
     showreachedPickupPopup
   ])
 
+  const getRestaurantMarkerIcon = useCallback(() => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="52" height="60" viewBox="0 0 52 60"><path fill="#FF6B35" d="M26 2c-9.94 0-18 8.06-18 18 0 13.5 18 38 18 38s18-24.5 18-38c0-9.94-8.06-18-18-18z"/><circle cx="26" cy="20" r="12" fill="#FFF7ED"/><path fill="#FF6B35" d="M20 14h2v12h-2zm10 0h2v12h-2zm-5 0h2v5h2v2h-2v5h-2v-5h-2v-2h2z"/> </svg>'
+
+    return {
+      url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+      scaledSize: new window.google.maps.Size(52, 60),
+      anchor: new window.google.maps.Point(26, 56),
+      labelOrigin: new window.google.maps.Point(26, 20)
+    }
+  }, [])
+
+  const createRestaurantMapMarker = useCallback((location, title = 'Restaurant') => {
+    if (!window.google?.maps || !window.deliveryMapInstance || !location) {
+      return null
+    }
+
+    if (restaurantMarkerRef.current) {
+      restaurantMarkerRef.current.setMap(null)
+      restaurantMarkerRef.current = null
+    }
+
+    restaurantMarkerRef.current = new window.google.maps.Marker({
+      position: location,
+      map: window.deliveryMapInstance,
+      icon: getRestaurantMarkerIcon(),
+      title,
+      animation: window.google.maps.Animation.DROP,
+      optimized: false,
+      zIndex: 1200
+    })
+
+    return restaurantMarkerRef.current
+  }, [getRestaurantMarkerIcon])
+
   // Use same localStorage key as FeedNavbar for online status
   const LS_KEY = "app:isOnline"
   
@@ -2901,31 +2935,7 @@ export default function DeliveryHome() {
                     lng: restaurantInfo.lng
                   };
                   
-                  // Remove old restaurant marker if exists
-                  if (restaurantMarkerRef.current) {
-                    restaurantMarkerRef.current.setMap(null);
-                  }
-                  
-                  // Create restaurant marker on main map with kitchen icon
-                  restaurantMarkerRef.current = new window.google.maps.Marker({
-                    position: restaurantLocation,
-                    map: window.deliveryMapInstance,
-                    icon: {
-                      url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                        <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
-                          <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                          <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
-                          <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
-                        </svg>
-                      `),
-                      scaledSize: new window.google.maps.Size(48, 48),
-                      anchor: new window.google.maps.Point(24, 48)
-                    },
-                    title: restaurantInfo.name || 'Kitchen',
-                    animation: window.google.maps.Animation.DROP,
-                    zIndex: 10
-                  });
+                  createRestaurantMapMarker(restaurantLocation, restaurantInfo.name || 'Kitchen')
                   
                   debugLog('✅ Restaurant marker added to main map');
                 }
@@ -2950,9 +2960,10 @@ export default function DeliveryHome() {
               } catch (storageError) {
                 debugError('❌ Error saving active order to localStorage:', storageError);
               }
-              
-              // Don't show Reached Pickup popup here - it will be shown when order becomes ready via WebSocket
-              // The popup will be triggered by orderReady event from backend
+
+              // Keep the pickup slider visible after acceptance.
+              // The swipe action stays locked until the rider is actually near the restaurant.
+              setShowreachedPickupPopup(true)
             }, 300); // Wait for popup close animation
 
           } else {
@@ -5771,24 +5782,7 @@ export default function DeliveryHome() {
                   lng: selectedRestaurant.lng
                 };
                 
-                restaurantMarkerRef.current = new window.google.maps.Marker({
-                  position: restaurantLocation,
-                  map: window.deliveryMapInstance,
-                  icon: {
-                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                        <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
-                        <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                        <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
-                        <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
-                      </svg>
-                    `),
-                    scaledSize: new window.google.maps.Size(48, 48),
-                    anchor: new window.google.maps.Point(24, 48)
-                  },
-                  title: selectedRestaurant.name || 'Restaurant',
-                  zIndex: 10
-                });
+                createRestaurantMapMarker(restaurantLocation, selectedRestaurant.name || 'Restaurant')
               }
             }, 500);
           }
@@ -5963,6 +5957,9 @@ export default function DeliveryHome() {
             
             restaurantMarkerRef.current.setMap(window.deliveryMapInstance);
             restaurantMarkerRef.current.setPosition(restaurantLocation);
+            restaurantMarkerRef.current.setIcon(getRestaurantMarkerIcon());
+            restaurantMarkerRef.current.setTitle(selectedRestaurant.name || 'Restaurant');
+            restaurantMarkerRef.current.setZIndex(1200);
           }
         } else {
           // Marker doesn't exist, create it
@@ -5972,24 +5969,7 @@ export default function DeliveryHome() {
             lng: selectedRestaurant.lng
           };
           
-          restaurantMarkerRef.current = new window.google.maps.Marker({
-            position: restaurantLocation,
-            map: window.deliveryMapInstance,
-            icon: {
-              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-                  <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
-                  <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-                  <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
-                  <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
-                </svg>
-              `),
-              scaledSize: new window.google.maps.Size(48, 48),
-              anchor: new window.google.maps.Point(24, 48)
-            },
-            title: selectedRestaurant.name || 'Restaurant',
-            zIndex: 10
-          });
+          createRestaurantMapMarker(restaurantLocation, selectedRestaurant.name || 'Restaurant')
         }
       }
 
@@ -6015,7 +5995,7 @@ export default function DeliveryHome() {
     }, 2000); // Check every 2 seconds
 
     return () => clearInterval(checkInterval);
-  }, [riderLocation, selectedRestaurant, showHomeSections])
+  }, [createRestaurantMapMarker, getRestaurantMarkerIcon, riderLocation, selectedRestaurant, showHomeSections])
 
   // Create restaurant marker when selectedRestaurant changes
   useEffect(() => {
@@ -6036,36 +6016,21 @@ export default function DeliveryHome() {
       }
       
       // Create new restaurant marker
-      restaurantMarkerRef.current = new window.google.maps.Marker({
-        position: restaurantLocation,
-        map: window.deliveryMapInstance,
-        icon: {
-          url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="11" fill="#FF6B35" stroke="#FFFFFF" stroke-width="2"/>
-              <path d="M8 10c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v6H8v-6z" fill="#FFFFFF"/>
-              <path d="M7 16h10M10 12h4M9 14h6" stroke="#FF6B35" stroke-width="1.5" stroke-linecap="round"/>
-              <path d="M10 8h4v2h-4z" fill="#FFFFFF" opacity="0.7"/>
-            </svg>
-          `),
-          scaledSize: new window.google.maps.Size(48, 48),
-          anchor: new window.google.maps.Point(24, 48)
-        },
-        title: selectedRestaurant.name || 'Restaurant',
-        animation: window.google.maps.Animation.DROP,
-        zIndex: 10
-      });
-      
-      debugLog('✅ Restaurant marker created/updated on main map');
-    } else {
-      // Update position if marker exists
-      restaurantMarkerRef.current.setPosition({
-        lat: selectedRestaurant.lat,
-        lng: selectedRestaurant.lng
-      });
-      restaurantMarkerRef.current.setTitle(selectedRestaurant.name || 'Restaurant');
-    }
-  }, [selectedRestaurant?.lat, selectedRestaurant?.lng, selectedRestaurant?.name])
+          createRestaurantMapMarker(restaurantLocation, selectedRestaurant.name || 'Restaurant')
+          
+          debugLog('✅ Restaurant marker created/updated on main map');
+        } else {
+          // Update position if marker exists
+          restaurantMarkerRef.current.setPosition({
+            lat: selectedRestaurant.lat,
+            lng: selectedRestaurant.lng
+          });
+          restaurantMarkerRef.current.setIcon(getRestaurantMarkerIcon());
+          restaurantMarkerRef.current.setMap(window.deliveryMapInstance);
+          restaurantMarkerRef.current.setTitle(selectedRestaurant.name || 'Restaurant');
+          restaurantMarkerRef.current.setZIndex(1200);
+        }
+  }, [createRestaurantMapMarker, getRestaurantMarkerIcon, selectedRestaurant?.lat, selectedRestaurant?.lng, selectedRestaurant?.name])
 
   // Create/update customer marker on main map so delivery destination icon is always visible.
   useEffect(() => {
@@ -7024,7 +6989,7 @@ export default function DeliveryHome() {
         const restoredStage = activeOrderData.uiStage
         if (restoredStage) {
           setTimeout(() => {
-            if (restoredStage === 'reached_pickup') {
+            if (restoredStage === 'en_route_to_pickup' || restoredStage === 'reached_pickup') {
               setShowreachedPickupPopup(true)
             } else if (restoredStage === 'order_id_confirmation') {
               setShowOrderIdConfirmationPopup(true)
@@ -8466,7 +8431,7 @@ selectedRestaurant?.customerLng || null,
 
   // Bike marker update removed (Ola Maps removed)
 
-  // Carousel slides data - filter based on bank details status
+  // Keep the home carousel visible even after bank details are complete.
   const carouselSlides = useMemo(() => [
     ...(bankDetailsFilled ? [] : [{
       id: 2,
@@ -8474,8 +8439,27 @@ selectedRestaurant?.customerLng || null,
       subtitle: "PAN & bank details required for payouts",
       icon: "bank",
       buttonText: "Submit",
-      bgColor: "bg-yellow-400"
-    }])
+      bgColor: "bg-yellow-400",
+      actionPath: "/delivery/profile/details",
+    }]),
+    {
+      id: 3,
+      title: "Check pocket balance",
+      subtitle: "Track deposits, cash in hand, and settlements",
+      icon: "bank",
+      buttonText: "Open",
+      bgColor: "bg-gray-700",
+      actionPath: "/delivery/pocket",
+    },
+    {
+      id: 4,
+      title: "View trip history",
+      subtitle: "Review your completed deliveries and earnings",
+      icon: "bag",
+      buttonText: "View",
+      bgColor: "bg-orange-400",
+      actionPath: "/delivery/trip-history",
+    }
   ], [bankDetailsFilled])
 
   // Auto-rotate carousel
@@ -9080,8 +9064,8 @@ selectedRestaurant?.customerLng || null,
                 {/* Button */}
                 <button 
                   onClick={() => {
-                    if (slide.id === 2) {
-                      navigate("/delivery/profile/details")
+                    if (slide.actionPath) {
+                      navigate(slide.actionPath)
                     }
                   }}
                   className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-colors ${slide.bgColor === "bg-gray-700"

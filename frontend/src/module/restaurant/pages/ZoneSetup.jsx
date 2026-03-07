@@ -9,6 +9,45 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const parseCoordinate = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+const getSavedLocationCoords = (location) => {
+  if (!location) return null
+
+  let lat = null
+  let lng = null
+
+  if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    lng = parseCoordinate(location.coordinates[0])
+    lat = parseCoordinate(location.coordinates[1])
+  }
+
+  if (lat === null || lng === null) {
+    lat = parseCoordinate(location.latitude)
+    lng = parseCoordinate(location.longitude)
+  }
+
+  if (lat === null || lng === null) return null
+
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    const swappedLat = lng
+    const swappedLng = lat
+
+    if (
+      swappedLat >= -90 && swappedLat <= 90 &&
+      swappedLng >= -180 && swappedLng <= 180
+    ) {
+      return { lat: swappedLat, lng: swappedLng }
+    }
+
+    return null
+  }
+
+  return { lat, lng }
+}
 
 export default function ZoneSetup() {
   const navigate = useNavigate()
@@ -71,19 +110,10 @@ export default function ZoneSetup() {
   useEffect(() => {
     if (restaurantData?.location && mapInstanceRef.current && !mapLoading && window.google) {
       const location = restaurantData.location
-      let lat = null
-      let lng = null
-      
-      // Get coordinates from different possible structures
-      if (location.coordinates && Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
-        lng = location.coordinates[0]
-        lat = location.coordinates[1]
-      } else if (location.latitude && location.longitude) {
-        lat = parseFloat(location.latitude)
-        lng = parseFloat(location.longitude)
-      }
-      
-      if (lat && lng && !isNaN(lat) && !isNaN(lng)) {
+      const savedCoords = getSavedLocationCoords(location)
+
+      if (savedCoords) {
+        const { lat, lng } = savedCoords
         const locationObj = new window.google.maps.LatLng(lat, lng)
         mapInstanceRef.current.setCenter(locationObj)
         mapInstanceRef.current.setZoom(17)

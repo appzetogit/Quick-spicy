@@ -3,30 +3,77 @@ import Restaurant from '../models/Restaurant.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 
+const DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const normalizeDayName = (value) => {
+  const raw = String(value || '').trim().toLowerCase();
+  if (!raw) return null;
+
+  const exactMatch = DAY_ORDER.find((day) => day.toLowerCase() === raw);
+  if (exactMatch) return exactMatch;
+
+  const shortMatch = DAY_ORDER.find((day) => day.toLowerCase().startsWith(raw.slice(0, 3)));
+  return shortMatch || null;
+};
+
+const toOutletTime = (value, fallback) => {
+  const raw = String(value || '').trim();
+  if (!raw) return fallback;
+
+  if (/^\d{1,2}:\d{2}\s?(AM|PM|am|pm)$/.test(raw)) {
+    return raw.toUpperCase().replace(/\s+/, ' ');
+  }
+
+  const match24 = raw.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match24) return raw;
+
+  let hours = Number(match24[1]);
+  const minutes = Number(match24[2]);
+  if (Number.isNaN(hours) || Number.isNaN(minutes)) return fallback;
+
+  const period = hours >= 12 ? 'PM' : 'AM';
+  hours %= 12;
+  if (hours === 0) hours = 12;
+
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')} ${period}`;
+};
+
+const buildFallbackOutletTimings = (restaurant) => {
+  const openDays = new Set(
+    (Array.isArray(restaurant?.openDays) ? restaurant.openDays : [])
+      .map(normalizeDayName)
+      .filter(Boolean)
+  );
+
+  const openingTime = toOutletTime(restaurant?.deliveryTimings?.openingTime, '09:00 AM');
+  const closingTime = toOutletTime(restaurant?.deliveryTimings?.closingTime, '10:00 PM');
+
+  return {
+    restaurantId: restaurant?._id,
+    outletType: 'Appzeto delivery',
+    timings: DAY_ORDER.map((day) => ({
+      day,
+      isOpen: openDays.size === 0 ? true : openDays.has(day),
+      openingTime,
+      closingTime,
+    })),
+    isActive: true,
+  };
+};
+
 /**
  * Get outlet timings for the authenticated restaurant
  * @route GET /api/restaurant/outlet-timings
  */
 export const getOutletTimings = asyncHandler(async (req, res) => {
   const restaurantId = req.restaurant._id;
+  const restaurant = req.restaurant;
 
   let outletTimings = await OutletTimings.findOne({ restaurantId });
 
   // If no timings exist, create default timings
   if (!outletTimings) {
-    outletTimings = await OutletTimings.create({
-      restaurantId,
-      outletType: 'Appzeto delivery',
-      timings: [
-        { day: 'Monday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Tuesday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Wednesday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Thursday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Friday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Saturday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-        { day: 'Sunday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' }
-      ]
-    });
+    outletTimings = await OutletTimings.create(buildFallbackOutletTimings(restaurant));
   }
 
   return successResponse(res, 200, 'Outlet timings retrieved successfully', {
@@ -55,20 +102,7 @@ export const getOutletTimingsByRestaurantId = asyncHandler(async (req, res) => {
   if (!outletTimings) {
     // Return default timings if not set
     return successResponse(res, 200, 'Outlet timings retrieved successfully', {
-      outletTimings: {
-        restaurantId,
-        outletType: 'Appzeto delivery',
-        timings: [
-          { day: 'Monday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Tuesday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Wednesday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Thursday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Friday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Saturday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' },
-          { day: 'Sunday', isOpen: true, openingTime: '09:00 AM', closingTime: '10:00 PM' }
-        ],
-        isActive: true
-      }
+      outletTimings: buildFallbackOutletTimings(restaurant)
     });
   }
 

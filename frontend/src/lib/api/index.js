@@ -270,7 +270,7 @@ export const userAPI = {
 
   // Get user orders
   getOrders: (params = {}) => {
-    return apiClient.get(API_ENDPOINTS.USER.ORDERS, { params });
+    return apiClient.get(API_ENDPOINTS.ORDER.LIST, { params });
   },
 
   // Get user location

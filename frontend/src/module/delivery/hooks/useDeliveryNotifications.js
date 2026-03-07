@@ -8,6 +8,13 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const resolveAudioSource = (source, cacheKey = 'delivery-alert') => {
+  if (!source) return source;
+  if (!import.meta.env.DEV) return source;
+  const separator = source.includes('?') ? '&' : '?';
+  return `${source}${separator}devcache=${cacheKey}`;
+}
+
 
 export const useDeliveryNotifications = () => {
   // CRITICAL: All hooks must be called unconditionally and in the same order every render
@@ -32,7 +39,9 @@ export const useDeliveryNotifications = () => {
     try {
       // Get current selected sound preference from localStorage
       const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone';
-      const soundFile = selectedSound === 'original' ? originalSound : alertSound;
+      const soundFile = selectedSound === 'original'
+        ? resolveAudioSource(originalSound, 'delivery-original')
+        : resolveAudioSource(alertSound, 'delivery-alert');
       
       // Update audio source if preference changed or initialize if not exists
       if (audioRef.current) {
@@ -82,7 +91,9 @@ export const useDeliveryNotifications = () => {
       userInteractedRef.current = true;
 
       const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone';
-      const soundFile = selectedSound === 'original' ? originalSound : alertSound;
+      const soundFile = selectedSound === 'original'
+        ? resolveAudioSource(originalSound, 'delivery-original')
+        : resolveAudioSource(alertSound, 'delivery-alert');
 
       if (!audioRef.current) {
         audioRef.current = new Audio(soundFile);
@@ -131,7 +142,9 @@ export const useDeliveryNotifications = () => {
   useEffect(() => {
     // Get selected alert sound preference from localStorage
     const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone';
-    const soundFile = selectedSound === 'original' ? originalSound : alertSound;
+    const soundFile = selectedSound === 'original'
+      ? resolveAudioSource(originalSound, 'delivery-original')
+      : resolveAudioSource(alertSound, 'delivery-alert');
     
     if (!audioRef.current) {
       audioRef.current = new Audio(soundFile);
