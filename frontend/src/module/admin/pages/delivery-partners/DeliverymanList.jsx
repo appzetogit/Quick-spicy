@@ -1,12 +1,10 @@
 ﻿import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Eye, Trash2, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck } from "lucide-react"
+import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDeliverymenToExcel, exportDeliverymenToPDF } from "../../components/deliveryman/deliverymanExportUtils"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugError = () => {}
 
 
 const formatCurrency = (amount) => {
@@ -21,11 +19,8 @@ export default function DeliverymanList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
-  const [selectedDeliveryman, setSelectedDeliveryman] = useState(null)
   const [viewDetails, setViewDetails] = useState(null)
-  const [processing, setProcessing] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
     name: true,
@@ -186,34 +181,6 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
       alert(err.response?.data?.message || "Failed to load details")
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleDelete = (deliveryman) => {
-    setSelectedDeliveryman(deliveryman)
-    setIsDeleteOpen(true)
-  }
-
-  const confirmDelete = async () => {
-    if (!selectedDeliveryman) return
-
-    try {
-      setProcessing(true)
-      await adminAPI.deleteDeliveryPartner(selectedDeliveryman._id)
-      
-      // Refresh the list
-      await fetchDeliverymen()
-      
-      setIsDeleteOpen(false)
-      setSelectedDeliveryman(null)
-      
-      // Show success message
-      alert(`Successfully deleted ${selectedDeliveryman.name}`)
-    } catch (err) {
-      debugError("Error deleting delivery partner:", err)
-      alert(err.response?.data?.message || "Failed to delete delivery partner. Please try again.")
-    } finally {
-      setProcessing(false)
     }
   }
 
@@ -515,14 +482,6 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(dm)}
-                                disabled={processing}
-                                className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
                             </div>
                           </td>
                         )}
@@ -535,37 +494,6 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="max-w-md bg-white p-0 opacity-0 data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:scale-100 data-[state=closed]:scale-100">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle>Delete Delivery Partner</DialogTitle>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <p className="text-sm text-slate-700">
-              Are you sure you want to delete "{selectedDeliveryman?.name}"? This action cannot be undone.
-            </p>
-          </div>
-          <DialogFooter className="px-6 pb-6">
-            <button
-              onClick={() => setIsDeleteOpen(false)}
-              disabled={processing}
-              className="px-4 py-2 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={confirmDelete}
-              disabled={processing}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-red-600 text-white hover:bg-red-700 transition-all shadow-md disabled:opacity-50 flex items-center gap-2"
-            >
-              {processing && <Loader2 className="w-4 h-4 animate-spin" />}
-              Delete
-            </button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* View Details Dialog */}
       <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>

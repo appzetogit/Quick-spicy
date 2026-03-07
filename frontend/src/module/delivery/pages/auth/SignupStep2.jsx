@@ -11,6 +11,12 @@ const debugError = (...args) => {}
 
 export default function SignupStep2() {
   const navigate = useNavigate()
+  const fileInputRefs = useRef({
+    profilePhoto: null,
+    aadharPhoto: null,
+    panPhoto: null,
+    drivingLicensePhoto: null
+  })
   const [documents, setDocuments] = useState({
     profilePhoto: null,
     aadharPhoto: null,
@@ -167,9 +173,31 @@ export default function SignupStep2() {
   }
 
   const handlePickFromDevice = () => {
-    const fallbackRef = sourcePicker.fallbackInputRef
-    closeImageSourcePicker()
-    fallbackRef?.current?.click()
+    const input = sourcePicker.fallbackInputRef?.current || null
+
+    if (!input) {
+      debugWarn("No file input available for device upload")
+      toast.error("Device upload is not available right now. Please try again.")
+      return
+    }
+
+    try {
+      if (typeof input.showPicker === "function") {
+        input.showPicker()
+      } else {
+        input.click()
+      }
+      closeImageSourcePicker()
+    } catch (error) {
+      debugError("Device file picker open failed:", error)
+      try {
+        input.click()
+        closeImageSourcePicker()
+      } catch (fallbackError) {
+        debugError("Fallback file input click failed:", fallbackError)
+        toast.error("Could not open device files. Please try again.")
+      }
+    }
   }
 
   const handlePickFromCamera = async () => {
@@ -283,7 +311,6 @@ export default function SignupStep2() {
   const DocumentUpload = ({ docType, label, required = true }) => {
     const uploaded = uploadedDocs[docType]
     const isUploading = uploading[docType]
-    const galleryInputRef = useRef(null)
 
     return (
       <div className="bg-white rounded-lg p-4 border border-gray-200">
@@ -335,7 +362,9 @@ export default function SignupStep2() {
                     openImageSourcePicker({
                       title: label,
                       fileNamePrefix: docType,
-                      fallbackInputRef: galleryInputRef,
+                      fallbackInputRef: {
+                        current: fileInputRefs.current[docType]
+                      },
                       onSelectFile: (selectedFile) => handleFileSelect(docType, selectedFile)
                     })
                   }
@@ -347,9 +376,11 @@ export default function SignupStep2() {
             )}
 
             <input
-              ref={galleryInputRef}
+              ref={(node) => {
+                fileInputRefs.current[docType] = node
+              }}
               type="file"
-              className="sr-only"
+              className="hidden"
               accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
               onClick={(e) => {
                 e.target.value = ""

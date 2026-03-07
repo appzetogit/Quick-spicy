@@ -454,7 +454,7 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
 /**
  * Delete Delivery Partner
  * DELETE /api/admin/delivery-partners/:id
- * Deletes all related data and logs out the delivery partner
+ * Soft-deactivates the delivery partner and logs them out.
  */
 export const deleteDeliveryPartner = asyncHandler(async (req, res) => {
   try {
@@ -466,59 +466,25 @@ export const deleteDeliveryPartner = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Delivery partner not found');
     }
 
-    // Import related models
-    const DeliveryWallet = (await import('../../delivery/models/DeliveryWallet.js')).default;
-    const Order = (await import('../../order/models/Order.js')).default;
+    await Delivery.updateOne(
+      { _id: id },
+      {
+        status: 'blocked',
+        'availability.isOnline': false,
+        $unset: { refreshToken: 1 }
+      }
+    );
 
-    // Start transaction for atomic operations
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    logger.info(`Delivery partner soft-deactivated: ${id}`, {
+      deletedBy: req.user._id,
+      deliveryId: delivery.deliveryId
+    });
 
-    try {
-      // 1. Delete Delivery Wallet and all transactions
-      const walletDeleted = await DeliveryWallet.deleteOne({ deliveryId: id }).session(session);
-      logger.info(`Deleted wallet for delivery partner: ${id}`, { walletDeleted });
-
-      // 2. Update Orders - Remove deliveryPartnerId (set to null)
-      // This preserves order history but removes the delivery partner assignment
-      const ordersUpdated = await Order.updateMany(
-        { deliveryPartnerId: id },
-        { $unset: { deliveryPartnerId: 1 } },
-        { session }
-      );
-      logger.info(`Updated orders for delivery partner: ${id}`, { 
-        ordersUpdated: ordersUpdated.modifiedCount 
-      });
-
-      // 3. Clear refreshToken to force logout
-      // This will invalidate all active sessions
-      await Delivery.updateOne(
-        { _id: id },
-        { $unset: { refreshToken: 1 } },
-        { session }
-      );
-
-      // 4. Delete the Delivery partner record
-      await Delivery.deleteOne({ _id: id }).session(session);
-
-      // Commit transaction
-      await session.commitTransaction();
-      session.endSession();
-
-      logger.info(`Delivery partner deleted successfully: ${id}`, {
-        deletedBy: req.user._id,
-        deliveryId: delivery.deliveryId,
-        walletDeleted: walletDeleted.deletedCount,
-        ordersUpdated: ordersUpdated.modifiedCount
-      });
-
-      return successResponse(res, 200, 'Delivery partner and all related data deleted successfully. Partner has been logged out.');
-    } catch (error) {
-      // Rollback transaction on error
-      await session.abortTransaction();
-      session.endSession();
-      throw error;
-    }
+    return successResponse(
+      res,
+      200,
+      'Delivery partner deactivated successfully. Profile, wallet, and history were preserved.'
+    );
   } catch (error) {
     logger.error(`Error deleting delivery partner: ${error.message}`, { error: error.stack });
     return errorResponse(res, 500, 'Failed to delete delivery partner');
