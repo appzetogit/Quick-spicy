@@ -644,6 +644,7 @@ export default function DeliveryHome() {
   const reachedPickupSwipeStartX = useRef(0)
   const reachedPickupSwipeStartY = useRef(0)
   const reachedPickupIsSwiping = useRef(false)
+  const [isDraggingReachedPickup, setIsDraggingReachedPickup] = useState(false)
   const [reachedDropButtonProgress, setReachedDropButtonProgress] = useState(0)
   const [reachedDropIsAnimatingToComplete, setReachedDropIsAnimatingToComplete] = useState(false)
   const reachedDropButtonRef = useRef(null)
@@ -3369,6 +3370,65 @@ export default function DeliveryHome() {
     setreachedPickupButtonProgress(0)
     setreachedPickupIsAnimatingToComplete(false)
   }
+
+  const handleReachedPickupMouseDown = (e) => {
+    reachedPickupSwipeStartX.current = e.clientX
+    reachedPickupSwipeStartY.current = e.clientY
+    reachedPickupIsSwiping.current = false
+    setIsDraggingReachedPickup(true)
+    setreachedPickupIsAnimatingToComplete(false)
+    setreachedPickupButtonProgress(0)
+  }
+
+  const handleReachedPickupMouseMove = (e) => {
+    if (!isDraggingReachedPickup) return
+
+    const deltaX = e.clientX - reachedPickupSwipeStartX.current
+    const deltaY = e.clientY - reachedPickupSwipeStartY.current
+
+    if (Math.abs(deltaX) > 5 && Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
+      reachedPickupIsSwiping.current = true
+
+      const buttonWidth = reachedPickupButtonRef.current?.offsetWidth || 300
+      const circleWidth = 56
+      const padding = 16
+      const maxSwipe = buttonWidth - circleWidth - (padding * 2)
+
+      const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      setreachedPickupButtonProgress(progress)
+    }
+  }
+
+  const handleReachedPickupMouseUp = (e) => {
+    if (!isDraggingReachedPickup) return
+    setIsDraggingReachedPickup(false)
+
+    if (!reachedPickupIsSwiping.current) {
+      setreachedPickupButtonProgress(0)
+      return
+    }
+
+    handlereachedPickupTouchEnd({
+      changedTouches: [
+        {
+          clientX: e.clientX,
+          clientY: e.clientY
+        }
+      ]
+    })
+  }
+
+  useEffect(() => {
+    if (!isDraggingReachedPickup) return undefined
+
+    document.addEventListener('mousemove', handleReachedPickupMouseMove)
+    document.addEventListener('mouseup', handleReachedPickupMouseUp)
+
+    return () => {
+      document.removeEventListener('mousemove', handleReachedPickupMouseMove)
+      document.removeEventListener('mouseup', handleReachedPickupMouseUp)
+    }
+  }, [isDraggingReachedPickup])
 
   const HOLD_TO_CONFIRM_MS = 3000
 
@@ -10691,6 +10751,7 @@ selectedRestaurant?.customerLng || null,
               onTouchMove={handlereachedPickupTouchMove}
               onTouchEnd={handlereachedPickupTouchEnd}
               onTouchCancel={handlereachedPickupTouchCancel}
+              onMouseDown={handleReachedPickupMouseDown}
               whileTap={{ scale: 0.98 }}
             >
               {/* Swipe progress background */}
