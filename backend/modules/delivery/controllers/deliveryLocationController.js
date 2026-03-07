@@ -21,7 +21,11 @@ const logger = winston.createLogger({
   ]
 });
 
-const realtimeSyncStateByDelivery = new Map();
+const socketSyncStateByDelivery = new Map();
+const firebasePresenceSyncStateByDelivery = new Map();
+const firebaseTrackingSyncStateByDelivery = new Map();
+const SOCKET_SYNC_INTERVAL_MS = 3000;
+const FIREBASE_SYNC_INTERVAL_MS = 10000;
 
 function toFiniteNumber(value) {
   const num = Number(value);
@@ -67,12 +71,12 @@ function getActiveRoutePayload(order) {
   return { route_coordinates: normalized };
 }
 
-function shouldSyncRealtime(deliveryId, lat, lng, phase) {
+function shouldSyncRealtime(stateMap, deliveryId, lat, lng, phase, intervalMs, extraState = {}) {
   const key = String(deliveryId || '');
   const now = Date.now();
-  const previous = realtimeSyncStateByDelivery.get(key);
+  const previous = stateMap.get(key);
   if (!previous) {
-    realtimeSyncStateByDelivery.set(key, { lat, lng, phase, ts: now });
+    stateMap.set(key, { lat, lng, phase, ts: now, ...extraState });
     return true;
   }
 
@@ -80,10 +84,15 @@ function shouldSyncRealtime(deliveryId, lat, lng, phase) {
   const elapsedMs = now - previous.ts;
   const phaseChanged = previous.phase !== phase;
   const coordinatesChanged = previous.lat !== lat || previous.lng !== lng;
-  const shouldSync = phaseChanged || (coordinatesChanged && distanceMeters >= 0.5) || elapsedMs >= 1000;
+  const extraStateChanged = Object.entries(extraState).some(([key, value]) => previous[key] !== value);
+  const shouldSync =
+    phaseChanged ||
+    extraStateChanged ||
+    (coordinatesChanged && distanceMeters >= 0.5) ||
+    elapsedMs >= intervalMs;
 
   if (shouldSync) {
-    realtimeSyncStateByDelivery.set(key, { lat, lng, phase, ts: now });
+    stateMap.set(key, { lat, lng, phase, ts: now, ...extraState });
   }
   return shouldSync;
 }
@@ -191,13 +200,33 @@ export const updateLocation = asyncHandler(async (req, res) => {
     const currentOrderId = activeOrder?.orderId || activeOrder?._id?.toString() || null;
 
     // Best-effort Firebase sync for online/offline + coordinates.
-    await syncDeliveryPartnerPresence({
-      deliveryId: updatedDelivery._id?.toString(),
-      lat,
-      lng,
-      isOnline: updatedDelivery.availability?.isOnline || false,
-      activeOrderId: currentOrderId
-    });
+    const deliveryId = updatedDelivery._id?.toString();
+    const isOnlineNow = updatedDelivery.availability?.isOnline || false;
+    const shouldSyncFirebasePresence =
+      !Number.isFinite(lat) ||
+      !Number.isFinite(lng) ||
+      shouldSyncRealtime(
+        firebasePresenceSyncStateByDelivery,
+        deliveryId,
+        Number.isFinite(lat) ? lat : 0,
+        Number.isFinite(lng) ? lng : 0,
+        currentOrderId || 'idle',
+        FIREBASE_SYNC_INTERVAL_MS,
+        {
+          isOnline: isOnlineNow,
+          activeOrderId: currentOrderId || null
+        }
+      );
+
+    if (shouldSyncFirebasePresence) {
+      await syncDeliveryPartnerPresence({
+        deliveryId,
+        lat,
+        lng,
+        isOnline: isOnlineNow,
+        activeOrderId: currentOrderId
+      });
+    }
 
     // Keep order tracking location fresh for customer map + realtime socket feed.
     if (
@@ -235,7 +264,31 @@ export const updateLocation = asyncHandler(async (req, res) => {
           ? calculateDistanceKm(lat, lng, customerLat, customerLng)
           : null;
 
-      if (shouldSyncRealtime(updatedDelivery._id?.toString(), lat, lng, phase || trackingStatus)) {
+      const shouldSyncSocket = shouldSyncRealtime(
+        socketSyncStateByDelivery,
+        deliveryId,
+        lat,
+        lng,
+        phase || trackingStatus,
+        SOCKET_SYNC_INTERVAL_MS,
+        { status: trackingStatus }
+      );
+
+      const shouldSyncFirebaseTracking = shouldSyncRealtime(
+        firebaseTrackingSyncStateByDelivery,
+        deliveryId,
+        lat,
+        lng,
+        phase || trackingStatus,
+        FIREBASE_SYNC_INTERVAL_MS,
+        {
+          status: trackingStatus,
+          activeOrderId: currentOrderId || null,
+          isOnline: isOnlineNow
+        }
+      );
+
+      if (shouldSyncSocket || shouldSyncFirebaseTracking) {
         const activeRoutePayload = getActiveRoutePayload(activeOrder);
         const trackingPayload = {
           boy_id: updatedDelivery._id?.toString(),
@@ -255,12 +308,14 @@ export const updateLocation = asyncHandler(async (req, res) => {
           activeOrder._id?.toString?.()
         ].filter(Boolean))];
 
-        await Promise.allSettled(
-          trackingIds.map((trackingId) => updateActiveOrderLocation(trackingId, trackingPayload))
-        );
+        if (shouldSyncFirebaseTracking) {
+          await Promise.allSettled(
+            trackingIds.map((trackingId) => updateActiveOrderLocation(trackingId, trackingPayload))
+          );
+        }
 
         const io = req.app.get('io');
-        if (io) {
+        if (io && shouldSyncSocket) {
           const locationData = {
             orderId: activeOrder.orderId || activeOrder._id?.toString(),
             lat,

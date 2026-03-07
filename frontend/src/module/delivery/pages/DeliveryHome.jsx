@@ -68,6 +68,8 @@ const debugError = (...args) => {}
 const PICKUP_REACHED_THRESHOLD_METERS = 120
 const DROP_REACHED_THRESHOLD_METERS = 90
 const ROUTE_OFF_TRACK_THRESHOLD_METERS = 40
+const DELIVERY_LOCATION_SEND_INTERVAL_MS = 3000
+const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
 
 
 // Ola Maps API Key removed
@@ -1952,15 +1954,14 @@ export default function DeliveryHome() {
           )
           
           if (!shouldAccept) {
-            // Location rejected by filter - but send to backend if it's been > 30 seconds since last update
+            // Location rejected by filter - keep the realtime stream alive with the last valid point.
             // This ensures admin map always shows delivery boy even with poor GPS
             if (isOnlineRef.current && lastValidLocationRef.current) {
               const now = Date.now();
               const lastSentTime = window.lastLocationSentTime || 0;
               const timeSinceLastSend = now - lastSentTime;
               
-              // Fallback: Send last valid location every 30 seconds even if new location is rejected
-              if (timeSinceLastSend >= 30000) {
+              if (timeSinceLastSend >= DELIVERY_LOCATION_FALLBACK_INTERVAL_MS) {
                 const [lat, lng] = lastValidLocationRef.current;
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   debugLog('📤 Sending fallback location to backend (filter rejected new location):', { 
@@ -2051,8 +2052,8 @@ export default function DeliveryHome() {
               const lastSentTime = window.lastLocationSentTime || 0;
               const timeSinceLastSend = now - lastSentTime;
               
-              // Push first accepted GPS points quickly so Firebase tracking stays responsive.
-              if (timeSinceLastSend >= 1000) {
+              // Push initial accepted GPS points on the same cadence as realtime socket updates.
+              if (timeSinceLastSend >= DELIVERY_LOCATION_SEND_INTERVAL_MS) {
                 if (lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
                   debugLog('📤 Sending raw location to backend (not smoothed yet):', { lat, lng })
                   deliveryAPI.updateLocation(lat, lng, true, {
@@ -2149,7 +2150,7 @@ export default function DeliveryHome() {
             timestamp: new Date().toISOString()
           })
           
-          // Send SMOOTHED location to backend if user is online (throttle to every 5 seconds)
+          // Send smoothed location to backend on the realtime cadence used for socket updates.
           if (isOnlineRef.current && smoothedLocation) {
             const now = Date.now();
             const lastSentTime = window.lastLocationSentTime || 0;
@@ -2172,8 +2173,7 @@ export default function DeliveryHome() {
             // Get last sent location for distance check
             const lastSentLocation = window.lastSentLocation || null;
             
-            // Send frequent updates so even small rider movement reaches Firebase quickly.
-            const shouldSend = timeSinceLastSend >= 1000 || 
+            const shouldSend = timeSinceLastSend >= DELIVERY_LOCATION_SEND_INTERVAL_MS || 
               (lastSentLocation && 
                calculateDistance(lastSentLocation[0], lastSentLocation[1], smoothedLat, smoothedLng) > 0.001);
             
