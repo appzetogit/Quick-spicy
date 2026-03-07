@@ -16,6 +16,7 @@ export const useDeliveryNotifications = () => {
   // Step 1: All refs first (unconditional)
   const socketRef = useRef(null);
   const audioRef = useRef(null);
+  const audioUnlockAttemptedRef = useRef(false);
   
   // Step 2: All state hooks (unconditional)
   const [newOrder, setNewOrder] = useState(null);
@@ -47,6 +48,7 @@ export const useDeliveryNotifications = () => {
       } else {
         // Initialize audio if not exists
         audioRef.current = new Audio(soundFile);
+        audioRef.current.preload = 'auto';
         audioRef.current.volume = 0.7;
       }
       
@@ -76,23 +78,52 @@ export const useDeliveryNotifications = () => {
   // Step 4: All effects (unconditional hook calls, conditional logic inside)
   // Track user interaction for autoplay policy
   useEffect(() => {
-    const handleUserInteraction = () => {
+    const handleUserInteraction = async () => {
       userInteractedRef.current = true;
+
+      const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone';
+      const soundFile = selectedSound === 'original' ? originalSound : alertSound;
+
+      if (!audioRef.current) {
+        audioRef.current = new Audio(soundFile);
+        audioRef.current.preload = 'auto';
+        audioRef.current.volume = 0.7;
+      }
+
+      if (!audioUnlockAttemptedRef.current && audioRef.current) {
+        audioUnlockAttemptedRef.current = true;
+        try {
+          audioRef.current.muted = true;
+          await audioRef.current.play();
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.muted = false;
+        } catch (error) {
+          audioUnlockAttemptedRef.current = false;
+          if (!error.message?.includes('user didn\'t interact') && !error.name?.includes('NotAllowedError')) {
+            debugWarn('Error unlocking notification audio:', error);
+          }
+        }
+      }
+
       // Remove listeners after first interaction
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
     };
     
     // Listen for user interaction
     document.addEventListener('click', handleUserInteraction, { once: true });
     document.addEventListener('touchstart', handleUserInteraction, { once: true });
     document.addEventListener('keydown', handleUserInteraction, { once: true });
+    window.addEventListener('pointerdown', handleUserInteraction, { once: true, passive: true });
     
     return () => {
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
     };
   }, []);
   
@@ -104,6 +135,7 @@ export const useDeliveryNotifications = () => {
     
     if (!audioRef.current) {
       audioRef.current = new Audio(soundFile);
+      audioRef.current.preload = 'auto';
       audioRef.current.volume = 0.7;
       debugLog('🔊 Audio initialized with:', selectedSound === 'original' ? 'Original' : 'Zomato Tone');
     } else {

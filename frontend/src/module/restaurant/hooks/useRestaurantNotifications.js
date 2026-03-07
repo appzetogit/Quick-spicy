@@ -7,6 +7,13 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const resolveAudioSource = (source, cacheKey = 'restaurant-alert') => {
+  if (!source) return source;
+  if (!import.meta.env.DEV) return source;
+  const separator = source.includes('?') ? '&' : '?';
+  return `${source}${separator}devcache=${cacheKey}`;
+}
+
 
 /**
  * Hook for restaurant to receive real-time order notifications with sound
@@ -18,6 +25,7 @@ export const useRestaurantNotifications = () => {
   const [isConnected, setIsConnected] = useState(false);
   const audioRef = useRef(null);
   const userInteractedRef = useRef(false); // Track user interaction for autoplay policy
+  const audioUnlockAttemptedRef = useRef(false);
   const [restaurantId, setRestaurantId] = useState(null);
   const lastConnectErrorLogRef = useRef(0);
   const CONNECT_ERROR_LOG_THROTTLE_MS = 10000;
@@ -310,7 +318,8 @@ export const useRestaurantNotifications = () => {
     });
 
     // Load notification sound
-    audioRef.current = new Audio(alertSound);
+    audioRef.current = new Audio(resolveAudioSource(alertSound));
+    audioRef.current.preload = 'auto';
     audioRef.current.volume = 0.7;
 
     return () => {
@@ -327,23 +336,49 @@ export const useRestaurantNotifications = () => {
 
   // Track user interaction for autoplay policy
   useEffect(() => {
-    const handleUserInteraction = () => {
+    const handleUserInteraction = async () => {
       userInteractedRef.current = true;
+
+      if (!audioRef.current) {
+        audioRef.current = new Audio(resolveAudioSource(alertSound));
+        audioRef.current.preload = 'auto';
+        audioRef.current.volume = 0.7;
+      }
+
+      if (!audioUnlockAttemptedRef.current && audioRef.current) {
+        audioUnlockAttemptedRef.current = true;
+        try {
+          audioRef.current.muted = true;
+          await audioRef.current.play();
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.muted = false;
+        } catch (error) {
+          audioUnlockAttemptedRef.current = false;
+          if (!error.message?.includes('user didn\'t interact') && !error.name?.includes('NotAllowedError')) {
+            debugWarn('Error unlocking notification sound:', error);
+          }
+        }
+      }
+
       // Remove listeners after first interaction
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
     };
     
     // Listen for user interaction
     document.addEventListener('click', handleUserInteraction, { once: true });
     document.addEventListener('touchstart', handleUserInteraction, { once: true });
     document.addEventListener('keydown', handleUserInteraction, { once: true });
+    window.addEventListener('pointerdown', handleUserInteraction, { once: true, passive: true });
     
     return () => {
       document.removeEventListener('click', handleUserInteraction);
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('pointerdown', handleUserInteraction);
     };
   }, []);
 
