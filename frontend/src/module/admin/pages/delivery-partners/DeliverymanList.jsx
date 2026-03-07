@@ -1,9 +1,10 @@
 ﻿import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck } from "lucide-react"
+import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck, Pencil, Save, X } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDeliverymenToExcel, exportDeliverymenToPDF } from "../../components/deliveryman/deliverymanExportUtils"
+import { toast } from "sonner"
 const debugError = () => {}
 
 
@@ -21,6 +22,9 @@ export default function DeliverymanList() {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [viewDetails, setViewDetails] = useState(null)
+  const [editingDeliveryId, setEditingDeliveryId] = useState(null)
+  const [editValues, setEditValues] = useState({ pocketBalance: "", cashInHand: "" })
+  const [savingDeliveryId, setSavingDeliveryId] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
     name: true,
@@ -230,6 +234,106 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
     remainingCashLimit: "Remaining Cash Limit",
     availabilityStatus: "Availability Status",
     actions: "Actions",
+  }
+
+  const startEditingWallet = (deliveryman) => {
+    setEditingDeliveryId(String(deliveryman._id))
+    setEditValues({
+      pocketBalance: String(Number(deliveryman.pocketBalance) || 0),
+      cashInHand: String(Number(deliveryman.cashInHand) || 0),
+    })
+  }
+
+  const cancelEditingWallet = () => {
+    setEditingDeliveryId(null)
+    setEditValues({ pocketBalance: "", cashInHand: "" })
+  }
+
+  const updateWalletFieldValue = (field, value) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const saveWalletChanges = async (deliveryman) => {
+    const nextPocketBalance = Number(editValues.pocketBalance)
+    const nextCashInHand = Number(editValues.cashInHand)
+
+    if (!Number.isFinite(nextPocketBalance) || nextPocketBalance < 0) {
+      toast.error("Pocket balance must be a valid non-negative number")
+      return
+    }
+
+    if (!Number.isFinite(nextCashInHand) || nextCashInHand < 0) {
+      toast.error("Cash in hand must be a valid non-negative number")
+      return
+    }
+
+    try {
+      setSavingDeliveryId(String(deliveryman._id))
+      const response = await adminAPI.updateDeliveryBoyWallet({
+        walletId: deliveryman.walletSummary?.walletId,
+        deliveryId: deliveryman._id,
+        pocketBalance: nextPocketBalance,
+        cashInHand: nextCashInHand,
+      })
+
+      if (!response?.data?.success) {
+        toast.error(response?.data?.message || "Failed to update wallet")
+        return
+      }
+
+      const updatedWallet = response.data.data || {}
+      setDeliverymen((prev) =>
+        prev.map((item) =>
+          String(item._id) === String(deliveryman._id)
+            ? {
+                ...item,
+                pocketBalance: updatedWallet.pocketBalance ?? nextPocketBalance,
+                cashInHand: updatedWallet.cashInHand ?? nextCashInHand,
+                remainingCashLimit: updatedWallet.remainingCashLimit ?? item.remainingCashLimit,
+                availableCashLimit: updatedWallet.availableCashLimit ?? item.availableCashLimit,
+                walletSummary: {
+                  ...(item.walletSummary || {}),
+                  walletId: updatedWallet.walletId || item.walletSummary?.walletId,
+                  pocketBalance: updatedWallet.pocketBalance ?? nextPocketBalance,
+                  cashCollected: updatedWallet.cashInHand ?? nextCashInHand,
+                  remainingCashLimit: updatedWallet.remainingCashLimit ?? item.remainingCashLimit,
+                  availableCashLimit: updatedWallet.availableCashLimit ?? item.availableCashLimit,
+                },
+              }
+            : item,
+        ),
+      )
+
+      setViewDetails((prev) => {
+        if (!prev || String(prev._id) !== String(deliveryman._id)) {
+          return prev
+        }
+
+        return {
+          ...prev,
+          pocketBalance: updatedWallet.pocketBalance ?? nextPocketBalance,
+          cashInHand: updatedWallet.cashInHand ?? nextCashInHand,
+          remainingCashLimit: updatedWallet.remainingCashLimit ?? prev.remainingCashLimit,
+          availableCashLimit: updatedWallet.availableCashLimit ?? prev.availableCashLimit,
+          walletSummary: {
+            ...(prev.walletSummary || {}),
+            walletId: updatedWallet.walletId || prev.walletSummary?.walletId,
+            pocketBalance: updatedWallet.pocketBalance ?? nextPocketBalance,
+            cashCollected: updatedWallet.cashInHand ?? nextCashInHand,
+            remainingCashLimit: updatedWallet.remainingCashLimit ?? prev.remainingCashLimit,
+            availableCashLimit: updatedWallet.availableCashLimit ?? prev.availableCashLimit,
+          },
+        }
+      })
+
+      toast.success("Wallet updated")
+      cancelEditingWallet()
+    } catch (err) {
+      debugError("Error updating delivery wallet:", err)
+      toast.error(err.response?.data?.message || "Failed to update wallet")
+    } finally {
+      setSavingDeliveryId(null)
+    }
   }
 
   return (
@@ -450,12 +554,34 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
                         )}
                         {visibleColumns.pocketBalance && (
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-slate-700">{formatCurrency(dm.pocketBalance)}</span>
+                            {editingDeliveryId === String(dm._id) ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editValues.pocketBalance}
+                                onChange={(e) => updateWalletFieldValue("pocketBalance", e.target.value)}
+                                className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+                              />
+                            ) : (
+                              <span className="text-sm text-slate-700">{formatCurrency(dm.pocketBalance)}</span>
+                            )}
                           </td>
                         )}
                         {visibleColumns.cashInHand && (
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-slate-700">{formatCurrency(dm.cashInHand)}</span>
+                            {editingDeliveryId === String(dm._id) ? (
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editValues.cashInHand}
+                                onChange={(e) => updateWalletFieldValue("cashInHand", e.target.value)}
+                                className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+                              />
+                            ) : (
+                              <span className="text-sm text-slate-700">{formatCurrency(dm.cashInHand)}</span>
+                            )}
                           </td>
                         )}
                         {visibleColumns.remainingCashLimit && (
@@ -475,6 +601,34 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
                         {visibleColumns.actions && (
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <div className="flex items-center justify-center gap-2">
+                              {editingDeliveryId === String(dm._id) ? (
+                                <>
+                                  <button
+                                    onClick={() => saveWalletChanges(dm)}
+                                    disabled={savingDeliveryId === String(dm._id)}
+                                    className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                                    title="Save Wallet"
+                                  >
+                                    {savingDeliveryId === String(dm._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                  </button>
+                                  <button
+                                    onClick={cancelEditingWallet}
+                                    disabled={savingDeliveryId === String(dm._id)}
+                                    className="p-1.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                    title="Cancel"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => startEditingWallet(dm)}
+                                  className="p-1.5 rounded bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
+                                  title="Edit Wallet"
+                                >
+                                  <Pencil className="w-4 h-4" />
+                                </button>
+                              )}
                               <button 
                                 onClick={() => handleView(dm)}
                                 className="p-1.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors" 

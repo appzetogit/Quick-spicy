@@ -1882,6 +1882,9 @@ export const adminAPI = {
   getDeliveryBoyWallets: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.DELIVERY_BOY_WALLET, { params });
   },
+  updateDeliveryBoyWallet: (data) => {
+    return apiClient.put(API_ENDPOINTS.ADMIN.DELIVERY_BOY_WALLET_UPDATE, data);
+  },
   addDeliveryBoyWalletAdjustment: (data) => {
     return apiClient.post(
       API_ENDPOINTS.ADMIN.DELIVERY_BOY_WALLET_ADJUSTMENT,

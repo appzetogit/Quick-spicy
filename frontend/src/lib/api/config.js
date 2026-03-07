@@ -402,6 +402,7 @@ export const API_ENDPOINTS = {
     DELIVERY_WITHDRAWAL_APPROVE: "/admin/delivery-withdrawal/:id/approve",
     DELIVERY_WITHDRAWAL_REJECT: "/admin/delivery-withdrawal/:id/reject",
     DELIVERY_BOY_WALLET: "/admin/delivery-boy-wallet",
+    DELIVERY_BOY_WALLET_UPDATE: "/admin/delivery-boy-wallet",
     DELIVERY_BOY_WALLET_ADJUSTMENT: "/admin/delivery-boy-wallet/adjustment",
     DELIVERY_EMERGENCY_HELP: "/admin/delivery-emergency-help",
     DELIVERY_EMERGENCY_HELP_STATUS: "/admin/delivery-emergency-help/status",

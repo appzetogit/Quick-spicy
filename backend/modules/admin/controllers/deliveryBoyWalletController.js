@@ -128,3 +128,72 @@ export const addWalletAdjustment = asyncHandler(async (req, res) => {
     newCashCollected: Number(wallet.cashInHand) || 0
   });
 });
+
+/**
+ * Update delivery boy wallet balances directly
+ * PUT /api/admin/delivery-boy-wallet
+ * Body: { walletId?, deliveryId?, pocketBalance?, cashInHand? }
+ */
+export const updateDeliveryBoyWalletBalances = asyncHandler(async (req, res) => {
+  const admin = req.admin;
+  if (!admin?._id) {
+    return errorResponse(res, 401, 'Admin authentication required');
+  }
+
+  const { walletId, deliveryId, pocketBalance, cashInHand } = req.body || {};
+  const hasPocketBalance = pocketBalance !== undefined;
+  const hasCashInHand = cashInHand !== undefined;
+
+  if (!hasPocketBalance && !hasCashInHand) {
+    return errorResponse(res, 400, 'Provide pocketBalance or cashInHand to update');
+  }
+
+  let wallet = null;
+  if (walletId) {
+    wallet = await DeliveryWallet.findById(walletId);
+  }
+
+  if (!wallet && deliveryId) {
+    const delivery = await Delivery.findById(deliveryId);
+    if (!delivery) {
+      return errorResponse(res, 404, 'Delivery partner not found');
+    }
+    wallet = await DeliveryWallet.findOrCreateByDeliveryId(deliveryId);
+  }
+
+  if (!wallet) {
+    return errorResponse(res, 400, 'Provide walletId or deliveryId');
+  }
+
+  if (hasPocketBalance) {
+    const nextPocketBalance = Number(pocketBalance);
+    if (!Number.isFinite(nextPocketBalance) || nextPocketBalance < 0) {
+      return errorResponse(res, 400, 'pocketBalance must be a valid non-negative number');
+    }
+    wallet.totalBalance = nextPocketBalance;
+  }
+
+  if (hasCashInHand) {
+    const nextCashInHand = Number(cashInHand);
+    if (!Number.isFinite(nextCashInHand) || nextCashInHand < 0) {
+      return errorResponse(res, 400, 'cashInHand must be a valid non-negative number');
+    }
+    wallet.cashInHand = nextCashInHand;
+  }
+
+  wallet.lastTransactionAt = new Date();
+  await wallet.save();
+
+  const settings = await BusinessSettings.getSettings().catch(() => null);
+  const availableCashLimit = Number(settings?.deliveryCashLimit) || 0;
+  const currentCashInHand = Number(wallet.cashInHand) || 0;
+
+  return successResponse(res, 200, 'Delivery boy wallet updated successfully', {
+    walletId: wallet._id,
+    deliveryId: wallet.deliveryId,
+    pocketBalance: Number(wallet.totalBalance) || 0,
+    cashInHand: currentCashInHand,
+    remainingCashLimit: Math.max(0, availableCashLimit - currentCashInHand),
+    availableCashLimit,
+  });
+});

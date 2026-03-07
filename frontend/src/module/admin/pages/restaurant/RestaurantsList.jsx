@@ -5,6 +5,7 @@ import { adminAPI, restaurantAPI, locationAPI, uploadAPI } from "../../../../lib
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportRestaurantsToPDF } from "../../components/restaurants/restaurantsExportUtils"
 import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 
 // Import icons from Dashboard-icons
 import locationIcon from "../../assets/Dashboard-icons/image1.png"
@@ -52,6 +53,7 @@ export default function RestaurantsList() {
   const [resolvingAddress, setResolvingAddress] = useState(false)
   const [mapLoading, setMapLoading] = useState(false)
   const [mapError, setMapError] = useState("")
+  const [availabilityTick, setAvailabilityTick] = useState(() => Date.now())
   const [locationForm, setLocationForm] = useState({
     latitude: "",
     longitude: "",
@@ -162,6 +164,14 @@ export default function RestaurantsList() {
 
     fetchRestaurants()
   }, [])
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      setAvailabilityTick(Date.now())
+    }, 60000)
+
+    return () => window.clearInterval(intervalId)
+  }, [])
   const [filters, setFilters] = useState({
     all: "All",
     businessModel: "",
@@ -170,6 +180,7 @@ export default function RestaurantsList() {
   })
 
   const filteredRestaurants = useMemo(() => {
+    const now = new Date(availabilityTick)
     let result = [...restaurants]
 
     if (searchQuery.trim()) {
@@ -226,8 +237,8 @@ export default function RestaurantsList() {
             bValue = b.cuisine.toLowerCase();
             break;
           case 'status':
-            aValue = a.status ? 1 : 0;
-            bValue = b.status ? 1 : 0;
+            aValue = getRestaurantAvailabilityStatus(a.originalData || a, now).isOpen ? 1 : 0;
+            bValue = getRestaurantAvailabilityStatus(b.originalData || b, now).isOpen ? 1 : 0;
             break;
           default:
             return 0;
@@ -239,8 +250,11 @@ export default function RestaurantsList() {
       });
     }
 
-    return result
-  }, [restaurants, searchQuery, filters, sortConfig])
+    return result.map((restaurant) => ({
+      ...restaurant,
+      availability: getRestaurantAvailabilityStatus(restaurant.originalData || restaurant, now),
+    }))
+  }, [restaurants, searchQuery, filters, sortConfig, availabilityTick])
 
   const handleSort = (key) => {
     let direction = "asc"
@@ -248,32 +262,6 @@ export default function RestaurantsList() {
       direction = "desc"
     }
     setSortConfig({ key, direction })
-  }
-
-  const handleToggleStatus = async (id) => {
-    const restaurant = restaurants.find(r => r.id === id)
-    if (!restaurant) return
-
-    const newStatus = !restaurant.status
-    const restaurantId = restaurant._id || restaurant.id
-
-    try {
-      // Optimistically update UI
-      setRestaurants(prev => prev.map(r =>
-        r.id === id ? { ...r, status: newStatus } : r
-      ))
-
-      // Call API to update restaurant status
-      await adminAPI.updateRestaurantStatus(restaurantId, newStatus)
-      debugLog(`Restaurant ${id} status updated to ${newStatus}`)
-    } catch (err) {
-      debugError("Error updating restaurant status:", err)
-      // Revert on error
-      setRestaurants(prev => prev.map(r =>
-        r.id === id ? { ...r, status: !newStatus } : r
-      ))
-      alert("Failed to update status. Please try again.")
-    }
   }
 
   const totalRestaurants = restaurants.length
@@ -1158,16 +1146,24 @@ export default function RestaurantsList() {
                           <span className="text-sm text-slate-700">{restaurant.cuisine}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleToggleStatus(restaurant.id)}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${restaurant.status ? "bg-blue-600" : "bg-slate-300"
-                              }`}
-                          >
-                            <span
-                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${restaurant.status ? "translate-x-6" : "translate-x-1"
-                                }`}
-                            />
-                          </button>
+                          <div className="flex flex-col gap-1">
+                            <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${restaurant.availability?.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                              {restaurant.availability?.isOpen ? "Online" : "Offline"}
+                            </span>
+                            {restaurant.availability?.closingCountdownLabel ? (
+                              <span className="text-[11px] text-slate-500">
+                                {restaurant.availability.closingCountdownLabel}
+                              </span>
+                            ) : restaurant.availability?.openingTime && restaurant.availability?.closingTime ? (
+                              <span className="text-[11px] text-slate-500">
+                                {restaurant.availability.openingTime} - {restaurant.availability.closingTime}
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-slate-500">
+                                No timings
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
                           <div className="flex items-center justify-center gap-2">
@@ -1568,10 +1564,13 @@ export default function RestaurantsList() {
                         )}
                         <div>
                           <p className="text-xs text-slate-500 mb-1">Status</p>
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${(restaurantDetails?.isActive !== false) ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getRestaurantAvailabilityStatus(restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant).isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
                             }`}>
-                            {(restaurantDetails?.isActive !== false) ? "Active" : "Inactive"}
+                            {getRestaurantAvailabilityStatus(restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant).isOpen ? "Online" : "Offline"}
                           </span>
+                          <p className="mt-2 text-xs text-slate-500">
+                            Outlet: {(restaurantDetails?.isActive !== false) ? "Active" : "Inactive"}
+                          </p>
                         </div>
                       </div>
                     </div>

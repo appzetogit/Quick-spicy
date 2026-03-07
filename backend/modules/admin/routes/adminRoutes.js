@@ -106,6 +106,7 @@ import {
 import {
   getDeliveryBoyWallets,
   addWalletAdjustment,
+  updateDeliveryBoyWalletBalances,
 } from "../controllers/deliveryBoyWalletController.js";
 import {
   getEmergencyHelp,
@@ -268,6 +269,7 @@ router.post("/delivery-withdrawal/:id/approve", approveDeliveryWithdrawal);
 router.post("/delivery-withdrawal/:id/reject", rejectDeliveryWithdrawal);
 
 router.get("/delivery-boy-wallet", getDeliveryBoyWallets);
+router.put("/delivery-boy-wallet", updateDeliveryBoyWalletBalances);
 router.post("/delivery-boy-wallet/adjustment", addWalletAdjustment);
 
 // Admin Management
