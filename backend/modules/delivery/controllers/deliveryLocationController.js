@@ -268,6 +268,7 @@ export const updateLocation = asyncHandler(async (req, res) => {
             heading: normalizedHeading ?? 0,
             bearing: normalizedHeading ?? 0,
             speed: normalizedSpeed ?? 0,
+            ...activeRoutePayload,
             distanceToCustomerKm,
             distanceToCustomerM: distanceToCustomerKm !== null ? Math.round(distanceToCustomerKm * 1000) : null,
             timestamp: Date.now()

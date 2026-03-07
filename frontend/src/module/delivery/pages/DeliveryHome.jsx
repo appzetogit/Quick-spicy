@@ -49,10 +49,9 @@ import { getGoogleMapsApiKey } from "@/lib/utils/googleMapsApiKey"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 import { Loader } from "@googlemaps/js-api-loader"
 import {
+  buildVisibleRouteFromRiderPosition,
   decodePolyline,
   extractPolylineFromDirections,
-  findNearestPointOnPolyline,
-  trimPolylineBehindRider,
   calculateBearing,
   animateMarker,
   calculateDistance
@@ -65,6 +64,10 @@ import bikeLogo from "../../../assets/bikelogo.png"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+
+const PICKUP_REACHED_THRESHOLD_METERS = 120
+const DROP_REACHED_THRESHOLD_METERS = 90
+const ROUTE_OFF_TRACK_THRESHOLD_METERS = 40
 
 
 // Ola Maps API Key removed
@@ -2785,25 +2788,8 @@ export default function DeliveryHome() {
             // Ensure route path is visible
             setShowRoutePath(true);
             
-            // Show Reached Pickup popup immediately after order acceptance (no distance check)
-            // But only if order is not already past pickup phase
-            setTimeout(() => {
-              const currentOrderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || '';
-              const currentDeliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '';
-              const isAlreadyPastPickup = currentOrderStatus === 'out_for_delivery' || 
-                                         currentDeliveryPhase === 'en_route_to_delivery' ||
-                                         currentDeliveryPhase === 'en_route_to_drop' ||
-                                         currentDeliveryPhase === 'picked_up';
-              
-              if (!isAlreadyPastPickup) {
-                debugLog('✅ Order accepted - showing Reached Pickup popup immediately');
-                setShowreachedPickupPopup(true);
-                // Close directions map if open
-                setShowDirectionsMap(false);
-              } else {
-                debugLog('🚫 Order already past pickup phase, skipping Reached Pickup popup');
-              }
-            }, 500); // Wait 500ms for state to update
+            // Reached Pickup should open only after the rider is actually near the restaurant.
+            setShowDirectionsMap(false);
             
             // Show route on main map instead of opening full-screen directions map
             setTimeout(() => {
@@ -4054,13 +4040,7 @@ export default function DeliveryHome() {
 
             toast.success('Order is out for delivery. Route to customer is on the map.', { duration: 4000 })
             
-            // Show Reached Drop popup instantly after Order Picked Up is confirmed
-            // Use setTimeout to ensure state updates are processed and useEffect doesn't block it
-            debugLog('✅ Showing Reached Drop popup instantly after Order Picked Up confirmation')
-            setTimeout(() => {
-              setShowReachedDropPopup(true)
-              debugLog('✅ Reached Drop popup state set to true')
-            }, 100) // Small delay to ensure showOrderIdConfirmationPopup state is updated
+            debugLog('✅ Waiting for rider to get near customer before showing Reached Drop popup')
             
           } else {
             debugError('❌ Failed to confirm order ID:', response.data)
@@ -6309,20 +6289,15 @@ export default function DeliveryHome() {
       // Convert rider position to object format
       const riderPos = { lat: riderPosition[0], lng: riderPosition[1] };
 
-      // Find nearest point on polyline to rider
-      const { segmentIndex, nearestPoint, distance } = findNearestPointOnPolyline(fullPolyline, riderPos);
-
-      // Trim polyline to remove points behind rider
-      const trimmedPolyline = trimPolylineBehindRider(fullPolyline, nearestPoint, segmentIndex);
-
-      // IMPORTANT: Start polyline from bike's actual position, not from nearest point on route
-      // This ensures the polyline always starts at the bike's current location
-      const path = [
-        new window.google.maps.LatLng(riderPos.lat, riderPos.lng), // Start from bike position
-        ...trimmedPolyline.map(point => 
-          new window.google.maps.LatLng(point.lat, point.lng)
-        )
-      ];
+      const routeState = buildVisibleRouteFromRiderPosition(fullPolyline, riderPos, {
+        offRouteThresholdMeters: ROUTE_OFF_TRACK_THRESHOLD_METERS
+      });
+      const visiblePolyline = Array.isArray(routeState.visiblePolyline) && routeState.visiblePolyline.length > 1
+        ? routeState.visiblePolyline
+        : fullPolyline;
+      const path = visiblePolyline.map((point) =>
+        new window.google.maps.LatLng(point.lat, point.lng)
+      );
 
       // Update or create live tracking polyline with Zomato/Rapido style
       if (liveTrackingPolylineRef.current) {
@@ -6379,7 +6354,7 @@ export default function DeliveryHome() {
         debugLog('✅ Created new live tracking polyline on map with Zomato/Rapido styling');
       }
 
-      debugLog(`✅ Live tracking polyline updated: ${trimmedPolyline.length} points remaining, ${distance.toFixed(2)}m from route`);
+      debugLog(`✅ Live tracking polyline updated: ${visiblePolyline.length} points remaining, ${Number(routeState.distanceFromRoute || 0).toFixed(2)}m from route`);
       debugLog(`📍 Polyline path has ${path.length} points, map: ${window.deliveryMapInstance ? 'ready' : 'not ready'}`);
     } catch (error) {
       debugError('❌ Error updating live tracking polyline:', error);
@@ -6969,6 +6944,7 @@ export default function DeliveryHome() {
         }
 
         // Verify order still exists in database before restoring
+        let verifiedOrder = null;
         try {
           debugLog('🔍 Verifying order exists in database:', orderId);
           const orderResponse = await deliveryAPI.getOrderDetails(orderId);
@@ -6980,11 +6956,12 @@ export default function DeliveryHome() {
             return;
           }
 
-          const order = orderResponse.data.data;
+          const orderPayload = orderResponse.data.data;
+          verifiedOrder = orderPayload?.order || orderPayload;
           
           // Check if order is cancelled or deleted
-          if (order.status === 'cancelled' || order.status === 'delivered') {
-            debugLog(`⚠️ Order is ${order.status}, removing from localStorage`);
+          if (verifiedOrder.status === 'cancelled' || verifiedOrder.status === 'delivered') {
+            debugLog(`⚠️ Order is ${verifiedOrder.status}, removing from localStorage`);
             localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
             setSelectedRestaurant(null);
             return;
@@ -7018,7 +6995,29 @@ export default function DeliveryHome() {
 
         // Restore selectedRestaurant state
         if (activeOrderData.restaurantInfo) {
-          setSelectedRestaurant(activeOrderData.restaurantInfo);
+          const customerCoords = verifiedOrder?.address?.location?.coordinates;
+          const restaurantCoords = verifiedOrder?.restaurantId?.location?.coordinates;
+          const mergedRestaurantInfo = {
+            ...activeOrderData.restaurantInfo,
+            orderId: verifiedOrder?.orderId || activeOrderData.restaurantInfo?.orderId || activeOrderData.orderId,
+            id: verifiedOrder?._id?.toString?.() || activeOrderData.restaurantInfo?.id || activeOrderData.orderId,
+            orderStatus: verifiedOrder?.status || activeOrderData.restaurantInfo?.orderStatus || activeOrderData.restaurantInfo?.status,
+            status: verifiedOrder?.status || activeOrderData.restaurantInfo?.status,
+            deliveryPhase: verifiedOrder?.deliveryState?.currentPhase || activeOrderData.restaurantInfo?.deliveryPhase,
+            deliveryState: verifiedOrder?.deliveryState || activeOrderData.restaurantInfo?.deliveryState,
+            lat: restaurantCoords?.[1] ?? activeOrderData.restaurantInfo?.lat,
+            lng: restaurantCoords?.[0] ?? activeOrderData.restaurantInfo?.lng,
+            customerName: verifiedOrder?.userId?.name || activeOrderData.restaurantInfo?.customerName,
+            customerAddress:
+              verifiedOrder?.address?.formattedAddress ||
+              (verifiedOrder?.address?.street
+                ? `${verifiedOrder.address.street}, ${verifiedOrder.address.city || ''}, ${verifiedOrder.address.state || ''}`.trim()
+                : '') ||
+              activeOrderData.restaurantInfo?.customerAddress,
+            customerLat: customerCoords?.[1] ?? activeOrderData.restaurantInfo?.customerLat,
+            customerLng: customerCoords?.[0] ?? activeOrderData.restaurantInfo?.customerLng
+          };
+          setSelectedRestaurant(mergedRestaurantInfo);
           debugLog('✅ Restored selectedRestaurant from localStorage');
         }
 
@@ -7052,13 +7051,41 @@ export default function DeliveryHome() {
 
           // Recalculate route using Directions API (preferred) or use saved coordinates (fallback)
           // Don't restore directionsResponse from localStorage - Google Maps objects can't be serialized
-          if (activeOrderData.restaurantInfo && activeOrderData.restaurantInfo.lat && activeOrderData.restaurantInfo.lng && riderLocation && riderLocation.length === 2) {
+          const restoredInfo = activeOrderData.restaurantInfo;
+          const restoredPhase = String(
+            verifiedOrder?.deliveryState?.currentPhase ||
+            restoredInfo?.deliveryPhase ||
+            restoredInfo?.deliveryState?.currentPhase ||
+            ''
+          ).toLowerCase();
+          const restoredStatus = String(
+            verifiedOrder?.deliveryState?.status ||
+            restoredInfo?.deliveryState?.status ||
+            verifiedOrder?.status ||
+            restoredInfo?.orderStatus ||
+            restoredInfo?.status ||
+            ''
+          ).toLowerCase();
+          const isDeliveryLeg =
+            restoredPhase === 'en_route_to_delivery' ||
+            restoredPhase === 'at_delivery' ||
+            restoredStatus === 'order_confirmed' ||
+            restoredStatus === 'en_route_to_delivery' ||
+            restoredStatus === 'out_for_delivery';
+          const destinationLat = isDeliveryLeg
+            ? (verifiedOrder?.address?.location?.coordinates?.[1] ?? restoredInfo?.customerLat)
+            : restoredInfo?.lat;
+          const destinationLng = isDeliveryLeg
+            ? (verifiedOrder?.address?.location?.coordinates?.[0] ?? restoredInfo?.customerLng)
+            : restoredInfo?.lng;
+
+          if (destinationLat != null && destinationLng != null && riderLocation && riderLocation.length === 2) {
             // Try to recalculate with Directions API first (if flag indicates we had Directions API before)
             if (activeOrderData.hasDirectionsAPI) {
               debugLog('🔄 Recalculating route with Directions API for restored order...');
               calculateRouteWithDirectionsAPI(
                 riderLocation,
-                { lat: activeOrderData.restaurantInfo.lat, lng: activeOrderData.restaurantInfo.lng }
+                { lat: destinationLat, lng: destinationLng }
               ).then(result => {
                 if (result && result.routes && result.routes.length > 0) {
                   setDirectionsResponse(result);
@@ -7477,9 +7504,7 @@ export default function DeliveryHome() {
       return
     }
 
-    // Order is ready: show Reached Pickup popup immediately (no 500m check)
-    debugLog('✅ Order ready – showing Reached Pickup popup')
-    setShowreachedPickupPopup(true)
+    debugLog('✅ Order ready – pickup popup will open after proximity check')
 
     clearOrderReady()
   }, [orderReady, selectedRestaurant])
@@ -7777,13 +7802,28 @@ export default function DeliveryHome() {
       return
     }
 
-    // Show "Reached Pickup" popup immediately when order is in pickup phase (no distance check)
-    if (!showreachedPickupPopup) {
-      debugLog('✅ Order is in pickup phase, showing Reached Pickup popup immediately')
+    const distanceInMeters = calculateDistanceInMeters(
+      riderLocation[0],
+      riderLocation[1],
+      selectedRestaurant.lat,
+      selectedRestaurant.lng
+    )
+
+    if (distanceInMeters <= PICKUP_REACHED_THRESHOLD_METERS && !showreachedPickupPopup) {
+      debugLog('✅ Rider reached pickup proximity, opening popup', {
+        distanceInMeters,
+        threshold: PICKUP_REACHED_THRESHOLD_METERS
+      })
       setShowreachedPickupPopup(true)
-      
-      // Close directions map if open
       setShowDirectionsMap(false)
+      return
+    }
+
+    if (distanceInMeters <= PICKUP_REACHED_THRESHOLD_METERS * 2) {
+      debugLog('📍 Rider approaching pickup', {
+        distanceInMeters,
+        threshold: PICKUP_REACHED_THRESHOLD_METERS
+      })
     }
   }, [
 riderLocation?.[0] || null, 
@@ -8095,8 +8135,18 @@ selectedRestaurant?.lng || null,
       selectedRestaurant.customerLng
     )
 
+    if (distanceInMeters <= DROP_REACHED_THRESHOLD_METERS && !showReachedDropPopup) {
+      debugLog('✅ Rider reached drop proximity, opening popup', {
+        distanceInMeters,
+        threshold: DROP_REACHED_THRESHOLD_METERS
+      })
+      setShowReachedDropPopup(true)
+      setShowDirectionsMap(false)
+      return
+    }
+
     // Log distance check more frequently for debugging
-    if (distanceInMeters <= 600) { // Log when within 600m (slightly more than threshold)
+    if (distanceInMeters <= 200) {
       debugLog(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters`, {
         riderPos: riderPos,
         customerLat: selectedRestaurant.customerLat,
@@ -8113,13 +8163,8 @@ selectedRestaurant?.lng || null,
       })
     }
 
-    // REMOVED: 500m distance check - Reached Drop popup now shows instantly after Order Picked Up
-    // This useEffect is kept for other monitoring but won't trigger Reached Drop popup
-    // The popup is now shown directly after Order Picked Up confirmation (see handleOrderIdConfirmTouchEnd)
-    
-    // Log distance for debugging (but don't show popup based on distance)
-    if (distanceInMeters <= 1000) {
-      debugLog(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters (popup shown instantly, not based on distance)`, {
+    if (distanceInMeters <= 400) {
+      debugLog(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters`, {
         orderId: selectedRestaurant?.orderId || selectedRestaurant?.id,
         customerLocation: { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng },
         riderLocation: riderPos,

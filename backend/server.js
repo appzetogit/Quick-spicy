@@ -528,8 +528,13 @@ function getCustomerCoordsFromOrder(order) {
 
 function getActiveRouteCoordinatesFromOrder(order) {
   const phase = String(order?.deliveryState?.currentPhase || '').toLowerCase();
+  const deliveryStateStatus = String(order?.deliveryState?.status || '').toLowerCase();
   const routeCoordinates =
-    phase === 'en_route_to_delivery' || phase === 'at_delivery' || order?.status === 'out_for_delivery'
+    phase === 'en_route_to_delivery' ||
+    phase === 'at_delivery' ||
+    deliveryStateStatus === 'order_confirmed' ||
+    deliveryStateStatus === 'en_route_to_delivery' ||
+    order?.status === 'out_for_delivery'
       ? order?.deliveryState?.routeToDelivery?.coordinates
       : order?.deliveryState?.routeToPickup?.coordinates;
 
@@ -656,6 +661,16 @@ io.on('connection', (socket) => {
         trackedOrder?.deliveryPartnerId?.toString?.() ||
         null;
       const deliveryId = data.deliveryId ? String(data.deliveryId) : deliveryIdFromOrder;
+      const trackedPhase = String(trackedOrder?.deliveryState?.currentPhase || '').toLowerCase();
+      const trackedStatus = String(trackedOrder?.deliveryState?.status || '').toLowerCase();
+      const trackingStatus =
+        trackedPhase === 'en_route_to_delivery' ||
+        trackedPhase === 'at_delivery' ||
+        trackedStatus === 'order_confirmed' ||
+        trackedStatus === 'en_route_to_delivery' ||
+        trackedOrder?.status === 'out_for_delivery'
+          ? 'out_for_delivery'
+          : 'en_route_to_pickup';
 
       // Keep Firebase Realtime Database node in sync for live user tracking.
       await Promise.allSettled([
@@ -665,7 +680,7 @@ io.on('connection', (socket) => {
           boy_lng: data.lng,
           heading: data.heading || 0,
           timestamp,
-          status: 'on_the_way',
+          status: trackingStatus,
           route_coordinates: getActiveRouteCoordinatesFromOrder(trackedOrder),
           distance_to_customer_km: distanceToCustomerKm,
           distance_to_customer_m: distanceToCustomerM
