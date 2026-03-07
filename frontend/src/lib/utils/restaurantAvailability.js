@@ -152,16 +152,6 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     }
   }
 
-  if (!isAcceptingOrders) {
-    return {
-      isOpen: false,
-      isActive,
-      isAcceptingOrders,
-      isWithinTimings: false,
-      reason: "manual-offline",
-    }
-  }
-
   const dayName = DAY_NAMES[now.getDay()]
   const todayTiming = getTodayTiming(restaurant, dayName)
 
@@ -217,6 +207,8 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     closingCountdownLabel: isWithinTimings
       ? formatClosingCountdown(minutesUntilClose, closingTime)
       : null,
-    reason: isWithinTimings ? "open" : (hasExplicitWindow ? "outside-hours" : "no-timings"),
+    reason: isWithinTimings
+      ? (isAcceptingOrders ? "open" : "open-by-timings")
+      : (hasExplicitWindow ? "outside-hours" : "no-timings"),
   }
 }

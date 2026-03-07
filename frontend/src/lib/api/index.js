@@ -1980,11 +1980,7 @@ export const uploadAPI = {
       formData.append("folder", options.folder);
     }
 
-    return apiClient.post(API_ENDPOINTS.UPLOAD.MEDIA, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    return apiClient.post(API_ENDPOINTS.UPLOAD.MEDIA, formData);
   },
 };
 

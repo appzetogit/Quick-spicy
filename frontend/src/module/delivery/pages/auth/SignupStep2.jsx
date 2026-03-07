@@ -1,8 +1,7 @@
 ﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Upload, X, Check } from "lucide-react"
-import { deliveryAPI } from "@/lib/api"
-import apiClient from "@/lib/api/axios"
+import { deliveryAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -64,6 +63,33 @@ export default function SignupStep2() {
   useEffect(() => {
     sessionStorage.setItem("deliverySignupDocs", JSON.stringify(uploadedDocs))
   }, [uploadedDocs])
+
+  useEffect(() => {
+    return () => {
+      Object.values(documents).forEach((file) => {
+        if (file instanceof File) {
+          const previewUrl = file.previewUrl || file._previewUrl
+          if (previewUrl) {
+            URL.revokeObjectURL(previewUrl)
+          }
+        }
+      })
+    }
+  }, [documents])
+
+  const getPreviewSrc = (docType) => {
+    const localFile = documents[docType]
+    if (localFile instanceof File) {
+      if (!localFile._previewUrl) {
+        localFile._previewUrl = URL.createObjectURL(localFile)
+      }
+      return localFile._previewUrl
+    }
+
+    const uploaded = uploadedDocs[docType]
+    if (typeof uploaded === "string") return uploaded
+    return uploaded?.url || null
+  }
 
   const getExtensionFromMimeType = (mimeType) => {
     const normalized = String(mimeType || "").toLowerCase()
@@ -227,16 +253,8 @@ export default function SignupStep2() {
     setUploading(prev => ({ ...prev, [docType]: true }))
 
     try {
-      // Create FormData for file upload
-      const formData = new FormData()
-      formData.append('file', file)
-      formData.append('folder', 'appzeto/delivery/documents')
-
-      // Upload to Cloudinary via backend
-      const response = await apiClient.post('/upload/media', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await uploadAPI.uploadMedia(file, {
+        folder: 'appzeto/delivery/documents'
       })
 
       if (response?.data?.success && response?.data?.data) {
@@ -253,10 +271,15 @@ export default function SignupStep2() {
         }))
 
         toast.success(`${docType.replace(/([A-Z])/g, ' $1').trim()} uploaded successfully`)
+      } else {
+        toast.error("Upload failed. Please try again.")
       }
     } catch (error) {
       debugError(`Error uploading ${docType}:`, error)
-      toast.error(`Failed to upload ${docType.replace(/([A-Z])/g, ' $1').trim()}`)
+      toast.error(
+        error?.response?.data?.message ||
+        `Failed to upload ${docType.replace(/([A-Z])/g, ' $1').trim()}`
+      )
     } finally {
       setUploading(prev => ({ ...prev, [docType]: false }))
     }
@@ -321,7 +344,7 @@ export default function SignupStep2() {
         {uploaded ? (
           <div className="relative">
             <img
-              src={uploaded.url}
+              src={getPreviewSrc(docType)}
               alt={label}
               className="w-full h-48 object-cover rounded-lg"
             />
