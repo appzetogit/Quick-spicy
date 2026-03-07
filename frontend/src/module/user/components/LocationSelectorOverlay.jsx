@@ -386,9 +386,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       }, 500)
     }
   }, [
-location?.latitude || null,
-location?.longitude || null,
-    location?.accuracy ? null
+    location?.latitude || null,
+    location?.longitude || null,
+    location?.accuracy || null,
   ])
 
   // Initialize Google Maps with Loader (ZOMATO-STYLE)
@@ -2658,7 +2658,6 @@ location?.longitude || null,
     </div>
   )
 }
-
 
 
 

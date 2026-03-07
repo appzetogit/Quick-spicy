@@ -392,8 +392,8 @@ const DeliveryTrackingMap = ({
 
     return rawRoute
       .map((point) => {
-        const lat = Number(point?.lat ? point?.[0]);
-        const lng = Number(point?.lng ? point?.[1]);
+        const lat = Number(point?.lat ?? point?.[0]);
+        const lng = Number(point?.lng ?? point?.[1]);
         return { lat, lng };
       })
       .filter((point) => Number.isFinite(point.lat) && Number.isFinite(point.lng));
@@ -842,15 +842,11 @@ const DeliveryTrackingMap = ({
         trackingId,
         (trackingData) => {
           // Firebase/backend may use lat/lng or boy_lat/boy_lng
-          const lat = Number(trackingData?.lat ? trackingData?.boy_lat);
-          const lng = Number(trackingData?.lng ? trackingData?.boy_lng);
+          const lat = Number(trackingData?.lat ?? trackingData?.boy_lat);
+          const lng = Number(trackingData?.lng ?? trackingData?.boy_lng);
           if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
-          const heading = Number(
-            trackingData?.heading ?
-              trackingData?.bearing ?
-              0,
-          );
+          const heading = Number(trackingData?.heading ?? trackingData?.bearing ?? 0);
 
           const location = {
             lat,
@@ -924,8 +920,8 @@ const DeliveryTrackingMap = ({
         const location = { lat: data.lat, lng: data.lng, heading: data.heading || data.bearing || 0 };
         setCurrentLocation(location);
         setDeliveryBoyLocation(location);
-        const distanceM = Number(data?.distanceToCustomerM ? data?.distance_to_customer_m);
-        const distanceKm = Number(data?.distanceToCustomerKm ? data?.distance_to_customer_km);
+        const distanceM = Number(data?.distanceToCustomerM ?? data?.distance_to_customer_m);
+        const distanceKm = Number(data?.distanceToCustomerKm ?? data?.distance_to_customer_km);
         const normalizedDistanceM = Number.isFinite(distanceM)
           ? distanceM
           : (Number.isFinite(distanceKm)
@@ -958,8 +954,8 @@ const DeliveryTrackingMap = ({
         const location = { lat: data.lat, lng: data.lng, heading: data.heading || data.bearing || 0 };
         setCurrentLocation(location);
         setDeliveryBoyLocation(location);
-        const distanceM = Number(data?.distanceToCustomerM ? data?.distance_to_customer_m);
-        const distanceKm = Number(data?.distanceToCustomerKm ? data?.distance_to_customer_km);
+        const distanceM = Number(data?.distanceToCustomerM ?? data?.distance_to_customer_m);
+        const distanceKm = Number(data?.distanceToCustomerKm ?? data?.distance_to_customer_km);
         const normalizedDistanceM = Number.isFinite(distanceM)
           ? distanceM
           : (Number.isFinite(distanceKm)
