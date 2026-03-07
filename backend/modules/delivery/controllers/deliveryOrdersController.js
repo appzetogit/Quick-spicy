@@ -577,8 +577,9 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       return String(id);
     };
     
-    // Valid statuses for order acceptance (unassigned orders in these statuses can be viewed by any delivery boy)
-    const validAcceptanceStatuses = ['preparing', 'ready'];
+    // Treat all open, unassigned delivery statuses as viewable/acceptable.
+    // Notification lists can be stale or missing, so status + zone remains the primary guard.
+    const validAcceptanceStatuses = ['pending', 'confirmed', 'preparing', 'ready'];
     
     // If order is assigned to this delivery partner, allow access
     if (orderDeliveryPartnerId === currentDeliveryId) {
@@ -586,7 +587,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
       console.log(`✅ Order ${order.orderId} is assigned to current delivery partner ${currentDeliveryId}`);
     } else if (!orderDeliveryPartnerId) {
       // Order not assigned yet - allow access if:
-      // 1. Order is in a valid status for acceptance (preparing/ready), OR
+      // 1. Order is in a valid open status for acceptance, OR
       // 2. This delivery boy was notified about it
       
       const isInValidStatus = validAcceptanceStatuses.includes(order.status);
@@ -693,7 +694,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     const cashLimitState = await getDeliveryCashLimitState(delivery._id);
 
     // If order is not assigned, check if this delivery boy was notified (priority-based system)
-    // Also allow acceptance if order is in valid status (preparing/ready) - more permissive
+    // Also allow acceptance if order is still in a valid open status.
     if (!orderDeliveryPartnerId) {
       if (!cashLimitState.canReceiveNewOrders) {
         return errorResponse(
@@ -734,8 +735,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       const wasNotified = normalizedPriorityIds.includes(normalizedCurrentId) || 
                          normalizedExpandedIds.includes(normalizedCurrentId);
       
-      // Also allow if order is in valid status (preparing/ready) - more permissive for unassigned orders
-      const isValidStatus = order.status === 'preparing' || order.status === 'ready';
+      // If the order is still open and unassigned, allow in-zone riders to accept it even if
+      // the notification bookkeeping was missed or the popup came from a stale notification batch.
+      const validAcceptanceStatuses = ['pending', 'confirmed', 'preparing', 'ready'];
+      const isValidStatus = validAcceptanceStatuses.includes(order.status);
       
       if (!wasNotified && !isValidStatus) {
         console.error(`❌ Order ${order.orderId} is not assigned, delivery partner ${currentDeliveryId} was not notified, and order status is ${order.status}`);

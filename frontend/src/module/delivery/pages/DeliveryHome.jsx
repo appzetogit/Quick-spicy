@@ -10089,7 +10089,8 @@ selectedRestaurant?.customerLng || null,
                     <p className="text-4xl font-bold text-gray-900 mb-2">
                       ₹{(() => {
                         const earnings = newOrder?.estimatedEarnings || selectedRestaurant?.estimatedEarnings || 0;
-                        const fallback = newOrder?.deliveryFee ? selectedRestaurant?.deliveryFee ? selectedRestaurant?.amount ? 0;
+                        const fallback =
+                          Number(newOrder?.deliveryFee ?? selectedRestaurant?.deliveryFee ?? selectedRestaurant?.amount) || 0;
                         let value = 0;
                         
                         debugLog('💰 Display earnings calculation:', {

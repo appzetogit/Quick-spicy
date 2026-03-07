@@ -40,6 +40,7 @@ export default function RestaurantDetailsPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [restaurantData, setRestaurantData] = useState(() => getRestaurantData())
   const [foodItems, setFoodItems] = useState([])
+  const [logoLoadFailed, setLogoLoadFailed] = useState(false)
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function RestaurantDetailsPage() {
   useEffect(() => {
     const refreshRestaurantData = () => {
       setRestaurantData(getRestaurantData())
+      setLogoLoadFailed(false)
     }
 
     // Initial load
@@ -156,11 +158,12 @@ export default function RestaurantDetailsPage() {
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
               <div className="bg-primary-orange rounded-lg p-3">
-                {restaurantData.logo ? (
+                {restaurantData.logo && !logoLoadFailed ? (
                   <img 
                     src={restaurantData.logo} 
                     alt="Restaurant Logo" 
                     className="w-6 h-6 md:w-8 md:h-8 object-cover rounded"
+                    onError={() => setLogoLoadFailed(true)}
                   />
                 ) : (
                   <Utensils className="w-6 h-6 md:w-8 md:h-8 text-white" />

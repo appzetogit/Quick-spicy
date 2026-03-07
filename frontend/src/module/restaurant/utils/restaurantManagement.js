@@ -28,6 +28,30 @@ const DEFAULT_RESTAURANT_DATA = {
 
 const RESTAURANT_STORAGE_KEY = 'restaurant_data'
 
+const isValidImageValue = (value) => {
+  if (!value || typeof value !== 'string') return false
+  const trimmed = value.trim()
+  if (!trimmed) return false
+
+  return (
+    trimmed.startsWith('http://') ||
+    trimmed.startsWith('https://') ||
+    trimmed.startsWith('data:image/')
+  )
+}
+
+const normalizeRestaurantData = (data = {}) => ({
+  ...DEFAULT_RESTAURANT_DATA,
+  ...data,
+  restaurantName: {
+    ...DEFAULT_RESTAURANT_DATA.restaurantName,
+    ...(data.restaurantName || {})
+  },
+  logo: isValidImageValue(data.logo) ? data.logo : null,
+  cover: isValidImageValue(data.cover) ? data.cover : DEFAULT_RESTAURANT_DATA.cover,
+  metaImage: isValidImageValue(data.metaImage) ? data.metaImage : null
+})
+
 /**
  * Get restaurant data from localStorage
  * @returns {Object} - Restaurant data object
@@ -36,7 +60,9 @@ export const getRestaurantData = () => {
   try {
     const saved = localStorage.getItem(RESTAURANT_STORAGE_KEY)
     if (saved) {
-      return JSON.parse(saved)
+      const normalizedData = normalizeRestaurantData(JSON.parse(saved))
+      localStorage.setItem(RESTAURANT_STORAGE_KEY, JSON.stringify(normalizedData))
+      return normalizedData
     }
     // Initialize with default data
     setRestaurantData(DEFAULT_RESTAURANT_DATA)
@@ -53,7 +79,8 @@ export const getRestaurantData = () => {
  */
 export const setRestaurantData = (restaurantData) => {
   try {
-    localStorage.setItem(RESTAURANT_STORAGE_KEY, JSON.stringify(restaurantData))
+    const normalizedData = normalizeRestaurantData(restaurantData)
+    localStorage.setItem(RESTAURANT_STORAGE_KEY, JSON.stringify(normalizedData))
     // Dispatch custom event for other components
     window.dispatchEvent(new CustomEvent('restaurantDataUpdated'))
     // Trigger storage event for cross-tab updates
