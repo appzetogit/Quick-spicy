@@ -22,6 +22,7 @@ const logger = winston.createLogger({
 });
 
 const REFERRAL_REWARD_AMOUNT = 50;
+const NEW_USER_WALLET_CREDIT_AMOUNT = 50;
 
 const normalizeReferralCode = (code = "") =>
   String(code || "").trim().toUpperCase();
@@ -94,6 +95,45 @@ const applyReferralReward = async ({ newUser, referrer }) => {
   newUser.referredAt = new Date();
   newUser.referralRewardGranted = true;
   await newUser.save();
+};
+
+const applyNewUserWalletCredit = async (user) => {
+  if (!user || user.role !== "user") return;
+
+  const wallet = await UserWallet.findOrCreateByUserId(user._id);
+  const alreadyCredited = (wallet.transactions || []).some(
+    (transaction) =>
+      transaction?.status === "Completed" &&
+      transaction?.type === "addition" &&
+      transaction?.metadata?.get?.("source") === "new_user_signup_bonus",
+  );
+
+  if (alreadyCredited) {
+    await User.findByIdAndUpdate(user._id, {
+      "wallet.balance": wallet.balance,
+      "wallet.currency": wallet.currency || "INR",
+    });
+    return;
+  }
+
+  wallet.addTransaction({
+    amount: NEW_USER_WALLET_CREDIT_AMOUNT,
+    type: "addition",
+    status: "Completed",
+    description: "Welcome bonus for new account signup",
+    paymentMethod: "wallet",
+    metadata: new Map([
+      ["source", "new_user_signup_bonus"],
+      ["reason", "new_user_wallet_credit"],
+      ["userId", user._id.toString()],
+    ]),
+  });
+  await wallet.save();
+
+  await User.findByIdAndUpdate(user._id, {
+    "wallet.balance": wallet.balance,
+    "wallet.currency": wallet.currency || "INR",
+  });
 };
 
 const ensureReferralCodeForUser = async (user) => {
@@ -284,6 +324,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
       try {
         user = await User.create(userData);
+        await applyNewUserWalletCredit(user);
         if (referrer) {
           await applyReferralReward({ newUser: user, referrer });
         }
@@ -399,6 +440,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
         try {
           user = await User.create(userData);
+          await applyNewUserWalletCredit(user);
           if (referrer) {
             await applyReferralReward({ newUser: user, referrer });
           }
@@ -591,6 +633,8 @@ export const register = asyncHandler(async (req, res) => {
       ? { referralCode: await generateUniqueReferralCode(name) }
       : {}),
   });
+
+  await applyNewUserWalletCredit(user);
 
   if (referrer) {
     await applyReferralReward({ newUser: user, referrer });
@@ -1074,6 +1118,7 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
 
       try {
         user = await User.create(userData);
+        await applyNewUserWalletCredit(user);
         if (referrer) {
           await applyReferralReward({ newUser: user, referrer });
         }
@@ -1324,6 +1369,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
       };
 
       user = await User.create(userData);
+      await applyNewUserWalletCredit(user);
       logger.info(`New user registered via Google: ${user._id}`, {
         email: googleUser.email,
         userId: user._id,
