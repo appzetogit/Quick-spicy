@@ -14,6 +14,27 @@ const resolveAudioSource = (source, cacheKey = 'restaurant-alert') => {
   return `${source}${separator}devcache=${cacheKey}`;
 }
 
+const supportsBrowserNotifications = () =>
+  typeof window !== 'undefined' && typeof Notification !== 'undefined';
+
+const buildRestaurantOrderNotification = (orderData = {}) => {
+  const orderId = orderData.orderId || orderData.orderMongoId || 'New';
+  const itemCount = Array.isArray(orderData.items) ? orderData.items.length : 0;
+  const total = Number(orderData.total || orderData.pricing?.total || 0);
+
+  return {
+    title: `New order #${orderId}`,
+    body: itemCount > 0
+      ? `${itemCount} item${itemCount === 1 ? '' : 's'} - Rs.${total.toFixed(2)}`
+      : 'A new order is waiting for review',
+    tag: `restaurant-order-${orderId}`,
+    data: {
+      orderId,
+      targetUrl: `/restaurant/orders/${orderData.orderMongoId || orderData.orderId || ''}`,
+    },
+  };
+}
+
 
 /**
  * Hook for restaurant to receive real-time order notifications with sound
@@ -29,6 +50,52 @@ export const useRestaurantNotifications = () => {
   const [restaurantId, setRestaurantId] = useState(null);
   const lastConnectErrorLogRef = useRef(0);
   const CONNECT_ERROR_LOG_THROTTLE_MS = 10000;
+
+  const showBackgroundOrderNotification = async (orderData) => {
+    if (!supportsBrowserNotifications() || Notification.permission !== 'granted') {
+      return;
+    }
+
+    const notificationOptions = buildRestaurantOrderNotification(orderData);
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.showNotification(notificationOptions.title, {
+            body: notificationOptions.body,
+            tag: notificationOptions.tag,
+            renotify: true,
+            requireInteraction: true,
+            silent: false,
+            vibrate: [200, 100, 200, 100, 300],
+            icon: '/favicon.ico',
+            data: notificationOptions.data,
+          });
+          return;
+        }
+      }
+
+      new Notification(notificationOptions.title, {
+        body: notificationOptions.body,
+        tag: notificationOptions.tag,
+        requireInteraction: true,
+        silent: false,
+        icon: '/favicon.ico',
+        data: notificationOptions.data,
+      });
+    } catch (error) {
+      debugWarn('Error showing background restaurant notification:', error);
+    }
+  };
+
+  const handleIncomingOrderAlert = (orderData) => {
+    playNotificationSound();
+
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      showBackgroundOrderNotification(orderData);
+    }
+  };
 
   // Get restaurant ID from API
   useEffect(() => {
@@ -300,15 +367,14 @@ export const useRestaurantNotifications = () => {
     socketRef.current.on('new_order', (orderData) => {
       debugLog('📦 New order received:', orderData);
       setNewOrder(orderData);
-      
-      // Play notification sound
-      playNotificationSound();
+
+      handleIncomingOrderAlert(orderData);
     });
 
     // Listen for sound notification event
     socketRef.current.on('play_notification_sound', (data) => {
       debugLog('🔔 Sound notification:', data);
-      playNotificationSound();
+      handleIncomingOrderAlert(data);
     });
 
     // Listen for order status updates

@@ -5298,6 +5298,38 @@ export default function DeliveryHome() {
     }
   }, [isOnline, fetchAssignedOrders])
 
+  // Re-check available assignments whenever the delivery socket connects.
+  // This covers cases where an order was assigned before the room join finished.
+  useEffect(() => {
+    if (!isOnline || !isConnected) {
+      return
+    }
+
+    const timeoutId = setTimeout(() => {
+      fetchAssignedOrders()
+    }, 1000)
+
+    return () => clearTimeout(timeoutId)
+  }, [isOnline, isConnected, fetchAssignedOrders])
+
+  // Keep a lightweight background sync running while online so riders do not
+  // have to manually refresh if a realtime event is missed.
+  useEffect(() => {
+    if (!isOnline) {
+      return
+    }
+
+    const intervalId = setInterval(() => {
+      if (showNewOrderPopup || activeOrder || selectedRestaurant) {
+        return
+      }
+
+      fetchAssignedOrders()
+    }, 15000)
+
+    return () => clearInterval(intervalId)
+  }, [isOnline, showNewOrderPopup, activeOrder, selectedRestaurant, fetchAssignedOrders])
+
   // Also fetch orders on initial page load if already online
   useEffect(() => {
     // Check if delivery person is already online when component mounts
