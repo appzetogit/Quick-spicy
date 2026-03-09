@@ -767,6 +767,12 @@ export default function Cart() {
   const totalBeforeDiscount = subtotal + deliveryFee + platformFee + gstCharges
   const total = pricing?.total || (totalBeforeDiscount - discount)
   const savings = pricing?.savings || (discount + (subtotal > 500 ? 32 : 0))
+  const selectedPaymentLabel =
+    selectedPaymentMethod === "wallet"
+      ? "Wallet"
+      : selectedPaymentMethod === "razorpay"
+        ? "Online Payment"
+        : "Cash on Delivery"
 
   // Restaurant name from data or cart
   const restaurantName = restaurantData?.name || cart[0]?.restaurant || "Restaurant"
@@ -2077,13 +2083,17 @@ export default function Cart() {
               {/* Pay Using */}
               <div className="flex items-center justify-between mb-2 md:mb-3">
                 <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                  {selectedPaymentMethod === "wallet" ? (
+                    <Wallet className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                  ) : (
+                    <CreditCard className="h-4 w-4 text-gray-600 dark:text-gray-300" />
+                  )}
                   <div className="leading-tight">
                     <p className="text-[11px] md:text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
                       PAY USING
                     </p>
                     <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200">
-                      Cash on Delivery
+                      {selectedPaymentLabel}
                     </p>
                   </div>
                 </div>
@@ -2094,8 +2104,10 @@ export default function Cart() {
                     onChange={(e) => setSelectedPaymentMethod(e.target.value)}
                     className="appearance-none bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-9 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#EB590E]/40"
                   >
-                    {/* Razorpay and Wallet hidden for now */}
                     <option value="cash">COD</option>
+                    <option value="wallet">
+                      Wallet ({RUPEE_SYMBOL}{isLoadingWallet ? "..." : walletBalance.toFixed(0)})
+                    </option>
                   </select>
                   <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
                 </div>

@@ -40,7 +40,7 @@ import {
   calculatePeriodEarnings
 } from "../utils/deliveryWalletState"
 import { formatCurrency } from "../../restaurant/utils/currency"
-import { getAllDeliveryOrders } from "../utils/deliveryOrderStatus"
+import { getAllDeliveryOrders, saveDeliveryOrderStatus, DELIVERY_ORDER_STATUS } from "../utils/deliveryOrderStatus"
 import { getUnreadDeliveryNotificationCount } from "../utils/deliveryNotifications"
 import { deliveryAPI, restaurantAPI, uploadAPI } from "@/lib/api"
 import { subscribeOrderTracking } from "@/lib/realtimeTracking"
@@ -406,7 +406,15 @@ export default function DeliveryHome() {
   const cashLimitBlockedMessage = cashLimitWarningMessage || "Deposit cash to continue"
   
   // Delivery notifications hook
-  const { newOrder, clearNewOrder, orderReady, clearOrderReady, isConnected } = useDeliveryNotifications()
+  const {
+    newOrder,
+    clearNewOrder,
+    orderReady,
+    clearOrderReady,
+    orderStatusUpdate,
+    clearOrderStatusUpdate,
+    isConnected
+  } = useDeliveryNotifications()
   
   // Default location - will be set from saved location or GPS, not hardcoded
   const [riderLocation, setRiderLocation] = useState(null) // Will be set from GPS or saved location
@@ -7020,6 +7028,9 @@ export default function DeliveryHome() {
           // Check if order is cancelled or deleted
           if (verifiedOrder.status === 'cancelled' || verifiedOrder.status === 'delivered') {
             debugLog(`⚠️ Order is ${verifiedOrder.status}, removing from localStorage`);
+            if (verifiedOrder.status === 'cancelled') {
+              markOrderAsCancelled(verifiedOrder);
+            }
             localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
             setSelectedRestaurant(null);
             return;
@@ -7352,8 +7363,47 @@ export default function DeliveryHome() {
     return () => clearTimeout(timer);
   }, [selectedRestaurant])
 
+  const markOrderAsCancelled = useCallback((orderData = null) => {
+    try {
+      const orderExternalId = String(
+        orderData?.orderId ||
+        selectedRestaurant?.orderId ||
+        selectedRestaurant?.id ||
+        ''
+      ).trim();
+      const orderMongoId = String(
+        orderData?.id ||
+        orderData?._id ||
+        orderData?.orderMongoId ||
+        selectedRestaurant?.id ||
+        ''
+      ).trim();
+
+      const statusDate = orderData?.cancelledAt || orderData?.updatedAt || new Date().toISOString();
+      if (orderExternalId) {
+        saveDeliveryOrderStatus(orderExternalId, DELIVERY_ORDER_STATUS.CANCELLED);
+        localStorage.setItem(`delivery_order_date_${orderExternalId}`, statusDate);
+      }
+      if (orderMongoId && orderMongoId !== orderExternalId) {
+        saveDeliveryOrderStatus(orderMongoId, DELIVERY_ORDER_STATUS.CANCELLED);
+        localStorage.setItem(`delivery_order_date_${orderMongoId}`, statusDate);
+      }
+    } catch (statusSaveError) {
+      debugWarn('Failed to persist cancelled order status:', statusSaveError);
+    }
+  }, [selectedRestaurant?.id, selectedRestaurant?.orderId]);
+
   // Utility function to clear order data when order is deleted or cancelled
-  const clearOrderData = useCallback(() => {
+  const clearOrderData = useCallback((options = {}) => {
+    const { reason = '', orderData = null, showToast = false } = options;
+    if (reason === 'cancelled') {
+      markOrderAsCancelled(orderData);
+      if (showToast) {
+        const orderLabel = orderData?.orderId || selectedRestaurant?.orderId || selectedRestaurant?.id || '';
+        toast.error(orderLabel ? `Order ${orderLabel} was cancelled` : 'Order was cancelled');
+      }
+    }
+
     debugLog('🧹 Clearing order data...');
     localStorage.removeItem(DELIVERY_ACTIVE_ORDER_KEY);
     setSelectedRestaurant(null);
@@ -7379,7 +7429,72 @@ export default function DeliveryHome() {
     directionsResponseRef.current = null;
     setRoutePolyline([]);
     setShowRoutePath(false);
-  }, [clearNewOrder, clearOrderReady])
+  }, [clearNewOrder, clearOrderReady, markOrderAsCancelled, selectedRestaurant?.id, selectedRestaurant?.orderId])
+
+  useEffect(() => {
+    if (!orderStatusUpdate) return
+
+    const updateStatus = String(
+      orderStatusUpdate?.status ||
+      orderStatusUpdate?.orderStatus ||
+      orderStatusUpdate?.newStatus ||
+      ''
+    ).toLowerCase().trim()
+
+    const updateIds = new Set(
+      [
+        orderStatusUpdate?.orderId,
+        orderStatusUpdate?.order_id,
+        orderStatusUpdate?.orderMongoId,
+        orderStatusUpdate?.order_mongo_id,
+        orderStatusUpdate?.id,
+        orderStatusUpdate?._id
+      ]
+        .map((value) => (value == null ? '' : String(value).trim()))
+        .filter(Boolean)
+    )
+
+    const activeIds = new Set(
+      [
+        selectedRestaurant?.orderId,
+        selectedRestaurant?.id,
+        selectedRestaurant?._id,
+        newOrder?.orderId,
+        newOrder?.orderMongoId,
+        newOrder?._id
+      ]
+        .map((value) => (value == null ? '' : String(value).trim()))
+        .filter(Boolean)
+    )
+
+    const isActiveOrderUpdate =
+      updateIds.size === 0 ||
+      [...updateIds].some((id) => activeIds.has(id))
+
+    if (updateStatus === 'cancelled' || updateStatus === 'canceled') {
+      markOrderAsCancelled(orderStatusUpdate)
+      if (isActiveOrderUpdate) {
+        clearOrderData({
+          reason: 'cancelled',
+          orderData: orderStatusUpdate,
+          showToast: true
+        })
+      }
+    }
+
+    clearOrderStatusUpdate()
+  }, [
+    clearOrderData,
+    clearOrderStatusUpdate,
+    markOrderAsCancelled,
+    newOrder?._id,
+    newOrder?.orderId,
+    newOrder?.orderMongoId,
+    orderStatusUpdate,
+    selectedRestaurant?._id,
+    selectedRestaurant?.id,
+    selectedRestaurant?.orderId
+  ])
 
   // Periodically verify order still exists (every 30 seconds) to catch deletions
   useEffect(() => {
@@ -7404,7 +7519,11 @@ export default function DeliveryHome() {
         // Check if order is cancelled, deleted, or delivered/completed
         if (order.status === 'cancelled') {
           debugLog('⚠️ Order is cancelled, clearing data');
-          clearOrderData();
+          clearOrderData({
+            reason: 'cancelled',
+            orderData: order,
+            showToast: true
+          });
           return;
         }
 

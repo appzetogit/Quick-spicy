@@ -74,6 +74,7 @@ async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
     return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
   }
 
+  const targetUrl = String(payload?.targetUrl || '/delivery');
   const message = {
     notification: {
       title: String(payload?.title || 'New Delivery Update'),
@@ -85,7 +86,44 @@ async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
       orderMongoId: String(payload?.orderMongoId || ''),
       status: String(payload?.status || ''),
       phase: String(payload?.phase || ''),
-      sentAt: new Date().toISOString()
+      sentAt: new Date().toISOString(),
+      targetUrl
+    },
+    android: {
+      priority: 'high',
+      ttl: 120000,
+      notification: {
+        sound: 'default',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        priority: 'max'
+      }
+    },
+    apns: {
+      headers: {
+        'apns-priority': '10'
+      },
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1
+        }
+      }
+    },
+    webpush: {
+      headers: {
+        Urgency: 'high',
+        TTL: '120'
+      },
+      fcmOptions: {
+        link: targetUrl
+      },
+      notification: {
+        icon: '/favicon.ico',
+        requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 300],
+        silent: false
+      }
     },
     tokens: uniqueTokens
   };
@@ -93,15 +131,11 @@ async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
   if (payload?.imageUrl) {
     message.notification.imageUrl = payload.imageUrl;
     message.notification.image = payload.imageUrl;
-    message.webpush = {
-      notification: { image: payload.imageUrl },
-      fcmOptions: { link: '/delivery' }
-    };
-    message.android = {
-      notification: { imageUrl: payload.imageUrl, image: payload.imageUrl }
-    };
-    message.apns = {
-      fcmOptions: { imageUrl: payload.imageUrl }
+    message.webpush.notification.image = payload.imageUrl;
+    message.android.notification.imageUrl = payload.imageUrl;
+    message.android.notification.image = payload.imageUrl;
+    message.apns.fcmOptions = {
+      imageUrl: payload.imageUrl
     };
   }
 
@@ -383,7 +417,8 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
         body: `${orderNotification.restaurantName || 'Restaurant'} order ${order.orderId} is available`,
         orderId: order.orderId,
         orderMongoId: order._id?.toString(),
-        status: order.status
+        status: order.status,
+        targetUrl: '/delivery'
       });
       console.log(`📲 Push notification result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
     } catch (pushError) {
@@ -716,7 +751,8 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         orderId: order.orderId || order._id?.toString(),
         orderMongoId: order._id?.toString(),
         status: order.status,
-        phase
+        phase,
+        targetUrl: '/delivery'
       });
       console.log(`📲 Push notification result for order ${order.orderId} (${phase}):`, pushResult);
     } catch (pushError) {
@@ -809,7 +845,8 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
         body: `Order ${order.orderId || order._id} is ready at ${orderReadyNotification.restaurantName || 'restaurant'}`,
         orderId: order.orderId || order._id?.toString(),
         orderMongoId: order._id?.toString(),
-        status: 'ready'
+        status: 'ready',
+        targetUrl: '/delivery'
       });
       console.log(`📲 Order-ready push result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
     } catch (pushError) {

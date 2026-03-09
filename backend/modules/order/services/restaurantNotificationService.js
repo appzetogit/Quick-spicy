@@ -55,6 +55,7 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
     return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
   }
 
+  const targetUrl = String(payload?.targetUrl || '/restaurant/orders');
   const message = {
     notification: {
       title: String(payload?.title || 'Restaurant Order Update'),
@@ -66,12 +67,43 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
       orderMongoId: String(payload?.orderMongoId || ''),
       status: String(payload?.status || ''),
       sentAt: new Date().toISOString(),
-      targetUrl: '/restaurant/orders'
+      targetUrl
+    },
+    android: {
+      priority: 'high',
+      ttl: 120000,
+      notification: {
+        sound: 'default',
+        defaultSound: true,
+        defaultVibrateTimings: true,
+        priority: 'max'
+      }
+    },
+    apns: {
+      headers: {
+        'apns-priority': '10'
+      },
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1
+        }
+      }
     },
     webpush: {
+      headers: {
+        Urgency: 'high',
+        TTL: '120'
+      },
       fcmOptions: {
-        link: '/restaurant/orders'
-      }
+        link: targetUrl
+      },
+      notification: {
+        icon: '/favicon.ico',
+        requireInteraction: true,
+        vibrate: [200, 100, 200, 100, 300],
+        silent: false
+      },
     },
     tokens: uniqueTokens
   };
@@ -281,7 +313,8 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
         body: `Order ${order.orderId} received from ${orderNotification.restaurantName || 'customer'}`,
         orderId: order.orderId,
         orderMongoId: order._id?.toString(),
-        status: order.status
+        status: order.status,
+        targetUrl: `/restaurant/orders/${order._id?.toString() || order.orderId || ''}`
       });
       console.log(`📲 Restaurant push result for ${normalizedRestaurantId}:`, pushResult);
     } catch (pushError) {
@@ -343,7 +376,8 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
         body: getRestaurantStatusMessage(status, order.orderId),
         orderId: order.orderId,
         orderMongoId: order._id?.toString(),
-        status
+        status,
+        targetUrl: `/restaurant/orders/${order._id?.toString() || order.orderId || ''}`
       });
       console.log(`📲 Restaurant status push result for ${order.restaurantId}:`, pushResult);
     } catch (pushError) {

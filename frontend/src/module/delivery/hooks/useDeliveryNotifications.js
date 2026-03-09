@@ -93,6 +93,7 @@ export const useDeliveryNotifications = () => {
   // Step 2: All state hooks (unconditional)
   const [newOrder, setNewOrder] = useState(null);
   const [orderReady, setOrderReady] = useState(null);
+  const [orderStatusUpdate, setOrderStatusUpdate] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [deliveryPartnerId, setDeliveryPartnerId] = useState(null);
   const ALERT_LOOP_INTERVAL_MS = 4500;
@@ -628,6 +629,19 @@ export const useDeliveryNotifications = () => {
       playNotificationSound(orderData);
     });
 
+    socketRef.current.on('order_status_update', (statusData) => {
+      debugLog('📣 Delivery order status update received via socket:', statusData);
+      setOrderStatusUpdate(statusData || null);
+    });
+
+    socketRef.current.on('order_cancelled', (statusData) => {
+      debugLog('📣 Delivery order cancelled event received via socket:', statusData);
+      setOrderStatusUpdate({
+        ...(statusData || {}),
+        status: 'cancelled'
+      });
+    });
+
     return () => {
       stopAlertLoop();
       if (socketRef.current) {
@@ -648,11 +662,17 @@ export const useDeliveryNotifications = () => {
     setOrderReady(null);
   };
 
+  const clearOrderStatusUpdate = () => {
+    setOrderStatusUpdate(null);
+  };
+
   return {
     newOrder,
     clearNewOrder,
     orderReady,
     clearOrderReady,
+    orderStatusUpdate,
+    clearOrderStatusUpdate,
     isConnected,
     playNotificationSound
   };
