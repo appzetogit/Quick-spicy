@@ -4183,68 +4183,6 @@ export default function DeliveryHome() {
     setOrderIdConfirmIsAnimatingToComplete(false)
   }
 
-  // Handle Start Navigation Button - Opens Google Maps app in navigation mode
-  const handleStartNavigation = () => {
-    // Get customer location from selectedRestaurant
-    const customerLat = toFiniteCoordinate(selectedRestaurant?.customerLat);
-    const customerLng = toFiniteCoordinate(selectedRestaurant?.customerLng);
-    
-    if (!Number.isFinite(customerLat) || !Number.isFinite(customerLng)) {
-      debugError('❌ Customer location not available');
-      toast.error('Customer location not found');
-      return;
-    }
-
-    debugLog('🗺️ Opening Google Maps navigation to customer:', { lat: customerLat, lng: customerLng });
-
-    // Get current rider location for origin (optional, Google Maps will use current location if not provided)
-    const originLat = riderLocation?.[0];
-    const originLng = riderLocation?.[1];
-
-    // Detect platform (Android or iOS)
-    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-    const isAndroid = /android/i.test(userAgent);
-    const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream;
-
-    let mapsUrl = '';
-
-    if (isAndroid) {
-      // Android: Use google.navigation: scheme (opens directly in navigation mode)
-      // Fallback to web URL if app not installed
-      mapsUrl = `google.navigation:q=${customerLat},${customerLng}&mode=b`;
-      
-      // Try to open Google Maps app first
-      window.location.href = mapsUrl;
-      
-      // Fallback to web URL after a short delay (in case app is not installed)
-      setTimeout(() => {
-        const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`;
-        window.open(webUrl, '_blank');
-      }, 500);
-    } else if (isIOS) {
-      // iOS: Use comgooglemaps:// scheme (opens Google Maps app)
-      mapsUrl = `comgooglemaps://?daddr=${customerLat},${customerLng}&directionsmode=bicycling`;
-      
-      // Try to open Google Maps app first
-      window.location.href = mapsUrl;
-      
-      // Fallback to web URL after a short delay (in case app is not installed)
-      setTimeout(() => {
-        const webUrl = `https://maps.google.com/?daddr=${customerLat},${customerLng}&directionsmode=bicycling`;
-        window.open(webUrl, '_blank');
-      }, 500);
-    } else {
-      // Web/Desktop: Use web URL
-      mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${customerLat},${customerLng}&travelmode=bicycling`;
-      window.open(mapsUrl, '_blank');
-    }
-
-    // Show success message
-    toast.success('Opening Google Maps navigation 🗺️', {
-      duration: 2000
-    });
-  }
-
   // Handle Order Delivered button swipe
   const requestDeliveryOtpFromModal = useCallback(() => {
     return new Promise((resolve) => {
@@ -8173,6 +8111,9 @@ selectedRestaurant?.lng || null,
     
     // Only switch route if order is picked up and we have customer location
     if (isPickedUp && hasCustomerLocation && riderLocation && riderLocation.length === 2) {
+      // Ensure customer route layer is visible in delivery phase.
+      setShowRoutePath(true);
+
       // Check if current route is already heading to customer.
       const currentDirections = directionsResponseRef.current;
       const isCurrentRouteToCustomer = isDirectionsResultNearDestination(currentDirections, customerDestination);
@@ -11179,79 +11120,6 @@ selectedRestaurant?.lng || null,
           </div>
         </div>
       </BottomPopup>
-
-      {/* Start Navigation Button Card - Show when order is out_for_delivery */}
-      {selectedRestaurant && 
-       (selectedRestaurant.orderStatus === 'out_for_delivery' || 
-        selectedRestaurant.deliveryPhase === 'en_route_to_delivery') && 
-       !showReachedDropPopup && 
-       !showOrderDeliveredAnimation &&
-       !showCustomerReviewPopup &&
-       !showPaymentPage && (
-        <div className="fixed bottom-24 left-0 right-0 px-4 z-50">
-          <motion.div
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 100, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="bg-white rounded-2xl shadow-2xl p-5 border border-gray-100"
-          >
-            {/* Customer Info */}
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 bg-teal-100 rounded-full flex items-center justify-center">
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-teal-600"
-                  >
-                    <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-                  </svg>
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-semibold text-gray-900">
-                    Head to Customer Location
-                  </h3>
-                  <p className="text-sm text-gray-600 mt-0.5">
-                    {selectedRestaurant?.customerName || 'Customer'}
-                  </p>
-                </div>
-              </div>
-              {selectedRestaurant?.customerAddress && (
-                <p className="text-xs text-gray-500 ml-13 truncate">
-                  {selectedRestaurant.customerAddress}
-                </p>
-              )}
-            </div>
-
-            {/* Start Navigation Button */}
-            <button
-              onClick={handleStartNavigation}
-              className="w-full bg-[#4285F4] hover:bg-[#357ae8] text-white font-bold py-4 px-6 rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center gap-2 active:scale-95"
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-              </svg>
-              <span>START NAVIGATION</span>
-            </button>
-
-            <p className="text-center text-xs text-gray-500 mt-3">
-              Opens Google Maps in Bike Mode 🏍️
-            </p>
-          </motion.div>
-        </div>
-      )}
 
       {/* Reached Drop Popup - shown instantly after Order Picked Up confirmation */}
       <BottomPopup
