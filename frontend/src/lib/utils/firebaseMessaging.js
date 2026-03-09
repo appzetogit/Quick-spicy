@@ -255,15 +255,15 @@ function setupPushSoundUnlock() {
   if (typeof window === "undefined" || pushSoundUnlocked) return;
 
   const unlock = async () => {
+    let audio = null;
     try {
-      const audio = ensurePushSoundAudio();
+      audio = ensurePushSoundAudio();
       if (!audio) return;
       console.log(PUSH_DEBUG_PREFIX, "Attempting passive push sound unlock");
       audio.muted = true;
       await audio.play();
       audio.pause();
       audio.currentTime = 0;
-      audio.muted = false;
       pushSoundUnlocked = true;
       localStorage.setItem(pushSoundEnabledStorageKey, "true");
       console.log(PUSH_DEBUG_PREFIX, "Passive push sound unlock succeeded");
@@ -272,6 +272,10 @@ function setupPushSoundUnlock() {
       console.warn(PUSH_DEBUG_PREFIX, "Passive push sound unlock failed", {
         error: error?.message || error,
       });
+    } finally {
+      if (audio) {
+        audio.muted = false;
+      }
     }
 
     if (pushSoundUnlocked) {
@@ -289,15 +293,15 @@ function setupPushSoundUnlock() {
 export async function enablePushNotificationSound() {
   if (typeof window === "undefined") return false;
 
+  let audio = null;
   try {
-    const audio = ensurePushSoundAudio();
+    audio = ensurePushSoundAudio();
     if (!audio) return false;
     console.log(PUSH_DEBUG_PREFIX, "Manual push sound enable started");
     audio.muted = true;
     await audio.play();
     audio.pause();
     audio.currentTime = 0;
-    audio.muted = false;
     pushSoundUnlocked = true;
     localStorage.setItem(pushSoundEnabledStorageKey, "true");
     window.dispatchEvent(new CustomEvent("push-sound-enabled"));
@@ -337,6 +341,10 @@ export async function enablePushNotificationSound() {
       return false;
     }
     return true;
+  } finally {
+    if (audio) {
+      audio.muted = false;
+    }
   }
 }
 

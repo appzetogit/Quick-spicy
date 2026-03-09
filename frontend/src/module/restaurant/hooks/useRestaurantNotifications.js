@@ -586,11 +586,15 @@ export const useRestaurantNotifications = () => {
           await audioRef.current.play();
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
-          audioRef.current.muted = false;
         } catch (error) {
           audioUnlockAttemptedRef.current = false;
           if (!error.message?.includes('user didn\'t interact') && !error.name?.includes('NotAllowedError')) {
             debugWarn('Error unlocking notification sound:', error);
+          }
+        } finally {
+          // Ensure audio never remains muted after unlock attempts.
+          if (audioRef.current) {
+            audioRef.current.muted = false;
           }
         }
       }
@@ -632,7 +636,8 @@ export const useRestaurantNotifications = () => {
           debugLog('🔇 Audio playback skipped - user has not interacted with page yet');
           return;
         }
-        
+
+        audioRef.current.muted = false;
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(error => {
           // Don't log autoplay policy errors as they're expected
