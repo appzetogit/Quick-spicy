@@ -31,6 +31,8 @@ const logger = winston.createLogger({
   ]
 });
 
+const DELIVERY_OPEN_ACCEPT_STATUSES = ['preparing', 'ready'];
+
 let getIO = null;
 async function getIOInstance() {
   if (!getIO) {
@@ -579,7 +581,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     
     // Treat all open, unassigned delivery statuses as viewable/acceptable.
     // Notification lists can be stale or missing, so status + zone remains the primary guard.
-    const validAcceptanceStatuses = ['pending', 'confirmed', 'preparing', 'ready'];
+    const validAcceptanceStatuses = DELIVERY_OPEN_ACCEPT_STATUSES;
     
     // If order is assigned to this delivery partner, allow access
     if (orderDeliveryPartnerId === currentDeliveryId) {
@@ -693,6 +695,16 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     const currentDeliveryId = delivery._id.toString();
     const cashLimitState = await getDeliveryCashLimitState(delivery._id);
 
+    // Hard block: delivery partner can only accept after restaurant has accepted
+    // and moved order to preparing/ready.
+    if (!DELIVERY_OPEN_ACCEPT_STATUSES.includes(order.status)) {
+      return errorResponse(
+        res,
+        400,
+        `Order cannot be accepted. Current status: ${order.status}. Order must be in 'preparing' or 'ready' status.`
+      );
+    }
+
     // If order is not assigned, check if this delivery boy was notified (priority-based system)
     // Also allow acceptance if order is still in a valid open status.
     if (!orderDeliveryPartnerId) {
@@ -737,7 +749,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       
       // If the order is still open and unassigned, allow in-zone riders to accept it even if
       // the notification bookkeeping was missed or the popup came from a stale notification batch.
-      const validAcceptanceStatuses = ['pending', 'confirmed', 'preparing', 'ready'];
+      const validAcceptanceStatuses = DELIVERY_OPEN_ACCEPT_STATUSES;
       const isValidStatus = validAcceptanceStatuses.includes(order.status);
       
       if (!wasNotified && !isValidStatus) {
