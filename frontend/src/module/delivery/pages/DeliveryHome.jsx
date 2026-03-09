@@ -170,6 +170,33 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
   return R * c
 }
 
+function toFiniteCoordinate(value) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function getCustomerDestination(restaurantInfo) {
+  if (!restaurantInfo) return null
+  const lat = toFiniteCoordinate(restaurantInfo.customerLat)
+  const lng = toFiniteCoordinate(restaurantInfo.customerLng)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { lat, lng }
+}
+
+function isDirectionsResultNearDestination(directionsResult, destination, thresholdMeters = 120) {
+  if (!directionsResult || !destination) return false
+  const legs = directionsResult?.routes?.[0]?.legs
+  const lastLeg = Array.isArray(legs) && legs.length > 0 ? legs[legs.length - 1] : null
+  const endLocation = lastLeg?.end_location
+  if (!endLocation) return false
+
+  const endLat = typeof endLocation.lat === 'function' ? endLocation.lat() : Number(endLocation.lat)
+  const endLng = typeof endLocation.lng === 'function' ? endLocation.lng() : Number(endLocation.lng)
+  if (!Number.isFinite(endLat) || !Number.isFinite(endLng)) return false
+
+  return haversineDistance(endLat, endLng, destination.lat, destination.lng) <= thresholdMeters
+}
+
 /**
  * Filter GPS location based on accuracy, distance jump, and speed
  * @param {Object} position - GPS position object
@@ -3985,7 +4012,7 @@ export default function DeliveryHome() {
               const customerLat = customerCoords?.[1]
               const customerLng = customerCoords?.[0]
               
-              if (customerLat && customerLng) {
+              if (Number.isFinite(customerLat) && Number.isFinite(customerLng)) {
                 const updatedRestaurant = {
                   ...selectedRestaurant,
                   customerName: order.userId?.name || selectedRestaurant.customerName,
@@ -4159,10 +4186,10 @@ export default function DeliveryHome() {
   // Handle Start Navigation Button - Opens Google Maps app in navigation mode
   const handleStartNavigation = () => {
     // Get customer location from selectedRestaurant
-    const customerLat = selectedRestaurant?.customerLat;
-    const customerLng = selectedRestaurant?.customerLng;
+    const customerLat = toFiniteCoordinate(selectedRestaurant?.customerLat);
+    const customerLng = toFiniteCoordinate(selectedRestaurant?.customerLng);
     
-    if (!customerLat || !customerLng) {
+    if (!Number.isFinite(customerLat) || !Number.isFinite(customerLng)) {
       debugError('❌ Customer location not available');
       toast.error('Customer location not found');
       return;
@@ -6075,14 +6102,11 @@ export default function DeliveryHome() {
       }
 
       // Check customer marker
-      if (
-        selectedRestaurant &&
-        selectedRestaurant.customerLat != null &&
-        selectedRestaurant.customerLng != null
-      ) {
+      const customerDestination = getCustomerDestination(selectedRestaurant)
+      if (selectedRestaurant && customerDestination) {
         const customerLocation = {
-          lat: Number(selectedRestaurant.customerLat),
-          lng: Number(selectedRestaurant.customerLng)
+          lat: customerDestination.lat,
+          lng: customerDestination.lng
         };
 
         if (customerMarkerRef.current) {
@@ -6091,6 +6115,24 @@ export default function DeliveryHome() {
             customerMarkerRef.current.setMap(window.deliveryMapInstance);
             customerMarkerRef.current.setPosition(customerLocation);
           }
+        } else if (window.google?.maps && window.deliveryMapInstance) {
+          customerMarkerRef.current = new window.google.maps.Marker({
+            position: customerLocation,
+            map: window.deliveryMapInstance,
+            icon: {
+              url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="11" fill="#10B981" stroke="#FFFFFF" stroke-width="2"/>
+                  <circle cx="12" cy="9" r="3" fill="#FFFFFF"/>
+                  <path d="M7.5 16.5c0-2 1.8-3.5 4.5-3.5s4.5 1.5 4.5 3.5" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              `),
+              scaledSize: new window.google.maps.Size(48, 48),
+              anchor: new window.google.maps.Point(24, 48)
+            },
+            title: selectedRestaurant.customerName || 'Customer',
+            zIndex: 1150
+          });
         }
       }
     }, 2000); // Check every 2 seconds
@@ -6174,7 +6216,7 @@ export default function DeliveryHome() {
         map: window.deliveryMapInstance,
         icon: customerIcon,
         title: selectedRestaurant.customerName || 'Customer',
-        zIndex: 9
+        zIndex: 1150
       });
     } else {
       customerMarkerRef.current.setPosition(customerLocation);
@@ -6527,10 +6569,11 @@ export default function DeliveryHome() {
         // Determine destination based on navigation mode
         let destinationLocation;
         let destinationName;
-        if (navigationMode === 'customer' && selectedRestaurant.customerLat && selectedRestaurant.customerLng) {
+        const customerDestination = getCustomerDestination(selectedRestaurant)
+        if (navigationMode === 'customer' && customerDestination) {
           destinationLocation = {
-            lat: selectedRestaurant.customerLat,
-            lng: selectedRestaurant.customerLng
+            lat: customerDestination.lat,
+            lng: customerDestination.lng
           };
           destinationName = selectedRestaurant.customerName || 'Customer';
         } else {
@@ -6773,9 +6816,18 @@ export default function DeliveryHome() {
             phase === 'at_delivery' ||
             selectedRestaurant?.orderStatus === 'out_for_delivery' ||
             selectedRestaurant?.status === 'out_for_delivery';
-          const destination = isToCustomerPhase && selectedRestaurant?.customerLat && selectedRestaurant?.customerLng
-            ? { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng }
-            : { lat: selectedRestaurant.lat, lng: selectedRestaurant.lng };
+          const customerDestination = getCustomerDestination(selectedRestaurant)
+          const restaurantDestination = {
+            lat: toFiniteCoordinate(selectedRestaurant?.lat),
+            lng: toFiniteCoordinate(selectedRestaurant?.lng)
+          }
+          const destination = isToCustomerPhase && customerDestination
+            ? customerDestination
+            : restaurantDestination;
+
+          if (!Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) {
+            return
+          }
 
           debugLog('🔄 Significant deviation detected, recalculating route...');
           lastRouteRecalculationRef.current = Date.now();
@@ -8108,6 +8160,7 @@ selectedRestaurant?.lng || null,
   useEffect(() => {
     const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || '';
     const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '';
+    const customerDestination = getCustomerDestination(selectedRestaurant)
     
     // Check if order is picked up or out for delivery
     const isPickedUp = orderStatus === 'out_for_delivery' || 
@@ -8116,15 +8169,14 @@ selectedRestaurant?.lng || null,
                        deliveryPhase === 'picked_up';
     
     // Check if we have customer location
-    const hasCustomerLocation = selectedRestaurant?.customerLat && selectedRestaurant?.customerLng;
+    const hasCustomerLocation = !!customerDestination;
     
     // Only switch route if order is picked up and we have customer location
     if (isPickedUp && hasCustomerLocation && riderLocation && riderLocation.length === 2) {
-      // Check if we already have a route to customer (avoid recalculating unnecessarily)
+      // Check if current route is already heading to customer.
       const currentDirections = directionsResponseRef.current;
-      const needsCustomerRoute = !currentDirections || 
-                                 !currentDirections.routes || 
-                                 currentDirections.routes.length === 0;
+      const isCurrentRouteToCustomer = isDirectionsResultNearDestination(currentDirections, customerDestination);
+      const needsCustomerRoute = !isCurrentRouteToCustomer;
       
       if (needsCustomerRoute) {
         debugLog('🔄 Order picked up - switching route to customer location');
@@ -8132,7 +8184,7 @@ selectedRestaurant?.lng || null,
         // Calculate route from current location to customer
         calculateRouteWithDirectionsAPI(
           riderLocation,
-          { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng }
+          customerDestination
         ).then(directionsResult => {
           if (directionsResult) {
             debugLog('✅ Route to customer calculated after pickup');
@@ -8211,8 +8263,10 @@ selectedRestaurant?.lng || null,
     const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
     const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
     const isOutForDelivery = orderStatus === 'out_for_delivery' || deliveryPhase === 'en_route_to_delivery'
-    const hasCustomerCoords = selectedRestaurant?.customerLat != null && selectedRestaurant?.customerLng != null &&
-      !(selectedRestaurant.customerLat === 0 && selectedRestaurant.customerLng === 0)
+    const customerLat = toFiniteCoordinate(selectedRestaurant?.customerLat)
+    const customerLng = toFiniteCoordinate(selectedRestaurant?.customerLng)
+    const hasCustomerCoords = Number.isFinite(customerLat) && Number.isFinite(customerLng) &&
+      !(customerLat === 0 && customerLng === 0)
     const orderId = selectedRestaurant?.orderId || selectedRestaurant?.id
 
     if (!isOutForDelivery || hasCustomerCoords || !orderId || fetchedOrderDetailsForDropRef.current === orderId) return
@@ -8268,8 +8322,9 @@ selectedRestaurant?.lng || null,
     // Rider position: prefer riderLocation, fallback lastLocationRef
     const riderPos = (riderLocation && riderLocation.length === 2) ? riderLocation : (lastLocationRef.current && lastLocationRef.current.length === 2 ? lastLocationRef.current : null)
 
-    const hasCustomerCoords = selectedRestaurant?.customerLat != null && selectedRestaurant?.customerLng != null &&
-      !(selectedRestaurant.customerLat === 0 && selectedRestaurant.customerLng === 0)
+    const customerDestination = getCustomerDestination(selectedRestaurant)
+    const hasCustomerCoords = !!customerDestination &&
+      !(customerDestination.lat === 0 && customerDestination.lng === 0)
 
     if (!hasCustomerCoords) {
       // Don't spam; only log when we're otherwise ready to monitor
@@ -8321,8 +8376,8 @@ selectedRestaurant?.lng || null,
     const distanceInMeters = calculateDistanceInMeters(
       riderPos[0],
       riderPos[1],
-      selectedRestaurant.customerLat,
-      selectedRestaurant.customerLng
+      customerDestination.lat,
+      customerDestination.lng
     )
 
     if (distanceInMeters <= DROP_REACHED_THRESHOLD_METERS && !showReachedDropPopup) {
@@ -8339,8 +8394,8 @@ selectedRestaurant?.lng || null,
     if (distanceInMeters <= 200) {
       debugLog(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters`, {
         riderPos: riderPos,
-        customerLat: selectedRestaurant.customerLat,
-        customerLng: selectedRestaurant.customerLng,
+        customerLat: customerDestination.lat,
+        customerLng: customerDestination.lng,
         orderId: selectedRestaurant?.orderId || selectedRestaurant?.id,
         orderStatus,
         deliveryPhase,
@@ -8356,7 +8411,7 @@ selectedRestaurant?.lng || null,
     if (distanceInMeters <= 400) {
       debugLog(`📍 Distance to customer: ${distanceInMeters.toFixed(2)} meters`, {
         orderId: selectedRestaurant?.orderId || selectedRestaurant?.id,
-        customerLocation: { lat: selectedRestaurant.customerLat, lng: selectedRestaurant.customerLng },
+        customerLocation: customerDestination,
         riderLocation: riderPos,
         orderStatus,
         deliveryPhase,
@@ -8367,10 +8422,10 @@ selectedRestaurant?.lng || null,
     // Live tracking polyline is already updated automatically via watchPosition callback
     // No need to recalculate route here - it's handled in handleOrderIdConfirmTouchEnd
   }, [
-riderLocation?.[0] || null, 
-riderLocation?.[1] || null, 
-selectedRestaurant?.customerLat || null, 
-selectedRestaurant?.customerLng || null,
+    riderLocation?.[0] ?? null,
+    riderLocation?.[1] ?? null,
+    selectedRestaurant?.customerLat ?? null,
+    selectedRestaurant?.customerLng ?? null,
     selectedRestaurant?.orderStatus || newOrder?.status || null,
     selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || null,
     deliveryStateStatus, // Use memoized value to ensure consistent dependency array size
