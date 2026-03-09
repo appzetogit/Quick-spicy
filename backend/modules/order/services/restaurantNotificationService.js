@@ -188,10 +188,11 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
         ? [`restaurant:${new mongoose.Types.ObjectId(normalizedRestaurantId).toString()}`]
         : [])
     ];
+    const uniqueRoomVariations = [...new Set(roomVariations.filter(Boolean))];
 
     // Get all connected sockets in the restaurant room
     let socketsInRoom = [];
-    for (const room of roomVariations) {
+    for (const room of uniqueRoomVariations) {
       const sockets = await restaurantNamespace.in(room).fetchSockets();
       if (sockets.length > 0) {
         socketsInRoom = sockets;
@@ -200,7 +201,7 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
       }
     }
 
-    const primaryRoom = roomVariations[0];
+    const primaryRoom = uniqueRoomVariations[0];
 
     console.log(`📢 CRITICAL: Attempting to notify restaurant about new order:`);
     console.log(`📢 Order ID: ${order.orderId}`);
@@ -208,14 +209,14 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
     console.log(`📢 Restaurant ID (normalized): ${normalizedRestaurantId}`);
     console.log(`📢 Restaurant Name: ${order.restaurantName}`);
     console.log(`📢 Restaurant ID from order: ${order.restaurantId}`);
-    console.log(`📢 Room variations to try:`, roomVariations);
+    console.log(`📢 Room variations to try:`, uniqueRoomVariations);
     console.log(`📢 Connected sockets in primary room ${primaryRoom}: ${socketsInRoom.length}`);
 
     // CRITICAL: Only emit to the specific restaurant room - NEVER broadcast to all restaurants
     // This ensures orders only go to the correct restaurant
     if (socketsInRoom.length > 0) {
       // Found sockets in the restaurant room - send notification only to that room
-      roomVariations.forEach(room => {
+      uniqueRoomVariations.forEach(room => {
         restaurantNamespace.to(room).emit('new_order', orderNotification);
         restaurantNamespace.to(room).emit('play_notification_sound', {
           type: 'new_order',
@@ -229,7 +230,7 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
       // No sockets found in restaurant room - log error but DO NOT broadcast to all restaurants
       console.error(`❌ CRITICAL: No sockets found for restaurant ${normalizedRestaurantId} in any room!`);
       console.error(`❌ Order ${order.orderId} will NOT be delivered to restaurant ${normalizedRestaurantId}`);
-      console.error(`❌ Room variations tried:`, roomVariations);
+      console.error(`❌ Room variations tried:`, uniqueRoomVariations);
       console.error(`❌ Restaurant name: ${order.restaurantName}`);
       console.error(`❌ Restaurant ID from order: ${order.restaurantId}`);
       console.error(`❌ Normalized restaurant ID: ${normalizedRestaurantId}`);
@@ -252,7 +253,7 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
       
       // Still try to emit to room variations (in case socket connects later)
       // But DO NOT broadcast to all restaurants
-      roomVariations.forEach(room => {
+      uniqueRoomVariations.forEach(room => {
         restaurantNamespace.to(room).emit('new_order', orderNotification);
         restaurantNamespace.to(room).emit('play_notification_sound', {
           type: 'new_order',

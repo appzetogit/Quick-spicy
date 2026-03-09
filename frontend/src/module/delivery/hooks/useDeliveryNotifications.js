@@ -15,6 +15,65 @@ const resolveAudioSource = (source, cacheKey = 'delivery-alert') => {
   return `${source}${separator}devcache=${cacheKey}`;
 }
 
+const supportsBrowserNotifications = () =>
+  typeof window !== 'undefined' && typeof Notification !== 'undefined';
+
+const buildDeliveryOrderNotification = (orderData = {}) => {
+  const orderId = orderData.orderId || orderData.orderMongoId || orderData.id || 'New';
+  const itemCount = Array.isArray(orderData.items) ? orderData.items.length : 0;
+  const total = Number(orderData.total || orderData.pricing?.total || orderData.orderTotal || 0);
+
+  return {
+    title: `New order #${orderId}`,
+    body: itemCount > 0
+      ? `${itemCount} item${itemCount === 1 ? '' : 's'} - Rs.${total.toFixed(2)}`
+      : 'A new order is available to accept',
+    tag: `delivery-order-${orderId}`,
+    data: {
+      orderId,
+      targetUrl: '/delivery',
+    },
+  };
+}
+
+const triggerWebViewNativeNotification = async (orderData = {}) => {
+  if (typeof window === 'undefined') return false;
+
+  const bridgePayload = {
+    title: 'New delivery order',
+    body: `Order #${orderData?.orderId || orderData?.orderMongoId || orderData?.id || ''}`.trim(),
+    orderId: orderData?.orderId || orderData?.order_id || '',
+    orderMongoId: orderData?.orderMongoId || orderData?.order_mongo_id || '',
+    targetUrl: '/delivery',
+  };
+
+  try {
+    if (
+      window.flutter_inappwebview &&
+      typeof window.flutter_inappwebview.callHandler === 'function'
+    ) {
+      const handlerNames = [
+        'playNotificationSound',
+        'triggerNotificationFeedback',
+        'onPushNotification',
+      ];
+
+      for (const handlerName of handlerNames) {
+        try {
+          await window.flutter_inappwebview.callHandler(handlerName, bridgePayload);
+          return true;
+        } catch {
+          // Try next handler name.
+        }
+      }
+    }
+  } catch {
+    // Ignore bridge failures and fall back to browser/web audio.
+  }
+
+  return false;
+}
+
 
 export const useDeliveryNotifications = () => {
   // CRITICAL: All hooks must be called unconditionally and in the same order every render
@@ -24,19 +83,94 @@ export const useDeliveryNotifications = () => {
   const socketRef = useRef(null);
   const audioRef = useRef(null);
   const audioUnlockAttemptedRef = useRef(false);
+  const activeOrderRef = useRef(null);
+  const alertLoopTimerRef = useRef(null);
+  const alertLoopStartedAtRef = useRef(0);
+  const userInteractedRef = useRef(false);
+  const lastAlertAtByOrderRef = useRef(new Map());
+  const lastBrowserNotificationAtByOrderRef = useRef(new Map());
   
   // Step 2: All state hooks (unconditional)
   const [newOrder, setNewOrder] = useState(null);
   const [orderReady, setOrderReady] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [deliveryPartnerId, setDeliveryPartnerId] = useState(null);
+  const ALERT_LOOP_INTERVAL_MS = 4500;
+  const ALERT_LOOP_MAX_MS = 120000;
+  const ALERT_DEDUPE_MS = 15000;
+  const BROWSER_NOTIFICATION_DEDUPE_MS = 20000;
+  const NOTIFICATION_PERMISSION_ASKED_KEY = 'delivery_notification_permission_asked';
 
   // Step 3: All callbacks before effects (unconditional)
-  // Track user interaction for autoplay policy
-  const userInteractedRef = useRef(false);
+  const getOrderAlertKey = (orderData = {}) => (
+    String(
+      orderData?.orderMongoId ||
+      orderData?.order_mongo_id ||
+      orderData?.orderId ||
+      orderData?.order_id ||
+      orderData?._id ||
+      orderData?.id ||
+      ''
+    ).trim()
+  );
+
+  const shouldProcessOrderAlert = (orderData = {}) => {
+    const key = getOrderAlertKey(orderData);
+    if (!key) return true;
+    const now = Date.now();
+    const last = lastAlertAtByOrderRef.current.get(key) || 0;
+    if (now - last < ALERT_DEDUPE_MS) return false;
+    lastAlertAtByOrderRef.current.set(key, now);
+    return true;
+  };
+
+  const shouldShowBrowserNotification = (orderData = {}) => {
+    const key = getOrderAlertKey(orderData);
+    if (!key) return true;
+    const now = Date.now();
+    const last = lastBrowserNotificationAtByOrderRef.current.get(key) || 0;
+    if (now - last < BROWSER_NOTIFICATION_DEDUPE_MS) return false;
+    lastBrowserNotificationAtByOrderRef.current.set(key, now);
+    return true;
+  };
+
+  const stopAlertLoop = useCallback(() => {
+    if (alertLoopTimerRef.current) {
+      clearInterval(alertLoopTimerRef.current);
+      alertLoopTimerRef.current = null;
+    }
+    alertLoopStartedAtRef.current = 0;
+  }, []);
+
+  const startAlertLoop = useCallback((playSoundFn) => {
+    stopAlertLoop();
+    alertLoopStartedAtRef.current = Date.now();
+
+    alertLoopTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - alertLoopStartedAtRef.current;
+      if (elapsed >= ALERT_LOOP_MAX_MS || !activeOrderRef.current) {
+        stopAlertLoop();
+        return;
+      }
+
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        playSoundFn(activeOrderRef.current);
+      }
+    }, ALERT_LOOP_INTERVAL_MS);
+  }, [stopAlertLoop]);
   
-  const playNotificationSound = useCallback(() => {
+  const playNotificationSound = useCallback(async (orderData = {}) => {
     try {
+      const usedNativeBridge = await triggerWebViewNativeNotification(orderData);
+
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([200, 100, 200, 100, 300]);
+      }
+
+      if (usedNativeBridge) {
+        return;
+      }
+
       // Get current selected sound preference from localStorage
       const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone';
       const soundFile = selectedSound === 'original'
@@ -84,7 +218,109 @@ export const useDeliveryNotifications = () => {
     }
   }, []);
 
+  const showBackgroundOrderNotification = useCallback(async (orderData = {}) => {
+    if (!shouldShowBrowserNotification(orderData)) {
+      return;
+    }
+
+    if (!supportsBrowserNotifications() || Notification.permission !== 'granted') {
+      return;
+    }
+
+    const notificationOptions = buildDeliveryOrderNotification(orderData);
+
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+          await registration.showNotification(notificationOptions.title, {
+            body: notificationOptions.body,
+            tag: notificationOptions.tag,
+            renotify: true,
+            requireInteraction: true,
+            silent: false,
+            vibrate: [200, 100, 200, 100, 300],
+            icon: '/favicon.ico',
+            data: notificationOptions.data,
+          });
+          return;
+        }
+      }
+
+      new Notification(notificationOptions.title, {
+        body: notificationOptions.body,
+        tag: notificationOptions.tag,
+        requireInteraction: true,
+        silent: false,
+        icon: '/favicon.ico',
+        data: notificationOptions.data,
+      });
+    } catch (error) {
+      debugWarn('Error showing background delivery notification:', error);
+    }
+  }, []);
+
+  const handleIncomingOrderAlert = useCallback((orderData = {}) => {
+    if (!shouldProcessOrderAlert(orderData)) {
+      return;
+    }
+
+    activeOrderRef.current = orderData || { id: Date.now() };
+    playNotificationSound(orderData);
+    startAlertLoop(playNotificationSound);
+
+    if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+      showBackgroundOrderNotification(orderData);
+    }
+  }, [playNotificationSound, showBackgroundOrderNotification, startAlertLoop]);
+
   // Step 4: All effects (unconditional hook calls, conditional logic inside)
+  useEffect(() => {
+    if (!supportsBrowserNotifications()) return;
+
+    if (Notification.permission !== 'default') return;
+    if (localStorage.getItem(NOTIFICATION_PERMISSION_ASKED_KEY) === 'true') return;
+
+    const requestPermissionOnce = async () => {
+      localStorage.setItem(NOTIFICATION_PERMISSION_ASKED_KEY, 'true');
+      try {
+        await Notification.requestPermission();
+      } catch (error) {
+        debugWarn('Failed to request delivery notification permission:', error);
+      }
+    };
+
+    const askOnInteraction = () => {
+      requestPermissionOnce();
+      window.removeEventListener('pointerdown', askOnInteraction);
+      window.removeEventListener('keydown', askOnInteraction);
+    };
+
+    window.addEventListener('pointerdown', askOnInteraction, { once: true, passive: true });
+    window.addEventListener('keydown', askOnInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', askOnInteraction);
+      window.removeEventListener('keydown', askOnInteraction);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState !== 'hidden') return;
+      if (!activeOrderRef.current) return;
+
+      playNotificationSound(activeOrderRef.current);
+      showBackgroundOrderNotification(activeOrderRef.current);
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [playNotificationSound, showBackgroundOrderNotification]);
+
   // Track user interaction for autoplay policy
   useEffect(() => {
     const handleUserInteraction = async () => {
@@ -364,7 +600,7 @@ export const useDeliveryNotifications = () => {
     socketRef.current.on('new_order', (orderData) => {
       debugLog('📦 New order received via socket:', orderData);
       setNewOrder(orderData);
-      playNotificationSound();
+      handleIncomingOrderAlert(orderData);
     });
 
     // Listen for priority-based order notifications (new_order_available)
@@ -373,30 +609,38 @@ export const useDeliveryNotifications = () => {
       debugLog('📦 Notification phase:', orderData.phase || 'unknown');
       // Treat it the same as new_order for now - delivery boy can accept it
       setNewOrder(orderData);
-      playNotificationSound();
+      handleIncomingOrderAlert(orderData);
     });
 
     socketRef.current.on('play_notification_sound', (data) => {
       debugLog('🔔 Sound notification:', data);
-      playNotificationSound();
+      const normalizedData = {
+        orderId: data?.orderId || data?.order_id,
+        orderMongoId: data?.orderMongoId || data?.order_mongo_id,
+        ...data
+      };
+      handleIncomingOrderAlert(normalizedData);
     });
 
     socketRef.current.on('order_ready', (orderData) => {
       debugLog('✅ Order ready notification received via socket:', orderData);
       setOrderReady(orderData);
-      playNotificationSound();
+      playNotificationSound(orderData);
     });
 
     return () => {
+      stopAlertLoop();
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
       }
     };
-  }, [deliveryPartnerId, playNotificationSound]);
+  }, [deliveryPartnerId, handleIncomingOrderAlert, playNotificationSound, stopAlertLoop]);
 
   // Helper functions
   const clearNewOrder = () => {
+    stopAlertLoop();
+    activeOrderRef.current = null;
     setNewOrder(null);
   };
 

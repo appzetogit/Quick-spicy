@@ -4843,7 +4843,8 @@ export default function DeliveryHome() {
         customerLat: newOrder.customerLocation?.latitude,
         customerLng: newOrder.customerLocation?.longitude,
         items: newOrder.items || [],
-        total: newOrder.total || 0
+        total: Number(newOrder.total ?? newOrder.pricing?.total ?? 0) || 0,
+        paymentMethod: newOrder.paymentMethod || newOrder.payment?.method || newOrder.payment || 'cod'
       }
       
       setSelectedRestaurant(restaurantData)
@@ -5265,7 +5266,7 @@ export default function DeliveryHome() {
             customerLng: firstOrder.address?.location?.coordinates?.[0],
             items: firstOrder.items || [],
             total: firstOrder.pricing?.total || 0,
-            payment: firstOrder.payment?.method || 'COD',
+            paymentMethod: firstOrder.paymentMethod || firstOrder.payment?.method || 'cod',
             amount: firstOrder.pricing?.total || 0,
             deliveryVerification: firstOrder.deliveryVerification || null
           }
@@ -7065,6 +7066,19 @@ export default function DeliveryHome() {
             lat: restaurantCoords?.[1] ?? activeOrderData.restaurantInfo?.lat,
             lng: restaurantCoords?.[0] ?? activeOrderData.restaurantInfo?.lng,
             customerName: verifiedOrder?.userId?.name || activeOrderData.restaurantInfo?.customerName,
+            total:
+              Number(
+                verifiedOrder?.pricing?.total ??
+                verifiedOrder?.total ??
+                activeOrderData.restaurantInfo?.total ??
+                0
+              ) || 0,
+            paymentMethod:
+              verifiedOrder?.paymentMethod ||
+              verifiedOrder?.payment?.method ||
+              activeOrderData.restaurantInfo?.paymentMethod ||
+              activeOrderData.restaurantInfo?.payment ||
+              'cod',
             customerAddress:
               verifiedOrder?.address?.formattedAddress ||
               (verifiedOrder?.address?.street
@@ -11303,10 +11317,21 @@ selectedRestaurant?.customerLng || null,
           </div>
 
           {/* Payment info: Online = amount paid, COD = collect from customer */}
-          {selectedRestaurant?.total != null && (() => {
-            const m = (selectedRestaurant.paymentMethod || '').toLowerCase()
-            const isCod = m === 'cash' || m === 'cod'
-            const total = Number(selectedRestaurant.total) || 0
+          {(() => {
+            const m = String(
+              selectedRestaurant?.paymentMethod ||
+              selectedRestaurant?.payment ||
+              selectedRestaurant?.payment?.method ||
+              ''
+            ).toLowerCase().trim()
+            const isCod = m === 'cash' || m === 'cod' || m === 'cash_on_delivery'
+            const total = Number(
+              selectedRestaurant?.total ??
+              selectedRestaurant?.pricing?.total ??
+              selectedRestaurant?.payment?.amount ??
+              0
+            ) || 0
+            if (!Number.isFinite(total) || total < 0) return null
             return (
               <div className={`rounded-xl p-4 mb-6 ${isCod ? 'bg-amber-50 border border-amber-200' : 'bg-emerald-50 border border-emerald-200'}`}>
                 <div className="flex items-center justify-between">

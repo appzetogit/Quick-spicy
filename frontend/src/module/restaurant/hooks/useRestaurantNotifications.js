@@ -35,6 +35,44 @@ const buildRestaurantOrderNotification = (orderData = {}) => {
   };
 }
 
+const triggerWebViewNativeNotification = async (orderData = {}) => {
+  if (typeof window === 'undefined') return false;
+
+  const bridgePayload = {
+    title: 'New restaurant order',
+    body: `Order #${orderData?.orderId || orderData?.orderMongoId || orderData?.id || ''}`.trim(),
+    orderId: orderData?.orderId || orderData?.order_id || '',
+    orderMongoId: orderData?.orderMongoId || orderData?.order_mongo_id || '',
+    targetUrl: `/restaurant/orders/${orderData?.orderMongoId || orderData?.orderId || ''}`,
+  };
+
+  try {
+    if (
+      window.flutter_inappwebview &&
+      typeof window.flutter_inappwebview.callHandler === 'function'
+    ) {
+      const handlerNames = [
+        'playNotificationSound',
+        'triggerNotificationFeedback',
+        'onPushNotification',
+      ];
+
+      for (const handlerName of handlerNames) {
+        try {
+          await window.flutter_inappwebview.callHandler(handlerName, bridgePayload);
+          return true;
+        } catch {
+          // Try next handler name.
+        }
+      }
+    }
+  } catch {
+    // Ignore bridge failures and fall back to browser/web audio.
+  }
+
+  return false;
+}
+
 
 /**
  * Hook for restaurant to receive real-time order notifications with sound
@@ -45,13 +83,59 @@ export const useRestaurantNotifications = () => {
   const [newOrder, setNewOrder] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const audioRef = useRef(null);
+  const activeOrderRef = useRef(null);
+  const alertLoopTimerRef = useRef(null);
+  const alertLoopStartedAtRef = useRef(0);
   const userInteractedRef = useRef(false); // Track user interaction for autoplay policy
   const audioUnlockAttemptedRef = useRef(false);
   const [restaurantId, setRestaurantId] = useState(null);
   const lastConnectErrorLogRef = useRef(0);
+  const lastAlertAtByOrderRef = useRef(new Map());
+  const lastBrowserNotificationAtByOrderRef = useRef(new Map());
   const CONNECT_ERROR_LOG_THROTTLE_MS = 10000;
+  const ALERT_LOOP_INTERVAL_MS = 4500;
+  const ALERT_LOOP_MAX_MS = 120000;
+  const ALERT_DEDUPE_MS = 15000;
+  const BROWSER_NOTIFICATION_DEDUPE_MS = 20000;
+  const NOTIFICATION_PERMISSION_ASKED_KEY = 'restaurant_notification_permission_asked';
+
+  const getOrderAlertKey = (orderData = {}) => (
+    String(
+      orderData?.orderMongoId ||
+      orderData?.order_mongo_id ||
+      orderData?.orderId ||
+      orderData?.order_id ||
+      orderData?._id ||
+      orderData?.id ||
+      ''
+    ).trim()
+  );
+
+  const shouldProcessOrderAlert = (orderData = {}) => {
+    const key = getOrderAlertKey(orderData);
+    if (!key) return true;
+    const now = Date.now();
+    const last = lastAlertAtByOrderRef.current.get(key) || 0;
+    if (now - last < ALERT_DEDUPE_MS) return false;
+    lastAlertAtByOrderRef.current.set(key, now);
+    return true;
+  };
+
+  const shouldShowBrowserNotification = (orderData = {}) => {
+    const key = getOrderAlertKey(orderData);
+    if (!key) return true;
+    const now = Date.now();
+    const last = lastBrowserNotificationAtByOrderRef.current.get(key) || 0;
+    if (now - last < BROWSER_NOTIFICATION_DEDUPE_MS) return false;
+    lastBrowserNotificationAtByOrderRef.current.set(key, now);
+    return true;
+  };
 
   const showBackgroundOrderNotification = async (orderData) => {
+    if (!shouldShowBrowserNotification(orderData)) {
+      return;
+    }
+
     if (!supportsBrowserNotifications() || Notification.permission !== 'granted') {
       return;
     }
@@ -89,8 +173,40 @@ export const useRestaurantNotifications = () => {
     }
   };
 
+  const stopAlertLoop = () => {
+    if (alertLoopTimerRef.current) {
+      clearInterval(alertLoopTimerRef.current);
+      alertLoopTimerRef.current = null;
+    }
+    alertLoopStartedAtRef.current = 0;
+  };
+
+  const startAlertLoop = () => {
+    stopAlertLoop();
+    alertLoopStartedAtRef.current = Date.now();
+
+    alertLoopTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - alertLoopStartedAtRef.current;
+      if (elapsed >= ALERT_LOOP_MAX_MS || !activeOrderRef.current) {
+        stopAlertLoop();
+        return;
+      }
+
+      // Keep re-alerting while order is pending and tab is not visible.
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        playNotificationSound(activeOrderRef.current);
+      }
+    }, ALERT_LOOP_INTERVAL_MS);
+  };
+
   const handleIncomingOrderAlert = (orderData) => {
-    playNotificationSound();
+    if (!shouldProcessOrderAlert(orderData)) {
+      return;
+    }
+
+    activeOrderRef.current = orderData || { id: Date.now() };
+    playNotificationSound(orderData);
+    startAlertLoop();
 
     if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
       showBackgroundOrderNotification(orderData);
@@ -112,6 +228,52 @@ export const useRestaurantNotifications = () => {
       }
     };
     fetchRestaurantId();
+  }, []);
+
+  useEffect(() => {
+    if (!supportsBrowserNotifications()) return;
+
+    if (Notification.permission !== 'default') return;
+    if (localStorage.getItem(NOTIFICATION_PERMISSION_ASKED_KEY) === 'true') return;
+
+    const requestPermissionOnce = async () => {
+      localStorage.setItem(NOTIFICATION_PERMISSION_ASKED_KEY, 'true');
+      try {
+        await Notification.requestPermission();
+      } catch (error) {
+        debugWarn('Failed to request restaurant notification permission:', error);
+      }
+    };
+
+    const askOnInteraction = () => {
+      requestPermissionOnce();
+      window.removeEventListener('pointerdown', askOnInteraction);
+      window.removeEventListener('keydown', askOnInteraction);
+    };
+
+    window.addEventListener('pointerdown', askOnInteraction, { once: true, passive: true });
+    window.addEventListener('keydown', askOnInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', askOnInteraction);
+      window.removeEventListener('keydown', askOnInteraction);
+    };
+  }, []);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (typeof document === 'undefined') return;
+      if (document.visibilityState !== 'hidden') return;
+      if (!activeOrderRef.current) return;
+
+      playNotificationSound(activeOrderRef.current);
+      showBackgroundOrderNotification(activeOrderRef.current);
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -374,7 +536,12 @@ export const useRestaurantNotifications = () => {
     // Listen for sound notification event
     socketRef.current.on('play_notification_sound', (data) => {
       debugLog('🔔 Sound notification:', data);
-      handleIncomingOrderAlert(data);
+      const normalizedData = {
+        orderId: data?.orderId || data?.order_id,
+        orderMongoId: data?.orderMongoId || data?.order_mongo_id,
+        ...data
+      };
+      handleIncomingOrderAlert(normalizedData);
     });
 
     // Listen for order status updates
@@ -389,6 +556,7 @@ export const useRestaurantNotifications = () => {
     audioRef.current.volume = 0.7;
 
     return () => {
+      stopAlertLoop();
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -448,8 +616,16 @@ export const useRestaurantNotifications = () => {
     };
   }, []);
 
-  const playNotificationSound = () => {
+  const playNotificationSound = async (orderData = {}) => {
     try {
+      const usedNativeBridge = await triggerWebViewNativeNotification(orderData);
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+        navigator.vibrate([200, 100, 200, 100, 300]);
+      }
+      if (usedNativeBridge) {
+        return;
+      }
+
       if (audioRef.current) {
         // Only play if user has interacted with the page (browser autoplay policy)
         if (!userInteractedRef.current) {
@@ -462,6 +638,14 @@ export const useRestaurantNotifications = () => {
           // Don't log autoplay policy errors as they're expected
           if (!error.message?.includes('user didn\'t interact') && !error.name?.includes('NotAllowedError')) {
             debugWarn('Error playing notification sound:', error);
+            // Fallback: try one-shot audio instance (more reliable in background tabs on some browsers)
+            try {
+              const fallbackAudio = new Audio(resolveAudioSource(alertSound, `restaurant-alert-${Date.now()}`));
+              fallbackAudio.volume = 0.9;
+              fallbackAudio.play().catch(() => {});
+            } catch (fallbackError) {
+              debugWarn('Fallback audio playback failed:', fallbackError);
+            }
           }
         });
       }
@@ -474,6 +658,8 @@ export const useRestaurantNotifications = () => {
   };
 
   const clearNewOrder = () => {
+    stopAlertLoop();
+    activeOrderRef.current = null;
     setNewOrder(null);
   };
 

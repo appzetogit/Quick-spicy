@@ -596,6 +596,7 @@ export default function OrdersMain() {
     isLoading: true
   })
   const [isReverifying, setIsReverifying] = useState(false)
+  const audioUnlockedRef = useRef(false)
 
   // Restaurant notifications hook for real-time orders
   const { newOrder, clearNewOrder, isConnected } = useRestaurantNotifications()
@@ -740,6 +741,31 @@ export default function OrdersMain() {
       }
     }
   }, [newOrder])
+
+  // Best-effort unlock for popup buzzer so it can keep playing when tab is backgrounded.
+  useEffect(() => {
+    const unlockAudio = async () => {
+      if (audioUnlockedRef.current || !audioRef.current) return
+      try {
+        audioRef.current.muted = true
+        await audioRef.current.play()
+        audioRef.current.pause()
+        audioRef.current.currentTime = 0
+        audioRef.current.muted = false
+        audioUnlockedRef.current = true
+      } catch (_) {
+        audioRef.current.muted = false
+      }
+    }
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true, passive: true })
+    window.addEventListener('keydown', unlockAudio, { once: true })
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio)
+      window.removeEventListener('keydown', unlockAudio)
+    }
+  }, [])
 
   // Track popup state with ref to avoid stale closures
   const showNewOrderPopupRef = useRef(showNewOrderPopup)
@@ -1562,7 +1588,7 @@ export default function OrdersMain() {
       </div>
 
       {/* Audio element */}
-      <audio ref={audioRef} src={notificationSound} />
+      <audio ref={audioRef} src={notificationSound} preload="auto" playsInline />
 
       {/* New Order Popup */}
       <AnimatePresence>

@@ -7,7 +7,8 @@ import {
   buildVisibleRouteFromRiderPosition,
   decodePolyline,
   extractPolylineFromDirections,
-  findNearestPointOnPolyline
+  findNearestPointOnPolyline,
+  trimPolylineFromDistanceAlongRoute
 } from '@/module/delivery/utils/liveTrackingPolyline';
 import { subscribeOrderTracking } from '@/lib/realtimeTracking';
 import './DeliveryTrackingMap.css';
@@ -63,6 +64,8 @@ const DeliveryTrackingMap = ({
   const routePolylineRef = useRef(null);
   const routePolylinePointsRef = useRef(null); // Full route from Firebase/Directions for route-based animation
   const visibleRoutePolylinePointsRef = useRef(null); // Remaining route rendered on the map
+  const maxDistanceAlongRouteRef = useRef(0); // Forward-only clamp to prevent polyline regrowth
+  const activeRouteSignatureRef = useRef(null); // Reset clamp when route changes
   const animationControllerRef = useRef(null); // Route-based animation controller
   const lastRouteUpdateRef = useRef(null);
   const userHasInteractedRef = useRef(false);
@@ -152,6 +155,52 @@ const DeliveryTrackingMap = ({
     if (!socketRef.current || !socketRef.current.connected || !primaryTrackingId) return;
     socketRef.current.emit('request-current-location', primaryTrackingId);
   }, [primaryTrackingId]);
+
+  const renderInitialVisibleRouteFromPolyline = useCallback((polylinePoints) => {
+    if (!Array.isArray(polylinePoints) || polylinePoints.length < 2) return;
+
+    const routeState = currentLocationRef.current
+      ? buildVisibleRouteFromRiderPosition(polylinePoints, currentLocationRef.current, {
+        offRouteThresholdMeters: 35
+      })
+      : { visiblePolyline: polylinePoints, isOffRoute: false, distanceAlongRoute: 0 };
+
+    const currentDistanceAlongRoute = Number(routeState.distanceAlongRoute);
+    const clampedDistanceAlongRoute = Number.isFinite(currentDistanceAlongRoute)
+      ? Math.max(maxDistanceAlongRouteRef.current, currentDistanceAlongRoute)
+      : maxDistanceAlongRouteRef.current;
+    maxDistanceAlongRouteRef.current = clampedDistanceAlongRoute;
+
+    let visiblePolyline = routeState.visiblePolyline;
+    if (Number.isFinite(currentDistanceAlongRoute) &&
+      clampedDistanceAlongRoute > currentDistanceAlongRoute + 2) {
+      const monotonicTrimmed = trimPolylineFromDistanceAlongRoute(
+        polylinePoints,
+        clampedDistanceAlongRoute
+      ).trimmedPolyline;
+      visiblePolyline = routeState.isOffRoute && currentLocationRef.current
+        ? [currentLocationRef.current, ...monotonicTrimmed]
+        : monotonicTrimmed;
+    }
+
+    const pathToRender = Array.isArray(visiblePolyline) && visiblePolyline.length > 1
+      ? visiblePolyline
+      : polylinePoints;
+
+    if (routePolylineRef.current) {
+      routePolylineRef.current.setMap(null);
+    }
+
+    routePolylineRef.current = new window.google.maps.Polyline({
+      path: pathToRender,
+      geodesic: true,
+      strokeColor: routeColor,
+      strokeOpacity: 0.8,
+      strokeWeight: 4,
+      map: mapInstance.current,
+      zIndex: 1
+    });
+  }, [routeColor]);
 
   // Fallback source for rider location from order payload (from API poll when backend syncs from Firebase/socket)
   useEffect(() => {
@@ -246,33 +295,7 @@ const DeliveryTrackingMap = ({
               polylinePoints
             );
           }
-        }
-
-        if (cached.result.routes && cached.result.routes[0] && cached.result.routes[0].overview_path) {
-          if (routePolylineRef.current) {
-            routePolylineRef.current.setMap(null);
-          }
-
-          routePolylineRef.current = new window.google.maps.Polyline({
-            path: cached.result.routes[0].overview_path,
-            geodesic: true,
-            strokeColor: routeColor,
-            strokeOpacity: 0.8,
-            strokeWeight: 4,
-            icons: [{
-              icon: {
-                path: 'M 0,-1 0,1',
-                strokeOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: routeColor,
-                scale: 4
-              },
-              offset: '0%',
-              repeat: '15px'
-            }],
-            map: mapInstance.current,
-            zIndex: 1
-          });
+          renderInitialVisibleRouteFromPolyline(polylinePoints);
         }
       }
       return;
@@ -343,36 +366,7 @@ const DeliveryTrackingMap = ({
               );
               debugLog('✅ Route-based animation controller initialized');
             }
-          }
-
-          // Create dashed polyline overlay for better visibility
-          if (result.routes && result.routes[0] && result.routes[0].overview_path) {
-            // Remove existing custom polyline if any
-            if (routePolylineRef.current) {
-              routePolylineRef.current.setMap(null);
-            }
-
-            // Create dashed polyline
-            routePolylineRef.current = new window.google.maps.Polyline({
-              path: result.routes[0].overview_path,
-              geodesic: true,
-              strokeColor: routeColor,
-              strokeOpacity: 0.8,
-              strokeWeight: 4,
-              icons: [{
-                icon: {
-                  path: 'M 0,-1 0,1',
-                  strokeOpacity: 1,
-                  strokeWeight: 2,
-                  strokeColor: routeColor,
-                  scale: 4
-                },
-                offset: '0%',
-                repeat: '15px'
-              }],
-              map: mapInstance.current,
-              zIndex: 1
-            });
+            renderInitialVisibleRouteFromPolyline(polylinePoints);
           }
 
         } else {
@@ -385,7 +379,7 @@ const DeliveryTrackingMap = ({
     } catch (error) {
       debugWarn('Error calling Directions API:', error);
     }
-  }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, preserveViewportState, restoreViewportState]);
+  }, [ENABLE_GOOGLE_DIRECTIONS, routeColor, preserveViewportState, restoreViewportState, renderInitialVisibleRouteFromPolyline]);
 
   const normalizeRoutePoints = useCallback((rawRoute) => {
     if (!Array.isArray(rawRoute) || rawRoute.length < 2) return [];
@@ -435,6 +429,14 @@ const DeliveryTrackingMap = ({
 
     if (normalizedBaseRoute.length < 2) return false;
 
+    const firstPoint = normalizedBaseRoute[0];
+    const lastPoint = normalizedBaseRoute[normalizedBaseRoute.length - 1];
+    const routeSignature = `${normalizedBaseRoute.length}|${firstPoint.lat.toFixed(5)},${firstPoint.lng.toFixed(5)}|${lastPoint.lat.toFixed(5)},${lastPoint.lng.toFixed(5)}`;
+    if (activeRouteSignatureRef.current !== routeSignature) {
+      activeRouteSignatureRef.current = routeSignature;
+      maxDistanceAlongRouteRef.current = 0;
+    }
+
     routePolylinePointsRef.current = normalizedBaseRoute;
 
     if (animationControllerRef.current) {
@@ -454,8 +456,27 @@ const DeliveryTrackingMap = ({
       offRouteThresholdMeters: 35
     });
 
-    return renderVisibleRoute(routeState.visiblePolyline.length > 1
-      ? routeState.visiblePolyline
+    const currentDistanceAlongRoute = Number(routeState.distanceAlongRoute);
+    const clampedDistanceAlongRoute = Number.isFinite(currentDistanceAlongRoute)
+      ? Math.max(maxDistanceAlongRouteRef.current, currentDistanceAlongRoute)
+      : maxDistanceAlongRouteRef.current;
+    maxDistanceAlongRouteRef.current = clampedDistanceAlongRoute;
+
+    let visiblePolyline = routeState.visiblePolyline;
+    // If current snap jumps backward, keep rendering from last known forward distance.
+    if (Number.isFinite(currentDistanceAlongRoute) &&
+      clampedDistanceAlongRoute > currentDistanceAlongRoute + 2) {
+      const monotonicTrimmed = trimPolylineFromDistanceAlongRoute(
+        normalizedBaseRoute,
+        clampedDistanceAlongRoute
+      ).trimmedPolyline;
+      visiblePolyline = routeState.isOffRoute
+        ? [location, ...monotonicTrimmed]
+        : monotonicTrimmed;
+    }
+
+    return renderVisibleRoute(visiblePolyline.length > 1
+      ? visiblePolyline
       : normalizedBaseRoute);
   }, [normalizeRoutePoints, renderVisibleRoute]);
 
@@ -1477,6 +1498,8 @@ const DeliveryTrackingMap = ({
         routePolylineRef.current.setMap(null);
         routePolylineRef.current = null;
       }
+      maxDistanceAlongRouteRef.current = 0;
+      activeRouteSignatureRef.current = null;
       if (directionsRendererRef.current) {
         directionsRendererRef.current.setDirections({ routes: [] });
       }
@@ -1497,6 +1520,8 @@ const DeliveryTrackingMap = ({
     if (!hasReusableRoute) {
       routePolylinePointsRef.current = null;
       visibleRoutePolylinePointsRef.current = null;
+      maxDistanceAlongRouteRef.current = 0;
+      activeRouteSignatureRef.current = null;
     }
 
     const route = desiredRoute;

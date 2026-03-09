@@ -224,6 +224,105 @@ export function trimPolylineBehindRider(polyline, nearestPoint, segmentIndex) {
 }
 
 /**
+ * Trim polyline from an absolute distance traveled along the route.
+ * Useful for forward-only progress clamping so route never grows backward due to GPS noise.
+ * @param {Array<{lat: number, lng: number}>} polyline - Full polyline points
+ * @param {number} distanceAlongRouteMeters - Distance covered from route start in meters
+ * @returns {{
+ *   trimmedPolyline: Array<{lat: number, lng: number}>,
+ *   nearestPoint: {lat: number, lng: number} | null,
+ *   segmentIndex: number,
+ *   totalDistance: number,
+ *   distanceAlongRoute: number,
+ *   progress: number,
+ *   remainingDistance: number
+ * }}
+ */
+export function trimPolylineFromDistanceAlongRoute(polyline, distanceAlongRouteMeters) {
+  if (!Array.isArray(polyline) || polyline.length < 2) {
+    return {
+      trimmedPolyline: Array.isArray(polyline) ? polyline : [],
+      nearestPoint: polyline?.[0] || null,
+      segmentIndex: 0,
+      totalDistance: 0,
+      distanceAlongRoute: 0,
+      progress: 0,
+      remainingDistance: 0
+    };
+  }
+
+  const targetDistanceRaw = Number(distanceAlongRouteMeters);
+  const segmentDistances = [];
+  let totalDistance = 0;
+
+  for (let i = 0; i < polyline.length - 1; i++) {
+    const start = polyline[i];
+    const end = polyline[i + 1];
+    const segmentDistance = calculateDistance(start.lat, start.lng, end.lat, end.lng);
+    segmentDistances.push(segmentDistance);
+    totalDistance += segmentDistance;
+  }
+
+  const targetDistance = Math.max(0, Math.min(
+    Number.isFinite(targetDistanceRaw) ? targetDistanceRaw : 0,
+    totalDistance
+  ));
+
+  if (targetDistance <= 0) {
+    return {
+      trimmedPolyline: polyline,
+      nearestPoint: polyline[0],
+      segmentIndex: 0,
+      totalDistance,
+      distanceAlongRoute: 0,
+      progress: 0,
+      remainingDistance: totalDistance
+    };
+  }
+
+  let traversed = 0;
+  for (let i = 0; i < segmentDistances.length; i++) {
+    const segmentDistance = segmentDistances[i];
+    const nextTraversed = traversed + segmentDistance;
+
+    if (targetDistance <= nextTraversed || i === segmentDistances.length - 1) {
+      const start = polyline[i];
+      const end = polyline[i + 1];
+      const segmentProgress = segmentDistance > 0
+        ? Math.max(0, Math.min(1, (targetDistance - traversed) / segmentDistance))
+        : 0;
+      const nearestPoint = {
+        lat: start.lat + ((end.lat - start.lat) * segmentProgress),
+        lng: start.lng + ((end.lng - start.lng) * segmentProgress)
+      };
+
+      return {
+        trimmedPolyline: [nearestPoint, ...polyline.slice(i + 1)],
+        nearestPoint,
+        segmentIndex: i,
+        totalDistance,
+        distanceAlongRoute: targetDistance,
+        progress: totalDistance > 0 ? targetDistance / totalDistance : 0,
+        remainingDistance: Math.max(0, totalDistance - targetDistance)
+      };
+    }
+
+    traversed = nextTraversed;
+  }
+
+  const lastPoint = polyline[polyline.length - 1];
+  return {
+    trimmedPolyline: [lastPoint],
+    nearestPoint: lastPoint,
+    segmentIndex: polyline.length - 2,
+    totalDistance,
+    distanceAlongRoute: totalDistance,
+    progress: 1,
+    remainingDistance: 0
+  };
+}
+
+/**
  * Build the visible route for a live-tracking map.
  * When the rider is on-route, only show the remaining route ahead.
  * When the rider goes off-route, prepend the current rider location so the wrong-way
@@ -247,6 +346,7 @@ export function buildVisibleRouteFromRiderPosition(polyline, riderPosition, opti
       snappedPoint: null,
       isOffRoute: false,
       progress: 0,
+      distanceAlongRoute: 0,
       distanceFromRoute: Infinity,
       remainingDistance: 0
     };
@@ -261,6 +361,7 @@ export function buildVisibleRouteFromRiderPosition(polyline, riderPosition, opti
       snappedPoint: null,
       isOffRoute: false,
       progress: 0,
+      distanceAlongRoute: 0,
       distanceFromRoute: Infinity,
       remainingDistance: 0
     };
@@ -281,6 +382,7 @@ export function buildVisibleRouteFromRiderPosition(polyline, riderPosition, opti
     snappedPoint: nearest.nearestPoint,
     isOffRoute,
     progress,
+    distanceAlongRoute: nearest.distanceAlongRoute,
     distanceFromRoute: nearest.distance,
     remainingDistance: nearest.remainingDistance
   };
