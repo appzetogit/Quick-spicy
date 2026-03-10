@@ -597,6 +597,9 @@ export default function OrdersMain() {
   })
   const [isReverifying, setIsReverifying] = useState(false)
   const audioUnlockedRef = useRef(false)
+  const showNewOrderPopupRef = useRef(showNewOrderPopup)
+  const isMutedRef = useRef(isMuted)
+  const newOrderRef = useRef(null)
 
   // Restaurant notifications hook for real-time orders
   const { newOrder, clearNewOrder, isConnected } = useRestaurantNotifications()
@@ -742,6 +745,19 @@ export default function OrdersMain() {
     }
   }, [newOrder])
 
+  // Keep refs in sync to avoid stale state inside one-time event handlers.
+  useEffect(() => {
+    showNewOrderPopupRef.current = showNewOrderPopup
+  }, [showNewOrderPopup])
+
+  useEffect(() => {
+    isMutedRef.current = isMuted
+  }, [isMuted])
+
+  useEffect(() => {
+    newOrderRef.current = newOrder
+  }, [newOrder])
+
   // Best-effort unlock for popup buzzer so it can keep playing when tab is backgrounded.
   useEffect(() => {
     const unlockAudio = async () => {
@@ -752,7 +768,15 @@ export default function OrdersMain() {
         audioRef.current.pause()
         audioRef.current.currentTime = 0
         audioRef.current.muted = false
+        audioRef.current.volume = 1
         audioUnlockedRef.current = true
+
+        // If an order popup is already open, start buzzing immediately after unlock.
+        if (showNewOrderPopupRef.current && !isMutedRef.current) {
+          audioRef.current.loop = true
+          audioRef.current.currentTime = 0
+          audioRef.current.play().catch(() => {})
+        }
       } catch (_) {
         audioRef.current.muted = false
       }
@@ -766,18 +790,6 @@ export default function OrdersMain() {
       window.removeEventListener('keydown', unlockAudio)
     }
   }, [])
-
-  // Track popup state with ref to avoid stale closures
-  const showNewOrderPopupRef = useRef(showNewOrderPopup)
-  const newOrderRef = useRef(newOrder)
-
-  useEffect(() => {
-    showNewOrderPopupRef.current = showNewOrderPopup
-  }, [showNewOrderPopup])
-
-  useEffect(() => {
-    newOrderRef.current = newOrder
-  }, [newOrder])
 
   // Check for confirmed orders that haven't been shown in popup yet (fallback if Socket.IO fails)
   useEffect(() => {
@@ -847,6 +859,9 @@ export default function OrdersMain() {
     if (showNewOrderPopup && !isMuted) {
       if (audioRef.current) {
         audioRef.current.loop = true
+        audioRef.current.muted = false
+        audioRef.current.volume = 1
+        audioRef.current.currentTime = 0
         audioRef.current.play().catch(err => debugLog("Audio play failed:", err))
       }
     } else if (audioRef.current) {
@@ -1089,6 +1104,9 @@ export default function OrdersMain() {
       if (!isMuted) {
         audioRef.current.pause()
       } else {
+        audioRef.current.muted = false
+        audioRef.current.volume = 1
+        audioRef.current.currentTime = 0
         audioRef.current.play().catch(err => debugLog("Audio play failed:", err))
       }
     }

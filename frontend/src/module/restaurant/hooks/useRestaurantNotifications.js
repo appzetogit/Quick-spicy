@@ -553,7 +553,7 @@ export const useRestaurantNotifications = () => {
     // Load notification sound
     audioRef.current = new Audio(resolveAudioSource(alertSound));
     audioRef.current.preload = 'auto';
-    audioRef.current.volume = 0.7;
+    audioRef.current.volume = 1;
 
     return () => {
       stopAlertLoop();
@@ -576,7 +576,7 @@ export const useRestaurantNotifications = () => {
       if (!audioRef.current) {
         audioRef.current = new Audio(resolveAudioSource(alertSound));
         audioRef.current.preload = 'auto';
-        audioRef.current.volume = 0.7;
+        audioRef.current.volume = 1;
       }
 
       if (!audioUnlockAttemptedRef.current && audioRef.current) {
@@ -631,13 +631,8 @@ export const useRestaurantNotifications = () => {
       }
 
       if (audioRef.current) {
-        // Only play if user has interacted with the page (browser autoplay policy)
-        if (!userInteractedRef.current) {
-          debugLog('🔇 Audio playback skipped - user has not interacted with page yet');
-          return;
-        }
-
         audioRef.current.muted = false;
+        audioRef.current.volume = 1;
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(error => {
           // Don't log autoplay policy errors as they're expected
@@ -646,7 +641,7 @@ export const useRestaurantNotifications = () => {
             // Fallback: try one-shot audio instance (more reliable in background tabs on some browsers)
             try {
               const fallbackAudio = new Audio(resolveAudioSource(alertSound, `restaurant-alert-${Date.now()}`));
-              fallbackAudio.volume = 0.9;
+              fallbackAudio.volume = 1;
               fallbackAudio.play().catch(() => {});
             } catch (fallbackError) {
               debugWarn('Fallback audio playback failed:', fallbackError);
