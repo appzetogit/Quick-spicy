@@ -3944,6 +3944,7 @@ export default function DeliveryHome() {
             }
           }))
           setShowOrderIdConfirmationPopup(false)
+          setShowReachedDropPopup(true)
           toast.info('Order ID is already confirmed. Order is out for delivery.')
           return
         }
@@ -3951,6 +3952,7 @@ export default function DeliveryHome() {
         if (!orderId) {
           debugError('❌ No order ID found to confirm')
           toast.error('Order ID not found. Please try again.')
+          setShowOrderIdConfirmationPopup(true)
           return
         }
 
@@ -3973,6 +3975,7 @@ export default function DeliveryHome() {
           } catch (geoError) {
             debugError('❌ Could not get current location:', geoError)
             toast.error('Location not available. Please enable location services.')
+            setShowOrderIdConfirmationPopup(true)
             return
           }
         }
@@ -4143,20 +4146,24 @@ export default function DeliveryHome() {
             
             // Close Order ID confirmation popup
             setShowOrderIdConfirmationPopup(false)
+            // Move to next stage immediately so rider always sees the next slider.
+            setShowReachedDropPopup(true)
 
-            toast.success('Order is out for delivery. Route to customer is on the map.', { duration: 4000 })
+            toast.success('Order is out for delivery. You can now swipe Reached Drop.', { duration: 4000 })
             
-            debugLog('✅ Waiting for rider to get near customer before showing Reached Drop popup')
+            debugLog('✅ Showing Reached Drop popup after order ID confirmation')
             
           } else {
             debugError('❌ Failed to confirm order ID:', response.data)
             toast.error(response.data?.message || 'Failed to confirm order ID. Please try again.')
+            setShowOrderIdConfirmationPopup(true)
           }
         } catch (error) {
           const status = error.response?.status
           const msg = error.response?.data?.message || error.message || ''
           debugError('❌ Error confirming order ID:', { status, message: msg, data: error.response?.data })
           toast.error(msg || 'Failed to confirm order ID. Please try again.')
+          setShowOrderIdConfirmationPopup(true)
         }
         
         // Reset after animation
@@ -10651,7 +10658,7 @@ selectedRestaurant?.lng || null,
         closeOnBackdropClick={false}
         disableSwipeToClose={true}
         maxHeight="70vh"
-        showHandle={true}
+        showHandle={false}
         showBackdrop={false}
         backdropBlocksInteraction={false}
       >
@@ -10974,6 +10981,7 @@ selectedRestaurant?.lng || null,
         onClose={() => setShowOrderIdConfirmationPopup(false)}
         showCloseButton={false}
         closeOnBackdropClick={false}
+        disableSwipeToClose={true}
         maxHeight="60vh"
         showHandle={false}
         showBackdrop={false}
@@ -11127,8 +11135,9 @@ selectedRestaurant?.lng || null,
         onClose={() => setShowReachedDropPopup(false)}
         showCloseButton={false}
         closeOnBackdropClick={false}
+        disableSwipeToClose={true}
         maxHeight="70vh"
-        showHandle={true}
+        showHandle={false}
         showBackdrop={false}
         backdropBlocksInteraction={false}
       >

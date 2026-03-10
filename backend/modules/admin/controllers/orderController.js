@@ -4,6 +4,8 @@ import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 import { findNearestDeliveryBoys } from '../../order/services/deliveryAssignmentService.js';
 import { notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
+import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNotificationService.js';
+import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
 import { removeActiveOrderTracking } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 
 /**
@@ -537,6 +539,18 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     order.status = "preparing";
     order.tracking.preparing = { status: true, timestamp: new Date() };
     await order.save();
+
+    // Keep notification order strict: restaurant first, then delivery.
+    try {
+      await notifyRestaurantOrderUpdate(order._id.toString(), 'preparing');
+    } catch (notifError) {
+      console.error('Admin accept: restaurant notification failed:', notifError);
+    }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), 'preparing');
+    } catch (notifError) {
+      console.error('Admin accept: user notification failed:', notifError);
+    }
 
     // Trigger delivery notifications so order appears in delivery app.
     // This mirrors the restaurant-side notify flow for unassigned preparing orders.

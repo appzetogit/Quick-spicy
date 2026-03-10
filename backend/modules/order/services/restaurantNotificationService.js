@@ -73,8 +73,9 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
       priority: 'high',
       ttl: 120000,
       notification: {
-        sound: 'default',
-        defaultSound: true,
+        channelId: 'new_order_channel_v3',
+        sound: 'alert',
+        defaultSound: false,
         defaultVibrateTimings: true,
         priority: 'max'
       }

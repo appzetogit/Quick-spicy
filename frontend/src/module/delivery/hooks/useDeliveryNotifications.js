@@ -197,16 +197,11 @@ export const useDeliveryNotifications = () => {
       }
       
       if (audioRef.current) {
-        // Only play if user has interacted with the page (browser autoplay policy)
-        if (!userInteractedRef.current) {
-          debugLog('🔇 Audio playback skipped - user has not interacted with page yet');
-          return;
-        }
-
         audioRef.current.muted = false;
+        audioRef.current.volume = 0.9;
         audioRef.current.currentTime = 0;
         audioRef.current.play().catch(error => {
-          // Don't log autoplay policy errors as they're expected
+          // On strict autoplay environments, we still keep vibration/native bridge path active.
           if (!error.message?.includes('user didn\'t interact') && !error.name?.includes('NotAllowedError')) {
             debugWarn('Error playing notification sound:', error);
           }

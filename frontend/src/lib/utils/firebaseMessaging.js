@@ -44,6 +44,14 @@ function isSupportedBrowser() {
   );
 }
 
+function isFlutterWebView() {
+  return (
+    typeof window !== "undefined" &&
+    Boolean(window.flutter_inappwebview) &&
+    typeof window.flutter_inappwebview.callHandler === "function"
+  );
+}
+
 function isSecureContextForPush() {
   return window.isSecureContext || window.location.hostname === "localhost";
 }
@@ -428,6 +436,34 @@ async function saveTokenByModule(moduleName, token) {
   }
 }
 
+async function registerNativeWebViewFcmToken(moduleName) {
+  if (!isFlutterWebView()) return;
+
+  const handlerNames = ["getFcmToken", "getFCMToken", "getPushToken", "getFirebaseToken"];
+  for (const handlerName of handlerNames) {
+    try {
+      const token = await window.flutter_inappwebview.callHandler(handlerName, { module: moduleName });
+      const normalizedToken = String(token || "").trim();
+      if (normalizedToken.length < 20) continue;
+
+      const lastSavedToken = getSavedToken(moduleName);
+      if (lastSavedToken !== normalizedToken) {
+        await saveTokenByModule(moduleName, normalizedToken);
+        setSavedToken(moduleName, normalizedToken);
+      }
+
+      console.log(PUSH_DEBUG_PREFIX, "Registered native WebView FCM token", {
+        moduleName,
+        handlerName,
+        tokenPreview: `${normalizedToken.slice(0, 12)}...`,
+      });
+      return;
+    } catch {
+      // Try next handler.
+    }
+  }
+}
+
 function showForegroundNotification(payload = {}) {
   const notificationKey = getNotificationKey(payload);
   console.log(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKey, payload });
@@ -502,6 +538,20 @@ function attachServiceWorkerMessageListener() {
     });
   }
 
+  window.addEventListener("native-push-notification", (event) => {
+    const payload = event?.detail || {};
+    console.log(PUSH_DEBUG_PREFIX, "Received native push event", { payload });
+    showForegroundNotification(payload);
+  });
+
+  window.addEventListener("message", (event) => {
+    const data = event?.data || {};
+    if (!data || typeof data !== "object") return;
+    if (data.type !== "native-push-notification") return;
+    console.log(PUSH_DEBUG_PREFIX, "Received native postMessage push event", { payload: data.payload });
+    showForegroundNotification(data.payload || {});
+  });
+
   serviceWorkerMessageListenerAttached = true;
 }
 
@@ -547,6 +597,10 @@ export async function registerWebPushForCurrentModule(pathname = window.location
 
   const accessToken = localStorage.getItem(`${moduleName}_accessToken`);
   if (!accessToken) return;
+
+  // Flutter WebView fallback: register native token when available.
+  // This keeps restaurant/delivery FCM alerts working even when Web Push APIs are limited.
+  await registerNativeWebViewFcmToken(moduleName);
 
   if (!isSupportedBrowser() || !isSecureContextForPush()) return;
 
