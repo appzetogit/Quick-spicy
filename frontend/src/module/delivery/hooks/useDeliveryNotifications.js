@@ -620,6 +620,13 @@ export const useDeliveryNotifications = () => {
         orderMongoId: data?.orderMongoId || data?.order_mongo_id,
         ...data
       };
+      // Force immediate buzz for notification events, even if dedupe would skip.
+      activeOrderRef.current = normalizedData || { id: Date.now() };
+      playNotificationSound(normalizedData);
+      startAlertLoop(playNotificationSound);
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        showBackgroundOrderNotification(normalizedData);
+      }
       handleIncomingOrderAlert(normalizedData);
     });
 
@@ -649,7 +656,7 @@ export const useDeliveryNotifications = () => {
         socketRef.current = null;
       }
     };
-  }, [deliveryPartnerId, handleIncomingOrderAlert, playNotificationSound, stopAlertLoop]);
+  }, [deliveryPartnerId, handleIncomingOrderAlert, playNotificationSound, showBackgroundOrderNotification, startAlertLoop, stopAlertLoop]);
 
   // Helper functions
   const clearNewOrder = () => {

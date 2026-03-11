@@ -384,7 +384,7 @@ export default function OrdersPage({ statusKey = "all" }) {
 
     const pollId = setInterval(() => {
       fetchOrders({ silent: true, withRingCheck: true })
-    }, 15000)
+    }, 5000)
 
     return () => clearInterval(pollId)
   }, [statusKey, fetchOrders])
@@ -406,6 +406,15 @@ export default function OrdersPage({ statusKey = "all" }) {
     const handleIncomingRealtimeOrder = (payload = {}) => {
       const orderId = payload?.orderId || payload?.orderMongoId || ""
       if (!orderId) {
+        activeOrderAlertRef.current = payload || { orderId: "socket-new-order" }
+        playDefaultRing()
+        startAlertLoop()
+        toast.info("New order received")
+        showBrowserNotification(
+          "New order received",
+          "A new order arrived",
+          `admin-order-socket-${Date.now()}`,
+        )
         fetchOrders({ silent: true, withRingCheck: false })
         return
       }

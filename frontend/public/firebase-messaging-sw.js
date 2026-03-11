@@ -26,13 +26,43 @@ async function notifyOpenClients(payload) {
   });
 }
 
-async function hasVisibleClient() {
+function getTargetPathFromPayload(payload = {}) {
+  const rawTarget =
+    payload?.data?.targetUrl ||
+    payload?.data?.link ||
+    payload?.data?.click_action ||
+    payload?.fcmOptions?.link ||
+    "/";
+
+  try {
+    const url = new URL(rawTarget, self.location.origin);
+    return url.pathname || "/";
+  } catch {
+    return "/";
+  }
+}
+
+async function hasVisibleClientForTarget(payload = {}) {
   const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
-  const visibleClient = windowClients.find(
-    (client) => client.visibilityState === "visible" || client.focused,
-  );
+  const targetPath = getTargetPathFromPayload(payload);
+  const targetRoot = `/${String(targetPath).split("/").filter(Boolean)[0] || ""}`;
+  const visibleClient = windowClients.find((client) => {
+    const isVisible = client.visibilityState === "visible" || client.focused;
+    if (!isVisible) return false;
+    try {
+      const clientUrl = new URL(client.url);
+      if (targetRoot === "/" || !targetRoot) {
+        return true;
+      }
+      return clientUrl.pathname.startsWith(targetRoot);
+    } catch {
+      return false;
+    }
+  });
   console.log(PUSH_DEBUG_PREFIX, "Visible client check", {
     count: windowClients.length,
+    targetPath,
+    targetRoot,
     hasVisibleClient: Boolean(visibleClient),
     clients: windowClients.map((client) => ({
       url: client.url,
@@ -89,7 +119,7 @@ async function loadFirebaseWebConfig() {
 
   messaging.onBackgroundMessage(async (payload) => {
     console.log(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
-    const visibleClient = await hasVisibleClient();
+    const visibleClient = await hasVisibleClientForTarget(payload);
     if (visibleClient) {
       // Foreground/visible tab should render the notification itself.
       // Only relay to page, and never show service-worker notification here.

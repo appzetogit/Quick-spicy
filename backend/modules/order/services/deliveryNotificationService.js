@@ -408,25 +408,21 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       console.log(`📤 Emitted notification to room: ${room}`);
     });
 
-    let pushResult = { success: false, sentCount: 0, failedCount: 0, reason: 'Skipped: active socket session' };
-    if (socketsInRoom.length === 0) {
-      try {
-        const pushTokens = extractDeliveryTokens(deliveryPartner);
-        pushResult = await sendDeliveryPushNotifications(pushTokens, {
-          type: 'new_order',
-          title: 'New Delivery Request',
-          body: `${orderNotification.restaurantName || 'Restaurant'} order ${order.orderId} is available`,
-          orderId: order.orderId,
-          orderMongoId: order._id?.toString(),
-          status: order.status,
-          targetUrl: '/delivery'
-        });
-        console.log(`📲 Push notification result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
-      } catch (pushError) {
-        console.error(`❌ Push send failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
-      }
-    } else {
-      console.log(`ℹ️ Skipping push for delivery partner ${normalizedDeliveryPartnerId} because socket is connected (${socketsInRoom.length} session(s)).`);
+    let pushResult = { success: false, sentCount: 0, failedCount: 0, reason: 'No push attempt' };
+    try {
+      const pushTokens = extractDeliveryTokens(deliveryPartner);
+      pushResult = await sendDeliveryPushNotifications(pushTokens, {
+        type: 'new_order',
+        title: 'New Delivery Request',
+        body: `${orderNotification.restaurantName || 'Restaurant'} order ${order.orderId} is available`,
+        orderId: order.orderId,
+        orderMongoId: order._id?.toString(),
+        status: order.status,
+        targetUrl: '/delivery'
+      });
+      console.log(`📲 Push notification result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Push send failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
     }
 
     if (socketsInRoom.length === 0) {
@@ -740,11 +736,10 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
           roomVariations.forEach(room => {
             deliveryNamespace.to(room).emit('new_order_available', orderNotification);
           });
-          deliveryTokens.forEach((token) => pushTokens.push(token));
           notifiedCount++;
-        } else {
-          console.log(`ℹ️ Skipping push for delivery partner ${normalizedId} because socket is connected.`);
         }
+        // Always include tokens so minimized/background web clients still get FCM notification.
+        deliveryTokens.forEach((token) => pushTokens.push(token));
       } catch (partnerError) {
         console.error(`❌ Error notifying delivery partner ${deliveryPartnerId}:`, partnerError);
       }
@@ -845,23 +840,19 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
       notificationSent = false;
     }
 
-    if (!foundRoom || socketsInRoom.length === 0) {
-      try {
-        const pushResult = await sendDeliveryPushNotifications(pushTokens, {
-          type: 'order_ready',
-          title: 'Order Ready for Pickup',
-          body: `Order ${order.orderId || order._id} is ready at ${orderReadyNotification.restaurantName || 'restaurant'}`,
-          orderId: order.orderId || order._id?.toString(),
-          orderMongoId: order._id?.toString(),
-          status: 'ready',
-          targetUrl: '/delivery'
-        });
-        console.log(`📲 Order-ready push result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
-      } catch (pushError) {
-        console.error(`❌ Order-ready push failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
-      }
-    } else {
-      console.log(`ℹ️ Skipping order-ready push for ${normalizedDeliveryPartnerId} because socket is connected.`);
+    try {
+      const pushResult = await sendDeliveryPushNotifications(pushTokens, {
+        type: 'order_ready',
+        title: 'Order Ready for Pickup',
+        body: `Order ${order.orderId || order._id} is ready at ${orderReadyNotification.restaurantName || 'restaurant'}`,
+        orderId: order.orderId || order._id?.toString(),
+        orderMongoId: order._id?.toString(),
+        status: 'ready',
+        targetUrl: '/delivery'
+      });
+      console.log(`📲 Order-ready push result for delivery partner ${normalizedDeliveryPartnerId}:`, pushResult);
+    } catch (pushError) {
+      console.error(`❌ Order-ready push failed for delivery partner ${normalizedDeliveryPartnerId}:`, pushError.message);
     }
 
     return {
