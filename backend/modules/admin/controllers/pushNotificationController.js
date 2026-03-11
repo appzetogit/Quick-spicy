@@ -68,6 +68,18 @@ const extractTokensByPlatform = (records = [], platform = "all") => {
   };
 };
 
+const dedupeCrossChannelTokens = (webTokens = [], mobileTokens = []) => {
+  const webSet = new Set((webTokens || []).map((token) => String(token || "").trim()).filter(Boolean));
+  const uniqueWeb = [...webSet];
+  const uniqueMobile = [...new Set((mobileTokens || []).map((token) => String(token || "").trim()).filter(Boolean))]
+    .filter((token) => !webSet.has(token));
+
+  return {
+    webTokens: uniqueWeb,
+    mobileTokens: uniqueMobile,
+  };
+};
+
 const chunk = (arr = [], size = BATCH_SIZE) => {
   const result = [];
   for (let i = 0; i < arr.length; i += size) {
@@ -205,7 +217,11 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     );
   }
 
-  const { webTokens, mobileTokens } = await getTargetTokens(normalizedTarget, normalizedPlatform);
+  const targetTokens = await getTargetTokens(normalizedTarget, normalizedPlatform);
+  const { webTokens, mobileTokens } = dedupeCrossChannelTokens(
+    targetTokens.webTokens,
+    targetTokens.mobileTokens,
+  );
   const totalTokens = webTokens.length + mobileTokens.length;
 
   if (totalTokens === 0) {

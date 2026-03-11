@@ -19,14 +19,13 @@ let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
 let serviceWorkerMessageListenerAttached = false;
-let serviceWorkerBroadcastChannel = null;
 const MESSAGING_APP_NAME = "web-push-app";
 const recentForegroundNotifications = new Map();
 let pushSoundAudio = null;
 let pushSoundUnlocked = false;
 let pushSoundContext = null;
 const PUSH_DEBUG_PREFIX = "[push-debug]";
-const notificationDedupWindowMs = 2000;
+const notificationDedupWindowMs = 8000;
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -525,15 +524,6 @@ function attachServiceWorkerMessageListener() {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event?.data?.type !== "push-notification-received") return;
       console.log(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: event.data.payload });
-      showForegroundNotification(event.data.payload || {});
-    });
-  }
-
-  if (typeof BroadcastChannel !== "undefined") {
-    serviceWorkerBroadcastChannel = new BroadcastChannel("push-notifications");
-    serviceWorkerBroadcastChannel.addEventListener("message", (event) => {
-      if (event?.data?.type !== "push-notification-received") return;
-      console.log(PUSH_DEBUG_PREFIX, "Received BroadcastChannel push message in page", { payload: event.data.payload });
       showForegroundNotification(event.data.payload || {});
     });
   }
