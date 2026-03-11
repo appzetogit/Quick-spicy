@@ -507,8 +507,11 @@ export const createRestaurantFromOnboarding = async (onboardingData, restaurantI
       if (step4.offer) existing.offer = step4.offer;
     }
     
-    existing.isActive = true; // Ensure it's active
-    existing.isAcceptingOrders = true; // Ensure it's accepting orders
+    // Completing onboarding should submit the restaurant for review, not auto-approve it.
+    existing.isActive = false;
+    existing.isAcceptingOrders = false;
+    existing.approvedAt = null;
+    existing.approvedBy = null;
     
     try {
       await existing.save();
