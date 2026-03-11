@@ -253,15 +253,9 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
       body: normalizedDescription,
     },
     webpush: {
-      notification: {
-        title: normalizedTitle,
-        body: normalizedDescription,
-        tag: notificationId,
-        renotify: false,
-        silent: false,
-        requireInteraction: false,
-        vibrate: [200, 100, 200, 100, 300],
-        ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
+      headers: {
+        Urgency: "high",
+        TTL: "120",
       },
       fcmOptions: {
         link: targetLink,
