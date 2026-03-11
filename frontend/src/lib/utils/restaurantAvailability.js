@@ -128,7 +128,7 @@ const formatClosingCountdown = (minutesUntilClose, closingTime) => {
   return `Closes in ${hours}h ${minutes}m`
 }
 
-export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) => {
+export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), options = {}) => {
   if (!restaurant) {
     return {
       isOpen: false,
@@ -139,10 +139,11 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date()) =>
     }
   }
 
+  const ignoreOperationalStatus = options?.ignoreOperationalStatus === true
   const isActive = restaurant.isActive !== false
   const isAcceptingOrders = restaurant.isAcceptingOrders !== false
 
-  if (!isActive) {
+  if (!ignoreOperationalStatus && !isActive) {
     return {
       isOpen: false,
       isActive,

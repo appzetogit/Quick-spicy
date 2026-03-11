@@ -1303,8 +1303,8 @@ export default function Home() {
         if (userLat && userLng) {
           restaurantsWithOutletTimings.sort((a, b) => {
             // Available restaurants first, then unavailable
-            const aAvailable = getRestaurantAvailabilityStatus(a).isOpen
-            const bAvailable = getRestaurantAvailabilityStatus(b).isOpen
+            const aAvailable = getRestaurantAvailabilityStatus(a, new Date(), { ignoreOperationalStatus: true }).isOpen
+            const bAvailable = getRestaurantAvailabilityStatus(b, new Date(), { ignoreOperationalStatus: true }).isOpen
 
             if (aAvailable !== bAvailable) {
               return aAvailable ? -1 : 1 // Available restaurants come first
@@ -1630,8 +1630,8 @@ export default function Home() {
       // This ensures all restaurants in zone are shown, but nearby ones appear first
       filtered.sort((a, b) => {
         // Available restaurants first, then unavailable
-        const aAvailable = getRestaurantAvailabilityStatus(a, new Date(availabilityTick)).isOpen
-        const bAvailable = getRestaurantAvailabilityStatus(b, new Date(availabilityTick)).isOpen
+        const aAvailable = getRestaurantAvailabilityStatus(a, new Date(availabilityTick), { ignoreOperationalStatus: true }).isOpen
+        const bAvailable = getRestaurantAvailabilityStatus(b, new Date(availabilityTick), { ignoreOperationalStatus: true }).isOpen
 
         if (aAvailable !== bAvailable) {
           return aAvailable ? -1 : 1 // Available restaurants come first
@@ -2570,7 +2570,7 @@ export default function Home() {
             <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3  gap-3 sm:gap-4 lg:gap-5 xl:gap-6 pt-1 sm:pt-1.5 lg:pt-2 items-stretch ${isLoadingFilterResults || loadingRestaurants ? 'opacity-50' : 'opacity-100'} transition-opacity duration-300`}>
               {filteredRestaurants.map((restaurant, index) => {
                 const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
-                const availability = getRestaurantAvailabilityStatus(restaurant, new Date(availabilityTick))
+                const availability = getRestaurantAvailabilityStatus(restaurant, new Date(availabilityTick), { ignoreOperationalStatus: true })
                 // Direct favorite check - isFavorite is already memoized in context
                 const favorite = isFavorite(restaurantSlug)
 
