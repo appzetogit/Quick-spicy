@@ -34,6 +34,14 @@ function normalizeModuleFromPath(pathname = window.location.pathname) {
   return "user";
 }
 
+function getPushSoundSources(moduleName = normalizeModuleFromPath()) {
+  // Delivery and restaurant should always use the alert tone for FCM pushes.
+  if (moduleName === "delivery" || moduleName === "restaurant") {
+    return [fallbackNotificationSound];
+  }
+  return [pushNotificationSoundPath, fallbackNotificationSound];
+}
+
 function isSupportedBrowser() {
   return (
     typeof window !== "undefined" &&
@@ -95,7 +103,10 @@ function wasRecentlyHandled(notificationKey) {
 function ensurePushSoundAudio() {
   if (typeof window === "undefined") return null;
   if (!pushSoundAudio) {
-    const audioUrl = new URL(pushNotificationSoundPath, window.location.origin).toString();
+    const [primarySource] = getPushSoundSources();
+    const audioUrl = primarySource.startsWith("/")
+      ? new URL(primarySource, window.location.origin).toString()
+      : primarySource;
     console.log(PUSH_DEBUG_PREFIX, "Creating primary push audio", { audioUrl });
     pushSoundAudio = new Audio(audioUrl);
     pushSoundAudio.preload = "auto";
@@ -106,11 +117,12 @@ function ensurePushSoundAudio() {
 }
 
 function createPushPlaybackAudio() {
-  const primarySource =
-    typeof window === "undefined"
-      ? pushNotificationSoundPath
-      : new URL(pushNotificationSoundPath, window.location.origin).toString();
-  const audioSources = [primarySource, fallbackNotificationSound];
+  const moduleName = normalizeModuleFromPath();
+  const audioSources = getPushSoundSources(moduleName).map((source) =>
+    typeof window === "undefined" || !source.startsWith("/")
+      ? source
+      : new URL(source, window.location.origin).toString(),
+  );
   console.log(PUSH_DEBUG_PREFIX, "Preparing push playback sources", { audioSources });
   return audioSources.map((source) => {
     const playbackAudio = new Audio(source);

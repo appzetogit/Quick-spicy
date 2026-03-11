@@ -41,17 +41,11 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [deletingOrderId, setDeletingOrderId] = useState(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null)
-  const seenPendingOrderIdsRef = useRef(new Set())
+  const seenOrderIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
   const fallbackAudioRef = useRef(null)
   const audioContextRef = useRef(null)
   const audioUnlockedRef = useRef(false)
-
-  const isPendingOrder = useCallback((order) => {
-    const orderStatus = String(order?.orderStatus || "").toLowerCase()
-    const status = String(order?.status || "").toLowerCase()
-    return orderStatus === "pending" || (status === "confirmed" && orderStatus === "accepted")
-  }, [])
 
   const playDefaultRing = useCallback(() => {
     try {
@@ -193,24 +187,23 @@ export default function OrdersPage({ statusKey = "all" }) {
 
       if (response.data?.success && response.data?.data?.orders) {
         const nextOrders = response.data.data.orders
-        const nextPendingIds = new Set(
+        const nextOrderIds = new Set(
           nextOrders
-            .filter((order) => isPendingOrder(order))
             .map((order) => order.id || order._id || order.orderId)
             .filter(Boolean),
         )
 
-        if (withRingCheck && !isFirstLoadRef.current) {
-          const hasNewPendingOrder = [...nextPendingIds].some(
-            (id) => !seenPendingOrderIdsRef.current.has(id),
+        if (withRingCheck && !isFirstLoadRef.current && statusKey === "all") {
+          const hasNewOrder = [...nextOrderIds].some(
+            (id) => !seenOrderIdsRef.current.has(id),
           )
-          if (hasNewPendingOrder) {
+          if (hasNewOrder) {
             playDefaultRing()
-            toast.info("New pending order received")
+            toast.info("New order received")
           }
         }
 
-        seenPendingOrderIdsRef.current = nextPendingIds
+        seenOrderIdsRef.current = nextOrderIds
         isFirstLoadRef.current = false
         setOrders(nextOrders)
       } else {
@@ -227,11 +220,11 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       if (!silent) setIsLoading(false)
     }
-  }, [statusKey, playDefaultRing, isPendingOrder])
+  }, [statusKey, playDefaultRing])
 
   useEffect(() => {
     isFirstLoadRef.current = true
-    seenPendingOrderIdsRef.current = new Set()
+    seenOrderIdsRef.current = new Set()
     fetchOrders({ silent: false, withRingCheck: false })
   }, [fetchOrders])
 
