@@ -19,20 +19,27 @@ let publicEnvPromise = null;
 let foregroundListenerAttached = false;
 let registrationInFlight = null;
 let serviceWorkerMessageListenerAttached = false;
-let serviceWorkerBroadcastChannel = null;
 const MESSAGING_APP_NAME = "web-push-app";
 const recentForegroundNotifications = new Map();
 let pushSoundAudio = null;
 let pushSoundUnlocked = false;
 let pushSoundContext = null;
 const PUSH_DEBUG_PREFIX = "[push-debug]";
-const notificationDedupWindowMs = 2000;
+const notificationDedupWindowMs = 8000;
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
   if (pathname.startsWith("/delivery")) return "delivery";
   if (pathname.startsWith("/admin")) return "admin";
   return "user";
+}
+
+function getPushSoundSources(moduleName = normalizeModuleFromPath()) {
+  // Delivery and restaurant should always use the alert tone for FCM pushes.
+  if (moduleName === "delivery" || moduleName === "restaurant") {
+    return [fallbackNotificationSound];
+  }
+  return [pushNotificationSoundPath, fallbackNotificationSound];
 }
 
 function isSupportedBrowser() {
@@ -96,7 +103,10 @@ function wasRecentlyHandled(notificationKey) {
 function ensurePushSoundAudio() {
   if (typeof window === "undefined") return null;
   if (!pushSoundAudio) {
-    const audioUrl = new URL(pushNotificationSoundPath, window.location.origin).toString();
+    const [primarySource] = getPushSoundSources();
+    const audioUrl = primarySource.startsWith("/")
+      ? new URL(primarySource, window.location.origin).toString()
+      : primarySource;
     console.log(PUSH_DEBUG_PREFIX, "Creating primary push audio", { audioUrl });
     pushSoundAudio = new Audio(audioUrl);
     pushSoundAudio.preload = "auto";
@@ -107,11 +117,12 @@ function ensurePushSoundAudio() {
 }
 
 function createPushPlaybackAudio() {
-  const primarySource =
-    typeof window === "undefined"
-      ? pushNotificationSoundPath
-      : new URL(pushNotificationSoundPath, window.location.origin).toString();
-  const audioSources = [primarySource, fallbackNotificationSound];
+  const moduleName = normalizeModuleFromPath();
+  const audioSources = getPushSoundSources(moduleName).map((source) =>
+    typeof window === "undefined" || !source.startsWith("/")
+      ? source
+      : new URL(source, window.location.origin).toString(),
+  );
   console.log(PUSH_DEBUG_PREFIX, "Preparing push playback sources", { audioSources });
   return audioSources.map((source) => {
     const playbackAudio = new Audio(source);
@@ -524,16 +535,11 @@ function attachServiceWorkerMessageListener() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event?.data?.type !== "push-notification-received") return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        console.log(PUSH_DEBUG_PREFIX, "Skipping page notification render for SW relay because tab is hidden");
+        return;
+      }
       console.log(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: event.data.payload });
-      showForegroundNotification(event.data.payload || {});
-    });
-  }
-
-  if (typeof BroadcastChannel !== "undefined") {
-    serviceWorkerBroadcastChannel = new BroadcastChannel("push-notifications");
-    serviceWorkerBroadcastChannel.addEventListener("message", (event) => {
-      if (event?.data?.type !== "push-notification-received") return;
-      console.log(PUSH_DEBUG_PREFIX, "Received BroadcastChannel push message in page", { payload: event.data.payload });
       showForegroundNotification(event.data.payload || {});
     });
   }

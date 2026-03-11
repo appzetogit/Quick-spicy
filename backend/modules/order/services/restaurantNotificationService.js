@@ -369,20 +369,26 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
       updatedAt: new Date()
     });
 
-    try {
-      const pushTokens = extractRestaurantTokens(restaurant);
-      const pushResult = await sendRestaurantPushNotifications(pushTokens, {
-        type: 'order_status_update',
-        title: 'Order Status Updated',
-        body: getRestaurantStatusMessage(status, order.orderId),
-        orderId: order.orderId,
-        orderMongoId: order._id?.toString(),
-        status,
-        targetUrl: `/restaurant/orders/${order._id?.toString() || order.orderId || ''}`
-      });
-      console.log(`📲 Restaurant status push result for ${order.restaurantId}:`, pushResult);
-    } catch (pushError) {
-      console.error(`❌ Restaurant status push failed for ${order.restaurantId}:`, pushError.message);
+    const room = `restaurant:${order.restaurantId}`;
+    const socketsInRoom = await restaurantNamespace.in(room).fetchSockets();
+    if (socketsInRoom.length === 0) {
+      try {
+        const pushTokens = extractRestaurantTokens(restaurant);
+        const pushResult = await sendRestaurantPushNotifications(pushTokens, {
+          type: 'order_status_update',
+          title: 'Order Status Updated',
+          body: getRestaurantStatusMessage(status, order.orderId),
+          orderId: order.orderId,
+          orderMongoId: order._id?.toString(),
+          status,
+          targetUrl: `/restaurant/orders/${order._id?.toString() || order.orderId || ''}`
+        });
+        console.log(`📲 Restaurant status push result for ${order.restaurantId}:`, pushResult);
+      } catch (pushError) {
+        console.error(`❌ Restaurant status push failed for ${order.restaurantId}:`, pushError.message);
+      }
+    } else {
+      console.log(`ℹ️ Skipping restaurant status push for ${order.restaurantId} because socket is connected (${socketsInRoom.length} session(s)).`);
     }
 
     console.log(`📢 Notified restaurant ${order.restaurantId} about order ${order.orderId} status: ${status}`);
