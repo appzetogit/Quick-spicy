@@ -91,11 +91,12 @@ async function loadFirebaseWebConfig() {
     console.log(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
     const visibleClient = await hasVisibleClient();
     if (visibleClient) {
+      // Foreground/visible tab should render the notification itself.
+      // Only relay to page, and never show service-worker notification here.
+      await notifyOpenClients(payload);
       console.log(PUSH_DEBUG_PREFIX, "Skipping service worker notification because app tab is visible");
       return;
     }
-
-    await notifyOpenClients(payload);
 
     if (payload?.notification?.title || payload?.notification?.body) {
       console.log(PUSH_DEBUG_PREFIX, "Skipping manual showNotification because payload already has notification");

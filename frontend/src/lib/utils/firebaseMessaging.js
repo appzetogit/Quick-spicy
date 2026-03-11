@@ -523,6 +523,10 @@ function attachServiceWorkerMessageListener() {
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event?.data?.type !== "push-notification-received") return;
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        console.log(PUSH_DEBUG_PREFIX, "Skipping page notification render for SW relay because tab is hidden");
+        return;
+      }
       console.log(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: event.data.payload });
       showForegroundNotification(event.data.payload || {});
     });
