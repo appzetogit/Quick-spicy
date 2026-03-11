@@ -9214,7 +9214,7 @@ selectedRestaurant?.lng || null,
 
   // Render normal feed view when offline or no gig booked
   return (
-    <div className="min-h-screen bg-[#f6e9dc] overflow-x-hidden flex flex-col" style={{ height: '100vh' }}>
+    <div className="min-h-[100dvh] bg-[#f6e9dc] overflow-x-hidden flex flex-col relative">
       {/* Top Navigation Bar */}
       <FeedNavbar
         isOnline={isOnline}
@@ -10630,7 +10630,7 @@ selectedRestaurant?.lng || null,
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-[120] bg-white"
+            className="absolute inset-0 z-[120] bg-white"
           >
             {/* Ola Maps Container for Directions */}
             <div

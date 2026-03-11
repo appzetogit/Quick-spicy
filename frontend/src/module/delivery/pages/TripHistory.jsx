@@ -10,6 +10,17 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const formatDateForApi = (date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+const parseAmount = (value) => {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount : 0
+}
 
 export default function TripHistory() {
   const navigate = useNavigate()
@@ -39,7 +50,7 @@ export default function TripHistory() {
       try {
         const params = {
           period: activeTab,
-          date: selectedDate.toISOString().split('T')[0],
+          date: formatDateForApi(selectedDate),
           status: selectedTripType !== "ALL TRIPS" ? selectedTripType : undefined,
           limit: 1000
         }
@@ -114,6 +125,49 @@ export default function TripHistory() {
   }
 
   const recentDates = generateRecentDates()
+
+  const getTripDate = (trip) => {
+    const dateValue = trip?.date || trip?.createdAt || trip?.deliveredAt || trip?.cancelledAt
+    return dateValue ? new Date(dateValue) : null
+  }
+
+  const isSameLocalDay = (leftDate, rightDate) => {
+    if (!leftDate || !rightDate) return false
+    return (
+      leftDate.getFullYear() === rightDate.getFullYear() &&
+      leftDate.getMonth() === rightDate.getMonth() &&
+      leftDate.getDate() === rightDate.getDate()
+    )
+  }
+
+  const visibleTrips = activeTab === "daily"
+    ? trips.filter((trip) => isSameLocalDay(getTripDate(trip), selectedDate))
+    : trips
+
+  const dailyMetrics = visibleTrips.reduce((summary, trip) => {
+    const status = String(trip.status || "").toLowerCase()
+    const isCompleted = status === "completed"
+    const paymentMethod = String(trip.paymentMethod || trip.payment?.method || "").toLowerCase()
+    const isCOD = paymentMethod === "cash" || paymentMethod === "cod"
+    const earning = parseAmount(
+      trip.earningAmount ??
+      trip.deliveryEarning ??
+      trip.amount
+    )
+    const codAmount = parseAmount(
+      trip.codCollectedAmount ??
+      trip.codAmount ??
+      trip.orderTotal ??
+      (isCOD ? trip.amount : 0)
+    )
+
+    if (isCompleted) {
+      summary.totalEarnings += earning
+      if (isCOD) summary.codCollected += codAmount
+    }
+
+    return summary
+  }, { totalEarnings: 0, codCollected: 0 })
 
   // Fetch bonus transactions when modal opens
   useEffect(() => {
@@ -328,13 +382,31 @@ export default function TripHistory() {
               Retry
             </button>
           </div>
-        ) : trips.length === 0 ? (
+        ) : visibleTrips.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-500 text-base">No trips found</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {trips.map((trip) => (
+            {activeTab === "daily" && (
+              <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-emerald-700">COD Collected</p>
+                    <p className="text-lg font-bold text-emerald-900">
+                      ₹{dailyMetrics.codCollected.toFixed(2)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-emerald-700">Earnings</p>
+                    <p className="text-lg font-bold text-emerald-900">
+                      ₹{dailyMetrics.totalEarnings.toFixed(2)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            {visibleTrips.map((trip) => (
               <div
                 key={trip.id || trip.orderId}
                 className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
@@ -345,15 +417,15 @@ export default function TripHistory() {
                     <p className="text-sm text-gray-600 mt-1">{trip.restaurant || trip.restaurantName || 'Unknown Restaurant'}</p>
                     {/* Payment Method Badge */}
                     {(() => {
-                      const paymentMethod = trip.paymentMethod || trip.payment?.method || 'razorpay';
-                      const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod';
+                      const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'razorpay').toLowerCase()
+                      const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod'
                       return (
                         <span className={`inline-block mt-2 text-xs font-medium px-2 py-1 rounded-full ${
                           isCOD ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
                         }`}>
                           {isCOD ? 'COD' : 'Online'}
                         </span>
-                      );
+                      )
                     })()}
                   </div>
                   <span className={`text-sm font-medium ${
@@ -364,16 +436,36 @@ export default function TripHistory() {
                     {trip.status}
                   </span>
                 </div>
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                {(() => {
+                  const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'razorpay').toLowerCase()
+                  const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod'
+                  const status = String(trip.status || "").toLowerCase()
+                  const isCompleted = status === "completed"
+
+                  const codAmount = isCOD
+                    ? parseAmount(trip.codCollectedAmount ?? trip.codAmount ?? trip.orderTotal ?? trip.totalAmount ?? 0)
+                    : 0
+                  const earningAmount = isCompleted
+                    ? parseAmount(trip.earningAmount ?? trip.deliveryEarning ?? trip.amount ?? 0)
+                    : 0
+
+                  return (
+                <div className="grid grid-cols-3 gap-3 mt-3 pt-3 border-t border-gray-100">
                   <div>
                     <p className="text-xs text-gray-500">Time</p>
                     <p className="text-sm font-medium text-black mt-1">{trip.time}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-gray-500">Amount</p>
-                    <p className="text-sm font-semibold text-black mt-1">₹{trip.amount}</p>
+                    <p className="text-xs text-gray-500">COD</p>
+                    <p className="text-sm font-semibold text-black mt-1">₹{codAmount.toFixed(2)}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500">Earning</p>
+                    <p className="text-sm font-semibold text-black mt-1">₹{earningAmount.toFixed(2)}</p>
                   </div>
                 </div>
+                  )
+                })()}
               </div>
             ))}
           </div>
