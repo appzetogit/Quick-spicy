@@ -1,6 +1,8 @@
-﻿import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import io from "socket.io-client"
 import { FileText, Calendar, Package } from "lucide-react"
 import { adminAPI } from "@/lib/api"
+import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import OrdersTopbar from "../../components/orders/OrdersTopbar"
 import OrdersTable from "../../components/orders/OrdersTable"
@@ -11,6 +13,7 @@ import RefundModal from "../../components/orders/RefundModal"
 import { useOrdersManagement } from "../../components/orders/useOrdersManagement"
 import { Loader2 } from "lucide-react"
 import alertSound from "@/assets/audio/alert.mp3"
+import originalSound from "@/assets/audio/original.mp3"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -44,16 +47,71 @@ export default function OrdersPage({ statusKey = "all" }) {
   const seenOrderIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
   const fallbackAudioRef = useRef(null)
+  const notificationAudioRef = useRef(null)
   const audioContextRef = useRef(null)
   const audioUnlockedRef = useRef(false)
+  const socketRef = useRef(null)
+  const recentRealtimeOrderRef = useRef(new Map())
+  const activeOrderAlertRef = useRef(null)
+  const alertLoopTimerRef = useRef(null)
+  const alertLoopStartedAtRef = useRef(0)
+  const ALERT_LOOP_INTERVAL_MS = 4500
+  const ALERT_LOOP_MAX_MS = 120000
+
+  const resolveAudioSource = useCallback((source, cacheKey = "admin-alert") => {
+    if (!source) return source
+    if (!import.meta.env.DEV) return source
+    const separator = source.includes("?") ? "&" : "?"
+    return `${source}${separator}devcache=${cacheKey}`
+  }, [])
+
+  const playDeliveryStyleBuzz = useCallback(async () => {
+    const selectedSound = localStorage.getItem("delivery_alert_sound") || "zomato_tone"
+    const soundFile = selectedSound === "original"
+      ? resolveAudioSource(originalSound, "admin-original")
+      : resolveAudioSource(alertSound, "admin-alert")
+
+    try {
+      if (!notificationAudioRef.current) {
+        notificationAudioRef.current = new Audio(soundFile)
+        notificationAudioRef.current.preload = "auto"
+        notificationAudioRef.current.volume = 1
+      } else if (!notificationAudioRef.current.src.includes(soundFile.split("/").pop())) {
+        notificationAudioRef.current.pause()
+        notificationAudioRef.current.src = soundFile
+        notificationAudioRef.current.load()
+      }
+
+      if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+        navigator.vibrate([200, 100, 200, 100, 300])
+      }
+
+      notificationAudioRef.current.muted = false
+      notificationAudioRef.current.volume = 1
+      notificationAudioRef.current.currentTime = 0
+      await notificationAudioRef.current.play()
+      return true
+    } catch (_) {
+      return false
+    }
+  }, [resolveAudioSource])
 
   const playDefaultRing = useCallback(() => {
-    try {
-      if (!fallbackAudioRef.current) {
-        fallbackAudioRef.current = new Audio(alertSound)
-        fallbackAudioRef.current.preload = "auto"
+    playDeliveryStyleBuzz().then((played) => {
+      if (played) return
+
+      try {
+        if (!fallbackAudioRef.current) {
+          fallbackAudioRef.current = new Audio(alertSound)
+          fallbackAudioRef.current.preload = "auto"
+          fallbackAudioRef.current.volume = 1
+        }
+
+        fallbackAudioRef.current.muted = false
         fallbackAudioRef.current.volume = 1
-      }
+        fallbackAudioRef.current.currentTime = 0
+        fallbackAudioRef.current.play().catch(() => {})
+      } catch (_) {}
 
       const AudioCtx = window.AudioContext || window.webkitAudioContext
       if (AudioCtx) {
@@ -100,14 +158,66 @@ export default function OrdersPage({ statusKey = "all" }) {
         })
         return
       }
-
-      if (fallbackAudioRef.current) {
-        fallbackAudioRef.current.currentTime = 0
-        fallbackAudioRef.current.play().catch(() => {})
-      }
-    } catch (error) {
+    }).catch((error) => {
       debugWarn("Ring sound could not be played:", error)
+    })
+  }, [playDeliveryStyleBuzz])
+
+  const stopAlertLoop = useCallback(() => {
+    if (alertLoopTimerRef.current) {
+      clearInterval(alertLoopTimerRef.current)
+      alertLoopTimerRef.current = null
     }
+    alertLoopStartedAtRef.current = 0
+  }, [])
+
+  const startAlertLoop = useCallback(() => {
+    stopAlertLoop()
+    alertLoopStartedAtRef.current = Date.now()
+
+    alertLoopTimerRef.current = setInterval(() => {
+      const elapsed = Date.now() - alertLoopStartedAtRef.current
+      if (elapsed >= ALERT_LOOP_MAX_MS || !activeOrderAlertRef.current) {
+        stopAlertLoop()
+        return
+      }
+
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+        playDefaultRing()
+      }
+    }, ALERT_LOOP_INTERVAL_MS)
+  }, [playDefaultRing, stopAlertLoop])
+
+  const showBrowserNotification = useCallback(async (title, body, tag) => {
+    if (typeof window === "undefined" || typeof Notification === "undefined") return
+    if (Notification.permission !== "granted") return
+
+    try {
+      const options = {
+        body,
+        tag: tag || undefined,
+        renotify: true,
+        requireInteraction: true,
+        silent: false,
+        vibrate: [200, 100, 200, 100, 300],
+        icon: "/favicon.ico",
+        data: { targetUrl: "/admin/orders/all" },
+      }
+
+      if ("serviceWorker" in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration()
+        if (registration) {
+          await registration.showNotification(title, options)
+          return
+        }
+      }
+
+      const notification = new Notification(title, options)
+      notification.onclick = () => {
+        window.focus()
+        notification.close()
+      }
+    } catch (_) {}
   }, [])
 
   // Unlock audio on first user gesture so rings can play reliably later
@@ -128,6 +238,21 @@ export default function OrdersPage({ statusKey = "all" }) {
         fallbackAudioRef.current.pause()
         fallbackAudioRef.current.currentTime = 0
         fallbackAudioRef.current.muted = false
+
+        if (!notificationAudioRef.current) {
+          const selectedSound = localStorage.getItem("delivery_alert_sound") || "zomato_tone"
+          const soundFile = selectedSound === "original"
+            ? resolveAudioSource(originalSound, "admin-original")
+            : resolveAudioSource(alertSound, "admin-alert")
+          notificationAudioRef.current = new Audio(soundFile)
+          notificationAudioRef.current.preload = "auto"
+          notificationAudioRef.current.volume = 1
+        }
+        notificationAudioRef.current.muted = true
+        await notificationAudioRef.current.play()
+        notificationAudioRef.current.pause()
+        notificationAudioRef.current.currentTime = 0
+        notificationAudioRef.current.muted = false
 
         // Prime WebAudio permission
         const AudioCtx = window.AudioContext || window.webkitAudioContext
@@ -150,21 +275,38 @@ export default function OrdersPage({ statusKey = "all" }) {
     window.addEventListener("pointerdown", unlockAudio, { passive: true })
     window.addEventListener("keydown", unlockAudio)
     window.addEventListener("touchstart", unlockAudio, { passive: true })
+    document.addEventListener("click", unlockAudio, { passive: true })
+    document.addEventListener("touchstart", unlockAudio, { passive: true })
 
     return () => {
       window.removeEventListener("pointerdown", unlockAudio)
       window.removeEventListener("keydown", unlockAudio)
       window.removeEventListener("touchstart", unlockAudio)
+      document.removeEventListener("click", unlockAudio)
+      document.removeEventListener("touchstart", unlockAudio)
     }
   }, [])
 
   useEffect(() => {
     return () => {
+      stopAlertLoop()
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
         audioContextRef.current.close().catch(() => {})
       }
+      if (notificationAudioRef.current) {
+        notificationAudioRef.current.pause()
+        notificationAudioRef.current = null
+      }
     }
-  }, [])
+  }, [stopAlertLoop])
+
+  useEffect(() => {
+    if (statusKey !== "all") return
+    if (typeof window === "undefined" || typeof Notification === "undefined") return
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {})
+    }
+  }, [statusKey])
 
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
@@ -198,7 +340,16 @@ export default function OrdersPage({ statusKey = "all" }) {
             (id) => !seenOrderIdsRef.current.has(id),
           )
           if (hasNewOrder) {
+            activeOrderAlertRef.current = { orderId: "polling-new-order" }
             playDefaultRing()
+            startAlertLoop()
+            if (typeof document !== "undefined" && document.visibilityState === "hidden") {
+              showBrowserNotification(
+                "New order received",
+                "A new order arrived",
+                `admin-order-poll-${Date.now()}`,
+              )
+            }
             toast.info("New order received")
           }
         }
@@ -220,7 +371,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       if (!silent) setIsLoading(false)
     }
-  }, [statusKey, playDefaultRing])
+  }, [statusKey, playDefaultRing, showBrowserNotification, startAlertLoop])
 
   useEffect(() => {
     isFirstLoadRef.current = true
@@ -237,6 +388,79 @@ export default function OrdersPage({ statusKey = "all" }) {
 
     return () => clearInterval(pollId)
   }, [statusKey, fetchOrders])
+
+  useEffect(() => {
+    if (statusKey !== "all") return undefined
+
+    const backendUrl = API_BASE_URL.replace(/\/api\/?$/, "")
+    const socket = io(backendUrl, {
+      transports: ["websocket", "polling"],
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
+    })
+    socketRef.current = socket
+
+    const handleIncomingRealtimeOrder = (payload = {}) => {
+      const orderId = payload?.orderId || payload?.orderMongoId || ""
+      if (!orderId) {
+        fetchOrders({ silent: true, withRingCheck: false })
+        return
+      }
+
+      const now = Date.now()
+      const lastHandledAt = recentRealtimeOrderRef.current.get(orderId) || 0
+      if (now - lastHandledAt < 8000) return
+      recentRealtimeOrderRef.current.set(orderId, now)
+
+      const title = "New order received"
+      const body = payload?.restaurantName
+        ? `${payload.restaurantName} • ${orderId}`
+        : `Order ${orderId}`
+
+      activeOrderAlertRef.current = payload || { orderId }
+      playDefaultRing()
+      startAlertLoop()
+      toast.info(title, { description: body })
+      showBrowserNotification(title, body, `admin-order-${orderId}`)
+      fetchOrders({ silent: true, withRingCheck: false })
+    }
+
+    socket.on("connect", () => {
+      socket.emit("join-admin-orders")
+    })
+    socket.on("admin_new_order", handleIncomingRealtimeOrder)
+    socket.on("play_notification_sound", handleIncomingRealtimeOrder)
+
+    return () => {
+      socket.off("admin_new_order", handleIncomingRealtimeOrder)
+      socket.off("play_notification_sound", handleIncomingRealtimeOrder)
+      socket.disconnect()
+      socketRef.current = null
+    }
+  }, [statusKey, fetchOrders, playDefaultRing, showBrowserNotification, startAlertLoop])
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (typeof document === "undefined") return
+      if (document.visibilityState !== "hidden") return
+      if (!activeOrderAlertRef.current) return
+
+      playDefaultRing()
+      showBrowserNotification(
+        "New order received",
+        "A new order arrived",
+        `admin-order-hidden-${Date.now()}`,
+      )
+    }
+
+    document.addEventListener("visibilitychange", onVisibilityChange)
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [playDefaultRing, showBrowserNotification])
 
   const handleAcceptOrder = async (order) => {
     const orderIdToUse = order.id || order._id || order.orderId

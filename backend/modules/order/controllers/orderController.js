@@ -8,6 +8,7 @@ import winston from 'winston';
 import { calculateOrderPricing } from '../services/orderCalculationService.js';
 import { getRazorpayCredentials } from '../../../shared/utils/envService.js';
 import { notifyRestaurantNewOrder } from '../services/restaurantNotificationService.js';
+import { notifyAdminNewOrder } from '../services/adminNotificationService.js';
 import { calculateOrderSettlement } from '../services/orderSettlementService.js';
 import { holdEscrow } from '../services/escrowWalletService.js';
 import { processCancellationRefund } from '../services/cancellationRefundService.js';
@@ -652,6 +653,16 @@ export const createOrder = async (req, res) => {
           logger.error('❌ Error notifying restaurant about wallet payment order:', notifyError);
         }
 
+        try {
+          const notifyAdminResult = await notifyAdminNewOrder(order);
+          logger.info('✅ Wallet payment order notification sent to admin', {
+            orderId: order.orderId,
+            notifyAdminResult
+          });
+        } catch (adminNotifyError) {
+          logger.error('❌ Error notifying admin about wallet payment order:', adminNotifyError);
+        }
+
         // Respond to client
         return res.status(201).json({
           success: true,
@@ -733,6 +744,19 @@ export const createOrder = async (req, res) => {
         logger.error('❌ Error notifying restaurant about COD order (order still created):', {
           error: notifyError.message,
           stack: notifyError.stack
+        });
+      }
+
+      try {
+        const notifyAdminResult = await notifyAdminNewOrder(order);
+        logger.info('✅ COD order notification sent to admin', {
+          orderId: order.orderId,
+          notifyAdminResult
+        });
+      } catch (adminNotifyError) {
+        logger.error('❌ Error notifying admin about COD order (order still created):', {
+          error: adminNotifyError.message,
+          stack: adminNotifyError.stack
         });
       }
 
@@ -1012,6 +1036,21 @@ export const verifyOrderPayment = async (req, res) => {
       // Don't fail payment verification if notification fails
       // Order is still saved and restaurant can fetch it via API
       // But log it as critical for debugging
+    }
+
+    try {
+      const notifyAdminResult = await notifyAdminNewOrder(order);
+      logger.info('✅ Online payment verified order notification sent to admin', {
+        orderId: order.orderId,
+        notifyAdminResult
+      });
+    } catch (adminNotifyError) {
+      logger.error('❌ Error notifying admin after payment verification:', {
+        error: adminNotifyError.message,
+        stack: adminNotifyError.stack,
+        orderId: order.orderId,
+        orderMongoId: order._id?.toString()
+      });
     }
 
     logger.info(`Order payment verified: ${order.orderId}`, {

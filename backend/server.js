@@ -559,6 +559,11 @@ function toFiniteNumber(value) {
 io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
+  socket.on('join-admin-orders', () => {
+    socket.join('admin:orders');
+    console.log(`🛎️ Admin client joined room: admin:orders (${socket.id})`);
+  });
+
   const getTrackedOrderAndIds = async (rawOrderId) => {
     if (!rawOrderId) return { order: null, trackingIds: [] };
     const inputId = String(rawOrderId).trim();
