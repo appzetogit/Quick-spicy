@@ -92,6 +92,16 @@ export default function DeliveryRouter() {
         <Route
           element={
             <ProtectedRoute>
+              <DeliveryLayout showGig={true} showPocket={true}>
+                <PocketPage />
+              </DeliveryLayout>
+            </ProtectedRoute>
+          }
+          path="/pocket"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
               <DeliveryLayout showGig={true}>
                 <GigBooking />
               </DeliveryLayout>
@@ -431,4 +441,3 @@ export default function DeliveryRouter() {
     </Suspense>
   )
 }
-
