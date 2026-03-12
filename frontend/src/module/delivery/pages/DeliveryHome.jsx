@@ -4715,6 +4715,76 @@ export default function DeliveryHome() {
     return true
   }, [])
 
+  const openGoogleMapsNavigation = useCallback((destination, options = {}) => {
+    const { label = "destination", fallbackAddress = "" } = options
+    const lat = Number(destination?.lat)
+    const lng = Number(destination?.lng)
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng)
+    const addressText = String(fallbackAddress || "").trim()
+    const destinationParam = hasCoords
+      ? `${lat},${lng}`
+      : (addressText ? encodeURIComponent(addressText) : "")
+
+    if (!destinationParam) {
+      toast.error(`Unable to open map. ${label} location not available.`)
+      return false
+    }
+
+    // Use Search URL instead of forced navigation/bicycling to avoid:
+    // - "No routes found" for unsupported travel modes
+    // - intent:// launch failures in browser/device emulation
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${destinationParam}`
+
+    const popup = window.open(mapsUrl, "_blank", "noopener,noreferrer")
+    if (!popup) {
+      window.location.href = mapsUrl
+    }
+
+    toast.success("Opening Google Maps", { duration: 1600 })
+    return true
+  }, [])
+
+  const getRestaurantNavigationTarget = useCallback((restaurantInfo) => {
+    const fromPrimary = {
+      lat: toFiniteCoordinate(restaurantInfo?.lat),
+      lng: toFiniteCoordinate(restaurantInfo?.lng)
+    }
+
+    if (Number.isFinite(fromPrimary.lat) && Number.isFinite(fromPrimary.lng)) {
+      return fromPrimary
+    }
+
+    const coords = restaurantInfo?.restaurantId?.location?.coordinates
+    const latFromCoords = toFiniteCoordinate(coords?.[1])
+    const lngFromCoords = toFiniteCoordinate(coords?.[0])
+    if (Number.isFinite(latFromCoords) && Number.isFinite(lngFromCoords)) {
+      return { lat: latFromCoords, lng: lngFromCoords }
+    }
+
+    const nestedRestaurantCoords = restaurantInfo?.restaurant?.location?.coordinates
+    const nestedRestaurantLat = toFiniteCoordinate(nestedRestaurantCoords?.[1])
+    const nestedRestaurantLng = toFiniteCoordinate(nestedRestaurantCoords?.[0])
+    if (Number.isFinite(nestedRestaurantLat) && Number.isFinite(nestedRestaurantLng)) {
+      return { lat: nestedRestaurantLat, lng: nestedRestaurantLng }
+    }
+
+    // Final fallback for pickup flow: end-point of the currently active route.
+    // For pickup route, last leg end_location is the restaurant.
+    const currentDirections = directionsResponseRef.current
+    const legs = currentDirections?.routes?.[0]?.legs
+    const lastLeg = Array.isArray(legs) && legs.length > 0 ? legs[legs.length - 1] : null
+    const endLocation = lastLeg?.end_location
+    if (endLocation) {
+      const routeEndLat = typeof endLocation.lat === 'function' ? endLocation.lat() : Number(endLocation.lat)
+      const routeEndLng = typeof endLocation.lng === 'function' ? endLocation.lng() : Number(endLocation.lng)
+      if (Number.isFinite(routeEndLat) && Number.isFinite(routeEndLng)) {
+        return { lat: routeEndLat, lng: routeEndLng }
+      }
+    }
+
+    return null
+  }, [])
+
   // Show new order popup when order is received from Socket.IO
   useEffect(() => {
     if (newOrder) {
@@ -10975,66 +11045,17 @@ selectedRestaurant?.lng || null,
             </button>
             <button 
               onClick={() => {
-                // Get restaurant location coordinates
-                const restaurantLat = selectedRestaurant?.lat
-                const restaurantLng = selectedRestaurant?.lng
-                
-                if (!restaurantLat || !restaurantLng) {
-                  toast.error('Restaurant location not available')
-                  debugError('❌ Restaurant coordinates not found:', { 
-                    lat: restaurantLat, 
-                    lng: restaurantLng,
-                    selectedRestaurant 
-                  })
-                  return
-                }
+                const target = getRestaurantNavigationTarget(selectedRestaurant)
+                const addressFallback =
+                  selectedRestaurant?.address ||
+                  selectedRestaurant?.restaurantAddress ||
+                  selectedRestaurant?.restaurantId?.location?.formattedAddress ||
+                  selectedRestaurant?.restaurantId?.location?.address ||
+                  ""
 
-                debugLog('🗺️ Opening Google Maps navigation to restaurant:', { 
-                  lat: restaurantLat, 
-                  lng: restaurantLng,
-                  name: selectedRestaurant?.name 
-                })
-
-                // Detect platform (Android or iOS)
-                const userAgent = navigator.userAgent || navigator.vendor || window.opera
-                const isAndroid = /android/i.test(userAgent)
-                const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
-
-                let mapsUrl = ''
-
-                if (isAndroid) {
-                  // Android: Use google.navigation: scheme (opens directly in navigation mode)
-                  mapsUrl = `google.navigation:q=${restaurantLat},${restaurantLng}&mode=b`
-                  
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-                  
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else if (isIOS) {
-                  // iOS: Use comgooglemaps:// scheme (opens Google Maps app)
-                  mapsUrl = `comgooglemaps://?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-                  
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-                  
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    const webUrl = `https://maps.google.com/?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else {
-                  // Web/Desktop: Use web URL with navigation
-                  mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
-                  window.open(mapsUrl, '_blank')
-                }
-
-                // Show success message
-                toast.success('Opening Google Maps navigation 🗺️', {
-                  duration: 2000
+                openGoogleMapsNavigation(target, {
+                  label: "restaurant",
+                  fallbackAddress: addressFallback
                 })
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
@@ -11309,7 +11330,16 @@ selectedRestaurant?.lng || null,
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+            <button
+              onClick={() => {
+                const customerDestination = getCustomerDestination(selectedRestaurant)
+                openGoogleMapsNavigation(customerDestination, {
+                  label: "customer",
+                  fallbackAddress: selectedRestaurant?.customerAddress || ""
+                })
+              }}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
               <MapPin className="w-5 h-5 text-white" />
               <span className="text-white font-medium">Map</span>
             </button>
