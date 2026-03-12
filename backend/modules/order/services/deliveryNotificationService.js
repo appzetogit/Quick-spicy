@@ -19,7 +19,7 @@ async function getIOInstance() {
 
 function isOrderEligibleForDeliveryDispatch(order) {
   const status = String(order?.status || '').toLowerCase();
-  return ['preparing', 'ready'].includes(status);
+  return status === 'ready';
 }
 
 function normalizePaymentMethod(value) {

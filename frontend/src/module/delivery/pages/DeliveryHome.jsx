@@ -71,6 +71,7 @@ const DROP_REACHED_THRESHOLD_METERS = 90
 const ROUTE_OFF_TRACK_THRESHOLD_METERS = 40
 const DELIVERY_LOCATION_SEND_INTERVAL_MS = 3000
 const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
+const BILL_UPLOAD_TIMEOUT_MS = 45000
 
 
 // Ola Maps API Key removed
@@ -707,6 +708,7 @@ export default function DeliveryHome() {
   const [billImageUrl, setBillImageUrl] = useState(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
   const [billImageUploaded, setBillImageUploaded] = useState(false)
+  const billUploadRequestIdRef = useRef(0)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const [orderDeliveredButtonProgress, setOrderDeliveredButtonProgress] = useState(0)
@@ -3809,9 +3811,16 @@ export default function DeliveryHome() {
   // Process bill image file (extracted from handleBillImageSelect for reuse)
   const processBillImageFile = async (file) => {
     if (!file) return
+    if (isUploadingBill) {
+      toast.info('Bill upload already in progress')
+      return
+    }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const mimeType = String(file.type || '').toLowerCase()
+    const fileName = String(file.name || '').toLowerCase()
+    const looksLikeImageByName = /\.(jpg|jpeg|png|webp|heic|heif)$/.test(fileName)
+    if (!(mimeType.startsWith('image/') || looksLikeImageByName)) {
       toast.error('Please select an image file')
       return
     }
@@ -3823,14 +3832,24 @@ export default function DeliveryHome() {
     }
 
     setIsUploadingBill(true)
+    const requestId = ++billUploadRequestIdRef.current
 
     try {
       debugLog('📸 Uploading bill image to Cloudinary...')
       
       // Upload to Cloudinary via backend
-      const uploadResponse = await uploadAPI.uploadMedia(file, {
-        folder: 'appzeto/delivery/bills'
-      })
+      const uploadResponse = await Promise.race([
+        uploadAPI.uploadMedia(file, {
+          folder: 'appzeto/delivery/bills'
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('BILL_UPLOAD_TIMEOUT')), BILL_UPLOAD_TIMEOUT_MS)
+        )
+      ])
+
+      if (requestId !== billUploadRequestIdRef.current) {
+        return
+      }
 
       if (uploadResponse?.data?.success && uploadResponse?.data?.data) {
         const imageUrl = uploadResponse.data.data.url || uploadResponse.data.data.secure_url
@@ -3853,14 +3872,20 @@ export default function DeliveryHome() {
       }
     } catch (error) {
       debugError('❌ Error uploading bill image:', error)
-      toast.error('Failed to upload bill image. Please try again.')
+      if (error?.message === 'BILL_UPLOAD_TIMEOUT') {
+        toast.error('Bill upload timed out. Please check internet and try again.')
+      } else {
+        toast.error('Failed to upload bill image. Please try again.')
+      }
       setBillImageUrl(null)
       setBillImageUploaded(false)
     } finally {
-      setIsUploadingBill(false)
-      // Reset file input
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = ''
+      if (requestId === billUploadRequestIdRef.current) {
+        setIsUploadingBill(false)
+        // Reset file input
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = ''
+        }
       }
     }
   }
@@ -4788,6 +4813,16 @@ export default function DeliveryHome() {
   // Show new order popup when order is received from Socket.IO
   useEffect(() => {
     if (newOrder) {
+      const incomingStatus = String(newOrder?.status || '').toLowerCase().trim()
+      if (incomingStatus && incomingStatus !== 'ready') {
+        debugLog('⏭️ Ignoring delivery notification before restaurant ready:', {
+          orderId: newOrder?.orderId || newOrder?.orderMongoId || newOrder?._id,
+          status: incomingStatus
+        })
+        clearNewOrder()
+        return
+      }
+
       const orderId = newOrder.orderMongoId || newOrder.orderId;
       
       // Check if this order has already been accepted
@@ -4907,7 +4942,7 @@ export default function DeliveryHome() {
       setShowNewOrderPopup(true)
       setCountdownSeconds(300) // Reset countdown to 5 minutes
     }
-  }, [newOrder, calculateTimeAway, riderLocation])
+  }, [newOrder, calculateTimeAway, riderLocation, clearNewOrder])
 
   // Recalculate distance when rider location becomes available
   useEffect(() => {
@@ -5213,9 +5248,15 @@ export default function DeliveryHome() {
         const pendingOrders = orders.filter(order => {
           const orderStatus = order.status
           const deliveryPhase = order.deliveryState?.currentPhase
+          const isUnassignedOrder = !order?.deliveryPartnerId
           
           // Skip if already delivered or completed
           if (orderStatus === 'delivered' || deliveryPhase === 'completed') {
+            return false
+          }
+
+          // For unassigned discover orders, show only restaurant-ready orders.
+          if (isUnassignedOrder && orderStatus !== 'ready') {
             return false
           }
           
