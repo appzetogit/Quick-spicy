@@ -52,6 +52,7 @@ import {
   buildVisibleRouteFromRiderPosition,
   decodePolyline,
   extractPolylineFromDirections,
+  trimPolylineFromDistanceAlongRoute,
   calculateBearing,
   animateMarker,
   calculateDistance
@@ -70,6 +71,7 @@ const DROP_REACHED_THRESHOLD_METERS = 90
 const ROUTE_OFF_TRACK_THRESHOLD_METERS = 40
 const DELIVERY_LOCATION_SEND_INTERVAL_MS = 3000
 const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
+const BILL_UPLOAD_TIMEOUT_MS = 45000
 
 
 // Ola Maps API Key removed
@@ -486,6 +488,11 @@ export default function DeliveryHome() {
   const liveTrackingPolylineRef = useRef(null) // Google Maps Polyline instance for live tracking
   const liveTrackingPolylineShadowRef = useRef(null) // Shadow/outline polyline for better visibility (Zomato/Rapido style)
   const fullRoutePolylineRef = useRef([]) // Store full decoded polyline from Directions API
+  const liveRouteProgressRef = useRef({
+    routeKey: null,
+    distanceAlongRoute: 0,
+    updatedAt: 0
+  }) // Keep route progress monotonic so polyline never jumps/cuts
   const lastRiderPositionRef = useRef(null) // Last rider position for smooth animation
   const markerAnimationCancelRef = useRef(null) // Cancel function for marker animation
   const directionsResponseRef = useRef(null) // Store directions response for use in callbacks
@@ -701,6 +708,7 @@ export default function DeliveryHome() {
   const [billImageUrl, setBillImageUrl] = useState(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
   const [billImageUploaded, setBillImageUploaded] = useState(false)
+  const billUploadRequestIdRef = useRef(0)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
   const [orderDeliveredButtonProgress, setOrderDeliveredButtonProgress] = useState(0)
@@ -3803,9 +3811,16 @@ export default function DeliveryHome() {
   // Process bill image file (extracted from handleBillImageSelect for reuse)
   const processBillImageFile = async (file) => {
     if (!file) return
+    if (isUploadingBill) {
+      toast.info('Bill upload already in progress')
+      return
+    }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const mimeType = String(file.type || '').toLowerCase()
+    const fileName = String(file.name || '').toLowerCase()
+    const looksLikeImageByName = /\.(jpg|jpeg|png|webp|heic|heif)$/.test(fileName)
+    if (!(mimeType.startsWith('image/') || looksLikeImageByName)) {
       toast.error('Please select an image file')
       return
     }
@@ -3817,14 +3832,24 @@ export default function DeliveryHome() {
     }
 
     setIsUploadingBill(true)
+    const requestId = ++billUploadRequestIdRef.current
 
     try {
       debugLog('📸 Uploading bill image to Cloudinary...')
       
       // Upload to Cloudinary via backend
-      const uploadResponse = await uploadAPI.uploadMedia(file, {
-        folder: 'appzeto/delivery/bills'
-      })
+      const uploadResponse = await Promise.race([
+        uploadAPI.uploadMedia(file, {
+          folder: 'appzeto/delivery/bills'
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('BILL_UPLOAD_TIMEOUT')), BILL_UPLOAD_TIMEOUT_MS)
+        )
+      ])
+
+      if (requestId !== billUploadRequestIdRef.current) {
+        return
+      }
 
       if (uploadResponse?.data?.success && uploadResponse?.data?.data) {
         const imageUrl = uploadResponse.data.data.url || uploadResponse.data.data.secure_url
@@ -3847,14 +3872,20 @@ export default function DeliveryHome() {
       }
     } catch (error) {
       debugError('❌ Error uploading bill image:', error)
-      toast.error('Failed to upload bill image. Please try again.')
+      if (error?.message === 'BILL_UPLOAD_TIMEOUT') {
+        toast.error('Bill upload timed out. Please check internet and try again.')
+      } else {
+        toast.error('Failed to upload bill image. Please try again.')
+      }
       setBillImageUrl(null)
       setBillImageUploaded(false)
     } finally {
-      setIsUploadingBill(false)
-      // Reset file input
-      if (cameraInputRef.current) {
-        cameraInputRef.current.value = ''
+      if (requestId === billUploadRequestIdRef.current) {
+        setIsUploadingBill(false)
+        // Reset file input
+        if (cameraInputRef.current) {
+          cameraInputRef.current.value = ''
+        }
       }
     }
   }
@@ -4709,10 +4740,96 @@ export default function DeliveryHome() {
     return true
   }, [])
 
+  const openGoogleMapsNavigation = useCallback((destination, options = {}) => {
+    const { label = "destination", fallbackAddress = "" } = options
+    const lat = Number(destination?.lat)
+    const lng = Number(destination?.lng)
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng)
+    const addressText = String(fallbackAddress || "").trim()
+    const destinationParam = hasCoords
+      ? `${lat},${lng}`
+      : (addressText ? encodeURIComponent(addressText) : "")
+
+    if (!destinationParam) {
+      toast.error(`Unable to open map. ${label} location not available.`)
+      return false
+    }
+
+    // Use Search URL instead of forced navigation/bicycling to avoid:
+    // - "No routes found" for unsupported travel modes
+    // - intent:// launch failures in browser/device emulation
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${destinationParam}`
+
+    const popup = window.open(mapsUrl, "_blank", "noopener,noreferrer")
+    if (!popup) {
+      window.location.href = mapsUrl
+    }
+
+    toast.success("Opening Google Maps", { duration: 1600 })
+    return true
+  }, [])
+
+  const getRestaurantNavigationTarget = useCallback((restaurantInfo) => {
+    const fromPrimary = {
+      lat: toFiniteCoordinate(restaurantInfo?.lat),
+      lng: toFiniteCoordinate(restaurantInfo?.lng)
+    }
+
+    if (Number.isFinite(fromPrimary.lat) && Number.isFinite(fromPrimary.lng)) {
+      return fromPrimary
+    }
+
+    const coords = restaurantInfo?.restaurantId?.location?.coordinates
+    const latFromCoords = toFiniteCoordinate(coords?.[1])
+    const lngFromCoords = toFiniteCoordinate(coords?.[0])
+    if (Number.isFinite(latFromCoords) && Number.isFinite(lngFromCoords)) {
+      return { lat: latFromCoords, lng: lngFromCoords }
+    }
+
+    const nestedRestaurantCoords = restaurantInfo?.restaurant?.location?.coordinates
+    const nestedRestaurantLat = toFiniteCoordinate(nestedRestaurantCoords?.[1])
+    const nestedRestaurantLng = toFiniteCoordinate(nestedRestaurantCoords?.[0])
+    if (Number.isFinite(nestedRestaurantLat) && Number.isFinite(nestedRestaurantLng)) {
+      return { lat: nestedRestaurantLat, lng: nestedRestaurantLng }
+    }
+
+    // Final fallback for pickup flow: end-point of the currently active route.
+    // For pickup route, last leg end_location is the restaurant.
+    const currentDirections = directionsResponseRef.current
+    const legs = currentDirections?.routes?.[0]?.legs
+    const lastLeg = Array.isArray(legs) && legs.length > 0 ? legs[legs.length - 1] : null
+    const endLocation = lastLeg?.end_location
+    if (endLocation) {
+      const routeEndLat = typeof endLocation.lat === 'function' ? endLocation.lat() : Number(endLocation.lat)
+      const routeEndLng = typeof endLocation.lng === 'function' ? endLocation.lng() : Number(endLocation.lng)
+      if (Number.isFinite(routeEndLat) && Number.isFinite(routeEndLng)) {
+        return { lat: routeEndLat, lng: routeEndLng }
+      }
+    }
+
+    return null
+  }, [])
+
   // Show new order popup when order is received from Socket.IO
   useEffect(() => {
     if (newOrder) {
-      const orderId = newOrder.orderMongoId || newOrder.orderId;
+      const incomingStatus = String(newOrder?.status || '').toLowerCase().trim()
+      const isDispatchableStatus = !incomingStatus || incomingStatus === 'preparing' || incomingStatus === 'ready'
+      if (!isDispatchableStatus) {
+        debugLog('⏭️ Ignoring non-dispatchable delivery notification status:', {
+          orderId: newOrder?.orderId || newOrder?.orderMongoId || newOrder?._id,
+          status: incomingStatus
+        })
+        clearNewOrder()
+        return
+      }
+
+      const orderId =
+        newOrder.orderMongoId ||
+        newOrder.mongoId ||
+        newOrder.id ||
+        newOrder._id ||
+        newOrder.orderId;
       
       // Check if this order has already been accepted
       if (acceptedOrderIdsRef.current.has(orderId)) {
@@ -4805,7 +4922,12 @@ export default function DeliveryHome() {
       }
 
       const restaurantData = {
-        id: newOrder.orderMongoId || newOrder.orderId,
+        id:
+          newOrder.orderMongoId ||
+          newOrder.mongoId ||
+          newOrder.id ||
+          newOrder._id ||
+          newOrder.orderId,
         orderId: newOrder.orderId,
         name: newOrder.restaurantName,
         address: restaurantAddress,
@@ -4831,7 +4953,7 @@ export default function DeliveryHome() {
       setShowNewOrderPopup(true)
       setCountdownSeconds(300) // Reset countdown to 5 minutes
     }
-  }, [newOrder, calculateTimeAway, riderLocation])
+  }, [newOrder, calculateTimeAway, riderLocation, clearNewOrder])
 
   // Recalculate distance when rider location becomes available
   useEffect(() => {
@@ -5137,9 +5259,15 @@ export default function DeliveryHome() {
         const pendingOrders = orders.filter(order => {
           const orderStatus = order.status
           const deliveryPhase = order.deliveryState?.currentPhase
+          const isUnassignedOrder = !order?.deliveryPartnerId
           
           // Skip if already delivered or completed
           if (orderStatus === 'delivered' || deliveryPhase === 'completed') {
+            return false
+          }
+
+          // For unassigned discover orders, show dispatchable orders after restaurant acceptance.
+          if (isUnassignedOrder && !['preparing', 'ready'].includes(String(orderStatus || '').toLowerCase())) {
             return false
           }
           
@@ -6043,6 +6171,28 @@ export default function DeliveryHome() {
 
     // Check every 2 seconds if markers are still on map
     const checkInterval = setInterval(() => {
+      const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+      const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+      const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+      const isOrderDelivered = orderStatus === 'delivered' ||
+        orderStatus === 'completed' ||
+        deliveryPhase === 'completed' ||
+        deliveryPhase === 'delivered' ||
+        deliveryStateStatus === 'delivered'
+
+      // Once delivered, ensure destination markers are removed and not recreated.
+      if (isOrderDelivered) {
+        if (restaurantMarkerRef.current) {
+          restaurantMarkerRef.current.setMap(null)
+          restaurantMarkerRef.current = null
+        }
+        if (customerMarkerRef.current) {
+          customerMarkerRef.current.setMap(null)
+          customerMarkerRef.current = null
+        }
+        return
+      }
+
       // Check bike marker
       if (riderLocation && riderLocation.length === 2) {
         if (bikeMarkerRef.current) {
@@ -6089,8 +6239,6 @@ export default function DeliveryHome() {
 
       // Check customer marker
       const customerDestination = getCustomerDestination(selectedRestaurant)
-      const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-      const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
       const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
         orderStatus === 'picked_up' ||
         deliveryPhase === 'en_route_to_delivery' ||
@@ -6140,6 +6288,23 @@ export default function DeliveryHome() {
       return;
     }
 
+    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+    const isOrderDelivered = orderStatus === 'delivered' ||
+      orderStatus === 'completed' ||
+      deliveryPhase === 'completed' ||
+      deliveryPhase === 'delivered' ||
+      deliveryStateStatus === 'delivered'
+
+    if (isOrderDelivered) {
+      if (restaurantMarkerRef.current) {
+        restaurantMarkerRef.current.setMap(null)
+        restaurantMarkerRef.current = null
+      }
+      return
+    }
+
     // Only create marker if it doesn't exist or is on wrong map
     if (!restaurantMarkerRef.current || restaurantMarkerRef.current.getMap() !== window.deliveryMapInstance) {
       const restaurantLocation = {
@@ -6175,6 +6340,21 @@ export default function DeliveryHome() {
 
     const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
     const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+    const isOrderDelivered = orderStatus === 'delivered' ||
+      orderStatus === 'completed' ||
+      deliveryPhase === 'completed' ||
+      deliveryPhase === 'delivered' ||
+      deliveryStateStatus === 'delivered'
+
+    if (isOrderDelivered) {
+      if (customerMarkerRef.current) {
+        customerMarkerRef.current.setMap(null)
+        customerMarkerRef.current = null
+      }
+      return
+    }
+
     const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
       orderStatus === 'picked_up' ||
       deliveryPhase === 'en_route_to_delivery' ||
@@ -6412,12 +6592,60 @@ export default function DeliveryHome() {
       const routeState = buildVisibleRouteFromRiderPosition(fullPolyline, riderPos, {
         offRouteThresholdMeters: ROUTE_OFF_TRACK_THRESHOLD_METERS
       });
-      const visiblePolyline = Array.isArray(routeState.visiblePolyline) && routeState.visiblePolyline.length > 1
-        ? routeState.visiblePolyline
-        : fullPolyline;
-      const path = visiblePolyline.map((point) =>
-        new window.google.maps.LatLng(point.lat, point.lng)
+      const startPoint = fullPolyline[0];
+      const endPoint = fullPolyline[fullPolyline.length - 1];
+      const routeKey = `${fullPolyline.length}:${startPoint?.lat?.toFixed?.(5) || "0"},${startPoint?.lng?.toFixed?.(5) || "0"}->${endPoint?.lat?.toFixed?.(5) || "0"},${endPoint?.lng?.toFixed?.(5) || "0"}`;
+      const progressState = liveRouteProgressRef.current;
+      const now = Date.now();
+
+      if (progressState.routeKey !== routeKey) {
+        progressState.routeKey = routeKey;
+        progressState.distanceAlongRoute = Math.max(0, Number(routeState.distanceAlongRoute || 0));
+        progressState.updatedAt = now;
+      } else {
+        const measuredDistanceAlong = Math.max(0, Number(routeState.distanceAlongRoute || 0));
+        const elapsedSeconds = Math.max(0.2, (now - (progressState.updatedAt || now)) / 1000);
+        const maxForwardAdvance = Math.max(55, elapsedSeconds * 28); // ~100 km/h upper cap to absorb GPS spikes
+        const maxBackwardAllowance = 20; // allow tiny snap-back, prevent big route rewind
+        const minAllowed = Math.max(0, progressState.distanceAlongRoute - maxBackwardAllowance);
+        const maxAllowed = progressState.distanceAlongRoute + maxForwardAdvance;
+        const clampedDistanceAlong = Math.max(minAllowed, Math.min(measuredDistanceAlong, maxAllowed));
+        progressState.distanceAlongRoute = Math.max(progressState.distanceAlongRoute, clampedDistanceAlong);
+        progressState.updatedAt = now;
+      }
+
+      const trimmedFromLockedProgress = trimPolylineFromDistanceAlongRoute(
+        fullPolyline,
+        progressState.distanceAlongRoute
       );
+
+      let visiblePolyline = Array.isArray(trimmedFromLockedProgress.trimmedPolyline) && trimmedFromLockedProgress.trimmedPolyline.length > 0
+        ? trimmedFromLockedProgress.trimmedPolyline
+        : fullPolyline;
+
+      // Always connect route to live rider icon (Zomato-style continuity).
+      const firstVisible = visiblePolyline[0];
+      if (!firstVisible) {
+        visiblePolyline = [riderPos, endPoint];
+      } else {
+        const riderToRouteDistance = calculateDistance(
+          riderPos.lat,
+          riderPos.lng,
+          firstVisible.lat,
+          firstVisible.lng
+        );
+        if (riderToRouteDistance > 2) {
+          visiblePolyline = [riderPos, ...visiblePolyline];
+        } else {
+          visiblePolyline = [{ lat: riderPos.lat, lng: riderPos.lng }, ...visiblePolyline.slice(1)];
+        }
+      }
+
+      if (visiblePolyline.length < 2 && endPoint) {
+        visiblePolyline = [riderPos, endPoint];
+      }
+
+      const path = visiblePolyline.map((point) => new window.google.maps.LatLng(point.lat, point.lng));
 
       // Update or create live tracking polyline with Zomato/Rapido style
       if (liveTrackingPolylineRef.current) {
@@ -6474,7 +6702,7 @@ export default function DeliveryHome() {
         debugLog('✅ Created new live tracking polyline on map with Zomato/Rapido styling');
       }
 
-      debugLog(`✅ Live tracking polyline updated: ${visiblePolyline.length} points remaining, ${Number(routeState.distanceFromRoute || 0).toFixed(2)}m from route`);
+      debugLog(`✅ Live tracking polyline updated: ${visiblePolyline.length} points remaining, ${Number(routeState.distanceFromRoute || 0).toFixed(2)}m from route, progress ${Math.round((trimmedFromLockedProgress.progress || 0) * 100)}%`);
       debugLog(`📍 Polyline path has ${path.length} points, map: ${window.deliveryMapInstance ? 'ready' : 'not ready'}`);
     } catch (error) {
       debugError('❌ Error updating live tracking polyline:', error);
@@ -7387,6 +7615,7 @@ export default function DeliveryHome() {
       }
       // Clear full route polyline ref
       fullRoutePolylineRef.current = [];
+      liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
       // Clear route polyline state
       setRoutePolyline([]);
       setDirectionsResponse(null);
@@ -7418,6 +7647,7 @@ export default function DeliveryHome() {
         }
         // Clear full route polyline ref
         fullRoutePolylineRef.current = [];
+        liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
         // Clear route polyline state
         setRoutePolyline([]);
         setDirectionsResponse(null);
@@ -7491,6 +7721,16 @@ export default function DeliveryHome() {
     if (directionsRendererRef.current) {
       directionsRendererRef.current.setMap(null);
     }
+    if (liveTrackingPolylineRef.current) {
+      liveTrackingPolylineRef.current.setMap(null);
+      liveTrackingPolylineRef.current = null;
+    }
+    if (liveTrackingPolylineShadowRef.current) {
+      liveTrackingPolylineShadowRef.current.setMap(null);
+      liveTrackingPolylineShadowRef.current = null;
+    }
+    fullRoutePolylineRef.current = [];
+    liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
     setDirectionsResponse(null);
     directionsResponseRef.current = null;
     setRoutePolyline([]);
@@ -10909,66 +11149,17 @@ selectedRestaurant?.lng || null,
             </button>
             <button 
               onClick={() => {
-                // Get restaurant location coordinates
-                const restaurantLat = selectedRestaurant?.lat
-                const restaurantLng = selectedRestaurant?.lng
-                
-                if (!restaurantLat || !restaurantLng) {
-                  toast.error('Restaurant location not available')
-                  debugError('❌ Restaurant coordinates not found:', { 
-                    lat: restaurantLat, 
-                    lng: restaurantLng,
-                    selectedRestaurant 
-                  })
-                  return
-                }
+                const target = getRestaurantNavigationTarget(selectedRestaurant)
+                const addressFallback =
+                  selectedRestaurant?.address ||
+                  selectedRestaurant?.restaurantAddress ||
+                  selectedRestaurant?.restaurantId?.location?.formattedAddress ||
+                  selectedRestaurant?.restaurantId?.location?.address ||
+                  ""
 
-                debugLog('🗺️ Opening Google Maps navigation to restaurant:', { 
-                  lat: restaurantLat, 
-                  lng: restaurantLng,
-                  name: selectedRestaurant?.name 
-                })
-
-                // Detect platform (Android or iOS)
-                const userAgent = navigator.userAgent || navigator.vendor || window.opera
-                const isAndroid = /android/i.test(userAgent)
-                const isIOS = /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
-
-                let mapsUrl = ''
-
-                if (isAndroid) {
-                  // Android: Use google.navigation: scheme (opens directly in navigation mode)
-                  mapsUrl = `google.navigation:q=${restaurantLat},${restaurantLng}&mode=b`
-                  
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-                  
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    const webUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else if (isIOS) {
-                  // iOS: Use comgooglemaps:// scheme (opens Google Maps app)
-                  mapsUrl = `comgooglemaps://?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-                  
-                  // Try to open Google Maps app first
-                  window.location.href = mapsUrl
-                  
-                  // Fallback to web URL after a short delay (in case app is not installed)
-                  setTimeout(() => {
-                    const webUrl = `https://maps.google.com/?daddr=${restaurantLat},${restaurantLng}&directionsmode=bicycling`
-                    window.open(webUrl, '_blank')
-                  }, 500)
-                } else {
-                  // Web/Desktop: Use web URL with navigation
-                  mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${restaurantLat},${restaurantLng}&travelmode=bicycling`
-                  window.open(mapsUrl, '_blank')
-                }
-
-                // Show success message
-                toast.success('Opening Google Maps navigation 🗺️', {
-                  duration: 2000
+                openGoogleMapsNavigation(target, {
+                  label: "restaurant",
+                  fallbackAddress: addressFallback
                 })
               }}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
@@ -11243,7 +11434,16 @@ selectedRestaurant?.lng || null,
               <Phone className="w-5 h-5 text-gray-700" />
               <span className="text-gray-700 font-medium">Call</span>
             </button>
-            <button className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
+            <button
+              onClick={() => {
+                const customerDestination = getCustomerDestination(selectedRestaurant)
+                openGoogleMapsNavigation(customerDestination, {
+                  label: "customer",
+                  fallbackAddress: selectedRestaurant?.customerAddress || ""
+                })
+              }}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
               <MapPin className="w-5 h-5 text-white" />
               <span className="text-white font-medium">Map</span>
             </button>
@@ -11719,6 +11919,38 @@ selectedRestaurant?.lng || null,
                     <span className="text-gray-600">Long distance return pay</span>
                     <span className="text-gray-900 font-semibold">₹5.00</span>
                   </div>
+
+                  {(() => {
+                    const paymentMethod = String(
+                      selectedRestaurant?.paymentMethod ||
+                      selectedRestaurant?.payment ||
+                      selectedRestaurant?.payment?.method ||
+                      ''
+                    ).toLowerCase().trim()
+                    const isCod = paymentMethod === 'cash' || paymentMethod === 'cod' || paymentMethod === 'cash_on_delivery'
+                    const collectAmount = Number(
+                      selectedRestaurant?.amountToCollect ??
+                      selectedRestaurant?.codAmount ??
+                      selectedRestaurant?.codCollectedAmount ??
+                      selectedRestaurant?.orderTotal ??
+                      selectedRestaurant?.total ??
+                      selectedRestaurant?.pricing?.total ??
+                      selectedRestaurant?.payment?.amount ??
+                      0
+                    )
+                    const safeAmount = Number.isFinite(collectAmount) && collectAmount > 0 ? collectAmount : 0
+
+                    return (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className={`${isCod ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
+                          {isCod ? 'Amount to collect from customer' : 'Amount paid by customer'}
+                        </span>
+                        <span className={`${isCod ? 'text-amber-700 font-semibold' : 'text-gray-900 font-semibold'}`}>
+                          ₹{safeAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    )
+                  })()}
                   
                   <div className="flex justify-between items-center py-2">
                     <span className="text-lg font-bold text-gray-900">Total Earnings</span>
