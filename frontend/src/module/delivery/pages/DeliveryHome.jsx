@@ -52,6 +52,7 @@ import {
   buildVisibleRouteFromRiderPosition,
   decodePolyline,
   extractPolylineFromDirections,
+  trimPolylineFromDistanceAlongRoute,
   calculateBearing,
   animateMarker,
   calculateDistance
@@ -486,6 +487,11 @@ export default function DeliveryHome() {
   const liveTrackingPolylineRef = useRef(null) // Google Maps Polyline instance for live tracking
   const liveTrackingPolylineShadowRef = useRef(null) // Shadow/outline polyline for better visibility (Zomato/Rapido style)
   const fullRoutePolylineRef = useRef([]) // Store full decoded polyline from Directions API
+  const liveRouteProgressRef = useRef({
+    routeKey: null,
+    distanceAlongRoute: 0,
+    updatedAt: 0
+  }) // Keep route progress monotonic so polyline never jumps/cuts
   const lastRiderPositionRef = useRef(null) // Last rider position for smooth animation
   const markerAnimationCancelRef = useRef(null) // Cancel function for marker animation
   const directionsResponseRef = useRef(null) // Store directions response for use in callbacks
@@ -6412,12 +6418,60 @@ export default function DeliveryHome() {
       const routeState = buildVisibleRouteFromRiderPosition(fullPolyline, riderPos, {
         offRouteThresholdMeters: ROUTE_OFF_TRACK_THRESHOLD_METERS
       });
-      const visiblePolyline = Array.isArray(routeState.visiblePolyline) && routeState.visiblePolyline.length > 1
-        ? routeState.visiblePolyline
-        : fullPolyline;
-      const path = visiblePolyline.map((point) =>
-        new window.google.maps.LatLng(point.lat, point.lng)
+      const startPoint = fullPolyline[0];
+      const endPoint = fullPolyline[fullPolyline.length - 1];
+      const routeKey = `${fullPolyline.length}:${startPoint?.lat?.toFixed?.(5) || "0"},${startPoint?.lng?.toFixed?.(5) || "0"}->${endPoint?.lat?.toFixed?.(5) || "0"},${endPoint?.lng?.toFixed?.(5) || "0"}`;
+      const progressState = liveRouteProgressRef.current;
+      const now = Date.now();
+
+      if (progressState.routeKey !== routeKey) {
+        progressState.routeKey = routeKey;
+        progressState.distanceAlongRoute = Math.max(0, Number(routeState.distanceAlongRoute || 0));
+        progressState.updatedAt = now;
+      } else {
+        const measuredDistanceAlong = Math.max(0, Number(routeState.distanceAlongRoute || 0));
+        const elapsedSeconds = Math.max(0.2, (now - (progressState.updatedAt || now)) / 1000);
+        const maxForwardAdvance = Math.max(55, elapsedSeconds * 28); // ~100 km/h upper cap to absorb GPS spikes
+        const maxBackwardAllowance = 20; // allow tiny snap-back, prevent big route rewind
+        const minAllowed = Math.max(0, progressState.distanceAlongRoute - maxBackwardAllowance);
+        const maxAllowed = progressState.distanceAlongRoute + maxForwardAdvance;
+        const clampedDistanceAlong = Math.max(minAllowed, Math.min(measuredDistanceAlong, maxAllowed));
+        progressState.distanceAlongRoute = Math.max(progressState.distanceAlongRoute, clampedDistanceAlong);
+        progressState.updatedAt = now;
+      }
+
+      const trimmedFromLockedProgress = trimPolylineFromDistanceAlongRoute(
+        fullPolyline,
+        progressState.distanceAlongRoute
       );
+
+      let visiblePolyline = Array.isArray(trimmedFromLockedProgress.trimmedPolyline) && trimmedFromLockedProgress.trimmedPolyline.length > 0
+        ? trimmedFromLockedProgress.trimmedPolyline
+        : fullPolyline;
+
+      // Always connect route to live rider icon (Zomato-style continuity).
+      const firstVisible = visiblePolyline[0];
+      if (!firstVisible) {
+        visiblePolyline = [riderPos, endPoint];
+      } else {
+        const riderToRouteDistance = calculateDistance(
+          riderPos.lat,
+          riderPos.lng,
+          firstVisible.lat,
+          firstVisible.lng
+        );
+        if (riderToRouteDistance > 2) {
+          visiblePolyline = [riderPos, ...visiblePolyline];
+        } else {
+          visiblePolyline = [{ lat: riderPos.lat, lng: riderPos.lng }, ...visiblePolyline.slice(1)];
+        }
+      }
+
+      if (visiblePolyline.length < 2 && endPoint) {
+        visiblePolyline = [riderPos, endPoint];
+      }
+
+      const path = visiblePolyline.map((point) => new window.google.maps.LatLng(point.lat, point.lng));
 
       // Update or create live tracking polyline with Zomato/Rapido style
       if (liveTrackingPolylineRef.current) {
@@ -6474,7 +6528,7 @@ export default function DeliveryHome() {
         debugLog('✅ Created new live tracking polyline on map with Zomato/Rapido styling');
       }
 
-      debugLog(`✅ Live tracking polyline updated: ${visiblePolyline.length} points remaining, ${Number(routeState.distanceFromRoute || 0).toFixed(2)}m from route`);
+      debugLog(`✅ Live tracking polyline updated: ${visiblePolyline.length} points remaining, ${Number(routeState.distanceFromRoute || 0).toFixed(2)}m from route, progress ${Math.round((trimmedFromLockedProgress.progress || 0) * 100)}%`);
       debugLog(`📍 Polyline path has ${path.length} points, map: ${window.deliveryMapInstance ? 'ready' : 'not ready'}`);
     } catch (error) {
       debugError('❌ Error updating live tracking polyline:', error);
@@ -7387,6 +7441,7 @@ export default function DeliveryHome() {
       }
       // Clear full route polyline ref
       fullRoutePolylineRef.current = [];
+      liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
       // Clear route polyline state
       setRoutePolyline([]);
       setDirectionsResponse(null);
@@ -7418,6 +7473,7 @@ export default function DeliveryHome() {
         }
         // Clear full route polyline ref
         fullRoutePolylineRef.current = [];
+        liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
         // Clear route polyline state
         setRoutePolyline([]);
         setDirectionsResponse(null);
@@ -7491,6 +7547,16 @@ export default function DeliveryHome() {
     if (directionsRendererRef.current) {
       directionsRendererRef.current.setMap(null);
     }
+    if (liveTrackingPolylineRef.current) {
+      liveTrackingPolylineRef.current.setMap(null);
+      liveTrackingPolylineRef.current = null;
+    }
+    if (liveTrackingPolylineShadowRef.current) {
+      liveTrackingPolylineShadowRef.current.setMap(null);
+      liveTrackingPolylineShadowRef.current = null;
+    }
+    fullRoutePolylineRef.current = [];
+    liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 };
     setDirectionsResponse(null);
     directionsResponseRef.current = null;
     setRoutePolyline([]);
