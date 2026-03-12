@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck, Pencil, Save, X } from "lucide-react"
+import { Search, Download, ChevronDown, Eye, User, Star, ArrowUpDown, Settings, FileText, FileSpreadsheet, Loader2, Check, Columns, ExternalLink, Calendar, MapPin, CreditCard, Mail, Phone, Bike, FileCheck, Pencil, Save, Trash2, X } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
@@ -25,6 +25,7 @@ export default function DeliverymanList() {
   const [editingDeliveryId, setEditingDeliveryId] = useState(null)
   const [editValues, setEditValues] = useState({ pocketBalance: "", cashInHand: "" })
   const [savingDeliveryId, setSavingDeliveryId] = useState(null)
+  const [deletingDeliveryId, setDeletingDeliveryId] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
     name: true,
@@ -336,6 +337,47 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
     }
   }
 
+  const handleDelete = async (deliveryman) => {
+    const deliverymanId = String(deliveryman?._id || "")
+    if (!deliverymanId) {
+      toast.error("Delivery partner not found")
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Deactivate ${deliveryman?.name || "this delivery partner"}?\n\nThis will block the account and log them out, while preserving profile, wallet, and history.`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    try {
+      setDeletingDeliveryId(deliverymanId)
+      const response = await adminAPI.deleteDeliveryPartner(deliverymanId)
+
+      if (!response?.data?.success) {
+        toast.error(response?.data?.message || "Failed to deactivate delivery partner")
+        return
+      }
+
+      const wasViewingDeletedPartner = Boolean(
+        viewDetails && String(viewDetails._id) === deliverymanId,
+      )
+      setDeliverymen((prev) => prev.filter((item) => String(item._id) !== deliverymanId))
+      setViewDetails((prev) => (prev && String(prev._id) === deliverymanId ? null : prev))
+      if (wasViewingDeletedPartner) {
+        setIsViewOpen(false)
+      }
+      toast.success(response?.data?.message || "Delivery partner deactivated successfully")
+    } catch (err) {
+      debugError("Error deleting delivery partner:", err)
+      toast.error(err?.response?.data?.message || "Failed to deactivate delivery partner")
+    } finally {
+      setDeletingDeliveryId(null)
+    }
+  }
+
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -635,6 +677,18 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
                                 title="View Details"
                               >
                                 <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(dm)}
+                                disabled={deletingDeliveryId === String(dm._id)}
+                                className="p-1.5 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                title="Delete Delivery Partner"
+                              >
+                                {deletingDeliveryId === String(dm._id) ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="w-4 h-4" />
+                                )}
                               </button>
                             </div>
                           </td>

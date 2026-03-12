@@ -35,6 +35,15 @@ export default function SignupStep1() {
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const sanitizeLocationValue = (value) =>
+    value.replace(/[^A-Za-z\s.-]/g, "").replace(/\s{2,}/g, " ")
+
+  const isValidLocationValue = (value) =>
+    /^[A-Za-z][A-Za-z\s.-]*[A-Za-z.]$/.test(value.trim())
+
+  const isValidEmailValue = (value) =>
+    /^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(value.trim())
+
   // Save data to session storage whenever formData changes
   useEffect(() => {
     sessionStorage.setItem("deliverySignupDetails", JSON.stringify(formData))
@@ -52,6 +61,10 @@ export default function SignupStep1() {
     // Restrict Aadhaar to numeric only
     if (name === "aadharNumber") {
       updatedValue = value.replace(/\D/g, "").slice(0, 12)
+    }
+
+    if (name === "city" || name === "state") {
+      updatedValue = sanitizeLocationValue(value)
     }
 
     setFormData(prev => ({
@@ -74,7 +87,7 @@ export default function SignupStep1() {
       newErrors.name = "Name is required"
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    if (formData.email && !isValidEmailValue(formData.email)) {
       newErrors.email = "Invalid email format"
     }
 
@@ -84,10 +97,14 @@ export default function SignupStep1() {
 
     if (!formData.city.trim()) {
       newErrors.city = "City is required"
+    } else if (!isValidLocationValue(formData.city)) {
+      newErrors.city = "City can contain letters only"
     }
 
     if (!formData.state.trim()) {
       newErrors.state = "State is required"
+    } else if (!isValidLocationValue(formData.state)) {
+      newErrors.state = "State can contain letters only"
     }
 
     if (!formData.vehicleNumber.trim()) {
