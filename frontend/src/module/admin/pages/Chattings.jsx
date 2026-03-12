@@ -1,13 +1,13 @@
 import { useState } from "react"
 import { Search, Info, Settings } from "lucide-react"
-import { conversationsDummy } from "../data/conversationsDummy"
+import { emptyConversations } from "../utils/adminFallbackData"
 
 export default function Chattings() {
   const [activeTab, setActiveTab] = useState("customer")
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedConversation, setSelectedConversation] = useState(null)
 
-  const filteredConversations = conversationsDummy.filter(conv => {
+  const filteredConversations = emptyConversations.filter(conv => {
     if (activeTab === "customer" && conv.type !== "customer") return false
     if (activeTab === "restaurant" && conv.type !== "restaurant") return false
     

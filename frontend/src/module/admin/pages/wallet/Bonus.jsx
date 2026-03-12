@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from "react"
 import { Search, Wallet, Info, Calendar, Edit, Trash2 } from "lucide-react"
-import { walletBonusDummy } from "../../data/walletBonusDummy"
+import { emptyWalletBonuses } from "../../utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -9,7 +9,7 @@ const debugError = (...args) => {}
 export default function Bonus() {
   const [activeLanguage, setActiveLanguage] = useState("default")
   const [searchQuery, setSearchQuery] = useState("")
-  const [bonuses, setBonuses] = useState(walletBonusDummy)
+  const [bonuses, setBonuses] = useState(emptyWalletBonuses)
   const [formData, setFormData] = useState({
     bonusTitle: "",
     shortDescription: "",

@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react"
 import { Search, Plus, Eye, Edit, Settings, ArrowUpDown, Check, Columns } from "lucide-react"
-import { withdrawMethodsDummy } from "../../data/withdrawMethodsDummy"
+import { emptyWithdrawMethods } from "../../utils/adminFallbackData"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function WithdrawMethod() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [methods, setMethods] = useState(withdrawMethodsDummy)
+  const [methods, setMethods] = useState(emptyWithdrawMethods)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,

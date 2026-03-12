@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, UtensilsCrossed, Eye, ArrowUpDown, Info, Settings, FileText, FileSpreadsheet, Code } from "lucide-react"
-import { disbursementReportRestaurantsDummy, disbursementStats } from "../../data/disbursementReportRestaurantsDummy"
+import { emptyDisbursementReportRestaurants, emptyDisbursementStats } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
@@ -12,7 +12,7 @@ import canceledIcon from "../../assets/Transaction-report-icons/trx5.png"
 
 export default function DisbursementReportRestaurants() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [disbursements, setDisbursements] = useState(disbursementReportRestaurantsDummy)
+  const [disbursements, setDisbursements] = useState(emptyDisbursementReportRestaurants)
   const [filters, setFilters] = useState({
     zone: "All Zones",
     restaurant: "All restaurants",
@@ -119,7 +119,7 @@ export default function DisbursementReportRestaurants() {
               <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center mb-4 relative">
                 <img src={pendingIcon} alt="Pending" className="w-10 h-10" />
               </div>
-              <p className="text-2xl font-bold text-green-600 mb-1">{disbursementStats.pending}</p>
+              <p className="text-2xl font-bold text-green-600 mb-1">{emptyDisbursementStats.pending}</p>
               <p className="text-sm text-slate-600">Pending Disbursements</p>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function DisbursementReportRestaurants() {
               <div className="w-16 h-16 rounded-full bg-orange-500 flex items-center justify-center mb-4">
                 <img src={completedIcon} alt="Completed" className="w-10 h-10" />
               </div>
-              <p className="text-2xl font-bold text-slate-900 mb-1">{disbursementStats.completed}</p>
+              <p className="text-2xl font-bold text-slate-900 mb-1">{emptyDisbursementStats.completed}</p>
               <p className="text-sm text-slate-600">Completed Disbursements</p>
             </div>
           </div>
@@ -151,7 +151,7 @@ export default function DisbursementReportRestaurants() {
               <div className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center mb-4 relative">
                 <img src={canceledIcon} alt="Canceled" className="w-10 h-10" />
               </div>
-              <p className="text-2xl font-bold text-red-600 mb-1">{disbursementStats.canceled}</p>
+              <p className="text-2xl font-bold text-red-600 mb-1">{emptyDisbursementStats.canceled}</p>
               <p className="text-sm text-slate-600">Canceled Transactions</p>
             </div>
           </div>

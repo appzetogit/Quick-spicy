@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, Calendar, ClipboardList, DollarSign, FileText, AlertCircle, Settings, FileSpreadsheet, Code } from "lucide-react"
-import { restaurantVATReportDummy, restaurantVATStats } from "../../data/restaurantVATReportDummy"
+import { emptyRestaurantVATReports, emptyRestaurantVATStats } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 
 export default function RestaurantVATReport() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [reports, setReports] = useState(restaurantVATReportDummy)
+  const [reports, setReports] = useState(emptyRestaurantVATReports)
   const [filters, setFilters] = useState({
     dateRange: "",
     restaurant: "All Restaurants",
@@ -148,8 +148,8 @@ export default function RestaurantVATReport() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-slate-900 mb-1">Total Orders</p>
                 <p className="text-xs text-slate-600 mb-2">Total Orders</p>
-                <p className="text-3xl font-bold text-blue-600">{restaurantVATStats.totalOrders}</p>
-                <p className="text-lg font-semibold text-blue-600 mt-1">{restaurantVATStats.totalOrders}</p>
+                <p className="text-3xl font-bold text-blue-600">{emptyRestaurantVATStats.totalOrders}</p>
+                <p className="text-lg font-semibold text-blue-600 mt-1">{emptyRestaurantVATStats.totalOrders}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
                 <ClipboardList className="w-7 h-7 text-blue-600" />
@@ -163,8 +163,8 @@ export default function RestaurantVATReport() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-slate-900 mb-1">Total Order Amount</p>
                 <p className="text-xs text-slate-600 mb-2">Total Order Amount</p>
-                <p className="text-3xl font-bold text-green-600">{restaurantVATStats.totalOrderAmount}</p>
-                <p className="text-lg font-semibold text-green-600 mt-1">{restaurantVATStats.totalOrderAmount}</p>
+                <p className="text-3xl font-bold text-green-600">{emptyRestaurantVATStats.totalOrderAmount}</p>
+                <p className="text-lg font-semibold text-green-600 mt-1">{emptyRestaurantVATStats.totalOrderAmount}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center flex-shrink-0">
                 <DollarSign className="w-7 h-7 text-yellow-600" />
@@ -178,8 +178,8 @@ export default function RestaurantVATReport() {
               <div className="flex-1">
                 <p className="text-sm font-bold text-slate-900 mb-1">Total Tax Amount</p>
                 <p className="text-xs text-slate-600 mb-2">Total Tax Amount</p>
-                <p className="text-3xl font-bold text-red-600">{restaurantVATStats.totalTaxAmount}</p>
-                <p className="text-lg font-semibold text-red-600 mt-1">{restaurantVATStats.totalTaxAmount}</p>
+                <p className="text-3xl font-bold text-red-600">{emptyRestaurantVATStats.totalTaxAmount}</p>
+                <p className="text-lg font-semibold text-red-600 mt-1">{emptyRestaurantVATStats.totalTaxAmount}</p>
               </div>
               <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
                 <FileText className="w-7 h-7 text-purple-600" />

@@ -14,7 +14,7 @@ export default function PointOfSale() {
   const [restaurantData, setRestaurantData] = useState(null)
   const [showSearchResults, setShowSearchResults] = useState(false)
 
-  // Dummy data structure - replace with actual API calls
+  // Default analytics shape before the API responds
   const [analyticsData, setAnalyticsData] = useState({
     totalOrders: 0,
     cancelledOrders: 0,
@@ -87,7 +87,7 @@ export default function PointOfSale() {
       }
     } catch (error) {
       debugError('Error fetching restaurants:', error)
-      // Fallback to dummy data for development
+      // Fallback to a minimal local list when the API is unavailable
       setRestaurants([
         { _id: '1', name: 'Spice Garden', restaurantId: 'RST001' },
         { _id: '2', name: 'Tandoor Express', restaurantId: 'RST002' },

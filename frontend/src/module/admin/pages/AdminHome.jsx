@@ -24,11 +24,9 @@ import {
   YAxis,
 } from "recharts"
 import { Activity, ArrowUpRight, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, Plus } from "lucide-react"
-import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { adminAPI } from "@/lib/api"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugError = () => {}
 
 const INR_SYMBOL = "\u20B9"
 
@@ -80,7 +78,7 @@ export default function AdminHome() {
       const timer = setTimeout(() => setIsLoading(false), 350)
       return () => clearTimeout(timer)
     }
-  }, [selectedZone, selectedPeriod])
+  }, [dashboardData, selectedZone, selectedPeriod])
 
   // Get order stats from real data
   const getOrderStats = () => {
@@ -338,16 +336,16 @@ export default function AdminHome() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2 border-neutral-200 bg-white">
+            <Card className="lg:col-span-2 min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex flex-col gap-2 border-b border-neutral-200 pb-4">
                 <CardTitle className="text-lg text-neutral-900">Revenue trajectory</CardTitle>
                 <p className="text-sm text-neutral-500">
                   Commission and gross revenue with monthly order volume
                 </p>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-80 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={monthlyData}>
                       <defs>
                         <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
@@ -397,7 +395,7 @@ export default function AdminHome() {
               </CardContent>
             </Card>
 
-            <Card className="border-neutral-200 bg-white">
+            <Card className="min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex items-center justify-between border-b border-neutral-200 pb-4">
                 <div>
                   <CardTitle className="text-lg text-neutral-900">Order mix</CardTitle>
@@ -407,9 +405,9 @@ export default function AdminHome() {
                   {orderStats.reduce((s, o) => s + o.value, 0)} orders
                 </span>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-72 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={pieData}
@@ -462,14 +460,14 @@ export default function AdminHome() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="border-neutral-200 bg-white">
+            <Card className="min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex items-center justify-between border-b border-neutral-200 pb-4">
                 <CardTitle className="text-lg text-neutral-900">Momentum snapshot</CardTitle>
                 <span className="text-xs text-neutral-500">No data available</span>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-64 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={monthlyData.slice(-6)}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="month" stroke="#6b7280" />

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Settings, MoreVertical, Building2, Download, ChevronDown, Filter, FileDown, FileSpreadsheet, FileText, Code, Eye, CheckCircle2, XCircle } from "lucide-react"
-import { adRequestsDummy } from "../../data/adRequestsDummy"
+import { emptyAdRequests } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
@@ -9,7 +9,7 @@ import { exportAdvertisementsToCSV, exportAdvertisementsToExcel, exportAdvertise
 export default function AdRequests() {
   const [activeTab, setActiveTab] = useState("new")
   const [searchQuery, setSearchQuery] = useState("")
-  const [requests, setRequests] = useState(adRequestsDummy)
+  const [requests, setRequests] = useState(emptyAdRequests)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)

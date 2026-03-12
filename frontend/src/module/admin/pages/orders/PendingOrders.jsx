@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { ordersDummy } from "../../data/ordersDummy"
+import { emptyOrders } from "../../utils/adminFallbackData"
 import OrdersTopbar from "../../components/orders/OrdersTopbar"
 import OrdersTable from "../../components/orders/OrdersTable"
 import FilterPanel from "../../components/orders/FilterPanel"
@@ -7,7 +7,7 @@ import ViewOrderDialog from "../../components/orders/ViewOrderDialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
 import { useOrdersManagement } from "../../components/orders/useOrdersManagement"
 
-const pendingOrders = ordersDummy.filter((order) => order.orderStatus === "Pending")
+const pendingOrders = emptyOrders.filter((order) => order.orderStatus === "Pending")
 
 export default function PendingOrders() {
   const {

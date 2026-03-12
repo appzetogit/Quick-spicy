@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useNavigate } from "react-router-dom"
 import { Search, Download, ChevronDown, Plus, MoreVertical, Building2, Settings, Filter, FileDown, FileSpreadsheet, FileText, Code, Eye, Edit, Trash2 } from "lucide-react"
-import { adsListDummy } from "../../data/adsListDummy"
+import { emptyAds } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
@@ -11,7 +11,7 @@ export default function AdsList() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
   const [adsType, setAdsType] = useState("all")
-  const [ads, setAds] = useState(adsListDummy)
+  const [ads, setAds] = useState(emptyAds)
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)

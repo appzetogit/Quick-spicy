@@ -4,7 +4,7 @@ import ProtectedRoute from "@/components/ProtectedRoute"
 import AuthRedirect from "@/components/AuthRedirect"
 import Loader from "@/components/Loader"
 import PushSoundEnableButton from "@/components/PushSoundEnableButton"
-import { initPushNotificationClient, registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { useRestaurantNotifications } from "@/module/restaurant/hooks/useRestaurantNotifications"
 
@@ -178,10 +178,6 @@ function RestaurantGlobalNotificationListener() {
 
 export default function App() {
   const location = useLocation()
-
-  useEffect(() => {
-    initPushNotificationClient()
-  }, [])
 
   useEffect(() => {
     registerWebPushForCurrentModule(location.pathname)

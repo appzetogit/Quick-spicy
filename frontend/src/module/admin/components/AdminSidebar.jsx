@@ -48,7 +48,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Input } from "@/components/ui/input"
-import { sidebarMenuData } from "../data/sidebarMenu"
+import { adminSidebarMenu } from "../utils/adminSidebarMenu"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 const debugLog = (...args) => {}
@@ -212,7 +212,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       debugError('Error loading sidebar state:', e)
     }
     const state = {}
-    sidebarMenuData.forEach((item) => {
+    adminSidebarMenu.forEach((item) => {
       if (item.type === "section") {
         item.items.forEach((subItem) => {
           if (subItem.type === "expandable") {
@@ -229,13 +229,13 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
   // Filter menu items based on search query
   const filteredMenuData = useMemo(() => {
     if (!searchQuery.trim()) {
-      return sidebarMenuData
+      return adminSidebarMenu
     }
 
     const query = searchQuery.toLowerCase().trim()
     const filtered = []
 
-    sidebarMenuData.forEach((item) => {
+    adminSidebarMenu.forEach((item) => {
       if (item.type === "link") {
         if (item.label.toLowerCase().includes(query)) {
           filtered.push(item)
@@ -283,7 +283,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       setExpandedSections((prev) => {
         const newExpandedState = { ...prev }
 
-        sidebarMenuData.forEach((item) => {
+        adminSidebarMenu.forEach((item) => {
           if (item.type === "section") {
             item.items.forEach((subItem) => {
               if (subItem.type === "expandable") {

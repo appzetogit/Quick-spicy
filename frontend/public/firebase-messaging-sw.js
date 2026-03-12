@@ -4,6 +4,7 @@ importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-com
 
 const sanitize = (value) => String(value || "").trim().replace(/^['"]|['"]$/g, "");
 const PUSH_DEBUG_PREFIX = "[push-sw]";
+const pushDebugLog = () => {};
 const getNotificationKey = (payload) =>
   payload?.data?.notificationId ||
   payload?.data?.messageId ||
@@ -16,7 +17,7 @@ const getNotificationKey = (payload) =>
   ].join("::");
 
 async function notifyOpenClients(payload) {
-  console.log(PUSH_DEBUG_PREFIX, "Broadcasting push to open clients", { payload });
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Broadcasting push to open clients", { payload });
   const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
   windowClients.forEach((client) => {
     client.postMessage({
@@ -59,7 +60,7 @@ async function hasVisibleClientForTarget(payload = {}) {
       return false;
     }
   });
-  console.log(PUSH_DEBUG_PREFIX, "Visible client check", {
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Visible client check", {
     count: windowClients.length,
     targetPath,
     targetRoot,
@@ -96,7 +97,7 @@ async function loadFirebaseWebConfig() {
       };
 
       if (config.apiKey && config.projectId && config.appId && config.messagingSenderId) {
-        console.log(PUSH_DEBUG_PREFIX, "Loaded Firebase web config");
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Loaded Firebase web config");
         return config;
       }
     } catch {
@@ -114,22 +115,22 @@ async function loadFirebaseWebConfig() {
   }
 
   firebase.initializeApp(config);
-  console.log(PUSH_DEBUG_PREFIX, "Firebase messaging service worker initialized");
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Firebase messaging service worker initialized");
   const messaging = firebase.messaging();
 
   messaging.onBackgroundMessage(async (payload) => {
-    console.log(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
     const visibleClient = await hasVisibleClientForTarget(payload);
     if (visibleClient) {
       // Foreground/visible tab should render the notification itself.
       // Only relay to page, and never show service-worker notification here.
       await notifyOpenClients(payload);
-      console.log(PUSH_DEBUG_PREFIX, "Skipping service worker notification because app tab is visible");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping service worker notification because app tab is visible");
       return;
     }
 
     if (payload?.notification?.title || payload?.notification?.body) {
-      console.log(PUSH_DEBUG_PREFIX, "Skipping manual showNotification because payload already has notification");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping manual showNotification because payload already has notification");
       return;
     }
 
@@ -140,7 +141,7 @@ async function loadFirebaseWebConfig() {
       payload?.data?.imageUrl ||
       undefined;
     const notificationKey = getNotificationKey(payload);
-    console.log(PUSH_DEBUG_PREFIX, "Showing service worker notification", {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Showing service worker notification", {
       title,
       body,
       image,
@@ -166,7 +167,7 @@ self.addEventListener("push", (event) => {
 
   try {
     const payload = event.data.json();
-    console.log(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
     // No client relay here. onBackgroundMessage handles delivery, and relaying in both
     // places can produce duplicate notifications in web clients.
     event.waitUntil(Promise.resolve());
@@ -176,7 +177,7 @@ self.addEventListener("push", (event) => {
 });
 
 self.addEventListener("notificationclick", (event) => {
-  console.log(PUSH_DEBUG_PREFIX, "Notification click received", {
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Notification click received", {
     data: event?.notification?.data || {},
   });
   event.notification.close();

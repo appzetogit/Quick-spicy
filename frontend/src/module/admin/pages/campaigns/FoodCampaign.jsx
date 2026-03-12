@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, ArrowUpDown, Plus, Edit, Trash2, Megaphone, Settings } from "lucide-react"
-import { foodCampaignsDummy } from "../../data/foodCampaignsDummy"
+import { emptyFoodCampaigns } from "../../utils/adminFallbackData"
 
 export default function FoodCampaign() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [campaigns, setCampaigns] = useState(foodCampaignsDummy)
+  const [campaigns, setCampaigns] = useState(emptyFoodCampaigns)
 
   const filteredCampaigns = useMemo(() => {
     if (!searchQuery.trim()) {

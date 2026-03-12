@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, ArrowUpDown, Plus, Edit, Trash2, Megaphone, Filter, Settings, FileSpreadsheet, FileDown, FileText, Code } from "lucide-react"
-import { basicCampaignsDummy } from "../../data/basicCampaignsDummy"
+import { emptyBasicCampaigns } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportCampaignsToCSV, exportCampaignsToExcel, exportCampaignsToPDF, exportCampaignsToJSON } from "../../components/campaigns/campaignsExportUtils"
 import AddEditBasicCampaignDialog from "../../components/campaigns/AddEditBasicCampaignDialog"
@@ -10,7 +10,7 @@ import SettingsDialog from "../../components/orders/SettingsDialog"
 
 export default function BasicCampaign() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [campaigns, setCampaigns] = useState(basicCampaignsDummy)
+  const [campaigns, setCampaigns] = useState(emptyBasicCampaigns)
   const [isAddEditOpen, setIsAddEditOpen] = useState(false)
   const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const [isFilterOpen, setIsFilterOpen] = useState(false)

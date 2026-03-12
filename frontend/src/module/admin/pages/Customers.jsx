@@ -40,8 +40,7 @@ export default function Customers() {
       )
     }
 
-    // Filter by order date (if customer has order date field, otherwise skip)
-    // Note: customersDummy doesn't have orderDate, so this is a placeholder for future implementation
+    // Filter by order date when that field is available in the API payload.
 
     // Filter by joining date
     if (filters.joiningDate) {

@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, Calendar, Settings, TrendingUp, Wallet, Utensils, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
-import { loyaltyPointReportDummy } from "../../data/loyaltyPointReportDummy"
+import { emptyLoyaltyPointTransactions } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { exportLoyaltyPointsToCSV, exportLoyaltyPointsToExcel, exportLoyaltyPointsToPDF, exportLoyaltyPointsToJSON } from "../../components/loyalty-point/loyaltyPointExportUtils"
 
 export default function Report() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [transactions, setTransactions] = useState(loyaltyPointReportDummy)
+  const [transactions, setTransactions] = useState(emptyLoyaltyPointTransactions)
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",

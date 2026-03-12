@@ -1,10 +1,10 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Mail, Calendar, Settings } from "lucide-react"
-import { subscribedMailListDummy } from "../data/subscribedMailListDummy"
+import { emptySubscribedEmails } from "../utils/adminFallbackData"
 
 export default function SubscribedMailList() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [emails, setEmails] = useState(subscribedMailListDummy)
+  const [emails, setEmails] = useState(emptySubscribedEmails)
   const [filters, setFilters] = useState({
     subscriptionDate: "",
     sortBy: "",

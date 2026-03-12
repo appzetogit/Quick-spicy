@@ -18,7 +18,7 @@ import {
   FileSpreadsheet,
   Code,
 } from "lucide-react";
-import { campaignOrderReportDummy, campaignOrderStats } from "../../data/campaignOrderReportDummy";
+import { emptyCampaignOrderReports, emptyCampaignOrderStats } from "../../utils/adminFallbackData";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
@@ -31,7 +31,7 @@ export default function CampaignOrderReport() {
     time: "All Time",
   })
   const [searchQuery, setSearchQuery] = useState("")
-  const [orders] = useState(campaignOrderReportDummy)
+  const [orders] = useState(emptyCampaignOrderReports)
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
@@ -224,7 +224,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center mb-2">
                 <ShoppingBag className="w-6 h-6 text-yellow-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.totalOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.totalOrders}</p>
               <p className="text-[11px] text-slate-600">Total orders</p>
             </div>
           </div>
@@ -235,7 +235,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
                 <RefreshCw className="w-6 h-6 text-blue-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.inProgressOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.inProgressOrders}</p>
               <p className="text-[11px] text-slate-600">In progress orders</p>
             </div>
           </div>
@@ -246,7 +246,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center mb-2">
                 <Truck className="w-6 h-6 text-blue-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.onTheWay}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.onTheWay}</p>
               <p className="text-[11px] text-slate-600">On the way</p>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center mb-2">
                 <ShoppingBag className="w-6 h-6 text-green-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.deliveredOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.deliveredOrders}</p>
               <p className="text-[11px] text-slate-600">Delivered Orders</p>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center mb-2">
                 <AlertTriangle className="w-6 h-6 text-yellow-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.failedOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.failedOrders}</p>
               <p className="text-[11px] text-slate-600">Failed orders</p>
             </div>
           </div>
@@ -279,7 +279,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-2">
                 <Coins className="w-6 h-6 text-orange-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.refundedOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.refundedOrders}</p>
               <p className="text-[11px] text-slate-600">Refunded orders</p>
             </div>
           </div>
@@ -290,7 +290,7 @@ export default function CampaignOrderReport() {
               <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center mb-2">
                 <X className="w-6 h-6 text-red-600" />
               </div>
-              <p className="text-lg font-bold text-slate-900 mb-0.5">{campaignOrderStats.canceledOrders}</p>
+              <p className="text-lg font-bold text-slate-900 mb-0.5">{emptyCampaignOrderStats.canceledOrders}</p>
               <p className="text-[11px] text-slate-600">Canceled orders</p>
             </div>
           </div>

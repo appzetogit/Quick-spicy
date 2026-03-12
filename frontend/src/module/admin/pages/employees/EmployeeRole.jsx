@@ -39,7 +39,7 @@ const modulePermissions = [
   { id: "cashback", label: "Cashback" },
 ]
 
-const employeeRolesDummy = [
+const initialEmployeeRoles = [
   {
     id: 1,
     roleName: "Manager",
@@ -59,7 +59,7 @@ export default function EmployeeRole() {
   const [roleName, setRoleName] = useState("")
   const [permissions, setPermissions] = useState({})
   const [searchQuery, setSearchQuery] = useState("")
-  const [roles, setRoles] = useState(employeeRolesDummy)
+  const [roles, setRoles] = useState(initialEmployeeRoles)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
