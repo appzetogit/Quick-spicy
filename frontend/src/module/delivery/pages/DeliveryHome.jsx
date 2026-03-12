@@ -6119,6 +6119,28 @@ export default function DeliveryHome() {
 
     // Check every 2 seconds if markers are still on map
     const checkInterval = setInterval(() => {
+      const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+      const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+      const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+      const isOrderDelivered = orderStatus === 'delivered' ||
+        orderStatus === 'completed' ||
+        deliveryPhase === 'completed' ||
+        deliveryPhase === 'delivered' ||
+        deliveryStateStatus === 'delivered'
+
+      // Once delivered, ensure destination markers are removed and not recreated.
+      if (isOrderDelivered) {
+        if (restaurantMarkerRef.current) {
+          restaurantMarkerRef.current.setMap(null)
+          restaurantMarkerRef.current = null
+        }
+        if (customerMarkerRef.current) {
+          customerMarkerRef.current.setMap(null)
+          customerMarkerRef.current = null
+        }
+        return
+      }
+
       // Check bike marker
       if (riderLocation && riderLocation.length === 2) {
         if (bikeMarkerRef.current) {
@@ -6216,6 +6238,23 @@ export default function DeliveryHome() {
       return;
     }
 
+    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+    const isOrderDelivered = orderStatus === 'delivered' ||
+      orderStatus === 'completed' ||
+      deliveryPhase === 'completed' ||
+      deliveryPhase === 'delivered' ||
+      deliveryStateStatus === 'delivered'
+
+    if (isOrderDelivered) {
+      if (restaurantMarkerRef.current) {
+        restaurantMarkerRef.current.setMap(null)
+        restaurantMarkerRef.current = null
+      }
+      return
+    }
+
     // Only create marker if it doesn't exist or is on wrong map
     if (!restaurantMarkerRef.current || restaurantMarkerRef.current.getMap() !== window.deliveryMapInstance) {
       const restaurantLocation = {
@@ -6251,6 +6290,21 @@ export default function DeliveryHome() {
 
     const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
     const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const deliveryStateStatus = selectedRestaurant?.deliveryState?.status || ''
+    const isOrderDelivered = orderStatus === 'delivered' ||
+      orderStatus === 'completed' ||
+      deliveryPhase === 'completed' ||
+      deliveryPhase === 'delivered' ||
+      deliveryStateStatus === 'delivered'
+
+    if (isOrderDelivered) {
+      if (customerMarkerRef.current) {
+        customerMarkerRef.current.setMap(null)
+        customerMarkerRef.current = null
+      }
+      return
+    }
+
     const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
       orderStatus === 'picked_up' ||
       deliveryPhase === 'en_route_to_delivery' ||
