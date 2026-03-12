@@ -7,6 +7,38 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const createEmptyUploadedDocs = () => ({
+  profilePhoto: null,
+  aadharPhoto: null,
+  panPhoto: null,
+  drivingLicensePhoto: null
+})
+
+const sanitizeUploadedDocValue = (value) => {
+  if (!value) return null
+
+  if (typeof value === "string") {
+    return value.startsWith("blob:") ? null : value
+  }
+
+  if (typeof value === "object") {
+    const url = typeof value.url === "string" ? value.url : ""
+    if (url.startsWith("blob:")) {
+      return null
+    }
+    return value
+  }
+
+  return null
+}
+
+const sanitizeUploadedDocs = (docs) => ({
+  profilePhoto: sanitizeUploadedDocValue(docs?.profilePhoto),
+  aadharPhoto: sanitizeUploadedDocValue(docs?.aadharPhoto),
+  panPhoto: sanitizeUploadedDocValue(docs?.panPhoto),
+  drivingLicensePhoto: sanitizeUploadedDocValue(docs?.drivingLicensePhoto)
+})
+
 
 export default function SignupStep2() {
   const navigate = useNavigate()
@@ -29,17 +61,12 @@ export default function SignupStep2() {
     const saved = sessionStorage.getItem("deliverySignupDocs")
     if (saved) {
       try {
-        return JSON.parse(saved)
+        return sanitizeUploadedDocs(JSON.parse(saved))
       } catch (e) {
         debugError("Error parsing saved docs:", e)
       }
     }
-    return {
-      profilePhoto: null,
-      aadharPhoto: null,
-      panPhoto: null,
-      drivingLicensePhoto: null
-    }
+    return createEmptyUploadedDocs()
   })
   const [uploading, setUploading] = useState({
     profilePhoto: false,
@@ -81,6 +108,10 @@ export default function SignupStep2() {
   }, [documents])
 
   const getPreviewSrc = (docType) => {
+    const uploaded = uploadedDocs[docType]
+    if (typeof uploaded === "string") return uploaded
+    if (uploaded?.url) return uploaded.url
+
     const localFile = documents[docType]
     if (localFile instanceof File) {
       if (!localFile._previewUrl) {
@@ -88,10 +119,7 @@ export default function SignupStep2() {
       }
       return localFile._previewUrl
     }
-
-    const uploaded = uploadedDocs[docType]
-    if (typeof uploaded === "string") return uploaded
-    return uploaded?.url || null
+    return null
   }
 
   const getExtensionFromMimeType = (mimeType) => {
@@ -235,31 +263,12 @@ export default function SignupStep2() {
   }
 
   const handlePickFromDevice = () => {
-    const input = sourcePicker.fallbackInputRef?.current || null
-
     try {
-      if (input && typeof input.showPicker === "function") {
-        input.showPicker()
-      } else if (input) {
-        input.click()
-      } else {
-        openBrowserFileFallback({ onSelectFile: sourcePicker.onSelectFile })
-      }
+      openBrowserFileFallback({ onSelectFile: sourcePicker.onSelectFile })
       closeImageSourcePicker()
     } catch (error) {
       debugError("Device file picker open failed:", error)
-      try {
-        if (input) {
-          input.click()
-        } else {
-          openBrowserFileFallback({ onSelectFile: sourcePicker.onSelectFile })
-        }
-        closeImageSourcePicker()
-      } catch (fallbackError) {
-        debugError("Fallback file input click failed:", fallbackError)
-        openBrowserFileFallback({ onSelectFile: sourcePicker.onSelectFile })
-        closeImageSourcePicker()
-      }
+      toast.error("Could not open device files. Please try again.")
     }
   }
 
