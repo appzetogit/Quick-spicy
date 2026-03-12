@@ -187,6 +187,13 @@ export const adminSidebarMenu = [
   },
   {
     type: "section",
+    label: "ENV SETUP",
+    items: [
+      { type: "link", label: "System .env", path: "/admin/system-addons", icon: "Settings" },
+    ],
+  },
+  {
+    type: "section",
     label: "BANNER SETTINGS",
     items: [
       { type: "link", label: "Landing Page Management", path: "/admin/hero-banner-management", icon: "Image" },
