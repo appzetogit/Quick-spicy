@@ -11815,6 +11815,38 @@ selectedRestaurant?.lng || null,
                     <span className="text-gray-600">Long distance return pay</span>
                     <span className="text-gray-900 font-semibold">₹5.00</span>
                   </div>
+
+                  {(() => {
+                    const paymentMethod = String(
+                      selectedRestaurant?.paymentMethod ||
+                      selectedRestaurant?.payment ||
+                      selectedRestaurant?.payment?.method ||
+                      ''
+                    ).toLowerCase().trim()
+                    const isCod = paymentMethod === 'cash' || paymentMethod === 'cod' || paymentMethod === 'cash_on_delivery'
+                    const collectAmount = Number(
+                      selectedRestaurant?.amountToCollect ??
+                      selectedRestaurant?.codAmount ??
+                      selectedRestaurant?.codCollectedAmount ??
+                      selectedRestaurant?.orderTotal ??
+                      selectedRestaurant?.total ??
+                      selectedRestaurant?.pricing?.total ??
+                      selectedRestaurant?.payment?.amount ??
+                      0
+                    )
+                    const safeAmount = Number.isFinite(collectAmount) && collectAmount > 0 ? collectAmount : 0
+
+                    return (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className={`${isCod ? 'text-amber-700 font-medium' : 'text-gray-600'}`}>
+                          {isCod ? 'Amount to collect from customer' : 'Amount paid by customer'}
+                        </span>
+                        <span className={`${isCod ? 'text-amber-700 font-semibold' : 'text-gray-900 font-semibold'}`}>
+                          ₹{safeAmount.toFixed(2)}
+                        </span>
+                      </div>
+                    )
+                  })()}
                   
                   <div className="flex justify-between items-center py-2">
                     <span className="text-lg font-bold text-gray-900">Total Earnings</span>
