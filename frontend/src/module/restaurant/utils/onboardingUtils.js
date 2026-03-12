@@ -62,6 +62,15 @@ const isStepComplete = (stepData, stepNumber) => {
     )
   }
 
+  if (stepNumber === 4) {
+    return (
+      stepData.estimatedDeliveryTime &&
+      stepData.featuredDish &&
+      stepData.featuredPrice &&
+      stepData.offer
+    )
+  }
+
   return false
 }
 
@@ -86,15 +95,17 @@ const buildOnboardingLikeDataFromRestaurant = (restaurant) => {
       profileImageUrl: restaurant?.profileImage,
     },
     step3: onboarding.step3 || null,
+    step4: onboarding.step4 || {
+      estimatedDeliveryTime: restaurant?.estimatedDeliveryTime,
+      featuredDish: restaurant?.featuredDish,
+      featuredPrice: restaurant?.featuredPrice,
+      offer: restaurant?.offer,
+    },
   }
 }
 
 export const isRestaurantOnboardingComplete = (restaurant) => {
   if (!restaurant) return false
-
-  if (restaurant?.isActive === true) {
-    return true
-  }
 
   const onboardingLikeData = buildOnboardingLikeDataFromRestaurant(restaurant)
   if (onboardingLikeData.completedSteps === 4) {
@@ -104,8 +115,9 @@ export const isRestaurantOnboardingComplete = (restaurant) => {
   const step1Complete = isStepComplete(onboardingLikeData.step1, 1)
   const step2Complete = isStepComplete(onboardingLikeData.step2, 2)
   const step3Complete = isStepComplete(onboardingLikeData.step3, 3)
+  const step4Complete = isStepComplete(onboardingLikeData.step4, 4)
 
-  if (step1Complete && step2Complete && step3Complete) {
+  if (step1Complete && step2Complete && step3Complete && step4Complete) {
     return true
   }
 
@@ -117,6 +129,7 @@ export const isRestaurantOnboardingComplete = (restaurant) => {
     Boolean(String(restaurant?.slug || "").trim()) &&
     step1Complete &&
     step2Complete &&
+    step4Complete &&
     (restaurant?.approvedAt || restaurant?.rejectedAt || restaurant?.rejectionReason || restaurant?.isActive === false)
 
   if (hasOperationalProfile) {
@@ -150,8 +163,20 @@ export const determineStepToShow = (data) => {
     return 3
   }
 
+  // Check step 4
+  if (!isStepComplete(data.step4, 4)) {
+    return 4
+  }
+
   // All steps complete
   return null
+}
+
+export const getIncompleteOnboardingStep = (restaurant) => {
+  if (!restaurant) return 1
+
+  const onboardingLikeData = buildOnboardingLikeDataFromRestaurant(restaurant)
+  return determineStepToShow(onboardingLikeData)
 }
 
 // Check onboarding status from API and return the step to navigate to

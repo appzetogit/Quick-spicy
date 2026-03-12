@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { uploadAPI, api } from "@/lib/api"
+import { clearModuleAuth } from "@/lib/utils/auth"
 import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker"
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
@@ -46,6 +47,7 @@ const IFSC_CODE_REGEX = /^[A-Z0-9]{11}$/
 const ACCOUNT_HOLDER_NAME_REGEX = /^[A-Za-z ]+$/
 const GST_LEGAL_NAME_REGEX = /^[A-Za-z ]+$/
 const FEATURED_DISH_NAME_REGEX = /^[A-Za-z ]+$/
+const CITY_NAME_REGEX = /^[A-Za-z][A-Za-z .'-]*$/
 const LOCAL_IMAGE_FILE_ACCEPT = ".jpg,.jpeg,.png,.webp,.heic,.heif"
 const GALLERY_IMAGE_ACCEPT =
   ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -399,6 +401,11 @@ export default function RestaurantOnboarding() {
     fallbackInputRef: null,
   })
 
+  const handleCloseOnboarding = () => {
+    clearModuleAuth("restaurant")
+    navigate("/restaurant/login", { replace: true })
+  }
+
   const getPreviewImageUrl = (value) => {
     if (!value) return null
     if (typeof value === "string") return value
@@ -635,8 +642,7 @@ export default function RestaurantOnboarding() {
     if (!verifiedPhoneNumber) return
     setStep1((prev) => ({
       ...prev,
-      ownerPhone: verifiedPhoneNumber,
-      primaryContactNumber: verifiedPhoneNumber,
+      ownerPhone: prev.ownerPhone || verifiedPhoneNumber,
     }))
   }, [verifiedPhoneNumber])
 
@@ -811,6 +817,8 @@ export default function RestaurantOnboarding() {
     }
     if (!step1.location?.city?.trim()) {
       errors.push("City is required")
+    } else if (!CITY_NAME_REGEX.test(step1.location.city.trim())) {
+      errors.push("Please enter a valid city name")
     }
 
     return errors
@@ -858,6 +866,13 @@ export default function RestaurantOnboarding() {
     }
     if (!step2.closingTime?.trim()) {
       errors.push("Closing time is required")
+    }
+    if (
+      step2.openingTime?.trim() &&
+      step2.closingTime?.trim() &&
+      normalizeTimeValue(step2.closingTime) <= normalizeTimeValue(step2.openingTime)
+    ) {
+      errors.push("Closing time must be later than opening time")
     }
     if (!step2.openDays || step2.openDays.length === 0) {
       errors.push("Please select at least one open day")
@@ -1450,7 +1465,6 @@ export default function RestaurantOnboarding() {
             onChange={(e) =>
               setStep1({ ...step1, primaryContactNumber: e.target.value })
             }
-            readOnly={Boolean(verifiedPhoneNumber)}
             className="mt-1 bg-white text-sm text-black placeholder-black"
             placeholder="Restaurant's primary contact number"
           />
@@ -1512,7 +1526,10 @@ export default function RestaurantOnboarding() {
             onChange={(e) =>
               setStep1({
                 ...step1,
-                location: { ...step1.location, city: e.target.value },
+                location: {
+                  ...step1.location,
+                  city: e.target.value.replace(/[^A-Za-z .'-]/g, ""),
+                },
               })
             }
             className="bg-white text-sm"
@@ -2279,7 +2296,7 @@ export default function RestaurantOnboarding() {
         <header className="px-4 py-4 sm:px-6 sm:py-5 bg-white flex items-center justify-between border-b">
           <div className="flex items-center gap-3">
             <button
-              onClick={() => navigate("/restaurant/login")}
+              onClick={handleCloseOnboarding}
               className="p-1 hover:bg-gray-100 rounded-full transition-colors"
               aria-label="Close onboarding"
             >

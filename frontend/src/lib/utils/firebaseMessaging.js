@@ -627,6 +627,25 @@ async function attachForegroundListener(firebaseAppInstance) {
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
   const moduleName = normalizeModuleFromPath(pathname);
   if (moduleName === "admin") return;
+
+  const isRestaurantSetupRoute =
+    moduleName === "restaurant" &&
+    (
+      pathname === "/restaurant/login" ||
+      pathname === "/restaurant/auth/sign-in" ||
+      pathname === "/restaurant/signup" ||
+      pathname === "/restaurant/signup-email" ||
+      pathname === "/restaurant/forgot-password" ||
+      pathname === "/restaurant/otp" ||
+      pathname === "/restaurant/welcome" ||
+      pathname === "/restaurant/auth/google-callback" ||
+      pathname.startsWith("/restaurant/onboarding")
+    );
+
+  if (isRestaurantSetupRoute) {
+    return;
+  }
+
   initPushNotificationClient();
 
   const accessToken = localStorage.getItem(`${moduleName}_accessToken`);

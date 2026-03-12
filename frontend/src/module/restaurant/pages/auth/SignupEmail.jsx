@@ -10,6 +10,9 @@ import loginBg from "@/assets/loginbanner.png"
 import { restaurantAPI } from "@/lib/api"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
+const NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 '&.,-]{1,49}$/
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export default function RestaurantSignupEmail() {
   const companyName = useCompanyName()
   const navigate = useNavigate()
@@ -28,38 +31,54 @@ export default function RestaurantSignupEmail() {
   const [resendTimer, setResendTimer] = useState(0)
   const inputRefs = useRef(Array(6).fill(null).map(() => null))
 
+  const validateForm = () => {
+    const trimmedName = formData.name.trim()
+    const trimmedEmail = formData.email.trim().toLowerCase()
+
+    if (!trimmedName) {
+      return "Restaurant name is required"
+    }
+
+    if (!NAME_REGEX.test(trimmedName)) {
+      return "Enter a valid restaurant name"
+    }
+
+    if (!trimmedEmail) {
+      return "Email is required"
+    }
+
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      return "Enter a valid email address"
+    }
+
+    if (!formData.password) {
+      return "Password is required"
+    }
+
+    if (formData.password.length < 6) {
+      return "Password must be at least 6 characters long"
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      return "Passwords do not match"
+    }
+
+    return ""
+  }
+
   const handleFormSubmit = async (e) => {
     e.preventDefault()
     setError("")
 
-    if (!formData.name.trim()) {
-      setError("Restaurant name is required")
-      return
-    }
-
-    if (!formData.email.trim()) {
-      setError("Email is required")
-      return
-    }
-
-    if (!formData.password) {
-      setError("Password is required")
-      return
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters long")
-      return
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match")
+    const validationError = validateForm()
+    if (validationError) {
+      setError(validationError)
       return
     }
 
     setIsLoading(true)
     try {
-      await restaurantAPI.sendOTP(null, "register", formData.email)
+      await restaurantAPI.sendOTP(null, "register", formData.email.trim().toLowerCase())
       setStep(2)
       setResendTimer(60)
       const timer = setInterval(() => {
@@ -135,8 +154,9 @@ export default function RestaurantSignupEmail() {
         null,
         otpCode,
         "register",
-        formData.name,
-        formData.email
+        formData.name.trim(),
+        formData.email.trim().toLowerCase(),
+        formData.password
       )
 
       const data = response?.data?.data || response?.data
@@ -171,7 +191,13 @@ export default function RestaurantSignupEmail() {
     setIsLoading(true)
     setError("")
     try {
-      await restaurantAPI.sendOTP(null, "register", formData.email)
+      const validationError = validateForm()
+      if (validationError) {
+        setError(validationError)
+        return
+      }
+
+      await restaurantAPI.sendOTP(null, "register", formData.email.trim().toLowerCase())
       setResendTimer(60)
       const timer = setInterval(() => {
         setResendTimer((prev) => {

@@ -16,6 +16,8 @@ import {
 import loginBg from "@/assets/loginbanner.png"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
+const RESTAURANT_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 '&.,-]{1,49}$/
+
 // Common country codes
 const countryCodes = [
   { code: "+1", country: "US/CA", flag: "🇺🇸" },
@@ -58,7 +60,7 @@ export default function RestaurantSignup() {
     if (!phone.trim()) {
       return "Phone number is required"
     }
-    const cleanPhone = phone.replace(/[\s\-\(\)]/g, "")
+    const cleanPhone = phone.replace(/\D/g, "")
     const phoneRegex = /^\d{7,15}$/
     if (!phoneRegex.test(cleanPhone)) {
       return "Phone number must be 7-15 digits"
@@ -76,21 +78,25 @@ export default function RestaurantSignup() {
     if (name.trim().length > 50) {
       return "Restaurant name must be less than 50 characters"
     }
+    if (!RESTAURANT_NAME_REGEX.test(name.trim())) {
+      return "Enter a valid restaurant name"
+    }
     return ""
   }
 
   const handleChange = (e) => {
     const { name, value } = e.target
+    const nextValue = name === "phone" ? value.replace(/\D/g, "").slice(0, 15) : value
     setFormData({
       ...formData,
-      [name]: value,
+      [name]: nextValue,
     })
 
     // Real-time validation
     if (name === "phone") {
-      setErrors({ ...errors, phone: validatePhone(value) })
+      setErrors({ ...errors, phone: validatePhone(nextValue) })
     } else if (name === "name") {
-      setErrors({ ...errors, name: validateName(value) })
+      setErrors({ ...errors, name: validateName(nextValue) })
     }
   }
 
@@ -126,7 +132,7 @@ export default function RestaurantSignup() {
     }
 
     // Build full phone number
-    const fullPhone = `${formData.countryCode} ${formData.phone}`.trim()
+    const fullPhone = `${formData.countryCode} ${formData.phone.replace(/\D/g, "")}`.trim()
 
     try {
       // Send OTP with purpose 'register'
@@ -393,4 +399,3 @@ export default function RestaurantSignup() {
     </div>
   )
 }
-

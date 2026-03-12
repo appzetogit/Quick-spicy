@@ -1163,7 +1163,7 @@ function RestaurantDetailsContent() {
   const getActiveFilterCount = () => {
     let count = 0
     if (filters.sortBy) count++
-    if (filters.vegNonVeg) count++
+    if (!vegMode && filters.vegNonVeg) count++
     return count
   }
 
@@ -1795,42 +1795,46 @@ function RestaurantDetailsContent() {
                 )}
                 <ChevronDown className="h-3 w-3" />
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`flex items-center gap-1.5 whitespace-nowrap border-gray-300 bg-white rounded-full ${filters.vegNonVeg === "veg" ? "border-green-600 bg-green-50 text-green-700 font-bold" : ""
-                  }`}
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    vegNonVeg: prev.vegNonVeg === "veg" ? null : "veg",
-                  }))
-                }
-              >
-                <div className="h-3 w-3 rounded-full bg-green-500" />
-                Veg
-                {filters.vegNonVeg === "veg" && (
-                  <X className="h-3 w-3 text-gray-600" />
-                )}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className={`flex items-center gap-1.5 whitespace-nowrap border-gray-300 bg-white rounded-full ${filters.vegNonVeg === "non-veg" ? "border-amber-700 bg-amber-50" : ""
-                  }`}
-                onClick={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    vegNonVeg: prev.vegNonVeg === "non-veg" ? null : "non-veg",
-                  }))
-                }
-              >
-                <div className="h-3 w-3 rounded-full bg-amber-700" />
-                Non-veg
-                {filters.vegNonVeg === "non-veg" && (
-                  <X className="h-3 w-3 text-gray-600" />
-                )}
-              </Button>
+              {!vegMode && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`flex items-center gap-1.5 whitespace-nowrap border-gray-300 bg-white rounded-full ${filters.vegNonVeg === "veg" ? "border-green-600 bg-green-50 text-green-700 font-bold" : ""
+                      }`}
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        vegNonVeg: prev.vegNonVeg === "veg" ? null : "veg",
+                      }))
+                    }
+                  >
+                    <div className="h-3 w-3 rounded-full bg-green-500" />
+                    Veg
+                    {filters.vegNonVeg === "veg" && (
+                      <X className="h-3 w-3 text-gray-600" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`flex items-center gap-1.5 whitespace-nowrap border-gray-300 bg-white rounded-full ${filters.vegNonVeg === "non-veg" ? "border-amber-700 bg-amber-50" : ""
+                      }`}
+                    onClick={() =>
+                      setFilters((prev) => ({
+                        ...prev,
+                        vegNonVeg: prev.vegNonVeg === "non-veg" ? null : "non-veg",
+                      }))
+                    }
+                  >
+                    <div className="h-3 w-3 rounded-full bg-amber-700" />
+                    Non-veg
+                    {filters.vegNonVeg === "non-veg" && (
+                      <X className="h-3 w-3 text-gray-600" />
+                    )}
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -2561,41 +2565,43 @@ function RestaurantDetailsContent() {
                     </div>
 
                     {/* Veg/Non-veg preference */}
-                    <div className="space-y-2">
-                      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Veg/Non-veg preference:</h3>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              vegNonVeg: prev.vegNonVeg === "veg" ? null : "veg",
-                            }))
-                          }
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all flex-1 ${filters.vegNonVeg === "veg"
-                            ? "border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
-                            : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                            }`}
-                        >
-                          <div className="h-4 w-4 rounded-full bg-green-600 dark:bg-green-500" />
-                          <span className="font-medium">Veg</span>
-                        </button>
-                        <button
-                          onClick={() =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              vegNonVeg: prev.vegNonVeg === "non-veg" ? null : "non-veg",
-                            }))
-                          }
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all flex-1 ${filters.vegNonVeg === "non-veg"
-                            ? "border-amber-700 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-                            : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-                            }`}
-                        >
-                          <div className="h-4 w-4 rounded-full bg-amber-700 dark:bg-amber-600" />
-                          <span className="font-medium">Non-veg</span>
-                        </button>
+                    {!vegMode && (
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Veg/Non-veg preference:</h3>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                vegNonVeg: prev.vegNonVeg === "veg" ? null : "veg",
+                              }))
+                            }
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all flex-1 ${filters.vegNonVeg === "veg"
+                              ? "border-green-600 dark:border-green-500 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                              }`}
+                          >
+                            <div className="h-4 w-4 rounded-full bg-green-600 dark:bg-green-500" />
+                            <span className="font-medium">Veg</span>
+                          </button>
+                          <button
+                            onClick={() =>
+                              setFilters((prev) => ({
+                                ...prev,
+                                vegNonVeg: prev.vegNonVeg === "non-veg" ? null : "non-veg",
+                              }))
+                            }
+                            className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border-2 transition-all flex-1 ${filters.vegNonVeg === "non-veg"
+                              ? "border-amber-700 dark:border-amber-600 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                              : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                              }`}
+                          >
+                            <div className="h-4 w-4 rounded-full bg-amber-700 dark:bg-amber-600" />
+                            <span className="font-medium">Non-veg</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Top picks */}
                     <div className="space-y-2">
