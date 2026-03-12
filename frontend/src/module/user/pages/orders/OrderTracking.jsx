@@ -958,6 +958,10 @@ export default function OrderTracking() {
   }
 
   const currentStatus = statusConfig[orderStatus] || statusConfig.placed
+  const isDeliveredOrder =
+    orderStatus === "delivered" ||
+    order?.status === "delivered" ||
+    Boolean(order?.deliveredAt)
 
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-[#0a0a0a]">
@@ -1071,14 +1075,16 @@ export default function OrderTracking() {
       </motion.div>
 
       {/* Map Section */}
-      <DeliveryMap
-        orderId={orderId}
-        order={order}
-        isVisible={!showConfirmation && order !== null}
-        fallbackCustomerCoords={fallbackCustomerCoords}
-        userLiveCoords={userLiveCoords}
+      {!isDeliveredOrder && (
+        <DeliveryMap
+          orderId={orderId}
+          order={order}
+          isVisible={!showConfirmation && order !== null}
+          fallbackCustomerCoords={fallbackCustomerCoords}
+          userLiveCoords={userLiveCoords}
           userLocationAccuracy={userLiveLocation?.accuracy ?? null}
-      />
+        />
+      )}
 
       {/* Scrollable Content */}
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-32">
