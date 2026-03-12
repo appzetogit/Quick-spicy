@@ -6187,8 +6187,6 @@ export default function DeliveryHome() {
 
       // Check customer marker
       const customerDestination = getCustomerDestination(selectedRestaurant)
-      const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
-      const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
       const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
         orderStatus === 'picked_up' ||
         deliveryPhase === 'en_route_to_delivery' ||

@@ -8,12 +8,7 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
-const resolveAudioSource = (source, cacheKey = 'delivery-alert') => {
-  if (!source) return source;
-  if (!import.meta.env.DEV) return source;
-  const separator = source.includes('?') ? '&' : '?';
-  return `${source}${separator}devcache=${cacheKey}`;
-}
+const resolveAudioSource = (source) => source;
 
 const supportsBrowserNotifications = () =>
   typeof window !== 'undefined' && typeof Notification !== 'undefined';
