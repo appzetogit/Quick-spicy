@@ -4814,8 +4814,9 @@ export default function DeliveryHome() {
   useEffect(() => {
     if (newOrder) {
       const incomingStatus = String(newOrder?.status || '').toLowerCase().trim()
-      if (incomingStatus && incomingStatus !== 'ready') {
-        debugLog('⏭️ Ignoring delivery notification before restaurant ready:', {
+      const isDispatchableStatus = !incomingStatus || incomingStatus === 'preparing' || incomingStatus === 'ready'
+      if (!isDispatchableStatus) {
+        debugLog('⏭️ Ignoring non-dispatchable delivery notification status:', {
           orderId: newOrder?.orderId || newOrder?.orderMongoId || newOrder?._id,
           status: incomingStatus
         })
@@ -4823,7 +4824,12 @@ export default function DeliveryHome() {
         return
       }
 
-      const orderId = newOrder.orderMongoId || newOrder.orderId;
+      const orderId =
+        newOrder.orderMongoId ||
+        newOrder.mongoId ||
+        newOrder.id ||
+        newOrder._id ||
+        newOrder.orderId;
       
       // Check if this order has already been accepted
       if (acceptedOrderIdsRef.current.has(orderId)) {
@@ -4916,7 +4922,12 @@ export default function DeliveryHome() {
       }
 
       const restaurantData = {
-        id: newOrder.orderMongoId || newOrder.orderId,
+        id:
+          newOrder.orderMongoId ||
+          newOrder.mongoId ||
+          newOrder.id ||
+          newOrder._id ||
+          newOrder.orderId,
         orderId: newOrder.orderId,
         name: newOrder.restaurantName,
         address: restaurantAddress,
@@ -5255,8 +5266,8 @@ export default function DeliveryHome() {
             return false
           }
 
-          // For unassigned discover orders, show only restaurant-ready orders.
-          if (isUnassignedOrder && orderStatus !== 'ready') {
+          // For unassigned discover orders, show dispatchable orders after restaurant acceptance.
+          if (isUnassignedOrder && !['preparing', 'ready'].includes(String(orderStatus || '').toLowerCase())) {
             return false
           }
           

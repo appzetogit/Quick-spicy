@@ -31,7 +31,7 @@ const logger = winston.createLogger({
   ]
 });
 
-const DELIVERY_OPEN_ACCEPT_STATUSES = ['ready'];
+const DELIVERY_OPEN_ACCEPT_STATUSES = ['preparing', 'ready'];
 
 let getIO = null;
 async function getIOInstance() {
@@ -418,8 +418,8 @@ export const getOrders = asyncHandler(async (req, res) => {
       ? {
           $or: [
             { deliveryPartnerId: delivery._id },
-            { deliveryPartnerId: null, status: { $in: ['ready'] } },
-            { deliveryPartnerId: { $exists: false }, status: { $in: ['ready'] } },
+            { deliveryPartnerId: null, status: { $in: DELIVERY_OPEN_ACCEPT_STATUSES } },
+            { deliveryPartnerId: { $exists: false }, status: { $in: DELIVERY_OPEN_ACCEPT_STATUSES } },
           ],
         }
       : { deliveryPartnerId: delivery._id };
@@ -701,7 +701,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       return errorResponse(
         res,
         400,
-        `Order cannot be accepted. Current status: ${order.status}. Order must be in 'ready' status.`
+        `Order cannot be accepted. Current status: ${order.status}. Order must be in 'preparing' or 'ready' status.`
       );
     }
 
@@ -881,10 +881,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     });
 
     // Check if order is in valid state to accept
-    const validStatuses = ['ready'];
+    const validStatuses = DELIVERY_OPEN_ACCEPT_STATUSES;
     if (!validStatuses.includes(order.status)) {
       console.warn(`⚠️ Order ${order.orderId} cannot be accepted. Current status: ${order.status}, Valid statuses: ${validStatuses.join(', ')}`);
-      return errorResponse(res, 400, `Order cannot be accepted. Current status: ${order.status}. Order must be in 'ready' status.`);
+      return errorResponse(res, 400, `Order cannot be accepted. Current status: ${order.status}. Order must be in 'preparing' or 'ready' status.`);
     }
 
     // Get restaurant location

@@ -47,7 +47,7 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
     // Get restaurant location
     const restaurantDoc = await Restaurant.findById(restaurantId)
-      .select('location')
+      .select('name location address phone ownerPhone')
       .lean();
 
     if (!restaurantDoc || !restaurantDoc.location || !restaurantDoc.location.coordinates) {
@@ -82,10 +82,16 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
       // Notify all available delivery boys
       const populatedOrder = await Order.findById(order._id)
         .populate('userId', 'name phone')
-        .populate('restaurantId', 'name location address phone ownerPhone')
         .lean();
 
       if (populatedOrder) {
+        const orderForNotification = {
+          ...populatedOrder,
+          restaurantId: restaurantDoc || {
+            _id: restaurantId,
+            name: order.restaurantName
+          }
+        };
         const deliveryPartnerIds = allDeliveryBoys.map(db => db.deliveryPartnerId);
         
         // Update assignment info
@@ -97,12 +103,12 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
           }
         });
 
-        await notifyMultipleDeliveryBoys(populatedOrder, deliveryPartnerIds, 'priority');
+        await notifyMultipleDeliveryBoys(orderForNotification, deliveryPartnerIds, 'priority');
         
         console.log(`✅ Resent notification to ${deliveryPartnerIds.length} delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${deliveryPartnerIds.length} delivery partners`, {
-          order: populatedOrder,
+          order: orderForNotification,
           notifiedCount: deliveryPartnerIds.length
         });
       }
@@ -110,10 +116,16 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
       // Notify priority delivery boys
       const populatedOrder = await Order.findById(order._id)
         .populate('userId', 'name phone')
-        .populate('restaurantId', 'name location address phone ownerPhone')
         .lean();
 
       if (populatedOrder) {
+        const orderForNotification = {
+          ...populatedOrder,
+          restaurantId: restaurantDoc || {
+            _id: restaurantId,
+            name: order.restaurantName
+          }
+        };
         const priorityIds = priorityDeliveryBoys.map(db => db.deliveryPartnerId);
         
         // Update assignment info
@@ -125,12 +137,12 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
           }
         });
 
-        await notifyMultipleDeliveryBoys(populatedOrder, priorityIds, 'priority');
+        await notifyMultipleDeliveryBoys(orderForNotification, priorityIds, 'priority');
         
         console.log(`✅ Resent notification to ${priorityIds.length} priority delivery partners for order ${order.orderId}`);
 
         return successResponse(res, 200, `Notification sent to ${priorityIds.length} delivery partners`, {
-          order: populatedOrder,
+          order: orderForNotification,
           notifiedCount: priorityIds.length
         });
       }

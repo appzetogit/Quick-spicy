@@ -952,12 +952,24 @@ export const markOrderReady = asyncHandler(async (req, res) => {
     };
     await order.save();
 
-    // Populate order for notifications
+    // Populate order for notifications.
+    // Order.restaurantId is a String field, so avoid populate() on that path.
     const populatedOrder = await Order.findById(order._id)
-      .populate('restaurantId', 'name location address phone')
       .populate('userId', 'name phone')
       .populate('deliveryPartnerId', 'name phone')
       .lean();
+    const restaurantForNotification = req.restaurant || await Restaurant.findById(restaurantId)
+      .select('name location address phone')
+      .lean();
+    const notificationOrder = populatedOrder
+      ? {
+          ...populatedOrder,
+          restaurantId: restaurantForNotification || {
+            _id: restaurantId,
+            name: order.restaurantName
+          }
+        }
+      : order;
 
     try {
       await notifyRestaurantOrderUpdate(order._id.toString(), 'ready');
@@ -971,11 +983,11 @@ export const markOrderReady = asyncHandler(async (req, res) => {
     }
 
     // Notify delivery boy that order is ready for pickup
-    if (populatedOrder.deliveryPartnerId) {
+    if (notificationOrder?.deliveryPartnerId) {
       try {
         const { notifyDeliveryBoyOrderReady } = await import('../../order/services/deliveryNotificationService.js');
-        const deliveryPartnerId = populatedOrder.deliveryPartnerId._id || populatedOrder.deliveryPartnerId;
-        await notifyDeliveryBoyOrderReady(populatedOrder, deliveryPartnerId);
+        const deliveryPartnerId = notificationOrder.deliveryPartnerId._id || notificationOrder.deliveryPartnerId;
+        await notifyDeliveryBoyOrderReady(notificationOrder, deliveryPartnerId);
         console.log(`✅ Order ready notification sent to delivery partner ${deliveryPartnerId}`);
       } catch (deliveryNotifError) {
         console.error('Error sending delivery boy notification:', deliveryNotifError);
@@ -983,7 +995,7 @@ export const markOrderReady = asyncHandler(async (req, res) => {
     }
 
     return successResponse(res, 200, 'Order marked as ready', {
-      order: populatedOrder || order
+      order: notificationOrder
     });
   } catch (error) {
     console.error('Error updating order status:', error);
@@ -1127,3 +1139,4 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, `Failed to resend notification: ${error.message}`);
   }
 });
+

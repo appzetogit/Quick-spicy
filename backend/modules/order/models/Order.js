@@ -356,31 +356,51 @@ orderSchema.pre('save', async function(next) {
 // Update tracking when status changes
 orderSchema.pre('save', function(next) {
   const now = new Date();
+
+  // Backward-compatibility guard for legacy documents with partial tracking object.
+  if (!this.tracking || typeof this.tracking !== 'object') {
+    this.tracking = {};
+  }
+  if (!this.tracking.confirmed || typeof this.tracking.confirmed !== 'object') {
+    this.tracking.confirmed = { status: false };
+  }
+  if (!this.tracking.preparing || typeof this.tracking.preparing !== 'object') {
+    this.tracking.preparing = { status: false };
+  }
+  if (!this.tracking.ready || typeof this.tracking.ready !== 'object') {
+    this.tracking.ready = { status: false };
+  }
+  if (!this.tracking.outForDelivery || typeof this.tracking.outForDelivery !== 'object') {
+    this.tracking.outForDelivery = { status: false };
+  }
+  if (!this.tracking.delivered || typeof this.tracking.delivered !== 'object') {
+    this.tracking.delivered = { status: false };
+  }
   
   if (this.isModified('status')) {
     switch (this.status) {
       case 'confirmed':
-        if (!this.tracking.confirmed.status) {
+        if (!this.tracking.confirmed?.status) {
           this.tracking.confirmed = { status: true, timestamp: now };
         }
         break;
       case 'preparing':
-        if (!this.tracking.preparing.status) {
+        if (!this.tracking.preparing?.status) {
           this.tracking.preparing = { status: true, timestamp: now };
         }
         break;
       case 'ready':
-        if (!this.tracking.ready.status) {
+        if (!this.tracking.ready?.status) {
           this.tracking.ready = { status: true, timestamp: now };
         }
         break;
       case 'out_for_delivery':
-        if (!this.tracking.outForDelivery.status) {
+        if (!this.tracking.outForDelivery?.status) {
           this.tracking.outForDelivery = { status: true, timestamp: now };
         }
         break;
       case 'delivered':
-        if (!this.tracking.delivered.status) {
+        if (!this.tracking.delivered?.status) {
           this.tracking.delivered = { status: true, timestamp: now };
           this.deliveredAt = now;
         }
