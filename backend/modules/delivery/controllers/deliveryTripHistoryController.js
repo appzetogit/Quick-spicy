@@ -239,6 +239,14 @@ export const getTripHistory = asyncHandler(async (req, res) => {
       const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod';
       const codCollectedAmount = isCompleted && isCOD ? orderTotal : 0;
       const earningAmount = isCompleted ? deliveryEarning : 0;
+      const items = Array.isArray(order.items)
+        ? order.items.map((item) => ({
+            name: item?.name || 'Item',
+            quantity: Number(item?.quantity || 0),
+            price: Number(item?.price || 0)
+          }))
+        : [];
+      const itemsCount = items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
 
       return {
         id: order._id.toString(),
@@ -257,6 +265,8 @@ export const getTripHistory = asyncHandler(async (req, res) => {
         payment: {
           method: paymentMethod
         },
+        items,
+        itemsCount,
         date: order.createdAt,
         createdAt: order.createdAt,
         deliveredAt: order.deliveredAt,

@@ -22,6 +22,26 @@ const parseAmount = (value) => {
   return Number.isFinite(amount) ? amount : 0
 }
 
+const extractTripItems = (trip) => {
+  const sourceItems = Array.isArray(trip?.items)
+    ? trip.items
+    : Array.isArray(trip?.orderItems)
+      ? trip.orderItems
+      : []
+
+  return sourceItems
+    .map((item) => {
+      const name = String(item?.name || item?.itemName || "").trim()
+      const quantity = Number(item?.quantity ?? item?.qty ?? 0)
+      if (!name) return null
+      return {
+        name,
+        quantity: Number.isFinite(quantity) && quantity > 0 ? quantity : 1
+      }
+    })
+    .filter(Boolean)
+}
+
 export default function TripHistory() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState("daily")
@@ -415,6 +435,23 @@ export default function TripHistory() {
                   <div className="flex-1">
                     <p className="text-base font-semibold text-black">{trip.orderId}</p>
                     <p className="text-sm text-gray-600 mt-1">{trip.restaurant || trip.restaurantName || 'Unknown Restaurant'}</p>
+                    {(() => {
+                      const tripItems = extractTripItems(trip)
+                      if (tripItems.length === 0) return null
+
+                      const itemSummary = tripItems
+                        .slice(0, 2)
+                        .map((item) => `${item.quantity}x ${item.name}`)
+                        .join(", ")
+                      const hiddenCount = tripItems.length - 2
+
+                      return (
+                        <p className="text-xs text-gray-700 mt-1">
+                          {itemSummary}
+                          {hiddenCount > 0 ? ` +${hiddenCount} more` : ""}
+                        </p>
+                      )
+                    })()}
                     {/* Payment Method Badge */}
                     {(() => {
                       const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'razorpay').toLowerCase()

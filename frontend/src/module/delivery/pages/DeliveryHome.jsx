@@ -5995,6 +5995,47 @@ export default function DeliveryHome() {
     }
   }, [isOnline, riderLocation, showHomeSections])
 
+  const getRouteEndDestination = useCallback(() => {
+    const currentDirections = directionsResponseRef.current
+    const legs = currentDirections?.routes?.[0]?.legs
+    const lastLeg = Array.isArray(legs) && legs.length > 0 ? legs[legs.length - 1] : null
+    const endLocation = lastLeg?.end_location
+    if (endLocation) {
+      const endLat = typeof endLocation.lat === 'function' ? endLocation.lat() : Number(endLocation.lat)
+      const endLng = typeof endLocation.lng === 'function' ? endLocation.lng() : Number(endLocation.lng)
+      if (Number.isFinite(endLat) && Number.isFinite(endLng)) {
+        return { lat: endLat, lng: endLng }
+      }
+    }
+
+    const parseRoutePoint = (point) => {
+      if (Array.isArray(point) && point.length >= 2) {
+        const lat = Number(point[0])
+        const lng = Number(point[1])
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+      }
+      if (point && typeof point === 'object') {
+        const lat = Number(point.lat ?? point.latitude)
+        const lng = Number(point.lng ?? point.longitude)
+        return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null
+      }
+      return null
+    }
+
+    const fullRoute = fullRoutePolylineRef.current
+    if (Array.isArray(fullRoute) && fullRoute.length > 0) {
+      const parsed = parseRoutePoint(fullRoute[fullRoute.length - 1])
+      if (parsed) return parsed
+    }
+
+    if (Array.isArray(routePolyline) && routePolyline.length > 0) {
+      const parsed = parseRoutePoint(routePolyline[routePolyline.length - 1])
+      if (parsed) return parsed
+    }
+
+    return null
+  }, [routePolyline])
+
   // Safeguard: Ensure bike marker and restaurant marker stay on map (prevent them from disappearing)
   // Always show bike marker regardless of online/offline status
   useEffect(() => {
@@ -6048,10 +6089,18 @@ export default function DeliveryHome() {
 
       // Check customer marker
       const customerDestination = getCustomerDestination(selectedRestaurant)
-      if (selectedRestaurant && customerDestination) {
+      const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+      const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+      const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
+        orderStatus === 'picked_up' ||
+        deliveryPhase === 'en_route_to_delivery' ||
+        deliveryPhase === 'picked_up'
+      const routeEndDestination = isDeliveryPhase ? getRouteEndDestination() : null
+      const markerDestination = routeEndDestination || customerDestination
+      if (selectedRestaurant && markerDestination) {
         const customerLocation = {
-          lat: customerDestination.lat,
-          lng: customerDestination.lng
+          lat: markerDestination.lat,
+          lng: markerDestination.lng
         };
 
         if (customerMarkerRef.current) {
@@ -6083,7 +6132,7 @@ export default function DeliveryHome() {
     }, 2000); // Check every 2 seconds
 
     return () => clearInterval(checkInterval);
-  }, [createRestaurantMapMarker, getRestaurantMarkerIcon, riderLocation, selectedRestaurant, showHomeSections])
+  }, [createRestaurantMapMarker, getRestaurantMarkerIcon, riderLocation, selectedRestaurant, showHomeSections, getRouteEndDestination])
 
   // Create restaurant marker when selectedRestaurant changes
   useEffect(() => {
@@ -6124,11 +6173,20 @@ export default function DeliveryHome() {
   useEffect(() => {
     if (!window.deliveryMapInstance || !selectedRestaurant) return;
 
+    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || ''
+    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || ''
+    const isDeliveryPhase = orderStatus === 'out_for_delivery' ||
+      orderStatus === 'picked_up' ||
+      deliveryPhase === 'en_route_to_delivery' ||
+      deliveryPhase === 'picked_up'
+    const routeEndDestination = isDeliveryPhase ? getRouteEndDestination() : null
+    const customerDestination = getCustomerDestination(selectedRestaurant)
+    const markerDestination = routeEndDestination || customerDestination
+
     const hasCustomerCoords =
-      selectedRestaurant?.customerLat != null &&
-      selectedRestaurant?.customerLng != null &&
-      Number.isFinite(Number(selectedRestaurant.customerLat)) &&
-      Number.isFinite(Number(selectedRestaurant.customerLng));
+      markerDestination &&
+      Number.isFinite(Number(markerDestination.lat)) &&
+      Number.isFinite(Number(markerDestination.lng));
 
     if (!hasCustomerCoords) {
       if (customerMarkerRef.current) {
@@ -6139,8 +6197,8 @@ export default function DeliveryHome() {
     }
 
     const customerLocation = {
-      lat: Number(selectedRestaurant.customerLat),
-      lng: Number(selectedRestaurant.customerLng)
+      lat: Number(markerDestination.lat),
+      lng: Number(markerDestination.lng)
     };
 
     const customerIcon = {
@@ -6169,7 +6227,16 @@ export default function DeliveryHome() {
       customerMarkerRef.current.setTitle(selectedRestaurant.customerName || 'Customer');
       customerMarkerRef.current.setMap(window.deliveryMapInstance);
     }
-  }, [selectedRestaurant?.customerLat, selectedRestaurant?.customerLng, selectedRestaurant?.customerName])
+  }, [
+    selectedRestaurant?.customerLat,
+    selectedRestaurant?.customerLng,
+    selectedRestaurant?.customerName,
+    selectedRestaurant?.orderStatus,
+    selectedRestaurant?.status,
+    selectedRestaurant?.deliveryPhase,
+    selectedRestaurant?.deliveryState?.currentPhase,
+    getRouteEndDestination
+  ])
 
   useEffect(() => {
     if (selectedRestaurant) return;
@@ -6515,10 +6582,12 @@ export default function DeliveryHome() {
         let destinationLocation;
         let destinationName;
         const customerDestination = getCustomerDestination(selectedRestaurant)
-        if (navigationMode === 'customer' && customerDestination) {
+        const routeEndDestination = getRouteEndDestination()
+        if (navigationMode === 'customer' && (customerDestination || routeEndDestination)) {
+          const resolvedDestination = routeEndDestination || customerDestination
           destinationLocation = {
-            lat: customerDestination.lat,
-            lng: customerDestination.lng
+            lat: resolvedDestination.lat,
+            lng: resolvedDestination.lng
           };
           destinationName = selectedRestaurant.customerName || 'Customer';
         } else {
