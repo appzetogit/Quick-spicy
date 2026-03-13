@@ -24,11 +24,9 @@ import {
   YAxis,
 } from "recharts"
 import { Activity, ArrowUpRight, ShoppingBag, CreditCard, Truck, Receipt, DollarSign, Store, UserCheck, Package, UserCircle, Clock, CheckCircle, Plus } from "lucide-react"
-import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import { adminAPI } from "@/lib/api"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugError = () => {}
 
 const INR_SYMBOL = "\u20B9"
 
@@ -45,13 +43,23 @@ export default function AdminHome() {
   const [selectedPeriod, setSelectedPeriod] = useState("overall")
   const [isLoading, setIsLoading] = useState(true)
   const [dashboardData, setDashboardData] = useState(null)
+  const [configuredPlatformFee, setConfiguredPlatformFee] = useState(0)
+  const [configuredDeliveryFee, setConfiguredDeliveryFee] = useState(0)
+  const [configuredGstRate, setConfiguredGstRate] = useState(0)
+  const [pendingRestaurantRequestsCount, setPendingRestaurantRequestsCount] = useState(0)
 
   // Fetch dashboard stats on mount
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
         setIsLoading(true)
-        const response = await adminAPI.getDashboardStats()
+        const [dashboardResponse, feeSettingsResponse, joinRequestsResponse] = await Promise.all([
+          adminAPI.getDashboardStats(),
+          adminAPI.getFeeSettings(),
+          adminAPI.getRestaurantJoinRequests({ status: "pending", page: 1, limit: 200 }),
+        ])
+
+        const response = dashboardResponse
         if (response.data?.success && response.data?.data) {
           setDashboardData(response.data.data)
           debugLog('✅ Dashboard stats fetched:', response.data.data)
@@ -62,6 +70,22 @@ export default function AdminHome() {
           debugLog('💵 Total Admin Earnings:', response.data.data.totalAdminEarnings)
         } else {
           debugError('❌ Invalid response format:', response.data)
+        }
+
+        if (feeSettingsResponse.data?.success && feeSettingsResponse.data?.data?.feeSettings) {
+          const feeSettings = feeSettingsResponse.data.data.feeSettings
+          setConfiguredPlatformFee(Number(feeSettings.platformFee || 0))
+          setConfiguredDeliveryFee(Number(feeSettings.deliveryFee || 0))
+          setConfiguredGstRate(Number(feeSettings.gstRate || 0))
+        }
+
+        if (joinRequestsResponse.data?.success && joinRequestsResponse.data?.data) {
+          const requests =
+            joinRequestsResponse.data.data.requests ||
+            joinRequestsResponse.data.data.restaurants ||
+            joinRequestsResponse.data.data ||
+            []
+          setPendingRestaurantRequestsCount(Array.isArray(requests) ? requests.length : 0)
         }
       } catch (error) {
         debugError('❌ Error fetching dashboard stats:', error)
@@ -80,7 +104,7 @@ export default function AdminHome() {
       const timer = setTimeout(() => setIsLoading(false), 350)
       return () => clearTimeout(timer)
     }
-  }, [selectedZone, selectedPeriod])
+  }, [dashboardData, selectedZone, selectedPeriod])
 
   // Get order stats from real data
   const getOrderStats = () => {
@@ -127,20 +151,33 @@ export default function AdminHome() {
   const commissionTotal = dashboardData?.commission?.total || 0
   const ordersTotal = dashboardData?.orders?.total || 0
   const platformFeeTotal = dashboardData?.platformFee?.total || 0
+  const platformFeeCardValue = configuredPlatformFee > 0 ? configuredPlatformFee : platformFeeTotal
   const deliveryFeeTotal = dashboardData?.deliveryFee?.total || 0
+  const deliveryFeeCardValue = configuredDeliveryFee > 0 ? configuredDeliveryFee : deliveryFeeTotal
   const gstTotal = dashboardData?.gst?.total || 0
-  // Total revenue = Commission + Platform Fee + Delivery Fee + GST
-  const totalAdminEarnings = commissionTotal + platformFeeTotal + deliveryFeeTotal + gstTotal
+  const gstCardValue = configuredGstRate > 0 ? configuredGstRate : gstTotal
+  const totalAdminEarnings =
+    commissionTotal +
+    platformFeeCardValue +
+    deliveryFeeCardValue +
+    (configuredGstRate > 0 ? 0 : gstCardValue)
 
   // Additional stats
   const totalRestaurants = dashboardData?.restaurants?.total || 0
-  const pendingRestaurantRequests = dashboardData?.restaurants?.pendingRequests || 0
+  const pendingRestaurantRequests = pendingRestaurantRequestsCount || dashboardData?.restaurants?.pendingRequests || 0
   const totalDeliveryBoys = dashboardData?.deliveryBoys?.total || 0
   const pendingDeliveryBoyRequests = dashboardData?.deliveryBoys?.pendingRequests || 0
   const totalFoods = dashboardData?.foods?.total || 0
   const totalAddons = dashboardData?.addons?.total || 0
   const totalCustomers = dashboardData?.customers?.total || 0
-  const pendingOrders = dashboardData?.orderStats?.pending || 0
+  const byStatus = dashboardData?.orders?.byStatus || {}
+  const pendingOrders = (
+    Number(byStatus.pending || 0) +
+    Number(byStatus.confirmed || 0) +
+    Number(byStatus.preparing || 0) +
+    Number(byStatus.ready || 0) +
+    Number(byStatus.out_for_delivery || 0)
+  ) || dashboardData?.orderStats?.pending || 0
   const completedOrders = dashboardData?.orderStats?.completed || 0
 
   const pieData = orderStats.map((item) => ({
@@ -152,9 +189,11 @@ export default function AdminHome() {
   const activityFeed = []
   const totalRevenueHelper = [
     `Commission ${formatCurrency(commissionTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `Platform ${formatCurrency(platformFeeTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `Delivery ${formatCurrency(deliveryFeeTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-    `GST ${formatCurrency(gstTotal, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Platform ${formatCurrency(platformFeeCardValue, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    `Delivery ${formatCurrency(deliveryFeeCardValue, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+    configuredGstRate > 0
+      ? `GST ${configuredGstRate}%`
+      : `GST ${formatCurrency(gstCardValue, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
   ].join(" + ")
 
   return (
@@ -233,24 +272,24 @@ export default function AdminHome() {
             />
             <MetricCard
               title="Platform fee"
-              value={formatCurrency(platformFeeTotal)}
-              helper="Total platform fees"
+              value={formatCurrency(platformFeeCardValue)}
+              helper={configuredPlatformFee > 0 ? "Current configured platform fee" : "Total platform fees"}
               icon={<CreditCard className="h-5 w-5 text-purple-600" />}
               accent="bg-purple-200/40"
               path="/admin/fee-settings"
             />
             <MetricCard
               title="Delivery fee"
-              value={formatCurrency(deliveryFeeTotal)}
-              helper="Total delivery fees"
+              value={formatCurrency(deliveryFeeCardValue)}
+              helper={configuredDeliveryFee > 0 ? "Current configured delivery fee" : "Total delivery fees"}
               icon={<Truck className="h-5 w-5 text-blue-600" />}
               accent="bg-blue-200/40"
               path="/admin/transaction-report"
             />
             <MetricCard
               title="GST"
-              value={formatCurrency(gstTotal)}
-              helper="Total GST collected"
+              value={configuredGstRate > 0 ? `${configuredGstRate}%` : formatCurrency(gstCardValue)}
+              helper={configuredGstRate > 0 ? "Current configured GST rate" : "Total GST collected"}
               icon={<Receipt className="h-5 w-5 text-orange-600" />}
               accent="bg-orange-200/40"
               path="/admin/tax-report"
@@ -338,16 +377,16 @@ export default function AdminHome() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="lg:col-span-2 border-neutral-200 bg-white">
+            <Card className="lg:col-span-2 min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex flex-col gap-2 border-b border-neutral-200 pb-4">
                 <CardTitle className="text-lg text-neutral-900">Revenue trajectory</CardTitle>
                 <p className="text-sm text-neutral-500">
                   Commission and gross revenue with monthly order volume
                 </p>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-80 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <AreaChart data={monthlyData}>
                       <defs>
                         <linearGradient id="revFill" x1="0" y1="0" x2="0" y2="1">
@@ -397,7 +436,7 @@ export default function AdminHome() {
               </CardContent>
             </Card>
 
-            <Card className="border-neutral-200 bg-white">
+            <Card className="min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex items-center justify-between border-b border-neutral-200 pb-4">
                 <div>
                   <CardTitle className="text-lg text-neutral-900">Order mix</CardTitle>
@@ -407,9 +446,9 @@ export default function AdminHome() {
                   {orderStats.reduce((s, o) => s + o.value, 0)} orders
                 </span>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-72 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <PieChart>
                       <Pie
                         data={pieData}
@@ -462,14 +501,14 @@ export default function AdminHome() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-3">
-            <Card className="border-neutral-200 bg-white">
+            <Card className="min-w-0 border-neutral-200 bg-white">
               <CardHeader className="flex items-center justify-between border-b border-neutral-200 pb-4">
                 <CardTitle className="text-lg text-neutral-900">Momentum snapshot</CardTitle>
                 <span className="text-xs text-neutral-500">No data available</span>
               </CardHeader>
-              <CardContent className="pt-4">
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
+              <CardContent className="min-w-0 pt-4">
+                <div className="h-64 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                     <BarChart data={monthlyData.slice(-6)}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="month" stroke="#6b7280" />

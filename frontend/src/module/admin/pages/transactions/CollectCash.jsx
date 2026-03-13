@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Eye, Settings, Wallet, ArrowUpDown, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
-import { collectCashDummy } from "../../data/collectCashDummy"
+import { emptyCollectCashTransactions } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter as DialogFooterComponent } from "@/components/ui/dialog"
 import { exportTransactionsToCSV, exportTransactionsToExcel, exportTransactionsToPDF, exportTransactionsToJSON } from "../../components/transactions/transactionsExportUtils"
@@ -18,7 +18,7 @@ export default function CollectCash() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [transactions, setTransactions] = useState(collectCashDummy)
+  const [transactions, setTransactions] = useState(emptyCollectCashTransactions)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState(null)

@@ -7,9 +7,44 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const createEmptyUploadedDocs = () => ({
+  profilePhoto: null,
+  aadharPhoto: null,
+  panPhoto: null,
+  drivingLicensePhoto: null
+})
+
+const sanitizeUploadedDocValue = (value) => {
+  if (!value) return null
+
+  if (typeof value === "string") {
+    return value.startsWith("blob:") ? null : value
+  }
+
+  if (typeof value === "object") {
+    const url = typeof value.url === "string" ? value.url : ""
+    if (url.startsWith("blob:")) {
+      return null
+    }
+    return value
+  }
+
+  return null
+}
+
+const sanitizeUploadedDocs = (docs) => ({
+  profilePhoto: sanitizeUploadedDocValue(docs?.profilePhoto),
+  aadharPhoto: sanitizeUploadedDocValue(docs?.aadharPhoto),
+  panPhoto: sanitizeUploadedDocValue(docs?.panPhoto),
+  drivingLicensePhoto: sanitizeUploadedDocValue(docs?.drivingLicensePhoto)
+})
+
 
 export default function SignupStep2() {
   const navigate = useNavigate()
+  const isMobileDevice =
+    typeof navigator !== "undefined" &&
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || "")
   const fileInputRefs = useRef({
     profilePhoto: null,
     aadharPhoto: null,
@@ -26,17 +61,12 @@ export default function SignupStep2() {
     const saved = sessionStorage.getItem("deliverySignupDocs")
     if (saved) {
       try {
-        return JSON.parse(saved)
+        return sanitizeUploadedDocs(JSON.parse(saved))
       } catch (e) {
         debugError("Error parsing saved docs:", e)
       }
     }
-    return {
-      profilePhoto: null,
-      aadharPhoto: null,
-      panPhoto: null,
-      drivingLicensePhoto: null
-    }
+    return createEmptyUploadedDocs()
   })
   const [uploading, setUploading] = useState({
     profilePhoto: false,
@@ -78,6 +108,10 @@ export default function SignupStep2() {
   }, [documents])
 
   const getPreviewSrc = (docType) => {
+    const uploaded = uploadedDocs[docType]
+    if (typeof uploaded === "string") return uploaded
+    if (uploaded?.url) return uploaded.url
+
     const localFile = documents[docType]
     if (localFile instanceof File) {
       if (!localFile._previewUrl) {
@@ -85,10 +119,7 @@ export default function SignupStep2() {
       }
       return localFile._previewUrl
     }
-
-    const uploaded = uploadedDocs[docType]
-    if (typeof uploaded === "string") return uploaded
-    return uploaded?.url || null
+    return null
   }
 
   const getExtensionFromMimeType = (mimeType) => {
@@ -137,6 +168,23 @@ export default function SignupStep2() {
       input.click()
     } catch (error) {
       debugError("Browser camera fallback failed:", error)
+    }
+  }
+
+  const openBrowserFileFallback = ({ onSelectFile }) => {
+    try {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = ".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+      input.multiple = false
+      input.onchange = (event) => {
+        const file = event?.target?.files?.[0] || null
+        if (file) onSelectFile(file)
+      }
+      input.click()
+    } catch (error) {
+      debugError("Browser file fallback failed:", error)
+      toast.error("Could not open device files. Please try again.")
     }
   }
 
@@ -198,31 +246,29 @@ export default function SignupStep2() {
     setSourcePicker((prev) => ({ ...prev, isOpen: false }))
   }
 
-  const handlePickFromDevice = () => {
-    const input = sourcePicker.fallbackInputRef?.current || null
-
-    if (!input) {
-      debugWarn("No file input available for device upload")
-      toast.error("Device upload is not available right now. Please try again.")
+  const handleOpenUploadOptions = ({ title, docType, onSelectFile }) => {
+    if (isMobileDevice) {
+      openImageSourcePicker({
+        title,
+        fileNamePrefix: docType,
+        fallbackInputRef: {
+          current: fileInputRefs.current[docType]
+        },
+        onSelectFile
+      })
       return
     }
 
+    openBrowserFileFallback({ onSelectFile })
+  }
+
+  const handlePickFromDevice = () => {
     try {
-      if (typeof input.showPicker === "function") {
-        input.showPicker()
-      } else {
-        input.click()
-      }
+      openBrowserFileFallback({ onSelectFile: sourcePicker.onSelectFile })
       closeImageSourcePicker()
     } catch (error) {
       debugError("Device file picker open failed:", error)
-      try {
-        input.click()
-        closeImageSourcePicker()
-      } catch (fallbackError) {
-        debugError("Fallback file input click failed:", fallbackError)
-        toast.error("Could not open device files. Please try again.")
-      }
+      toast.error("Could not open device files. Please try again.")
     }
   }
 
@@ -382,12 +428,9 @@ export default function SignupStep2() {
                 <button
                   type="button"
                   onClick={() =>
-                    openImageSourcePicker({
+                    handleOpenUploadOptions({
                       title: label,
-                      fileNamePrefix: docType,
-                      fallbackInputRef: {
-                        current: fileInputRefs.current[docType]
-                      },
+                      docType,
                       onSelectFile: (selectedFile) => handleFileSelect(docType, selectedFile)
                     })
                   }
@@ -467,13 +510,15 @@ export default function SignupStep2() {
         <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
           <div className="w-full max-w-sm bg-white rounded-lg p-4 space-y-3">
             <h3 className="text-sm font-semibold text-black">{sourcePicker.title || "Select image source"}</h3>
-            <button
-              type="button"
-              className="w-full py-2.5 rounded-md bg-[#00B761] text-white text-sm font-medium hover:bg-[#00A055] transition-colors"
-              onClick={handlePickFromCamera}
-            >
-              Use Camera
-            </button>
+            {isMobileDevice && (
+              <button
+                type="button"
+                className="w-full py-2.5 rounded-md bg-[#00B761] text-white text-sm font-medium hover:bg-[#00A055] transition-colors"
+                onClick={handlePickFromCamera}
+              >
+                Use Camera
+              </button>
+            )}
             <button
               type="button"
               className="w-full py-2.5 rounded-md border border-gray-300 text-gray-800 text-sm font-medium hover:bg-gray-50 transition-colors"

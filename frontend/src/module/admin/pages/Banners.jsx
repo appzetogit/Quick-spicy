@@ -1,7 +1,7 @@
 ﻿import { useState, useMemo, useEffect } from "react"
 import { Search, Download, ChevronDown, Plus, Edit, Trash2, Upload, Image as ImageIcon, Info, Loader2 } from "lucide-react"
 import api from "@/lib/api"
-import { bannersDummy } from "../data/bannersDummy"
+import { emptyBanners } from "../utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -27,7 +27,7 @@ export default function Banners() {
   const [activeLanguage, setActiveLanguage] = useState("default")
   const [searchQuery, setSearchQuery] = useState("")
   const [bannerType, setBannerType] = useState("all")
-  const [banners, setBanners] = useState(bannersDummy)
+  const [banners, setBanners] = useState(emptyBanners)
   const [formData, setFormData] = useState({
     title: "",
     zone: "",

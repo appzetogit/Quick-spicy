@@ -1,6 +1,6 @@
 ﻿import { useState } from "react"
 import { Download, ChevronDown, RefreshCw, FileText, DollarSign, Settings, FileSpreadsheet, Code } from "lucide-react"
-import { taxReportDummy, taxStats } from "../../data/taxReportDummy"
+import { emptyTaxReports, emptyTaxStats } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
@@ -31,7 +31,7 @@ export default function TaxReport() {
   }
 
   const handleExport = (format) => {
-    if (taxReportDummy.length === 0) {
+    if (emptyTaxReports.length === 0) {
       alert("No data to export")
       return
     }
@@ -42,10 +42,10 @@ export default function TaxReport() {
       { key: "totalTax", label: "Total Tax" },
     ]
     switch (format) {
-      case "csv": exportReportsToCSV(taxReportDummy, headers, "tax_report"); break
-      case "excel": exportReportsToExcel(taxReportDummy, headers, "tax_report"); break
-      case "pdf": exportReportsToPDF(taxReportDummy, headers, "tax_report", "Tax Report"); break
-      case "json": exportReportsToJSON(taxReportDummy, "tax_report"); break
+      case "csv": exportReportsToCSV(emptyTaxReports, headers, "tax_report"); break
+      case "excel": exportReportsToExcel(emptyTaxReports, headers, "tax_report"); break
+      case "pdf": exportReportsToPDF(emptyTaxReports, headers, "tax_report", "Tax Report"); break
+      case "json": exportReportsToJSON(emptyTaxReports, "tax_report"); break
     }
   }
 
@@ -143,7 +143,7 @@ export default function TaxReport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Total Income</p>
-                <p className="text-2xl font-bold text-blue-600">{taxStats.totalIncome}</p>
+                <p className="text-2xl font-bold text-blue-600">{emptyTaxStats.totalIncome}</p>
               </div>
               <div className="w-14 h-14 rounded-lg bg-yellow-100 flex items-center justify-center">
                 <DollarSign className="w-8 h-8 text-yellow-600" />
@@ -156,7 +156,7 @@ export default function TaxReport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Total Tax</p>
-                <p className="text-2xl font-bold text-red-600">{taxStats.totalTax}</p>
+                <p className="text-2xl font-bold text-red-600">{emptyTaxStats.totalTax}</p>
               </div>
               <div className="w-14 h-14 rounded-lg bg-pink-100 flex items-center justify-center">
                 <FileText className="w-8 h-8 text-purple-600" />
@@ -210,7 +210,7 @@ export default function TaxReport() {
           </div>
 
           {/* Table */}
-          {taxReportDummy.length === 0 ? (
+          {emptyTaxReports.length === 0 ? (
             <div className="py-20 text-center">
               <div className="flex flex-col items-center justify-center">
                 <div className="w-20 h-20 rounded-lg bg-purple-100 flex items-center justify-center mb-4">
@@ -245,7 +245,7 @@ export default function TaxReport() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
-                  {taxReportDummy.map((report) => (
+                  {emptyTaxReports.map((report) => (
                     <tr key={report.sl} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-700">{report.sl}</span>

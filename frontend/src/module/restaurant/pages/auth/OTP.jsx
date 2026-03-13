@@ -20,6 +20,9 @@ export default function RestaurantOTP() {
   const [contactInfo, setContactInfo] = useState("") // Can be phone or email
   const [focusedIndex, setFocusedIndex] = useState(null)
   const inputRefs = useRef([])
+  const verifyAttemptRef = useRef(0)
+  const isVerifyingRef = useRef(false)
+  const navigationTimeoutRef = useRef(null)
 
   useEffect(() => {
     // Get auth data from sessionStorage
@@ -61,6 +64,14 @@ export default function RestaurantOTP() {
 
     return () => clearInterval(timer)
   }, [navigate])
+
+  useEffect(() => {
+    return () => {
+      if (navigationTimeoutRef.current) {
+        clearTimeout(navigationTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     // Focus first input on mount
@@ -152,6 +163,17 @@ export default function RestaurantOTP() {
       return
     }
 
+    if (isVerifyingRef.current) {
+      return
+    }
+
+    const attemptId = verifyAttemptRef.current + 1
+    verifyAttemptRef.current = attemptId
+    isVerifyingRef.current = true
+    if (navigationTimeoutRef.current) {
+      clearTimeout(navigationTimeoutRef.current)
+      navigationTimeoutRef.current = null
+    }
     setIsLoading(true)
     setError("")
 
@@ -202,7 +224,11 @@ export default function RestaurantOTP() {
         sessionStorage.removeItem("restaurantAuthData")
         sessionStorage.removeItem("restaurantLoginPhone")
 
-        setTimeout(async () => {
+        navigationTimeoutRef.current = setTimeout(async () => {
+          if (verifyAttemptRef.current !== attemptId) {
+            return
+          }
+
           debugLog({ authData })
           // After signup, send to onboarding
           if (authData?.isSignUp) {
@@ -229,8 +255,16 @@ export default function RestaurantOTP() {
             }
           }
         }, 500)
+      } else if (verifyAttemptRef.current === attemptId) {
+        setError("OTP verification failed. Please try again.")
+        setOtp(["", "", "", "", "", ""])
+        inputRefs.current[0]?.focus()
       }
     } catch (err) {
+      if (verifyAttemptRef.current !== attemptId) {
+        return
+      }
+
       const message =
         err?.response?.data?.message ||
         err?.response?.data?.error ||
@@ -240,7 +274,10 @@ export default function RestaurantOTP() {
       setOtp(["", "", "", "", "", ""])
       inputRefs.current[0]?.focus()
     } finally {
-      setIsLoading(false)
+      if (verifyAttemptRef.current === attemptId) {
+        isVerifyingRef.current = false
+        setIsLoading(false)
+      }
     }
   }
 

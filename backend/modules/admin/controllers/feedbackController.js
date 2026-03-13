@@ -16,8 +16,25 @@ export const createFeedback = asyncHandler(async (req, res) => {
 
     // Get user info from request (user is authenticated via middleware)
     const userId = req.user._id;
-    const userName = req.user.name || req.user.firstName || req.user.email?.split('@')[0] || 'User';
-    const userEmail = req.user.email || '';
+    const trimmedName =
+      typeof req.user.name === 'string' && req.user.name.trim()
+        ? req.user.name.trim()
+        : null;
+    const fallbackNameFromEmail =
+      typeof req.user.email === 'string' && req.user.email.includes('@')
+        ? req.user.email.split('@')[0]
+        : null;
+    const userName =
+      trimmedName ||
+      req.user.firstName ||
+      req.user.phone ||
+      fallbackNameFromEmail ||
+      'User';
+    const userEmail =
+      (typeof req.user.email === 'string' && req.user.email.trim()) ||
+      (typeof req.user.phone === 'string' && req.user.phone.trim()
+        ? `Phone: ${req.user.phone.trim()}`
+        : `User ID: ${String(userId)}`);
 
     const feedback = await Feedback.create({
       userId,
@@ -196,4 +213,3 @@ export const deleteFeedback = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to delete feedback');
   }
 });
-

@@ -57,6 +57,70 @@ export default function Under250() {
     { id: 'distance-low', label: 'Distance: Low to High' },
   ]
 
+  const getSafeRestaurantSlug = (restaurant) => {
+    if (typeof restaurant?.slug === "string" && restaurant.slug.trim()) {
+      return restaurant.slug.trim()
+    }
+
+    if (typeof restaurant?.restaurantId === "string" && restaurant.restaurantId.trim()) {
+      return restaurant.restaurantId.trim()
+    }
+
+    if (typeof restaurant?.name === "string" && restaurant.name.trim()) {
+      return restaurant.name.trim().toLowerCase().replace(/\s+/g, "-")
+    }
+
+    if (restaurant?.id || restaurant?._id) {
+      return String(restaurant.id || restaurant._id)
+    }
+
+    return "restaurant"
+  }
+
+  const normalizeUnder250Restaurant = (restaurant, index) => {
+    if (!restaurant || typeof restaurant !== "object") return null
+
+    const restaurantId = restaurant.id || restaurant._id || `restaurant-${index}`
+    const normalizedName =
+      typeof restaurant.name === "string" && restaurant.name.trim()
+        ? restaurant.name.trim()
+        : "Restaurant"
+    const menuItems = Array.isArray(restaurant.menuItems) ? restaurant.menuItems.filter(Boolean) : []
+
+    return {
+      ...restaurant,
+      id: restaurantId,
+      name: normalizedName,
+      slug: getSafeRestaurantSlug(restaurant),
+      rating: Number(restaurant.rating || 0),
+      totalRatings: Number(restaurant.totalRatings || 0),
+      deliveryTime:
+        typeof restaurant.deliveryTime === "string" && restaurant.deliveryTime.trim()
+          ? restaurant.deliveryTime
+          : "25-30 mins",
+      distance:
+        typeof restaurant.distance === "string" && restaurant.distance.trim()
+          ? restaurant.distance
+          : "1.2 km",
+      menuItems: menuItems.map((item, itemIndex) => ({
+        ...item,
+        id: item?.id || item?._id || `${restaurantId}-item-${itemIndex}`,
+        name:
+          typeof item?.name === "string" && item.name.trim()
+            ? item.name.trim()
+            : "Dish",
+        image:
+          typeof item?.image === "string"
+            ? item.image
+            : Array.isArray(item?.images) && typeof item.images[0] === "string"
+              ? item.images[0]
+              : "",
+        price: Number(item?.price || 0),
+        originalPrice: Number(item?.originalPrice || item?.price || 0),
+      })),
+    }
+  }
+
   const handleClearAll = () => {
     setSelectedSort(null)
   }
@@ -162,8 +226,8 @@ export default function Under250() {
         setLoadingBanner(true)
         const response = await api.get('/hero-banners/under-250/public')
         if (response.data.success && response.data.data.banners && response.data.data.banners.length > 0) {
-          // Use the first banner
-          setBannerImage(response.data.data.banners[0])
+          const firstBanner = response.data.data.banners[0]
+          setBannerImage(firstBanner?.imageUrl || firstBanner?.url || null)
         } else {
           setBannerImage(null)
         }
@@ -186,7 +250,10 @@ export default function Under250() {
         // Pass zoneId so backend can return only restaurants from the user's current zone.
         const response = await restaurantAPI.getRestaurantsUnder250(zoneId)
         if (response.data.success && response.data.data.restaurants) {
-          setUnder250Restaurants(response.data.data.restaurants)
+          const normalizedRestaurants = response.data.data.restaurants
+            .map((restaurant, index) => normalizeUnder250Restaurant(restaurant, index))
+            .filter(Boolean)
+          setUnder250Restaurants(normalizedRestaurants)
         } else {
           setUnder250Restaurants([])
         }
@@ -626,7 +693,7 @@ export default function Under250() {
           </div>
         ) : (
           sortedAndFilteredRestaurants.map((restaurant) => {
-            const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-")
+            const restaurantSlug = getSafeRestaurantSlug(restaurant)
             return (
               <section key={restaurant.id} className="pt-4 sm:pt-6 md:pt-8 lg:pt-10">
                 {/* Restaurant Header */}

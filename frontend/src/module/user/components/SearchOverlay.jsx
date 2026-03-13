@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom"
 import { X, Search, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { restaurantAPI } from "@/lib/api"
+import { restaurantAPI, adminAPI } from "@/lib/api"
 
 const SEARCH_HISTORY_KEY = "user_recent_searches_v1"
 
@@ -12,6 +12,8 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
   const inputRef = useRef(null)
   const [allFoods, setAllFoods] = useState([])
   const [filteredFoods, setFilteredFoods] = useState([])
+  const [allCategories, setAllCategories] = useState([])
+  const [filteredCategories, setFilteredCategories] = useState([])
   const [recentSuggestions, setRecentSuggestions] = useState([])
   const [loadingFoods, setLoadingFoods] = useState(false)
 
@@ -54,16 +56,20 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
       return ""
     }
 
-    const fetchDishesFromDB = async () => {
+    const fetchSearchData = async () => {
       setLoadingFoods(true)
       try {
-        const dishesRes = await restaurantAPI.getPublicDishes({ limit: 800 })
+        const [dishesRes, categoriesRes] = await Promise.all([
+          restaurantAPI.getPublicDishes({ limit: 800 }),
+          adminAPI.getPublicCategories(),
+        ])
+
         const dishes =
           dishesRes?.data?.data?.dishes ||
           dishesRes?.data?.dishes ||
           []
 
-        const normalized = (Array.isArray(dishes) ? dishes : [])
+        const normalizedDishes = (Array.isArray(dishes) ? dishes : [])
           .filter((dish) => dish?.name)
           .map((dish, index) => ({
             id: dish?.id || dish?._id || `dish-${index}`,
@@ -71,16 +77,31 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
             image: getImageUrl(dish?.image),
           }))
 
-        setAllFoods(normalized)
+        const categories =
+          categoriesRes?.data?.data?.categories ||
+          categoriesRes?.data?.categories ||
+          []
+
+        const normalizedCategories = (Array.isArray(categories) ? categories : [])
+          .filter((category) => category?.name)
+          .map((category, index) => ({
+            id: category?.id || category?._id || category?.slug || `category-${index}`,
+            name: String(category.name).trim(),
+            image: getImageUrl(category?.image || category?.imageUrl),
+          }))
+
+        setAllFoods(normalizedDishes)
+        setAllCategories(normalizedCategories)
       } catch {
         setAllFoods([])
+        setAllCategories([])
       } finally {
         setLoadingFoods(false)
       }
     }
 
     loadRecentSuggestions()
-    fetchDishesFromDB()
+    fetchSearchData()
   }, [isOpen])
 
   useEffect(() => {
@@ -104,13 +125,18 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
   useEffect(() => {
     if (searchValue.trim() === "") {
       setFilteredFoods(allFoods)
+      setFilteredCategories(allCategories)
     } else {
-      const filtered = allFoods.filter((food) =>
+      const filteredFoodResults = allFoods.filter((food) =>
         food.name.toLowerCase().includes(searchValue.toLowerCase())
       )
-      setFilteredFoods(filtered)
+      const filteredCategoryResults = allCategories.filter((category) =>
+        category.name.toLowerCase().includes(searchValue.toLowerCase())
+      )
+      setFilteredFoods(filteredFoodResults)
+      setFilteredCategories(filteredCategoryResults)
     }
-  }, [searchValue, allFoods])
+  }, [searchValue, allFoods, allCategories])
 
   const saveRecentSearch = (term) => {
     const value = String(term || "").trim()
@@ -141,6 +167,13 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
   const handleFoodClick = (food) => {
     saveRecentSearch(food.name)
     navigate(`/user/search?q=${encodeURIComponent(food.name)}`)
+    onClose()
+    onSearchChange("")
+  }
+
+  const handleCategoryClick = (category) => {
+    saveRecentSearch(category.name)
+    navigate(`/user/search?q=${encodeURIComponent(category.name)}`)
     onClose()
     onSearchChange("")
   }
@@ -216,6 +249,46 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
             animation: 'fadeIn 0.3s ease-out 0.2s both'
           }}
         >
+          {filteredCategories.length > 0 && (
+            <div className="mb-8">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
+                Matching Categories
+              </h3>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3 sm:gap-4 md:gap-5 lg:gap-6">
+                {filteredCategories.map((category, index) => (
+                  <div
+                    key={category.id}
+                    className="flex flex-col items-center gap-2 sm:gap-3 cursor-pointer group"
+                    style={{
+                      animation: `slideUp 0.3s ease-out ${0.2 + 0.04 * (index % 12)}s both`
+                    }}
+                    onClick={() => handleCategoryClick(category)}
+                  >
+                    <div className="relative w-full aspect-square rounded-full overflow-hidden transition-all duration-200 shadow-md group-hover:shadow-lg bg-white dark:bg-[#1a1a1a] p-1 sm:p-1.5">
+                      {category.image ? (
+                        <img
+                          src={category.image}
+                          alt={category.name}
+                          className="w-full h-full object-cover rounded-full"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="w-full h-full rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                          <Search className="h-5 w-5 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-1 sm:px-2 text-center">
+                      <span className="text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:text-primary-orange dark:group-hover:text-orange-400 transition-colors line-clamp-2">
+                        {category.name}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-4 sm:mb-6">
             {searchValue.trim() === "" ? "All Dishes" : `Search Results (${filteredFoods.length})`}
           </h3>
@@ -257,7 +330,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
               {loadingFoods ? (
                 <>
                   <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4 animate-spin" />
-                  <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">Loading dishes from database...</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">Loading dishes</p>
                 </>
               ) : (
                 <>

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Settings, Camera, FileText, ArrowUpDown, Eye, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
-import { deliveryManPaymentsDummy } from "../../data/deliveryManPaymentsDummy"
+import { emptyDeliveryManPayments } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportTransactionsToCSV, exportTransactionsToExcel, exportTransactionsToPDF, exportTransactionsToJSON } from "../../components/transactions/transactionsExportUtils"
@@ -16,7 +16,7 @@ export default function DeliveryManPayments() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showSuccessDialog, setShowSuccessDialog] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
-  const [payments, setPayments] = useState(deliveryManPaymentsDummy)
+  const [payments, setPayments] = useState(emptyDeliveryManPayments)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOpen, setIsViewOpen] = useState(false)
   const [selectedPayment, setSelectedPayment] = useState(null)

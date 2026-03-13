@@ -26,12 +26,18 @@ let pushSoundUnlocked = false;
 let pushSoundContext = null;
 const PUSH_DEBUG_PREFIX = "[push-debug]";
 const notificationDedupWindowMs = 8000;
+const pushDebugLog = () => {};
+const pushDebugWarn = () => {};
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
   if (pathname.startsWith("/delivery")) return "delivery";
   if (pathname.startsWith("/admin")) return "admin";
   return "user";
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 function getPushSoundSources(moduleName = normalizeModuleFromPath()) {
@@ -92,7 +98,7 @@ function wasRecentlyHandled(notificationKey) {
   }
 
   if (recentForegroundNotifications.has(notificationKey)) {
-    console.log(PUSH_DEBUG_PREFIX, "Duplicate notification skipped", { notificationKey });
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Duplicate notification skipped", { notificationKey });
     return true;
   }
 
@@ -107,7 +113,7 @@ function ensurePushSoundAudio() {
     const audioUrl = primarySource.startsWith("/")
       ? new URL(primarySource, window.location.origin).toString()
       : primarySource;
-    console.log(PUSH_DEBUG_PREFIX, "Creating primary push audio", { audioUrl });
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Creating primary push audio", { audioUrl });
     pushSoundAudio = new Audio(audioUrl);
     pushSoundAudio.preload = "auto";
     pushSoundAudio.volume = 1;
@@ -123,7 +129,7 @@ function createPushPlaybackAudio() {
       ? source
       : new URL(source, window.location.origin).toString(),
   );
-  console.log(PUSH_DEBUG_PREFIX, "Preparing push playback sources", { audioSources });
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Preparing push playback sources", { audioSources });
   return audioSources.map((source) => {
     const playbackAudio = new Audio(source);
     playbackAudio.preload = "auto";
@@ -148,7 +154,7 @@ function getAudioContext() {
 async function playSynthNotificationBeep() {
   const ctx = getAudioContext();
   if (!ctx) return false;
-  console.log(PUSH_DEBUG_PREFIX, "Playing synth notification beep");
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Playing synth notification beep");
 
   if (ctx.state === "suspended") {
     await ctx.resume();
@@ -207,9 +213,9 @@ async function triggerWebViewNativeNotification(payload = {}) {
 
       for (const handlerName of handlerNames) {
         try {
-          console.log(PUSH_DEBUG_PREFIX, "Trying native notification handler", { handlerName, bridgePayload });
+          pushDebugLog(PUSH_DEBUG_PREFIX, "Trying native notification handler", { handlerName, bridgePayload });
           await window.flutter_inappwebview.callHandler(handlerName, bridgePayload);
-          console.log(PUSH_DEBUG_PREFIX, "Native notification handler succeeded", { handlerName });
+          pushDebugLog(PUSH_DEBUG_PREFIX, "Native notification handler succeeded", { handlerName });
           return true;
         } catch {
           // Try the next available handler name.
@@ -225,7 +231,7 @@ async function triggerWebViewNativeNotification(payload = {}) {
 
 async function playPushSound(payload = {}) {
   try {
-    console.log(PUSH_DEBUG_PREFIX, "playPushSound called", {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "playPushSound called", {
       notificationKey: getNotificationKey(payload),
       pushSoundUnlocked,
       notificationPermission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
@@ -234,17 +240,17 @@ async function playPushSound(payload = {}) {
     const usedNativeBridge = await triggerWebViewNativeNotification(payload);
 
     if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
-      console.log(PUSH_DEBUG_PREFIX, "Triggering vibration");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Triggering vibration");
       navigator.vibrate([200, 100, 200, 100, 300]);
     }
 
     if (usedNativeBridge) {
-      console.log(PUSH_DEBUG_PREFIX, "Push sound handled by native bridge");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Push sound handled by native bridge");
       return;
     }
 
     if (!pushSoundUnlocked) {
-      console.warn(PUSH_DEBUG_PREFIX, "Push sound blocked because sound is not enabled/unlocked");
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Push sound blocked because sound is not enabled/unlocked");
       return;
     }
 
@@ -253,10 +259,10 @@ async function playPushSound(payload = {}) {
       try {
         audio.currentTime = 0;
         await audio.play();
-        console.log(PUSH_DEBUG_PREFIX, "Audio playback succeeded", { source: audio.src });
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Audio playback succeeded", { source: audio.src });
         return;
       } catch (error) {
-        console.warn(PUSH_DEBUG_PREFIX, "Audio playback failed", {
+        pushDebugWarn(PUSH_DEBUG_PREFIX, "Audio playback failed", {
           source: audio.src,
           error: error?.message || error,
         });
@@ -266,7 +272,7 @@ async function playPushSound(payload = {}) {
 
     await playSynthNotificationBeep();
   } catch (error) {
-    console.warn(PUSH_DEBUG_PREFIX, "playPushSound failed", { error: error?.message || error });
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "playPushSound failed", { error: error?.message || error });
   }
 }
 
@@ -278,17 +284,17 @@ function setupPushSoundUnlock() {
     try {
       audio = ensurePushSoundAudio();
       if (!audio) return;
-      console.log(PUSH_DEBUG_PREFIX, "Attempting passive push sound unlock");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Attempting passive push sound unlock");
       audio.muted = true;
       await audio.play();
       audio.pause();
       audio.currentTime = 0;
       pushSoundUnlocked = true;
       localStorage.setItem(pushSoundEnabledStorageKey, "true");
-      console.log(PUSH_DEBUG_PREFIX, "Passive push sound unlock succeeded");
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Passive push sound unlock succeeded");
       window.dispatchEvent(new CustomEvent("push-sound-enabled"));
     } catch (error) {
-      console.warn(PUSH_DEBUG_PREFIX, "Passive push sound unlock failed", {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Passive push sound unlock failed", {
         error: error?.message || error,
       });
     } finally {
@@ -316,7 +322,7 @@ export async function enablePushNotificationSound() {
   try {
     audio = ensurePushSoundAudio();
     if (!audio) return false;
-    console.log(PUSH_DEBUG_PREFIX, "Manual push sound enable started");
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Manual push sound enable started");
     audio.muted = true;
     await audio.play();
     audio.pause();
@@ -330,10 +336,10 @@ export async function enablePushNotificationSound() {
       try {
         previewAudio.currentTime = 0;
         await previewAudio.play();
-        console.log(PUSH_DEBUG_PREFIX, "Manual sound preview succeeded", { source: previewAudio.src });
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Manual sound preview succeeded", { source: previewAudio.src });
         return true;
       } catch (error) {
-        console.warn(PUSH_DEBUG_PREFIX, "Manual sound preview failed", {
+        pushDebugWarn(PUSH_DEBUG_PREFIX, "Manual sound preview failed", {
           source: previewAudio.src,
           error: error?.message || error,
         });
@@ -344,7 +350,7 @@ export async function enablePushNotificationSound() {
     await playSynthNotificationBeep();
     return true;
   } catch (error) {
-    console.warn(PUSH_DEBUG_PREFIX, "Manual push sound enable failed, trying synth beep", {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Manual push sound enable failed, trying synth beep", {
       error: error?.message || error,
     });
     try {
@@ -354,7 +360,7 @@ export async function enablePushNotificationSound() {
       window.dispatchEvent(new CustomEvent("push-sound-enabled"));
       }
     catch (beepError) {
-      console.warn(PUSH_DEBUG_PREFIX, "Synth beep fallback failed", {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Synth beep fallback failed", {
         error: beepError?.message || beepError,
       });
       return false;
@@ -463,7 +469,7 @@ async function registerNativeWebViewFcmToken(moduleName) {
         setSavedToken(moduleName, normalizedToken);
       }
 
-      console.log(PUSH_DEBUG_PREFIX, "Registered native WebView FCM token", {
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Registered native WebView FCM token", {
         moduleName,
         handlerName,
         tokenPreview: `${normalizedToken.slice(0, 12)}...`,
@@ -476,8 +482,12 @@ async function registerNativeWebViewFcmToken(moduleName) {
 }
 
 function showForegroundNotification(payload = {}) {
+  if (!isRecord(payload)) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed foreground notification payload", { payload });
+    return;
+  }
   const notificationKey = getNotificationKey(payload);
-  console.log(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKey, payload });
+  pushDebugLog(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKey, payload });
   if (wasRecentlyHandled(notificationKey)) {
     return;
   }
@@ -501,7 +511,7 @@ function showForegroundNotification(payload = {}) {
 
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
     try {
-      console.log(PUSH_DEBUG_PREFIX, "Showing browser notification from page", {
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Showing browser notification from page", {
         title,
         body,
         image,
@@ -514,7 +524,7 @@ function showForegroundNotification(payload = {}) {
         tag: notificationKey || undefined,
       });
     } catch (error) {
-      console.warn(PUSH_DEBUG_PREFIX, "Browser notification creation failed", {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Browser notification creation failed", {
         error: error?.message || error,
       });
     }
@@ -534,28 +544,41 @@ function attachServiceWorkerMessageListener() {
 
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.addEventListener("message", (event) => {
-      if (event?.data?.type !== "push-notification-received") return;
+      const data = isRecord(event?.data) ? event.data : null;
+      if (!data || data.type !== "push-notification-received") return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden") {
-        console.log(PUSH_DEBUG_PREFIX, "Skipping page notification render for SW relay because tab is hidden");
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping page notification render for SW relay because tab is hidden");
         return;
       }
-      console.log(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: event.data.payload });
-      showForegroundNotification(event.data.payload || {});
+      if (!isRecord(data.payload)) {
+        pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed SW push relay payload", { payload: data.payload });
+        return;
+      }
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Received service worker message in page", { payload: data.payload });
+      showForegroundNotification(data.payload);
     });
   }
 
   window.addEventListener("native-push-notification", (event) => {
-    const payload = event?.detail || {};
-    console.log(PUSH_DEBUG_PREFIX, "Received native push event", { payload });
+    const payload = isRecord(event?.detail) ? event.detail : null;
+    if (!payload) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed native push event", { payload: event?.detail });
+      return;
+    }
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Received native push event", { payload });
     showForegroundNotification(payload);
   });
 
   window.addEventListener("message", (event) => {
-    const data = event?.data || {};
-    if (!data || typeof data !== "object") return;
+    const data = isRecord(event?.data) ? event.data : null;
+    if (!data) return;
     if (data.type !== "native-push-notification") return;
-    console.log(PUSH_DEBUG_PREFIX, "Received native postMessage push event", { payload: data.payload });
-    showForegroundNotification(data.payload || {});
+    if (!isRecord(data.payload)) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed native postMessage payload", { payload: data.payload });
+      return;
+    }
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Received native postMessage push event", { payload: data.payload });
+    showForegroundNotification(data.payload);
   });
 
   serviceWorkerMessageListenerAttached = true;
@@ -563,10 +586,16 @@ function attachServiceWorkerMessageListener() {
 
 export function initPushNotificationClient() {
   if (typeof window === "undefined") return;
-  console.log(PUSH_DEBUG_PREFIX, "Initializing push notification client", {
+  const moduleName = normalizeModuleFromPath(window.location.pathname);
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Initializing push notification client", {
     path: window.location.pathname,
+    moduleName,
     soundEnabled: isPushSoundEnabled(),
   });
+
+  if (moduleName === "admin") {
+    return;
+  }
 
   if (isPushSoundEnabled()) {
     pushSoundUnlocked = true;
@@ -588,7 +617,7 @@ async function attachForegroundListener(firebaseAppInstance) {
   attachServiceWorkerMessageListener();
 
   onMessage(messaging, (payload) => {
-    console.log(PUSH_DEBUG_PREFIX, "Received Firebase foreground message", { payload });
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Received Firebase foreground message", { payload });
     showForegroundNotification(payload);
   });
 
@@ -596,10 +625,28 @@ async function attachForegroundListener(firebaseAppInstance) {
 }
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
-  initPushNotificationClient();
-
   const moduleName = normalizeModuleFromPath(pathname);
   if (moduleName === "admin") return;
+
+  const isRestaurantSetupRoute =
+    moduleName === "restaurant" &&
+    (
+      pathname === "/restaurant/login" ||
+      pathname === "/restaurant/auth/sign-in" ||
+      pathname === "/restaurant/signup" ||
+      pathname === "/restaurant/signup-email" ||
+      pathname === "/restaurant/forgot-password" ||
+      pathname === "/restaurant/otp" ||
+      pathname === "/restaurant/welcome" ||
+      pathname === "/restaurant/auth/google-callback" ||
+      pathname.startsWith("/restaurant/onboarding")
+    );
+
+  if (isRestaurantSetupRoute) {
+    return;
+  }
+
+  initPushNotificationClient();
 
   const accessToken = localStorage.getItem(`${moduleName}_accessToken`);
   if (!accessToken) return;
@@ -637,7 +684,7 @@ export async function registerWebPushForCurrentModule(pathname = window.location
     if (!supported) return;
 
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-    console.log(PUSH_DEBUG_PREFIX, "Service worker registered for push", {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Service worker registered for push", {
       scope: registration.scope,
       moduleName,
     });
@@ -649,7 +696,7 @@ export async function registerWebPushForCurrentModule(pathname = window.location
     });
 
     if (!token) return;
-    console.log(PUSH_DEBUG_PREFIX, "FCM token resolved", {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "FCM token resolved", {
       moduleName,
       tokenPreview: `${token.slice(0, 12)}...`,
     });

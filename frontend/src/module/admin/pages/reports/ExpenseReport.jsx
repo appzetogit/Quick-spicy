@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, FileText, ArrowUpDown, Settings, FileSpreadsheet, Code } from "lucide-react"
-import { expenseReportDummy } from "../../data/expenseReportDummy"
+import { emptyExpenseReports } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 
 export default function ExpenseReport() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [expenses, setExpenses] = useState(expenseReportDummy)
+  const [expenses, setExpenses] = useState(emptyExpenseReports)
   const [filters, setFilters] = useState({
     zone: "All Zones",
     restaurant: "All restaurants",

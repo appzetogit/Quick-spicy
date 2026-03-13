@@ -2,7 +2,7 @@ import { useState, useMemo, useRef } from "react"
 import { Search, Download, ChevronDown, Bell, Edit, Trash2, Upload, Settings, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import { adminAPI, uploadAPI } from "@/lib/api"
-import { pushNotificationsDummy } from "../data/pushNotificationsDummy"
+import { emptyNotifications } from "../utils/adminFallbackData"
 // Using placeholders for notification images
 const notificationImage1 = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=400&fit=crop"
 const notificationImage2 = "https://images.unsplash.com/photo-1559339352-11d035aa65de?w=800&h=400&fit=crop"
@@ -26,7 +26,7 @@ export default function PushNotification() {
   const [bannerPreview, setBannerPreview] = useState("")
   const [bannerFile, setBannerFile] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
-  const [notifications, setNotifications] = useState(pushNotificationsDummy)
+  const [notifications, setNotifications] = useState(emptyNotifications)
   const [isSending, setIsSending] = useState(false)
 
   const filteredNotifications = useMemo(() => {

@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Filter, UtensilsCrossed, Settings, ArrowUpDown, Star, BarChart3, FileText, FileSpreadsheet, Code } from "lucide-react"
-import { foodReportDummy, yearlySalesData } from "../../data/foodReportDummy"
+import { emptyFoodReports, emptyYearlySalesData } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 
 export default function FoodReport() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [foods, setFoods] = useState(foodReportDummy)
+  const [foods, setFoods] = useState(emptyFoodReports)
   const [filters, setFilters] = useState({
     zone: "All Zones",
     restaurant: "All restaurants",
@@ -99,7 +99,7 @@ export default function FoodReport() {
     return "★".repeat(fullStars) + (hasHalfStar ? "½" : "") + "☆".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
   }
 
-  const maxChartValue = Math.max(...yearlySalesData.chartData.map(d => d.amount))
+  const maxChartValue = emptyYearlySalesData.chartData.length > 0 ? Math.max(...emptyYearlySalesData.chartData.map((d) => d.amount)) : 0
   const chartHeight = 200
 
   return (
@@ -237,7 +237,7 @@ export default function FoodReport() {
             </div>
             <div className="flex items-center gap-4">
               <p className="text-sm text-slate-600">
-                Average Yearly Sales Value : <span className="font-semibold text-slate-900">{yearlySalesData.averageYearlySales}</span>
+                Average Yearly Sales Value : <span className="font-semibold text-slate-900">{emptyYearlySalesData.averageYearlySales}</span>
               </p>
               <button className="p-2 rounded-lg bg-slate-700 hover:bg-slate-800 transition-colors">
                 <Settings className="w-5 h-5 text-white" />
@@ -272,7 +272,7 @@ export default function FoodReport() {
               
               {/* Bars */}
               <div className="flex items-end justify-between gap-4 h-64 relative z-10">
-                {yearlySalesData.chartData.map((data) => {
+                {emptyYearlySalesData.chartData.map((data) => {
                   const height = (data.amount / maxChartValue) * 256 // 256px = 64 * 4 (for 64k max)
                   return (
                     <div key={data.year} className="flex-1 flex flex-col items-center h-full">
@@ -293,7 +293,7 @@ export default function FoodReport() {
               
               {/* X-axis labels */}
               <div className="flex justify-between gap-4 mt-2">
-                {yearlySalesData.chartData.map((data) => (
+                {emptyYearlySalesData.chartData.map((data) => (
                   <span key={data.year} className="flex-1 text-center text-xs text-slate-600">
                     {data.year}
                   </span>

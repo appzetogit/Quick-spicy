@@ -1,4 +1,4 @@
-import { ordersDummy } from "../../data/ordersDummy"
+import { emptyOrders } from "../../utils/adminFallbackData"
 import OrdersTopbar from "../../components/orders/OrdersTopbar"
 import OrdersTable from "../../components/orders/OrdersTable"
 import FilterPanel from "../../components/orders/FilterPanel"
@@ -6,7 +6,7 @@ import ViewOrderDialog from "../../components/orders/ViewOrderDialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
 import { useOrdersManagement } from "../../components/orders/useOrdersManagement"
 
-const offlinePaymentsOrders = ordersDummy.filter((order) => order.orderStatus === "Offline Payments")
+const offlinePaymentsOrders = emptyOrders.filter((order) => order.orderStatus === "Offline Payments")
 
 export default function OfflinePayments() {
   const {

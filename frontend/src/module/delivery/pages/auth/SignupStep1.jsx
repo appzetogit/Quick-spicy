@@ -35,6 +35,31 @@ export default function SignupStep1() {
   const [errors, setErrors] = useState({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const sanitizeLocationValue = (value) =>
+    value.replace(/[^A-Za-z\s.-]/g, "").replace(/\s{2,}/g, " ")
+
+  const isValidLocationValue = (value) =>
+    /^[A-Za-z][A-Za-z\s.-]*[A-Za-z.]$/.test(value.trim())
+
+  const isValidEmailValue = (value) => {
+    const normalizedValue = value.trim()
+    if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/.test(normalizedValue)) {
+      return false
+    }
+
+    const [, domain = ""] = normalizedValue.split("@")
+    const normalizedDomain = domain.toLowerCase()
+
+    if (normalizedDomain.startsWith("gmail.") && normalizedDomain !== "gmail.com") {
+      return false
+    }
+
+    return true
+  }
+
+  const sanitizeEmailValue = (value) =>
+    value.replace(/\s/g, "").toLowerCase()
+
   // Save data to session storage whenever formData changes
   useEffect(() => {
     sessionStorage.setItem("deliverySignupDetails", JSON.stringify(formData))
@@ -52,6 +77,14 @@ export default function SignupStep1() {
     // Restrict Aadhaar to numeric only
     if (name === "aadharNumber") {
       updatedValue = value.replace(/\D/g, "").slice(0, 12)
+    }
+
+    if (name === "city" || name === "state") {
+      updatedValue = sanitizeLocationValue(value)
+    }
+
+    if (name === "email") {
+      updatedValue = sanitizeEmailValue(value)
     }
 
     setFormData(prev => ({
@@ -74,8 +107,8 @@ export default function SignupStep1() {
       newErrors.name = "Name is required"
     }
 
-    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format"
+    if (formData.email && !isValidEmailValue(formData.email)) {
+      newErrors.email = "Enter a valid email address. Gmail must be gmail.com"
     }
 
     if (!formData.address.trim()) {
@@ -84,10 +117,14 @@ export default function SignupStep1() {
 
     if (!formData.city.trim()) {
       newErrors.city = "City is required"
+    } else if (!isValidLocationValue(formData.city)) {
+      newErrors.city = "City can contain letters only"
     }
 
     if (!formData.state.trim()) {
       newErrors.state = "State is required"
+    } else if (!isValidLocationValue(formData.state)) {
+      newErrors.state = "State can contain letters only"
     }
 
     if (!formData.vehicleNumber.trim()) {
@@ -197,6 +234,10 @@ export default function SignupStep1() {
               name="email"
               value={formData.email}
               onChange={handleChange}
+              autoCapitalize="none"
+              autoCorrect="off"
+              autoComplete="email"
+              inputMode="email"
               className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 ${errors.email ? "border-red-500" : "border-gray-300"
                 }`}
               placeholder="Enter your email"

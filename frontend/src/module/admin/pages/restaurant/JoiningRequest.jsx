@@ -8,6 +8,101 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const getRequestId = (request) => request?._id || request?.id || request?.restaurantId || null
+
+const normalizeRequestStatus = (request) => {
+  const rawStatus = String(
+    request?.status ||
+    request?.approvalStatus ||
+    request?.joinRequestStatus ||
+    ""
+  ).toLowerCase()
+
+  if (rawStatus === "rejected" || request?.rejectedAt || request?.rejectionReason) {
+    return "Rejected"
+  }
+
+  if (rawStatus === "approved" || request?.approvedAt || request?.isActive === true) {
+    return "Approved"
+  }
+
+  return "Pending"
+}
+
+const normalizeRestaurantRequest = (request, index = 0) => {
+  const status = normalizeRequestStatus(request)
+  const onboarding = request?.onboarding || {}
+  const step1 = onboarding?.step1 || {}
+  const location = request?.location || step1?.location || {}
+  const profileImage =
+    request?.profileImage?.url ||
+    request?.profileImageUrl?.url ||
+    request?.profileImageUrl ||
+    request?.logo ||
+    ""
+
+  return {
+    ...request,
+    _id: request?._id || request?.id,
+    id: request?.id || request?._id,
+    sl: request?.sl || index + 1,
+    restaurantName:
+      request?.restaurantName ||
+      request?.name ||
+      step1?.restaurantName ||
+      "N/A",
+    restaurantImage: profileImage || "https://via.placeholder.com/40",
+    ownerName:
+      request?.ownerName ||
+      step1?.ownerName ||
+      "N/A",
+    ownerPhone:
+      request?.ownerPhone ||
+      request?.phone ||
+      step1?.ownerPhone ||
+      "N/A",
+    ownerEmail:
+      request?.ownerEmail ||
+      request?.email ||
+      step1?.ownerEmail ||
+      "N/A",
+    zone:
+      request?.zone ||
+      location?.area ||
+      location?.city ||
+      "N/A",
+    businessModel:
+      request?.businessModel ||
+      request?.moduleType ||
+      request?.serviceType ||
+      "Restaurant",
+    status,
+    fullData: request?.fullData || request,
+  }
+}
+
+const mergeUniqueRequests = (...requestGroups) => {
+  const seen = new Set()
+  const merged = []
+
+  requestGroups.flat().forEach((request, index) => {
+    const normalized = normalizeRestaurantRequest(request, merged.length || index)
+    const requestId = getRequestId(normalized)
+    const dedupeKey = requestId || `${normalized.restaurantName}-${normalized.ownerPhone}-${normalized.status}`
+
+    if (seen.has(dedupeKey)) {
+      return
+    }
+
+    seen.add(dedupeKey)
+    merged.push({
+      ...normalized,
+      sl: merged.length + 1,
+    })
+  })
+
+  return merged
+}
 
 export default function JoiningRequest() {
   const [activeTab, setActiveTab] = useState("pending")
@@ -52,26 +147,65 @@ export default function JoiningRequest() {
       setError(null)
 
       const status = activeTab === "pending" ? "pending" : "rejected"
-      const response = await adminAPI.getRestaurantJoinRequests({
-        status,
-        search: searchQuery || undefined,
-        page: 1,
-        limit: 100
-      })
+      const [requestResponse, restaurantsResponse] = await Promise.allSettled([
+        adminAPI.getRestaurantJoinRequests({
+          status,
+          search: searchQuery || undefined,
+          page: 1,
+          limit: 100
+        }),
+        adminAPI.getRestaurants({
+          search: searchQuery || undefined,
+          page: 1,
+          limit: 200
+        })
+      ])
 
-      if (response.data && response.data.success && response.data.data) {
-        const requests = response.data.data.requests || []
-        if (activeTab === "pending") {
-          setPendingRequests(requests)
-        } else {
-          setRejectedRequests(requests)
-        }
+      const requestItems =
+        requestResponse.status === "fulfilled" &&
+        requestResponse.value?.data?.success &&
+        requestResponse.value?.data?.data
+          ? (
+              requestResponse.value.data.data.requests ||
+              requestResponse.value.data.data.restaurants ||
+              requestResponse.value.data.data
+            )
+          : []
+
+      const allRestaurants =
+        restaurantsResponse.status === "fulfilled" &&
+        restaurantsResponse.value?.data?.success &&
+        restaurantsResponse.value?.data?.data
+          ? (
+              restaurantsResponse.value.data.data.restaurants ||
+              restaurantsResponse.value.data.data.requests ||
+              restaurantsResponse.value.data.data
+            )
+          : []
+
+      const normalizedRestaurants = Array.isArray(allRestaurants)
+        ? allRestaurants.map((restaurant, index) => normalizeRestaurantRequest(restaurant, index))
+        : []
+
+      const fallbackRequests = normalizedRestaurants.filter((request) =>
+        activeTab === "pending"
+          ? request.status === "Pending"
+          : request.status === "Rejected"
+      )
+
+      const mergedRequests = mergeUniqueRequests(
+        Array.isArray(requestItems) ? requestItems : [],
+        fallbackRequests
+      ).filter((request) =>
+        activeTab === "pending"
+          ? request.status === "Pending"
+          : request.status === "Rejected"
+      )
+
+      if (activeTab === "pending") {
+        setPendingRequests(mergedRequests)
       } else {
-        if (activeTab === "pending") {
-          setPendingRequests([])
-        } else {
-          setRejectedRequests([])
-        }
+        setRejectedRequests(mergedRequests)
       }
     } catch (err) {
       debugError("Error fetching restaurant requests:", err)

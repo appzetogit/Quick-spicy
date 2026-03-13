@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { setAuthData } from "@/lib/utils/auth"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { checkOnboardingStatus, getIncompleteOnboardingStep, isRestaurantOnboardingComplete } from "../../utils/onboardingUtils"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -67,9 +68,28 @@ export default function RestaurantGoogleCallback() {
 
         setStatus("success")
 
-        // Redirect to restaurant home after short delay
-        setTimeout(() => {
-          navigate("/restaurant")
+        const redirectPath = (() => {
+          if (isRestaurantOnboardingComplete(user)) {
+            return "/restaurant"
+          }
+
+          const incompleteStep = getIncompleteOnboardingStep(user)
+          return incompleteStep ? `/restaurant/onboarding?step=${incompleteStep}` : null
+        })()
+
+        setTimeout(async () => {
+          if (redirectPath) {
+            navigate(redirectPath, { replace: true })
+            return
+          }
+
+          const incompleteStep = await checkOnboardingStatus()
+          if (incompleteStep) {
+            navigate(`/restaurant/onboarding?step=${incompleteStep}`, { replace: true })
+            return
+          }
+
+          navigate("/restaurant", { replace: true })
         }, 1200)
       } catch (err) {
         debugError("Restaurant Google auth error:", err)

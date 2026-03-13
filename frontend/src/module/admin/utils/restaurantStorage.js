@@ -1,5 +1,4 @@
 ﻿// Utility for managing restaurant data across pages
-import { restaurantsDummy } from "../data/restaurantsDummy"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -7,19 +6,17 @@ const debugError = (...args) => {}
 
 const STORAGE_KEY = "appzeto_restaurants"
 
-// Get restaurants from localStorage or use dummy data
+// Get restaurants from localStorage
 export const getRestaurants = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
       return JSON.parse(stored)
     }
-    // Initialize with dummy data
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(restaurantsDummy))
-    return restaurantsDummy
+    return []
   } catch (error) {
     debugError("Error loading restaurants:", error)
-    return restaurantsDummy
+    return []
   }
 }
 

@@ -142,6 +142,13 @@ export default function SafetyEmergencyReports() {
     )
   }, [reports, searchQuery])
 
+  const getDisplayEmail = (report) => {
+    const rawEmail = typeof report?.userEmail === "string" ? report.userEmail.trim() : ""
+    if (!rawEmail) return "N/A"
+    if (rawEmail.startsWith("Phone:") || rawEmail.startsWith("User ID:")) return "N/A"
+    return rawEmail
+  }
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       unread: { label: 'Unread', className: 'bg-blue-100 text-blue-700' },
@@ -336,7 +343,7 @@ export default function SafetyEmergencyReports() {
                       <span className="text-sm font-medium text-slate-900">{report.userName}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-slate-700">{report.userEmail}</span>
+                      <span className="text-sm text-slate-700">{getDisplayEmail(report)}</span>
                     </td>
                     <td className="px-6 py-4 max-w-md">
                       <span className="text-sm text-slate-700 line-clamp-2">
@@ -356,7 +363,7 @@ export default function SafetyEmergencyReports() {
                             <Settings className="w-4 h-4" />
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" sideOffset={8} className="z-[140]">
                           <DropdownMenuItem onClick={() => handleViewReport(report)}>
                             <Eye className="w-4 h-4 mr-2" />
                             View Details
@@ -443,7 +450,7 @@ export default function SafetyEmergencyReports() {
                   </div>
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white break-all">{selectedReport.userEmail || 'N/A'}</p>
+                    <p className="text-base font-semibold text-slate-900 dark:text-white break-all">{getDisplayEmail(selectedReport)}</p>
                   </div>
                   {selectedReport.userId?.phone && (
                     <div className="space-y-1">

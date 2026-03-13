@@ -31,10 +31,10 @@ export default function SearchResults() {
   const navigate = useNavigate()
   const { location } = useLocation()
   const { zoneId, isOutOfService } = useZone(location)
+  const { addFavorite, removeFavorite, isFavorite } = useProfile()
   const [searchQuery, setSearchQuery] = useState(query)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [activeFilters, setActiveFilters] = useState(new Set())
-  const [favorites, setFavorites] = useState(new Set())
   const categoryScrollRef = useRef(null)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
@@ -44,6 +44,7 @@ export default function SearchResults() {
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
   const slugify = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  const normalizedQuery = String(query || "").trim().toLowerCase()
   const uniqueRestaurants = (list) => {
     const seen = new Set()
     return list.filter((restaurant) => {
@@ -52,6 +53,92 @@ export default function SearchResults() {
       seen.add(key)
       return true
     })
+  }
+  const getSearchMatch = (restaurant, rawQuery) => {
+    const lowerQuery = String(rawQuery || "").trim().toLowerCase()
+    if (!lowerQuery) {
+      return {
+        nameMatch: true,
+        dishMatch: true,
+        menuMatch: true,
+      }
+    }
+
+    const nameMatch = restaurant.name?.toLowerCase().includes(lowerQuery)
+    const dishMatch = restaurant.featuredDish?.toLowerCase().includes(lowerQuery)
+
+    let menuMatch = false
+    const sections = Array.isArray(restaurant?.menu?.sections) ? restaurant.menu.sections : []
+    for (const section of sections) {
+      const directItems = Array.isArray(section?.items) ? section.items : []
+      for (const item of directItems) {
+        if (
+          item?.name?.toLowerCase().includes(lowerQuery) ||
+          item?.category?.toLowerCase().includes(lowerQuery)
+        ) {
+          menuMatch = true
+          break
+        }
+      }
+      if (menuMatch) break
+
+      const subsections = Array.isArray(section?.subsections) ? section.subsections : []
+      for (const subsection of subsections) {
+        const nestedItems = Array.isArray(subsection?.items) ? subsection.items : []
+        for (const item of nestedItems) {
+          if (
+            item?.name?.toLowerCase().includes(lowerQuery) ||
+            item?.category?.toLowerCase().includes(lowerQuery)
+          ) {
+            menuMatch = true
+            break
+          }
+        }
+        if (menuMatch) break
+      }
+      if (menuMatch) break
+    }
+
+    return {
+      nameMatch,
+      dishMatch,
+      menuMatch,
+    }
+  }
+  const matchedCategory = useMemo(() => {
+    if (!normalizedQuery) return null
+
+    return categories.find((cat) =>
+      cat.name.toLowerCase() === normalizedQuery ||
+      cat.id === normalizedQuery.replace(/\s+/g, '-')
+    ) || null
+  }, [categories, normalizedQuery])
+  const textMatchesCategory = (text, categoryId) => {
+    const normalizedText = String(text || "").trim().toLowerCase()
+    if (!normalizedText) return false
+
+    const category = categories.find((cat) => cat.id === categoryId)
+    const categoryName = String(category?.name || "").trim().toLowerCase()
+    const keywordSet = Array.isArray(categoryKeywords[categoryId])
+      ? categoryKeywords[categoryId]
+          .map((keyword) => String(keyword || "").trim().toLowerCase())
+          .filter(Boolean)
+      : []
+
+    if (categoryName && normalizedText.includes(categoryName)) {
+      return true
+    }
+
+    const words = (categoryName || keywordSet[0] || "")
+      .split(/[\s-]+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 2)
+
+    if (words.length > 1) {
+      return words.every((word) => normalizedText.includes(word))
+    }
+
+    return keywordSet.some((keyword) => keyword && normalizedText.includes(keyword))
   }
 
   // Fetch categories from admin API
@@ -108,31 +195,33 @@ export default function SearchResults() {
       return false
     }
 
-    // Get keywords for this category
-    const keywords = categoryKeywords[categoryId] || []
-    if (keywords.length === 0) {
-      return false
-    }
-
     // Check sections and items for category keywords
     for (const section of menu.sections) {
       // Check section name
-      const sectionNameLower = (section.name || '').toLowerCase()
-      if (keywords.some(keyword => sectionNameLower.includes(keyword))) {
+      if (textMatchesCategory(section.name, categoryId)) {
         return true
       }
 
       // Check items in section
       if (section.items && Array.isArray(section.items)) {
         for (const item of section.items) {
-          // Check item name
-          const itemNameLower = (item.name || '').toLowerCase()
-          if (keywords.some(keyword => itemNameLower.includes(keyword))) {
+          if (
+            textMatchesCategory(item.name, categoryId) ||
+            textMatchesCategory(item.category, categoryId)
+          ) {
             return true
           }
-          // Check item category
-          const itemCategoryLower = (item.category || '').toLowerCase()
-          if (keywords.some(keyword => itemCategoryLower.includes(keyword))) {
+        }
+      }
+
+      const subsections = Array.isArray(section.subsections) ? section.subsections : []
+      for (const subsection of subsections) {
+        const subsectionItems = Array.isArray(subsection.items) ? subsection.items : []
+        for (const item of subsectionItems) {
+          if (
+            textMatchesCategory(item.name, categoryId) ||
+            textMatchesCategory(item.category, categoryId)
+          ) {
             return true
           }
         }
@@ -148,21 +237,27 @@ export default function SearchResults() {
       return null
     }
 
-    const keywords = categoryKeywords[categoryId] || []
-    if (keywords.length === 0) {
-      return null
-    }
-
     // Find first matching item
     for (const section of menu.sections) {
       if (section.items && Array.isArray(section.items)) {
         for (const item of section.items) {
-          const itemNameLower = (item.name || '').toLowerCase()
-          const itemCategoryLower = (item.category || '').toLowerCase()
+          if (
+            textMatchesCategory(item.name, categoryId) ||
+            textMatchesCategory(item.category, categoryId)
+          ) {
+            return item.name
+          }
+        }
+      }
 
-          if (keywords.some(keyword =>
-            itemNameLower.includes(keyword) || itemCategoryLower.includes(keyword)
-          )) {
+      const subsections = Array.isArray(section.subsections) ? section.subsections : []
+      for (const subsection of subsections) {
+        const subsectionItems = Array.isArray(subsection.items) ? subsection.items : []
+        for (const item of subsectionItems) {
+          if (
+            textMatchesCategory(item.name, categoryId) ||
+            textMatchesCategory(item.category, categoryId)
+          ) {
             return item.name
           }
         }
@@ -170,6 +265,46 @@ export default function SearchResults() {
     }
 
     return null
+  }
+  const getMatchingMenuItems = (menu, categoryId, rawQuery) => {
+    if (!menu || !Array.isArray(menu.sections)) {
+      return []
+    }
+
+    const lowerQuery = String(rawQuery || "").trim().toLowerCase()
+    const isCategoryMode = Boolean(categoryId && categoryId !== 'all')
+    const results = []
+
+    for (const section of menu.sections) {
+      const directItems = Array.isArray(section?.items) ? section.items : []
+      for (const item of directItems) {
+        const itemName = String(item?.name || "")
+        const itemCategory = String(item?.category || "")
+        const isMatch = isCategoryMode
+          ? textMatchesCategory(itemName, categoryId) || textMatchesCategory(itemCategory, categoryId)
+          : itemName.toLowerCase().includes(lowerQuery) || itemCategory.toLowerCase().includes(lowerQuery)
+        if (isMatch) {
+          results.push(item)
+        }
+      }
+
+      const subsections = Array.isArray(section?.subsections) ? section.subsections : []
+      for (const subsection of subsections) {
+        const subsectionItems = Array.isArray(subsection?.items) ? subsection.items : []
+        for (const item of subsectionItems) {
+          const itemName = String(item?.name || "")
+          const itemCategory = String(item?.category || "")
+          const isMatch = isCategoryMode
+            ? textMatchesCategory(itemName, categoryId) || textMatchesCategory(itemCategory, categoryId)
+            : itemName.toLowerCase().includes(lowerQuery) || itemCategory.toLowerCase().includes(lowerQuery)
+          if (isMatch) {
+            results.push(item)
+          }
+        }
+      }
+    }
+
+    return results
   }
 
   // Fetch restaurants from API
@@ -477,18 +612,20 @@ export default function SearchResults() {
 
   // Update search query when URL changes
   useEffect(() => {
-    if (query) {
-      setSearchQuery(query)
-      // Try to match query to a category
-      const matchedCategory = categories.find(cat =>
-        cat.name.toLowerCase() === query.toLowerCase() ||
-        cat.id === query.toLowerCase().replace(/\s+/g, '-')
-      )
-      if (matchedCategory) {
-        setSelectedCategory(matchedCategory.id)
-      }
+    setSearchQuery(query)
+
+    if (!normalizedQuery) {
+      setSelectedCategory('all')
+      return
     }
-  }, [query])
+
+    if (matchedCategory) {
+      setSelectedCategory(matchedCategory.id)
+      return
+    }
+
+    setSelectedCategory('all')
+  }, [query, matchedCategory, normalizedQuery])
 
   const toggleFilter = (filterId) => {
     setActiveFilters(prev => {
@@ -502,15 +639,24 @@ export default function SearchResults() {
     })
   }
 
-  const toggleFavorite = (id) => {
-    setFavorites(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(id)) {
-        newSet.delete(id)
-      } else {
-        newSet.add(id)
-      }
-      return newSet
+  const toggleFavorite = (restaurant) => {
+    const restaurantSlug = restaurant.slug || restaurant.name?.toLowerCase().replace(/\s+/g, "-")
+    if (!restaurantSlug) return
+
+    if (isFavorite(restaurantSlug)) {
+      removeFavorite(restaurantSlug)
+      return
+    }
+
+    addFavorite({
+      slug: restaurantSlug,
+      name: restaurant.name,
+      cuisine: restaurant.cuisine,
+      rating: restaurant.rating,
+      deliveryTime: restaurant.deliveryTime,
+      distance: restaurant.distance,
+      priceRange: restaurant.priceRange,
+      image: restaurant.image,
     })
   }
 
@@ -534,94 +680,6 @@ export default function SearchResults() {
     }
   }
 
-  // Filter restaurants based on search query, selected category, and filters
-  const filteredRecommended = useMemo(() => {
-    // Use ONLY backend data - no hardcoded fallback
-    const sourceData = restaurantsData.length > 0 ? restaurantsData : []
-    let filtered = [...sourceData]
-
-    // Filter by search query
-    if (query.trim()) {
-      const lowerQuery = query.toLowerCase()
-      filtered = filtered.filter(r =>
-        r.name?.toLowerCase().includes(lowerQuery) ||
-        r.cuisine?.toLowerCase().includes(lowerQuery) ||
-        r.featuredDish?.toLowerCase().includes(lowerQuery) ||
-        r.category === selectedCategory
-      )
-    }
-
-    // Filter by category - Dynamic filtering based on menu items
-    if (selectedCategory && selectedCategory !== 'all') {
-      filtered = filtered.filter(r => {
-        // If restaurant has menu data, check menu for category items
-        if (r.menu) {
-          const hasCategoryItem = checkCategoryInMenu(r.menu, selectedCategory)
-          if (hasCategoryItem) {
-            // Update featured dish for this category
-            const categoryDish = getCategoryDishFromMenu(r.menu, selectedCategory)
-            if (categoryDish && !r.categoryFeaturedDish) {
-              r.categoryFeaturedDish = categoryDish
-            }
-            return true
-          }
-          // If menu exists but no match, don't show (menu was checked)
-          return false
-        }
-
-        // Fallback for hardcoded data or restaurants without menu
-        // Check if restaurant matches category (hardcoded data)
-        if (r.category === selectedCategory) {
-          return true
-        }
-
-        // For paneer-tikka (backward compatibility)
-        if (selectedCategory === 'paneer-tikka' && r.hasPaneer) {
-          return true
-        }
-
-        // Check featured dish and cuisine for category keywords
-        const keywords = categoryKeywords[selectedCategory] || []
-        if (keywords.length > 0) {
-          const featuredDishLower = (r.featuredDish || '').toLowerCase()
-          const cuisineLower = (r.cuisine || '').toLowerCase()
-          const nameLower = (r.name || '').toLowerCase()
-
-          const matches = keywords.some(keyword =>
-            featuredDishLower.includes(keyword) ||
-            cuisineLower.includes(keyword) ||
-            nameLower.includes(keyword)
-          )
-
-          if (matches) return true
-        }
-
-        // If no match found, don't show restaurant for this category
-        return false
-      })
-    } else if (!query.trim()) {
-      // Show all restaurants when no category selected (category is 'all')
-      // Don't filter - show all restaurants
-    }
-
-    // Apply filters
-    if (activeFilters.has('under-30-mins')) {
-      filtered = filtered.filter(r => {
-        if (!r.deliveryTime) return false
-        const timeMatch = r.deliveryTime.match(/(\d+)/)
-        return timeMatch && parseInt(timeMatch[1]) <= 30
-      })
-    }
-    if (activeFilters.has('rating-4-plus')) {
-      filtered = filtered.filter(r => r.rating && r.rating >= 4.0)
-    }
-    if (activeFilters.has('flat-50-off')) {
-      filtered = filtered.filter(r => r.offer && r.offer.includes('50%'))
-    }
-
-    return uniqueRestaurants(filtered)
-  }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories])
-
   const filteredAllRestaurants = useMemo(() => {
     // Use ONLY backend data - no hardcoded fallback
     const sourceData = restaurantsData.length > 0 ? restaurantsData : []
@@ -629,30 +687,12 @@ export default function SearchResults() {
 
     // Filter by search query - Search in name, cuisine, featured dish
     if (query.trim()) {
-      const lowerQuery = query.toLowerCase()
-      filtered = filtered.filter(r => {
-        const nameMatch = r.name?.toLowerCase().includes(lowerQuery)
-        const cuisineMatch = r.cuisine?.toLowerCase().includes(lowerQuery)
-        const dishMatch = r.featuredDish?.toLowerCase().includes(lowerQuery)
-
-        // Also search in menu items if menu is available
-        let menuMatch = false
-        if (r.menu && r.menu.sections) {
-          for (const section of r.menu.sections) {
-            if (section.items) {
-              for (const item of section.items) {
-                if (item.name?.toLowerCase().includes(lowerQuery) ||
-                  item.category?.toLowerCase().includes(lowerQuery)) {
-                  menuMatch = true
-                  break
-                }
-              }
-            }
-            if (menuMatch) break
-          }
+      filtered = filtered.filter((restaurant) => {
+        const searchMatch = getSearchMatch(restaurant, query)
+        if (matchedCategory) {
+          return searchMatch.dishMatch || searchMatch.menuMatch
         }
-
-        return nameMatch || cuisineMatch || dishMatch || menuMatch || r.category === selectedCategory
+        return searchMatch.nameMatch || searchMatch.dishMatch || searchMatch.menuMatch
       })
     }
 
@@ -674,34 +714,6 @@ export default function SearchResults() {
           return false
         }
 
-        // Fallback for hardcoded data or restaurants without menu
-        // Check if restaurant matches category (hardcoded data)
-        if (r.category === selectedCategory) {
-          return true
-        }
-
-        // For paneer-tikka (backward compatibility)
-        if (selectedCategory === 'paneer-tikka' && r.hasPaneer) {
-          return true
-        }
-
-        // Check featured dish and cuisine for category keywords
-        const keywords = categoryKeywords[selectedCategory] || []
-        if (keywords.length > 0) {
-          const featuredDishLower = (r.featuredDish || '').toLowerCase()
-          const cuisineLower = (r.cuisine || '').toLowerCase()
-          const nameLower = (r.name || '').toLowerCase()
-
-          const matches = keywords.some(keyword =>
-            featuredDishLower.includes(keyword) ||
-            cuisineLower.includes(keyword) ||
-            nameLower.includes(keyword)
-          )
-
-          if (matches) return true
-        }
-
-        // If no match found, don't show restaurant for this category
         return false
       })
     } else if (!query.trim()) {
@@ -728,16 +740,47 @@ export default function SearchResults() {
     }
 
     return uniqueRestaurants(filtered)
-  }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories])
+  }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories, matchedCategory])
+  const matchingDishes = useMemo(() => {
+    const dishes = []
+    const seen = new Set()
 
-  const recommendedIds = useMemo(
-    () => new Set(filteredRecommended.slice(0, 6).map((restaurant) => restaurant.id)),
-    [filteredRecommended]
-  )
-  const nonRepeatedAllRestaurants = useMemo(
-    () => filteredAllRestaurants.filter((restaurant) => !recommendedIds.has(restaurant.id)),
-    [filteredAllRestaurants, recommendedIds]
-  )
+    filteredAllRestaurants.forEach((restaurant) => {
+      const menuItems = getMatchingMenuItems(
+        restaurant.menu,
+        selectedCategory !== 'all' ? selectedCategory : null,
+        query
+      )
+
+      menuItems.forEach((item, index) => {
+        const itemName = String(item?.name || "").trim()
+        if (!itemName) return
+
+        const key = `${restaurant.id}-${slugify(itemName)}-${index}`
+        if (seen.has(key)) return
+        seen.add(key)
+
+        const basePrice = Number(item?.price ?? item?.originalPrice ?? 0)
+        const discountPercent = Number(item?.discountPercent ?? 0)
+        const price = discountPercent > 0
+          ? Math.round(basePrice * (1 - discountPercent / 100))
+          : basePrice
+
+        dishes.push({
+          id: item?._id || item?.id || key,
+          name: itemName,
+          image: item?.image || restaurant.image,
+          category: item?.category || "",
+          price: price || null,
+          restaurantName: restaurant.name,
+          restaurantSlug: restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, "-"),
+        })
+      })
+    })
+
+    return dishes
+  }, [filteredAllRestaurants, query, selectedCategory])
+  const filteredRecommended = []
 
   // Check if should show grayscale (user out of service)
   const shouldShowGrayscale = isOutOfService
@@ -882,10 +925,12 @@ export default function SearchResults() {
             {/* Small Restaurant Cards - Horizontal Scroll */}
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4 lg:gap-5">
               {filteredRecommended.slice(0, 6).map((restaurant) => {
+                const restaurantSlug = restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, '-')
+                const restaurantIsFavorite = isFavorite(restaurantSlug)
                 return (
                   <Link
                     key={restaurant.id}
-                    to={`/user/restaurants/${restaurant.slug || restaurant.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    to={`/user/restaurants/${restaurantSlug}`}
                     className="block"
                   >
                     <div className={`group ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
@@ -911,6 +956,18 @@ export default function SearchResults() {
                             {restaurant.offer}
                           </div>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="absolute top-1.5 right-1.5 h-8 w-8 bg-white/90 dark:bg-[#1a1a1a]/90 backdrop-blur-sm rounded-lg hover:bg-white dark:hover:bg-[#2a2a2a] transition-colors"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            toggleFavorite(restaurant)
+                          }}
+                        >
+                          <Bookmark className={`h-4 w-4 ${restaurantIsFavorite ? "fill-gray-800 dark:fill-gray-200 text-gray-800 dark:text-gray-200" : "text-gray-600 dark:text-gray-400"}`} strokeWidth={2} />
+                        </Button>
                       </div>
 
                       {/* Rating Badge - Only show if rating exists */}
@@ -949,9 +1006,9 @@ export default function SearchResults() {
 
           {/* Large Restaurant Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5 lg:gap-6">
-            {nonRepeatedAllRestaurants.map((restaurant) => {
+            {filteredAllRestaurants.map((restaurant) => {
               const restaurantSlug = restaurant.name.toLowerCase().replace(/\s+/g, "-")
-              const isFavorite = favorites.has(restaurant.id)
+              const restaurantIsFavorite = isFavorite(restaurant.slug || restaurantSlug)
 
               return (
                 <Link key={restaurant.id} to={`/user/restaurants/${restaurant.slug || restaurantSlug}`} className="h-full flex">
@@ -1015,10 +1072,10 @@ export default function SearchResults() {
                         onClick={(e) => {
                           e.preventDefault()
                           e.stopPropagation()
-                          toggleFavorite(restaurant.id)
+                          toggleFavorite(restaurant)
                         }}
                       >
-                        <Bookmark className={`h-5 w-5 ${isFavorite ? "fill-gray-800 dark:fill-gray-200 text-gray-800 dark:text-gray-200" : "text-gray-600 dark:text-gray-400"}`} strokeWidth={2} />
+                        <Bookmark className={`h-5 w-5 ${restaurantIsFavorite ? "fill-gray-800 dark:fill-gray-200 text-gray-800 dark:text-gray-200" : "text-gray-600 dark:text-gray-400"}`} strokeWidth={2} />
                       </Button>
                     </div>
 
@@ -1071,7 +1128,7 @@ export default function SearchResults() {
             })}
 
             {/* Empty State */}
-            {nonRepeatedAllRestaurants.length === 0 && (
+            {filteredAllRestaurants.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400">
                   {query

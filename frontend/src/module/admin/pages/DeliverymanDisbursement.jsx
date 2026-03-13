@@ -1,6 +1,6 @@
 import { ShoppingBag } from "lucide-react"
 import DisbursementPage from "../components/disbursement/DisbursementPage"
-import { deliverymanDisbursementsDummy } from "../data/deliverymanDisbursementsDummy"
+import { emptyDeliverymanDisbursements } from "../utils/adminFallbackData"
 
 export default function DeliverymanDisbursement() {
   const tabs = ["All", "Pending", "Processing", "Completed", "Partially completed", "Canceled"]
@@ -10,8 +10,8 @@ export default function DeliverymanDisbursement() {
       title="Deliveryman Disbursement"
       icon={ShoppingBag}
       tabs={tabs}
-      disbursements={deliverymanDisbursementsDummy}
-      count={deliverymanDisbursementsDummy.length}
+      disbursements={emptyDeliverymanDisbursements}
+      count={emptyDeliverymanDisbursements.length}
     />
   )
 }

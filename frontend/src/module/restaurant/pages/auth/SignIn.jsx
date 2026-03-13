@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import loginBg from "@/assets/loginbanner.png"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { checkOnboardingStatus, getIncompleteOnboardingStep, isRestaurantOnboardingComplete } from "../../utils/onboardingUtils"
 
 export default function RestaurantSignIn() {
   const navigate = useNavigate()
@@ -20,12 +21,22 @@ export default function RestaurantSignIn() {
   const [error, setError] = useState("")
   const companyName = useCompanyName()
 
-  // Redirect to restaurant home if already authenticated
   useEffect(() => {
-    const isAuthenticated = isModuleAuthenticated("restaurant")
-    if (isAuthenticated) {
+    const redirectAuthenticatedRestaurant = async () => {
+      if (!isModuleAuthenticated("restaurant")) {
+        return
+      }
+
+      const incompleteStep = await checkOnboardingStatus()
+      if (incompleteStep) {
+        navigate(`/restaurant/onboarding?step=${incompleteStep}`, { replace: true })
+        return
+      }
+
       navigate("/restaurant", { replace: true })
     }
+
+    redirectAuthenticatedRestaurant()
   }, [navigate])
 
   const handleSubmit = async (e) => {
@@ -44,7 +55,17 @@ export default function RestaurantSignIn() {
         
         // Dispatch custom event for same-tab updates
         window.dispatchEvent(new Event('restaurantAuthChanged'))
-        
+
+        if (!isRestaurantOnboardingComplete(data.restaurant)) {
+          const incompleteStep =
+            getIncompleteOnboardingStep(data.restaurant) || await checkOnboardingStatus()
+
+          if (incompleteStep) {
+            navigate(`/restaurant/onboarding?step=${incompleteStep}`, { replace: true })
+            return
+          }
+        }
+
         navigate("/restaurant", { replace: true })
       } else {
         throw new Error("Login failed. Please try again.")

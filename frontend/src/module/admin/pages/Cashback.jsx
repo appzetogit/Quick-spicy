@@ -1,6 +1,6 @@
 ﻿import { useState, useMemo } from "react"
 import { Search, Download, ChevronDown, Edit, Trash2, Calendar, RefreshCw } from "lucide-react"
-import { cashbackDummy } from "../data/cashbackDummy"
+import { emptyCashbacks } from "../utils/adminFallbackData"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -10,7 +10,7 @@ export default function Cashback() {
   const [activeLanguage, setActiveLanguage] = useState("default")
   const [searchQuery, setSearchQuery] = useState("")
   const [cashbackType, setCashbackType] = useState("all")
-  const [cashbacks, setCashbacks] = useState(cashbackDummy)
+  const [cashbacks, setCashbacks] = useState(emptyCashbacks)
   const [formData, setFormData] = useState({
     title: "Eid Dhamaka",
     customer: "",

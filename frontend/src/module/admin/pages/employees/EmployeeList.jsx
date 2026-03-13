@@ -7,7 +7,7 @@ const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
-const employeesDummy = [
+const initialEmployees = [
   {
     id: 1,
     name: "Jhon",
@@ -26,7 +26,7 @@ const employeesDummy = [
 
 export default function EmployeeList() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [employees, setEmployees] = useState(employeesDummy)
+  const [employees, setEmployees] = useState(initialEmployees)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,

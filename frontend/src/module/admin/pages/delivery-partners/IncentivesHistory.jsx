@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { Search, Settings, ArrowUpDown, Download, ChevronDown, FileText, FileSpreadsheet, Code, Check, Columns } from "lucide-react"
-import { incentivesHistoryDummy } from "../../data/incentivesHistoryDummy"
+import { emptyIncentivesHistory } from "../../utils/adminFallbackData"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { exportIncentivesToCSV, exportIncentivesToExcel, exportIncentivesToPDF, exportIncentivesToJSON } from "../../components/deliveryman/incentiveExportUtils"
 
 export default function IncentivesHistory() {
   const [searchQuery, setSearchQuery] = useState("")
-  const [history, setHistory] = useState(incentivesHistoryDummy)
+  const [history, setHistory] = useState(emptyIncentivesHistory)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
