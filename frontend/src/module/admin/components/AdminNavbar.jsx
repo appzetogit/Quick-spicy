@@ -130,17 +130,63 @@ export default function AdminNavbar({ onMenuClick }) {
     }
   }, [searchOpen]);
 
-  // Mock search results - replace with actual search logic
-  const searchResults = [
-    { type: "Order", title: "Order #12345", description: "Pending delivery", icon: Package },
-    { type: "User", title: "Sumit Jaiswal", description: "Customer profile", icon: Users },
-    { type: "Product", title: "Chicken Biryani", description: "Food item", icon: UtensilsCrossed },
-    { type: "Report", title: "Sales Report", description: "Monthly analytics", icon: FileText },
-  ].filter((item) =>
-    searchQuery.trim() === "" ||
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const searchActions = [
+    {
+      type: "Orders",
+      title: "Orders",
+      description: "Open all order management",
+      icon: Package,
+      path: "/admin/orders/all",
+      keywords: ["order", "orders", "delivery", "pending", "accepted", "processing", "refund"],
+    },
+    {
+      type: "Users",
+      title: "Users",
+      description: "Open customer management",
+      icon: Users,
+      path: "/admin/customers",
+      keywords: ["user", "users", "customer", "customers", "profile"],
+    },
+    {
+      type: "Products",
+      title: "Products",
+      description: "Open food and product list",
+      icon: UtensilsCrossed,
+      path: "/admin/foods",
+      keywords: ["product", "products", "food", "foods", "item", "items", "menu"],
+    },
+    {
+      type: "Reports",
+      title: "Reports",
+      description: "Open transaction reports",
+      icon: FileText,
+      path: "/admin/transaction-report",
+      keywords: ["report", "reports", "analytics", "sales", "transactions"],
+    },
+  ];
+
+  const searchResults = searchActions.filter((item) => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return false;
+
+    return (
+      item.title.toLowerCase().includes(query) ||
+      item.type.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.keywords.some((keyword) => keyword.includes(query))
+    );
+  });
+
+  const handleSearchNavigation = (path, query = "") => {
+    setSearchOpen(false);
+    setSearchQuery(query);
+    navigate(path);
+  };
+
+  const handleSearchSubmit = (event) => {
+    if (event.key !== "Enter" || searchResults.length === 0) return;
+    handleSearchNavigation(searchResults[0].path, searchResults[0].title);
+  };
 
   // Handle logout
   const handleLogout = async () => {
@@ -359,6 +405,7 @@ export default function AdminNavbar({ onMenuClick }) {
                 placeholder="Search orders, users, products, reports..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchSubmit}
                 className="pl-10 pr-4 py-3 text-base border-neutral-300 bg-white text-neutral-900 placeholder:text-neutral-500 focus:border-black focus:ring-black"
               />
             </div>
@@ -367,27 +414,23 @@ export default function AdminNavbar({ onMenuClick }) {
               <div className="space-y-4">
                 <div className="text-sm text-neutral-500 mb-4">Quick Actions</div>
                 <div className="grid grid-cols-2 gap-3">
-                  {[
-                    { icon: Package, label: "Orders" },
-                    { icon: Users, label: "Users" },
-                    { icon: UtensilsCrossed, label: "Products" },
-                    { icon: FileText, label: "Reports" },
-                  ].map((action, idx) => (
+                  {searchActions.map((action, idx) => (
                     <button
                       key={idx}
+                      onClick={() => handleSearchNavigation(action.path, action.title)}
                       className="flex items-center gap-3 p-4 rounded-lg border border-neutral-200 bg-white hover:border-neutral-300 hover:bg-neutral-50 transition-all"
                     >
                       <div className="p-2 rounded-md bg-black text-white">
                         <action.icon className="w-5 h-5" />
                       </div>
-                      <span className="text-sm font-medium text-neutral-900">{action.label}</span>
+                      <span className="text-sm font-medium text-neutral-900">{action.title}</span>
                     </button>
                   ))}
                 </div>
                 <div className="mt-6 pt-4 border-t border-neutral-200">
                   <p className="text-xs text-neutral-500 mb-2">Recent Searches</p>
                   <div className="flex flex-wrap gap-2">
-                    {["Order #12345", "Sumit Jaiswal", "Chicken Biryani"].map((term, idx) => (
+                    {["Orders", "Users", "Products"].map((term, idx) => (
                       <button
                         key={idx}
                         onClick={() => setSearchQuery(term)}
@@ -414,6 +457,7 @@ export default function AdminNavbar({ onMenuClick }) {
                     {searchResults.map((result, idx) => (
                       <button
                         key={idx}
+                        onClick={() => handleSearchNavigation(result.path, result.title)}
                         className="w-full flex items-center gap-4 p-4 rounded-lg border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-all text-left"
                       >
                         <div className="flex-1">
