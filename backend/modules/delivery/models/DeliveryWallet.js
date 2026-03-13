@@ -9,7 +9,7 @@ const transactionSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['payment', 'withdrawal', 'bonus', 'deduction', 'refund', 'deposit', 'earning_addon'],
+    enum: ['payment', 'tip', 'withdrawal', 'bonus', 'deduction', 'refund', 'deposit', 'earning_addon'],
     required: true
   },
   status: {
@@ -131,6 +131,11 @@ const deliveryWalletSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  totalTips: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   // Bonus fields
   joiningBonusClaimed: {
     type: Boolean,
@@ -186,10 +191,13 @@ deliveryWalletSchema.methods.addTransaction = function(transactionData) {
   
   // Update balances based on transaction type and status
   if (transaction.status === 'Completed') {
-    if (transaction.type === 'payment' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
+    if (transaction.type === 'payment' || transaction.type === 'tip' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
       const oldBalance = this.totalBalance || 0;
       this.totalBalance += transaction.amount;
       this.totalEarned += transaction.amount;
+      if (transaction.type === 'tip') {
+        this.totalTips = (this.totalTips || 0) + transaction.amount;
+      }
       
       // Log bonus/earning_addon transaction for debugging
       if (transaction.type === 'bonus' || transaction.type === 'earning_addon') {
@@ -245,9 +253,12 @@ deliveryWalletSchema.methods.updateTransactionStatus = function(transactionId, s
   
   // If transaction status changed from Pending to Completed, update balances
   if (oldStatus === 'Pending' && status === 'Completed') {
-    if (transaction.type === 'payment' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
+    if (transaction.type === 'payment' || transaction.type === 'tip' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
       this.totalBalance += oldAmount;
       this.totalEarned += oldAmount;
+      if (transaction.type === 'tip') {
+        this.totalTips = (this.totalTips || 0) + oldAmount;
+      }
       
       if (transaction.paymentCollected) {
         this.cashInHand += oldAmount;
@@ -267,9 +278,12 @@ deliveryWalletSchema.methods.updateTransactionStatus = function(transactionId, s
   
   // If transaction status changed from Completed to Failed/Cancelled, reverse balances
   if (oldStatus === 'Completed' && (status === 'Failed' || status === 'Cancelled')) {
-    if (transaction.type === 'payment' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
+    if (transaction.type === 'payment' || transaction.type === 'tip' || transaction.type === 'bonus' || transaction.type === 'refund' || transaction.type === 'earning_addon') {
       this.totalBalance = Math.max(0, this.totalBalance - oldAmount);
       this.totalEarned = Math.max(0, this.totalEarned - oldAmount);
+      if (transaction.type === 'tip') {
+        this.totalTips = Math.max(0, (this.totalTips || 0) - oldAmount);
+      }
       
       if (transaction.paymentCollected) {
         this.cashInHand = Math.max(0, this.cashInHand - oldAmount);
@@ -316,7 +330,8 @@ deliveryWalletSchema.statics.findOrCreateByDeliveryId = async function(deliveryI
       totalBalance: 0,
       cashInHand: 0,
       totalWithdrawn: 0,
-      totalEarned: 0
+      totalEarned: 0,
+      totalTips: 0
     });
   }
   

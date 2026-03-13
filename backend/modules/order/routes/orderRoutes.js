@@ -2,6 +2,8 @@ import express from 'express';
 import {
   createOrder,
   verifyOrderPayment,
+  createOrderTipPayment,
+  verifyOrderTipPayment,
   getUserOrders,
   getOrderDetails,
   calculateOrder,
@@ -23,6 +25,10 @@ router.post('/', createOrder);
 
 // Verify payment
 router.post('/verify-payment', verifyOrderPayment);
+
+// Create/verify tip payment for delivered order
+router.post('/:id/tip/create-order', createOrderTipPayment);
+router.post('/:id/tip/verify-payment', verifyOrderTipPayment);
 
 // Get user orders
 router.get('/', getUserOrders);

@@ -48,6 +48,7 @@ export const getProfile = asyncHandler(async (req, res) => {
 const updateProfileSchema = Joi.object({
   name: Joi.string().trim().min(2).max(100).optional(),
   email: Joi.string().email().lowercase().trim().optional().allow(null, ''),
+  upiId: Joi.string().trim().lowercase().optional().allow(null, ''),
   dateOfBirth: Joi.date().optional().allow(null),
   gender: Joi.string().valid('male', 'female', 'other', 'prefer-not-to-say').optional(),
   vehicle: Joi.object({

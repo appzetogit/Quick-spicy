@@ -225,7 +225,8 @@ export const getWalletBalance = asyncHandler(async (req, res) => {
         totalBalance: 0,
         cashInHand: 0,
         totalWithdrawn: 0,
-        totalEarned: 0
+        totalEarned: 0,
+        totalTips: 0
       });
     }
 
@@ -236,8 +237,8 @@ export const getWalletBalance = asyncHandler(async (req, res) => {
       pendingPayout: wallet.transactions
         .filter(t => t.type === 'withdrawal' && t.status === 'Pending')
         .reduce((sum, t) => sum + t.amount, 0),
-      tips: wallet.transactions
-        .filter(t => t.type === 'payment' && t.description?.toLowerCase().includes('tip'))
+      tips: Number(wallet.totalTips) || wallet.transactions
+        .filter(t => t.type === 'tip' || (t.type === 'payment' && t.description?.toLowerCase().includes('tip')))
         .reduce((sum, t) => sum + t.amount, 0),
       transactions: wallet.transactions.slice(0, 10).map(t => ({
         id: t._id,

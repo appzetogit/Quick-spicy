@@ -2311,11 +2311,12 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     // Calculate earnings using admin's commission rules
     let totalEarning = 0;
     let commissionBreakdown = null;
+    const tipAmount = Math.max(0, Number(order.pricing?.tip) || 0);
     
     try {
       // Use DeliveryBoyCommission model to calculate commission based on distance
       const commissionResult = await DeliveryBoyCommission.calculateCommission(deliveryDistance);
-      totalEarning = commissionResult.commission;
+      totalEarning = commissionResult.commission + tipAmount;
       commissionBreakdown = commissionResult.breakdown;
       
       console.log(`💰 Delivery earnings calculated using commission rules: ₹${totalEarning.toFixed(2)} for order ${orderIdForLog}`);
@@ -2335,7 +2336,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       const fallbackBasePayout = Number(fallbackRule?.basePayout) || 10;
       const fallbackCommissionPerKm = Number(fallbackRule?.commissionPerKm) || 5;
       const extraDistance = Math.max(0, deliveryDistance - fallbackMinDistance);
-      totalEarning = fallbackBasePayout + (extraDistance * fallbackCommissionPerKm);
+      totalEarning = fallbackBasePayout + (extraDistance * fallbackCommissionPerKm) + tipAmount;
       console.warn(`⚠️ Using fallback earnings (commission rule fallback): ₹${totalEarning.toFixed(2)}`);
     }
 
@@ -2348,7 +2349,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       // Check if transaction already exists for this order
       const orderIdForTransaction = orderMongoId?.toString ? orderMongoId.toString() : orderMongoId;
       const existingTransaction = wallet.transactions?.find(
-        t => t.orderId && t.orderId.toString() === orderIdForTransaction && t.type === 'payment'
+        t => t.orderId && t.orderId.toString() === orderIdForTransaction && (t.type === 'payment' || t.type === 'tip')
       );
 
       if (existingTransaction) {
@@ -2360,7 +2361,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
           amount: totalEarning,
           type: 'payment',
           status: 'Completed',
-          description: `Delivery earnings for Order #${orderIdForLog} (Distance: ${deliveryDistance.toFixed(2)} km)`,
+          description: `Delivery earnings for Order #${orderIdForLog} (Distance: ${deliveryDistance.toFixed(2)} km${tipAmount > 0 ? `, Tip: ₹${tipAmount.toFixed(2)}` : ''})`,
           orderId: orderMongoId || order._id,
           paymentCollected: false
         });

@@ -2698,6 +2698,8 @@ export default function DeliveryHome() {
                 customerLng: order.address?.location?.coordinates?.[0],
                 items: order.items || [],
                 total: order.pricing?.total || 0,
+                tipAmount: Number(order.pricing?.tip || 0),
+                additionalTip: Number(order.additionalTip || 0),
                 paymentMethod: order.paymentMethod || order.payment?.method || 'razorpay', // backend-resolved first (COD vs Online)
                 deliveryVerification: order.deliveryVerification || null,
                 phone: order.restaurantId?.phone || order.restaurantId?.ownerPhone || null, // Restaurant phone number (prefer phone, fallback to ownerPhone)
@@ -11900,6 +11902,10 @@ selectedRestaurant?.lng || null,
                   <div className="flex justify-between items-center py-2 border-b border-gray-100">
                     <span className="text-gray-600">Trip pay</span>
                     <span className="text-gray-900 font-semibold">₹{(() => {
+                      const totalTip = Math.max(
+                        0,
+                        Number(selectedRestaurant?.tipAmount || 0) + Number(selectedRestaurant?.additionalTip || 0)
+                      );
                       let earnings = 0;
                       if (orderEarnings > 0) {
                         earnings = orderEarnings;
@@ -11911,7 +11917,7 @@ selectedRestaurant?.lng || null,
                           earnings = estEarnings;
                         }
                       }
-                      return (earnings - 5).toFixed(2);
+                      return Math.max(0, earnings - 5 - totalTip).toFixed(2);
                     })()}</span>
                   </div>
                   
@@ -11919,6 +11925,20 @@ selectedRestaurant?.lng || null,
                     <span className="text-gray-600">Long distance return pay</span>
                     <span className="text-gray-900 font-semibold">₹5.00</span>
                   </div>
+
+                  {(() => {
+                    const totalTip = Math.max(
+                      0,
+                      Number(selectedRestaurant?.tipAmount || 0) + Number(selectedRestaurant?.additionalTip || 0)
+                    );
+                    if (totalTip <= 0) return null;
+                    return (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600">Tip received</span>
+                        <span className="text-green-700 font-semibold">₹{totalTip.toFixed(2)}</span>
+                      </div>
+                    );
+                  })()}
 
                   {(() => {
                     const paymentMethod = String(

@@ -3,6 +3,7 @@ import OrderSettlement from '../models/OrderSettlement.js';
 import UserWallet from '../../user/models/UserWallet.js';
 import AdminWallet from '../../admin/models/AdminWallet.js';
 import AuditLog from '../../admin/models/AuditLog.js';
+import { calculateOrderSettlement } from './orderSettlementService.js';
 
 /**
  * Hold funds in escrow when order is placed
@@ -53,12 +54,17 @@ export const holdEscrow = async (orderId, userId, amount) => {
  */
 export const releaseEscrow = async (orderId) => {
   try {
-    const settlement = await OrderSettlement.findOne({ orderId });
+    let settlement = await OrderSettlement.findOne({ orderId });
+    if (!settlement) {
+      // COD/legacy orders may not have settlement at placement time.
+      await calculateOrderSettlement(orderId);
+      settlement = await OrderSettlement.findOne({ orderId });
+    }
     if (!settlement) {
       throw new Error('Settlement not found');
     }
 
-    if (settlement.escrowStatus !== 'held') {
+    if (!['held', 'pending'].includes(settlement.escrowStatus)) {
       throw new Error(`Escrow not in held status. Current status: ${settlement.escrowStatus}`);
     }
 
@@ -85,11 +91,15 @@ export const releaseEscrow = async (orderId) => {
 
     // Credit delivery partner wallet
     if (settlement.deliveryPartnerId && settlement.deliveryPartnerEarning.totalEarning > 0) {
+      const totalDeliveryAmount = Math.max(0, Number(settlement.deliveryPartnerEarning.totalEarning) || 0);
+      const tipAmount = Math.max(0, Number(settlement.deliveryPartnerEarning.tipAmount) || 0);
+      const earningAmount = Math.max(0, totalDeliveryAmount - tipAmount);
       await creditDeliveryWallet(
         settlement.deliveryPartnerId,
         settlement.orderId,
-        settlement.deliveryPartnerEarning.totalEarning,
-        settlement.orderNumber
+        earningAmount,
+        settlement.orderNumber,
+        tipAmount
       );
       settlement.deliveryPartnerEarning.status = 'credited';
       settlement.deliveryPartnerEarning.creditedAt = new Date();
@@ -196,19 +206,34 @@ const creditRestaurantWallet = async (restaurantId, orderId, netAmount, orderNum
 /**
  * Credit delivery partner wallet
  */
-const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber) => {
+const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber, tipAmount = 0) => {
   try {
     const DeliveryWallet = (await import('../../delivery/models/DeliveryWallet.js')).default;
     const wallet = await DeliveryWallet.findOrCreateByDeliveryId(deliveryId);
-    
-    wallet.addTransaction({
-      amount: amount,
-      type: 'payment',
-      status: 'Completed',
-      description: `Payment for order ${orderNumber}`,
-      orderId: orderId,
-      paymentCollected: false // Will be updated when COD is collected
-    });
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    const safeTipAmount = Math.max(0, Number(tipAmount) || 0);
+
+    if (safeAmount > 0) {
+      wallet.addTransaction({
+        amount: safeAmount,
+        type: 'payment',
+        status: 'Completed',
+        description: `Payment for order ${orderNumber}`,
+        orderId: orderId,
+        paymentCollected: false // Will be updated when COD is collected
+      });
+    }
+
+    if (safeTipAmount > 0) {
+      wallet.addTransaction({
+        amount: safeTipAmount,
+        type: 'tip',
+        status: 'Completed',
+        description: `Customer tip for order ${orderNumber}`,
+        orderId: orderId,
+        paymentCollected: false
+      });
+    }
     
     await wallet.save();
 
@@ -223,7 +248,7 @@ const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber) =>
         name: 'System'
       },
       transactionDetails: {
-        amount: amount,
+        amount: safeAmount + safeTipAmount,
         type: 'payment',
         status: 'success',
         orderId: orderId,
