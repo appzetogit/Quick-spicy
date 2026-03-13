@@ -278,7 +278,7 @@ const executePushNotification = async ({
   };
 
   const isRestaurantMobileTarget =
-    normalizedTarget === "restaurant" &&
+    (normalizedTarget === "restaurant" || normalizedTarget === "all") &&
     (normalizedPlatform === "mobile" || normalizedPlatform === "all");
 
   const androidNotificationConfig = isRestaurantMobileTarget
