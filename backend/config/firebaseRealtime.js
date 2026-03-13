@@ -83,6 +83,7 @@ function getCandidateServiceAccountPaths() {
     let files = [];
     try {
       files = fs.readdirSync(dirPath);
+      
     } catch {
       return;
     }

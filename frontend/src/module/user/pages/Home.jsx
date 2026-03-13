@@ -1270,6 +1270,8 @@ export default function Home() {
             offer: offerText,
             slug: restaurant.slug,
             restaurantId: restaurant.restaurantId,
+            restaurantZoneId: restaurant.restaurantZoneId || null,
+            isInUserZone: typeof restaurant.isInUserZone === "boolean" ? restaurant.isInUserZone : null,
             location: restaurant.location, // Store location for distance recalculation
             isActive: restaurant.isActive !== false, // Default to true if not specified
             isAcceptingOrders: restaurant.isAcceptingOrders !== false, // Default to true if not specified
@@ -1544,8 +1546,16 @@ export default function Home() {
 
   // Filter restaurants and foods based on active filters
   const filteredRestaurants = useMemo(() => {
-    // Use only API data - no mock data fallback
-    let filtered = [...restaurantsData]
+    const userZoneKey = zoneId ? String(zoneId) : ""
+    const sameZoneRestaurants = (restaurantsData || []).filter((restaurant) => {
+      if (!userZoneKey) return false
+      if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
+      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
+      return candidateZoneId ? String(candidateZoneId) === userZoneKey : false
+    })
+
+    // Use only same-zone API data
+    let filtered = [...sameZoneRestaurants]
 
     filtered = filtered.filter(matchesVegMode)
 
@@ -1645,14 +1655,39 @@ export default function Home() {
     }
 
     return filtered
-  }, [restaurantsData, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
+  }, [restaurantsData, zoneId, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
   const recommendedForYouRestaurants = useMemo(() => {
+    const userZoneKey = zoneId ? String(zoneId) : ""
     const idsInOrder = (recommendedRestaurantIds || []).map((id) => String(id))
     const hasIds = idsInOrder.length > 0
     const fromSettings = Array.isArray(recommendedRestaurantsFromSettings)
       ? recommendedRestaurantsFromSettings
       : []
+    const inZoneRestaurantIds = new Set(
+      (restaurantsData || [])
+        .filter((restaurant) => {
+          if (!userZoneKey) return false
+          if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
+          const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
+          return candidateZoneId ? String(candidateZoneId) === userZoneKey : false
+        })
+        .map((restaurant) => String(restaurant?.mongoId || restaurant?.id || ""))
+        .filter(Boolean)
+    )
+
+    const isInSameZone = (restaurant) => {
+      if (!userZoneKey) return false
+      if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
+
+      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
+      if (candidateZoneId) {
+        return String(candidateZoneId) === userZoneKey
+      }
+
+      const restaurantKey = String(restaurant?.mongoId || restaurant?.id || "")
+      return restaurantKey ? inZoneRestaurantIds.has(restaurantKey) : false
+    }
 
     // Primary source: restaurants returned by landing settings API (already admin-selected).
     const fromSettingsMapped = fromSettings.map((restaurant) => {
@@ -1681,6 +1716,8 @@ export default function Home() {
         offer: null,
         isActive: true,
         isAcceptingOrders: true,
+        restaurantZoneId: restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id || null,
+        isInUserZone: typeof restaurant?.isInUserZone === 'boolean' ? restaurant.isInUserZone : null,
       }
     })
 
@@ -1701,8 +1738,10 @@ export default function Home() {
 
     return [...orderedFromSettings, ...fromFetchedMissing]
       .filter(matchesVegMode)
+      .filter(isInSameZone)
       .slice(0, 12)
   }, [
+    zoneId,
     recommendedRestaurantIds,
     recommendedRestaurantsFromSettings,
     restaurantsData,

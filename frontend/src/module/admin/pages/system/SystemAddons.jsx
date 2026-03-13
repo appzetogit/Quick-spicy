@@ -69,6 +69,8 @@ export default function SystemAddons() {
     // SMS Hub India
     SMSINDIAHUB_API_KEY: "",
     SMSINDIAHUB_SENDER_ID: "",
+    SMSINDIAHUB_ORDER_ALERT_TEMPLATE_ID: "",
+    SMSINDIAHUB_ORDER_ALERT_TEMPLATE: "",
 
     // Google Maps
     VITE_GOOGLE_MAPS_API_KEY: "",
@@ -358,6 +360,21 @@ export default function SystemAddons() {
                 value={envData.SMSINDIAHUB_SENDER_ID}
                 onChange={(e) => handleInputChange("SMSINDIAHUB_SENDER_ID", e.target.value)}
               />
+              <InputField
+                label="Order Alert Template ID"
+                value={envData.SMSINDIAHUB_ORDER_ALERT_TEMPLATE_ID}
+                onChange={(e) => handleInputChange("SMSINDIAHUB_ORDER_ALERT_TEMPLATE_ID", e.target.value)}
+                placeholder="DLT template ID for admin new-order SMS"
+              />
+              <div className="md:col-span-2">
+                <InputField
+                  label="Order Alert Template Text"
+                  value={envData.SMSINDIAHUB_ORDER_ALERT_TEMPLATE}
+                  onChange={(e) => handleInputChange("SMSINDIAHUB_ORDER_ALERT_TEMPLATE", e.target.value)}
+                  type="textarea"
+                  placeholder="Exact approved DLT template text. Tokens supported: {orderId}, {customerName}, {restaurantName}, {total}"
+                />
+              </div>
             </div>
           </div>
 

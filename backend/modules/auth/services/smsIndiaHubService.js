@@ -360,7 +360,7 @@ class SMSIndiaHubService {
    * @param {string} message - Custom message to send
    * @returns {Promise<Object>} - Response object
    */
-  async sendCustomSMS(phone, message) {
+  async sendCustomSMS(phone, message, options = {}) {
     try {
       const { apiKey, senderId } = await this.resolveCredentials();
 
@@ -388,63 +388,106 @@ class SMSIndiaHubService {
         );
       }
 
-      // Build the API URL with query parameters
-      const params = new URLSearchParams({
-        APIKey: apiKey,
-        msisdn: normalizedPhone,
-        sid: senderId,
-        msg: message,
-        fl: "0", // Flash message flag (0 = normal SMS)
-        dc: "0", // Delivery confirmation (0 = no confirmation)
-        gwid: "2", // Gateway ID (2 = transactional)
-      });
+      const templateId =
+        String(options?.templateId || "").trim() ||
+        process.env.SMSINDIAHUB_CUSTOM_TEMPLATE_ID?.trim() ||
+        process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
 
-      const apiUrl = `${this.baseUrl}?${params.toString()}`;
+      // Try transactional first, then fallback to promotional.
+      // OTP and strict DLT templates typically use transactional route; custom alerts often require promotional route.
+      const gatewayOrder =
+        Array.isArray(options?.gatewayOrder) && options.gatewayOrder.length > 0
+          ? options.gatewayOrder.map((g) => String(g))
+          : ["2", "1"];
+      let lastError = null;
 
-      // Make GET request to SMSIndia Hub API
-      const response = await axios.get(apiUrl, {
-        headers: {
-          "User-Agent": "DriveOn/1.0",
-          Accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-        timeout: 15000, // 15 second timeout
-      });
+      for (const gatewayId of gatewayOrder) {
+        try {
+          const params = new URLSearchParams({
+            APIKey: apiKey,
+            msisdn: normalizedPhone,
+            sid: senderId,
+            msg: message,
+            fl: "0",
+            dc: "0",
+            gwid: gatewayId,
+          });
 
-      const responseText = response.data.toString();
+          if (templateId && gatewayId === "2") {
+            params.append("templateid", templateId);
+          }
 
-      // Check for success indicators in the response
-      if (
-        responseText.includes("success") ||
-        responseText.includes("sent") ||
-        responseText.includes("accepted")
-      ) {
-        return {
-          success: true,
-          messageId: `sms_${Date.now()}`,
-          status: "sent",
-          to: normalizedPhone,
-          body: message,
-          provider: "SMSIndia Hub",
-          response: responseText,
-        };
-      } else if (
-        responseText.includes("error") ||
-        responseText.includes("failed") ||
-        responseText.includes("invalid")
-      ) {
-        throw new Error(`SMSIndia Hub API error: ${responseText}`);
-      } else {
-        return {
-          success: true,
-          messageId: `sms_${Date.now()}`,
-          status: "sent",
-          to: normalizedPhone,
-          body: message,
-          provider: "SMSIndia Hub",
-          response: responseText,
-        };
+          const apiUrl = `${this.baseUrl}?${params.toString()}`;
+          const response = await axios.get(apiUrl, {
+            headers: {
+              "User-Agent": "DriveOn/1.0",
+              Accept:
+                "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            },
+            timeout: 15000,
+          });
+
+          const rawResponse = response.data;
+          const responseText = String(rawResponse || "").toLowerCase();
+
+          let parsedResponse = null;
+          if (typeof rawResponse === "string") {
+            try {
+              parsedResponse = JSON.parse(rawResponse);
+            } catch (_e) {
+              // Not JSON; keep using text heuristics below.
+            }
+          } else if (rawResponse && typeof rawResponse === "object") {
+            parsedResponse = rawResponse;
+          }
+
+          // SMSIndia Hub success JSON commonly includes:
+          // { ErrorCode: "000", ErrorMessage: "Done", ... }
+          if (parsedResponse && typeof parsedResponse === "object") {
+            const errorCode = String(parsedResponse.ErrorCode || "");
+            const errorMessage = String(parsedResponse.ErrorMessage || "");
+            if (errorCode === "000" && errorMessage.toLowerCase() === "done") {
+              return {
+                success: true,
+                messageId: parsedResponse.MessageData?.[0]?.MessageId || `sms_${Date.now()}`,
+                status: "sent",
+                to: normalizedPhone,
+                body: message,
+                provider: "SMSIndia Hub",
+                gatewayId,
+                response: parsedResponse,
+              };
+            }
+            if (errorCode && errorCode !== "000") {
+              throw new Error(
+                `SMSIndia Hub API error: ${errorMessage || "Unknown error"} (Code: ${errorCode})`,
+              );
+            }
+          }
+
+          if (
+            responseText.includes("failed") ||
+            responseText.includes("invalid")
+          ) {
+            throw new Error(`SMSIndia Hub API error: ${responseText}`);
+          }
+
+          return {
+            success: true,
+            messageId: `sms_${Date.now()}`,
+            status: "sent",
+            to: normalizedPhone,
+            body: message,
+            provider: "SMSIndia Hub",
+            gatewayId,
+            response: response.data,
+          };
+        } catch (gatewayError) {
+          lastError = gatewayError;
+        }
       }
+
+      throw lastError || new Error("SMSIndia Hub send failed");
     } catch (error) {
       throw error;
     }

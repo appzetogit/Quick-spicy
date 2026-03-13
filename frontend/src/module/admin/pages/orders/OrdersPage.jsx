@@ -44,6 +44,9 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [deletingOrderId, setDeletingOrderId] = useState(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null)
+  const [orderSmsPhoneNumber, setOrderSmsPhoneNumber] = useState("")
+  const [isLoadingOrderSmsPhone, setIsLoadingOrderSmsPhone] = useState(false)
+  const [isSavingOrderSmsPhone, setIsSavingOrderSmsPhone] = useState(false)
   const seenOrderIdsRef = useRef(new Set())
   const isFirstLoadRef = useRef(true)
   const fallbackAudioRef = useRef(null)
@@ -301,12 +304,11 @@ export default function OrdersPage({ statusKey = "all" }) {
   }, [stopAlertLoop])
 
   useEffect(() => {
-    if (statusKey !== "all") return
     if (typeof window === "undefined" || typeof Notification === "undefined") return
     if (Notification.permission === "default") {
       Notification.requestPermission().catch(() => {})
     }
-  }, [statusKey])
+  }, [])
 
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
@@ -382,16 +384,61 @@ export default function OrdersPage({ statusKey = "all" }) {
   useEffect(() => {
     if (statusKey !== "all") return undefined
 
+    let mounted = true
+    const fetchOrderSmsPhoneSetting = async () => {
+      setIsLoadingOrderSmsPhone(true)
+      try {
+        const response = await adminAPI.getBusinessSettings()
+        const settings = response?.data?.data || response?.data || {}
+        if (mounted) {
+          setOrderSmsPhoneNumber(settings.orderSmsPhoneNumber || "")
+        }
+      } catch (_) {
+        if (mounted) {
+          setOrderSmsPhoneNumber("")
+        }
+      } finally {
+        if (mounted) {
+          setIsLoadingOrderSmsPhone(false)
+        }
+      }
+    }
+
+    fetchOrderSmsPhoneSetting()
+    return () => {
+      mounted = false
+    }
+  }, [statusKey])
+
+  const handleSaveOrderSmsPhoneNumber = async () => {
+    const normalizedPhone = String(orderSmsPhoneNumber || "").trim().replace(/\s+/g, "")
+    if (normalizedPhone && !/^\+?[0-9]{10,15}$/.test(normalizedPhone)) {
+      toast.error("Enter a valid phone number (10 to 15 digits, optional +)")
+      return
+    }
+
+    try {
+      setIsSavingOrderSmsPhone(true)
+      await adminAPI.updateBusinessSettings({ orderSmsPhoneNumber: normalizedPhone })
+      setOrderSmsPhoneNumber(normalizedPhone)
+      toast.success("Order SMS alert number saved")
+    } catch (error) {
+      debugError("Error saving order SMS phone number:", error)
+      toast.error(error.response?.data?.message || "Failed to save order SMS alert number")
+    } finally {
+      setIsSavingOrderSmsPhone(false)
+    }
+  }
+
+  useEffect(() => {
     const pollId = setInterval(() => {
-      fetchOrders({ silent: true, withRingCheck: true })
+      fetchOrders({ silent: true, withRingCheck: statusKey === "all" })
     }, 5000)
 
     return () => clearInterval(pollId)
   }, [statusKey, fetchOrders])
 
   useEffect(() => {
-    if (statusKey !== "all") return undefined
-
     const backendUrl = API_BASE_URL.replace(/\/api\/?$/, "")
     const socket = io(backendUrl, {
       transports: ["websocket", "polling"],
@@ -746,6 +793,36 @@ export default function OrdersPage({ statusKey = "all" }) {
         onExport={handleExport}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
+      {statusKey === "all" && (
+        <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                SMSHubIndia order alert number
+              </label>
+              <input
+                type="text"
+                value={orderSmsPhoneNumber}
+                onChange={(e) => setOrderSmsPhoneNumber(e.target.value)}
+                placeholder="+91XXXXXXXXXX"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                disabled={isLoadingOrderSmsPhone || isSavingOrderSmsPhone}
+              />
+              <p className="mt-1 text-xs text-slate-500">
+                Every new order sends an SMS alert to this number.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSaveOrderSmsPhoneNumber}
+              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isLoadingOrderSmsPhone || isSavingOrderSmsPhone}
+            >
+              {isSavingOrderSmsPhone ? "Saving..." : "Save Number"}
+            </button>
+          </div>
+        </div>
+      )}
       <FilterPanel
         isOpen={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
