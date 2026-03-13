@@ -7,6 +7,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from '../../../shared/utils/
 import { initializeCloudinary } from '../../../config/cloudinary.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
+import { deleteRestaurantRelatedData } from '../services/deleteRestaurantData.js';
 
 const toImageObject = (value) => {
   if (!value) return null;
@@ -915,6 +916,8 @@ export const deleteRestaurantAccount = asyncHandler(async (req, res) => {
       console.error('Error deleting images from Cloudinary:', error);
       // Continue with account deletion even if image deletion fails
     }
+
+    await deleteRestaurantRelatedData(restaurantId);
 
     // Delete the restaurant from database
     await Restaurant.findByIdAndDelete(restaurantId);
