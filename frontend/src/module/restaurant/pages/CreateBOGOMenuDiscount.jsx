@@ -7,7 +7,7 @@ import { getAllFoods } from "../utils/foodManagement"
 
 export default function CreateBOGOMenuDiscount() {
   const navigate = useNavigate()
-  const allFoods = getAllFoods()
+  const allFoods = Array.isArray(getAllFoods()) ? getAllFoods() : []
 
   const [discountConstruct, setDiscountConstruct] = useState("buy-1-get-1-free")
   const [selectedItems, setSelectedItems] = useState([])

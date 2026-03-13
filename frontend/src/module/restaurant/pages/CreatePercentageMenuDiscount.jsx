@@ -7,7 +7,7 @@ import { getAllFoods } from "../utils/foodManagement"
 
 export default function CreatePercentageMenuDiscount() {
   const navigate = useNavigate()
-  const allFoods = getAllFoods()
+  const allFoods = Array.isArray(getAllFoods()) ? getAllFoods() : []
 
   const [discountCards, setDiscountCards] = useState([
     { id: 1, percentage: "", items: [] }

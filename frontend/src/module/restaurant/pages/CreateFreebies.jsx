@@ -8,7 +8,7 @@ import { getAllFoods } from "../utils/foodManagement"
 export default function CreateFreebies() {
   const navigate = useNavigate()
   const { goalId } = useParams()
-  const allFoods = getAllFoods()
+  const allFoods = Array.isArray(getAllFoods()) ? getAllFoods() : []
 
   const [selectedFreebies, setSelectedFreebies] = useState([])
   const [selectedMinOrderValue, setSelectedMinOrderValue] = useState("")

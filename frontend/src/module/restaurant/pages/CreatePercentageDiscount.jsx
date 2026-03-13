@@ -77,7 +77,9 @@ export default function CreatePercentageDiscount() {
         const response = await restaurantAPI.getMenu()
         
         if (response?.data?.success && response?.data?.data?.menu) {
-          const sections = response.data.data.menu.sections || []
+          const sections = Array.isArray(response.data.data.menu.sections)
+            ? response.data.data.menu.sections
+            : []
           
           // Extract all items from all sections and subsections
           const allItems = []

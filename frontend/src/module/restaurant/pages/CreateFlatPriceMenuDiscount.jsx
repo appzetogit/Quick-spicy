@@ -7,7 +7,7 @@ import { getAllFoods } from "../utils/foodManagement"
 
 export default function CreateFlatPriceMenuDiscount() {
   const navigate = useNavigate()
-  const allFoods = getAllFoods()
+  const allFoods = Array.isArray(getAllFoods()) ? getAllFoods() : []
 
   const [priceCards, setPriceCards] = useState([
     { id: 1, flatPrice: "", items: [] }

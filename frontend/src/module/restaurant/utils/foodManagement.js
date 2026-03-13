@@ -153,7 +153,8 @@ export const getAllFoods = () => {
   try {
     const saved = localStorage.getItem(FOODS_STORAGE_KEY)
     if (saved) {
-      return JSON.parse(saved)
+      const parsedFoods = JSON.parse(saved)
+      return Array.isArray(parsedFoods) ? parsedFoods : DEFAULT_FOODS
     }
     // Initialize with default foods
     setAllFoods(DEFAULT_FOODS)
