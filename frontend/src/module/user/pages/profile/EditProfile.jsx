@@ -31,6 +31,109 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const mobileDatePickerFieldSx = {
+  '& .MuiOutlinedInput-root': {
+    height: '48px',
+    borderRadius: '8px',
+    backgroundColor: '#ffffff',
+    color: '#111827',
+    '& fieldset': {
+      borderColor: '#d1d5db',
+    },
+    '&:hover fieldset': {
+      borderColor: '#9ca3af',
+    },
+    '&.Mui-focused fieldset': {
+      borderColor: '#EB590E',
+      borderWidth: '1px',
+    },
+    '@media (prefers-color-scheme: dark)': {
+      backgroundColor: '#1a1a1a',
+      color: '#ffffff',
+      '& fieldset': {
+        borderColor: '#374151',
+      },
+      '&:hover fieldset': {
+        borderColor: '#4b5563',
+      },
+    },
+  },
+  '& .MuiInputBase-input': {
+    padding: '12px 14px',
+    fontSize: '16px',
+    color: '#111827',
+    WebkitTextFillColor: '#111827',
+    caretColor: '#111827',
+    opacity: 1,
+  },
+  '& .MuiInputBase-input::placeholder': {
+    color: '#6b7280',
+    opacity: 1,
+    WebkitTextFillColor: '#6b7280',
+  },
+  '& .MuiPickersSectionList-root': {
+    color: '#111827',
+  },
+  '& .MuiPickersSectionList-section': {
+    color: '#111827',
+  },
+  '& .MuiPickersInputBase-sectionsContainer': {
+    color: '#111827',
+  },
+  '& .MuiPickersSectionList-sectionContent': {
+    color: '#111827',
+  },
+  '& .MuiPickersSectionList-sectionSeparator': {
+    color: '#6b7280',
+  },
+  '& .MuiSvgIcon-root': {
+    color: '#6b7280',
+  },
+  '@media (prefers-color-scheme: dark)': {
+    '& .MuiInputBase-input': {
+      color: '#ffffff',
+      WebkitTextFillColor: '#ffffff',
+      caretColor: '#ffffff',
+      opacity: 1,
+    },
+    '& .MuiInputBase-input::placeholder': {
+      color: '#9ca3af',
+      opacity: 1,
+      WebkitTextFillColor: '#9ca3af',
+    },
+    '& .MuiPickersSectionList-root': {
+      color: '#ffffff',
+    },
+    '& .MuiPickersSectionList-section': {
+      color: '#ffffff',
+    },
+    '& .MuiPickersInputBase-sectionsContainer': {
+      color: '#ffffff',
+    },
+    '& .MuiPickersSectionList-sectionContent': {
+      color: '#ffffff',
+    },
+    '& .MuiPickersSectionList-sectionSeparator': {
+      color: '#d1d5db',
+    },
+    '& .MuiPickersSectionList-section.Mui-disabled': {
+      color: '#ffffff',
+      opacity: 1,
+    },
+    '& .MuiPickersSectionList-section[data-placeholder=\"true\"]': {
+      color: '#ffffff',
+      opacity: 1,
+    },
+    '& .MuiPickersSectionList-section span': {
+      color: '#ffffff',
+      WebkitTextFillColor: '#ffffff',
+      opacity: 1,
+    },
+    '& .MuiSvgIcon-root': {
+      color: '#9ca3af',
+    },
+  },
+}
 
 // Gender options
 const genderOptions = [
@@ -149,11 +252,6 @@ export default function EditProfile() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Please enter a valid email"
   }
 
-  const validateMobile = (value) => {
-    if (!value) return ""
-    return /^\d{10}$/.test(value) ? "" : "Mobile number must be 10 digits"
-  }
-
   const validateDateOfBirth = (value) => {
     if (!value) return ""
     const dob = dayjs(value)
@@ -165,10 +263,7 @@ export default function EditProfile() {
     let normalizedValue = value
     let errorMessage = ""
 
-    if (field === "mobile") {
-      normalizedValue = String(value || "").replace(/\D/g, "").slice(0, 10)
-      errorMessage = validateMobile(normalizedValue)
-    } else if (field === "email") {
+    if (field === "email") {
       normalizedValue = String(value || "").trim()
       errorMessage = validateEmail(normalizedValue)
     } else if (field === "dateOfBirth") {
@@ -180,7 +275,7 @@ export default function EditProfile() {
       [field]: normalizedValue
     }))
 
-    if (field === "mobile" || field === "email" || field === "dateOfBirth") {
+    if (field === "email" || field === "dateOfBirth") {
       setFieldErrors((prev) => ({
         ...prev,
         [field]: errorMessage
@@ -335,7 +430,7 @@ export default function EditProfile() {
 
   const validateForm = () => {
     const nextErrors = {
-      mobile: validateMobile(formData.mobile),
+      mobile: "",
       email: validateEmail(formData.email),
       dateOfBirth: validateDateOfBirth(formData.dateOfBirth),
     }
@@ -357,7 +452,6 @@ export default function EditProfile() {
       const updateData = {
         name: formData.name,
         email: formData.email || undefined,
-        phone: formData.mobile || undefined,
         dateOfBirth: formData.dateOfBirth ? formData.dateOfBirth.format('YYYY-MM-DD') : undefined,
         anniversary: formData.anniversary ? formData.anniversary.format('YYYY-MM-DD') : undefined,
         gender: formData.gender || undefined,
@@ -505,14 +599,15 @@ export default function EditProfile() {
                   id="mobile"
                   type="tel"
                   value={formData.mobile}
-                  onChange={(e) => handleChange('mobile', e.target.value)}
-                  className="flex-1 h-12 text-base  border border-gray-300 dark:border-gray-700 focus:border-[#EB590E] focus:ring-1 focus:ring-[#EB590E] rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white"
+                  readOnly
+                  disabled
+                  className="flex-1 h-12 text-base border border-gray-300 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-[#111111] text-gray-900 dark:text-white opacity-100 cursor-not-allowed disabled:opacity-100 disabled:text-gray-900 dark:disabled:text-white"
                   placeholder="Mobile"
                 />
               </div>
-              {fieldErrors.mobile && (
-                <p className="text-xs text-red-600">{fieldErrors.mobile}</p>
-              )}
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Phone number cannot be changed here
+              </p>
             </div>
 
             {/* Email Field */}
@@ -545,29 +640,12 @@ export default function EditProfile() {
                   value={formData.dateOfBirth}
                   onChange={(newValue) => handleChange('dateOfBirth', newValue)}
                   maxDate={dayjs()}
+                  format="MM/DD/YYYY"
+                  enableAccessibleFieldDOMStructure={false}
                   slotProps={{
                     textField: {
                       className: "w-full",
-                      sx: {
-                        '& .MuiOutlinedInput-root': {
-                          height: '48px',
-                          borderRadius: '8px',
-                          '& fieldset': {
-                            borderColor: '#d1d5db',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#9ca3af',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#EB590E',
-                            borderWidth: '1px',
-                          },
-                        },
-                        '& .MuiInputBase-input': {
-                          padding: '12px 14px',
-                          fontSize: '16px',
-                        },
-                      },
+                      sx: mobileDatePickerFieldSx,
                     },
                   }}
                 />
@@ -586,29 +664,12 @@ export default function EditProfile() {
                 <DatePicker
                   value={formData.anniversary}
                   onChange={(newValue) => handleChange('anniversary', newValue)}
+                  format="MM/DD/YYYY"
+                  enableAccessibleFieldDOMStructure={false}
                   slotProps={{
                     textField: {
                       className: "w-full",
-                      sx: {
-                        '& .MuiOutlinedInput-root': {
-                          height: '48px',
-                          borderRadius: '8px',
-                          '& fieldset': {
-                            borderColor: '#d1d5db',
-                          },
-                          '&:hover fieldset': {
-                            borderColor: '#9ca3af',
-                          },
-                          '&.Mui-focused fieldset': {
-                            borderColor: '#EB590E',
-                            borderWidth: '1px',
-                          },
-                        },
-                        '& .MuiInputBase-input': {
-                          padding: '12px 14px',
-                          fontSize: '16px',
-                        },
-                      },
+                      sx: mobileDatePickerFieldSx,
                     },
                   }}
                 />
@@ -627,9 +688,13 @@ export default function EditProfile() {
                 <SelectTrigger className="h-12 text-base border border-gray-300 dark:border-gray-700 focus:border-[#EB590E] focus:ring-1 focus:ring-[#EB590E] rounded-lg bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white">
                   <SelectValue placeholder="Gender" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white text-gray-900 dark:bg-[#1a1a1a] dark:text-white border border-gray-200 dark:border-gray-700">
                   {genderOptions.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      className="text-gray-900 dark:text-white focus:text-gray-900 dark:focus:text-white focus:bg-gray-100 dark:focus:bg-[#2a2a2a]"
+                    >
                       {option.label}
                     </SelectItem>
                   ))}
