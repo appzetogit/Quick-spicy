@@ -1546,16 +1546,8 @@ export default function Home() {
 
   // Filter restaurants and foods based on active filters
   const filteredRestaurants = useMemo(() => {
-    const userZoneKey = zoneId ? String(zoneId) : ""
-    const sameZoneRestaurants = (restaurantsData || []).filter((restaurant) => {
-      if (!userZoneKey) return false
-      if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
-      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
-      return candidateZoneId ? String(candidateZoneId) === userZoneKey : false
-    })
-
-    // Use only same-zone API data
-    let filtered = [...sameZoneRestaurants]
+    // Use only API data - no zone restriction on Home page
+    let filtered = [...restaurantsData]
 
     filtered = filtered.filter(matchesVegMode)
 
@@ -1655,39 +1647,14 @@ export default function Home() {
     }
 
     return filtered
-  }, [restaurantsData, zoneId, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
+  }, [restaurantsData, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
   const recommendedForYouRestaurants = useMemo(() => {
-    const userZoneKey = zoneId ? String(zoneId) : ""
     const idsInOrder = (recommendedRestaurantIds || []).map((id) => String(id))
     const hasIds = idsInOrder.length > 0
     const fromSettings = Array.isArray(recommendedRestaurantsFromSettings)
       ? recommendedRestaurantsFromSettings
       : []
-    const inZoneRestaurantIds = new Set(
-      (restaurantsData || [])
-        .filter((restaurant) => {
-          if (!userZoneKey) return false
-          if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
-          const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
-          return candidateZoneId ? String(candidateZoneId) === userZoneKey : false
-        })
-        .map((restaurant) => String(restaurant?.mongoId || restaurant?.id || ""))
-        .filter(Boolean)
-    )
-
-    const isInSameZone = (restaurant) => {
-      if (!userZoneKey) return false
-      if (typeof restaurant?.isInUserZone === "boolean") return restaurant.isInUserZone
-
-      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
-      if (candidateZoneId) {
-        return String(candidateZoneId) === userZoneKey
-      }
-
-      const restaurantKey = String(restaurant?.mongoId || restaurant?.id || "")
-      return restaurantKey ? inZoneRestaurantIds.has(restaurantKey) : false
-    }
 
     // Primary source: restaurants returned by landing settings API (already admin-selected).
     const fromSettingsMapped = fromSettings.map((restaurant) => {
@@ -1738,10 +1705,8 @@ export default function Home() {
 
     return [...orderedFromSettings, ...fromFetchedMissing]
       .filter(matchesVegMode)
-      .filter(isInSameZone)
       .slice(0, 12)
   }, [
-    zoneId,
     recommendedRestaurantIds,
     recommendedRestaurantsFromSettings,
     restaurantsData,
