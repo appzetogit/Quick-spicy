@@ -6,6 +6,9 @@ import mongoose from 'mongoose';
 import admin from 'firebase-admin';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 
+const DELIVERY_ANDROID_CHANNEL_ID = 'quick_spicy_popup_v1';
+const DELIVERY_ANDROID_SOUND = 'original';
+
 // Dynamic import to avoid circular dependency
 let getIO = null;
 
@@ -93,8 +96,9 @@ async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
       priority: 'high',
       ttl: 120000,
       notification: {
-        sound: 'default',
-        defaultSound: true,
+        channelId: DELIVERY_ANDROID_CHANNEL_ID,
+        sound: DELIVERY_ANDROID_SOUND,
+        defaultSound: false,
         defaultVibrateTimings: true,
         priority: 'max'
       }
