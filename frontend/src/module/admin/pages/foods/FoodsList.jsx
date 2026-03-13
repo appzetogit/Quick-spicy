@@ -21,6 +21,7 @@ const createFoodForm = () => ({
 })
 
 export default function FoodsList() {
+  const CUSTOM_CATEGORY_VALUE = "__custom_category__"
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRestaurant, setSelectedRestaurant] = useState("all")
   const [foods, setFoods] = useState([])
@@ -35,6 +36,7 @@ export default function FoodsList() {
   const [editingFood, setEditingFood] = useState(null)
   const [submittingFood, setSubmittingFood] = useState(false)
   const [categoryOptions, setCategoryOptions] = useState([])
+  const [customCategoryName, setCustomCategoryName] = useState("")
   const [selectedImageFile, setSelectedImageFile] = useState(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
@@ -267,6 +269,7 @@ export default function FoodsList() {
       ...createFoodForm(),
       restaurantId: selectedRestaurant !== "all" ? selectedRestaurant : "",
     })
+    setCustomCategoryName("")
     setSelectedImageFile(null)
     setImagePreviewUrl("")
     setShowFoodFormModal(true)
@@ -286,6 +289,7 @@ export default function FoodsList() {
       isAvailable: food.originalItem?.isAvailable !== false,
       preparationTime: String(food.originalItem?.preparationTime || ""),
     })
+    setCustomCategoryName("")
     setSelectedImageFile(null)
     setImagePreviewUrl(String(food.originalItem?.image || food.originalItem?.images?.[0] || ""))
     setShowFoodFormModal(true)
@@ -355,12 +359,15 @@ export default function FoodsList() {
   }
 
   const handleFoodFormSubmit = async () => {
+    const selectedCategory =
+      foodForm.sectionName === CUSTOM_CATEGORY_VALUE ? customCategoryName.trim() : foodForm.sectionName.trim()
+
     if (!foodForm.restaurantId) {
       toast.error("Please select a restaurant")
       return
     }
-    if (!foodForm.sectionName.trim()) {
-      toast.error("Please select a category")
+    if (!selectedCategory) {
+      toast.error("Please select or enter a category")
       return
     }
     if (!foodForm.name.trim()) {
@@ -391,7 +398,7 @@ export default function FoodsList() {
       const menu = await loadRestaurantMenu(foodForm.restaurantId)
       const menuSections = Array.isArray(menu.sections) ? [...menu.sections] : []
       const targetSectionIndex = menuSections.findIndex(
-        (section) => String(section.name || "").trim().toLowerCase() === foodForm.sectionName.trim().toLowerCase()
+        (section) => String(section.name || "").trim().toLowerCase() === selectedCategory.toLowerCase()
       )
 
       const targetSection =
@@ -403,7 +410,7 @@ export default function FoodsList() {
             }
           : {
               id: `section-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-              name: foodForm.sectionName.trim(),
+              name: selectedCategory,
               isEnabled: true,
               order: menuSections.length,
               items: [],
@@ -423,7 +430,7 @@ export default function FoodsList() {
         images: imageUrl ? [imageUrl] : [],
         foodType: foodForm.foodType === "Veg" ? "Veg" : "Non-Veg",
         isAvailable: foodForm.isAvailable !== false,
-        category: foodForm.sectionName.trim(),
+        category: selectedCategory,
         preparationTime: foodForm.preparationTime.trim(),
         approvalStatus: "approved",
       }
@@ -456,7 +463,7 @@ export default function FoodsList() {
         }
 
         const finalTargetSectionIndex = cleanedSections.findIndex(
-          (section) => String(section.name || "").trim().toLowerCase() === foodForm.sectionName.trim().toLowerCase()
+          (section) => String(section.name || "").trim().toLowerCase() === selectedCategory.toLowerCase()
         )
 
         if (finalTargetSectionIndex >= 0) {
@@ -485,6 +492,7 @@ export default function FoodsList() {
       setShowFoodFormModal(false)
       setEditingFood(null)
       setFoodForm(createFoodForm())
+      setCustomCategoryName("")
       setSelectedImageFile(null)
       setImagePreviewUrl("")
       await fetchAllFoods()
@@ -849,6 +857,7 @@ export default function FoodsList() {
           if (!open) {
             setEditingFood(null)
             setFoodForm(createFoodForm())
+            setCustomCategoryName("")
             setCategoryOptions([])
             setSelectedImageFile(null)
             setImagePreviewUrl("")
@@ -867,7 +876,10 @@ export default function FoodsList() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Restaurant</label>
                 <select
                   value={foodForm.restaurantId}
-                  onChange={(e) => setFoodForm((prev) => ({ ...prev, restaurantId: e.target.value, sectionName: "" }))}
+                  onChange={(e) => {
+                    setFoodForm((prev) => ({ ...prev, restaurantId: e.target.value, sectionName: "" }))
+                    setCustomCategoryName("")
+                  }}
                   disabled={foodFormMode === "edit"}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100"
                 >
@@ -883,7 +895,13 @@ export default function FoodsList() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
                 <select
                   value={foodForm.sectionName}
-                  onChange={(e) => setFoodForm((prev) => ({ ...prev, sectionName: e.target.value }))}
+                  onChange={(e) => {
+                    const nextValue = e.target.value
+                    setFoodForm((prev) => ({ ...prev, sectionName: nextValue }))
+                    if (nextValue !== CUSTOM_CATEGORY_VALUE) {
+                      setCustomCategoryName("")
+                    }
+                  }}
                   disabled={!foodForm.restaurantId}
                   className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100"
                 >
@@ -893,7 +911,17 @@ export default function FoodsList() {
                       {section.name}
                     </option>
                   ))}
+                  <option value={CUSTOM_CATEGORY_VALUE}>Add new category</option>
                 </select>
+                {foodForm.sectionName === CUSTOM_CATEGORY_VALUE ? (
+                  <input
+                    type="text"
+                    value={customCategoryName}
+                    onChange={(e) => setCustomCategoryName(e.target.value)}
+                    className="mt-2 w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
+                    placeholder="Type new category name"
+                  />
+                ) : null}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Food Name</label>

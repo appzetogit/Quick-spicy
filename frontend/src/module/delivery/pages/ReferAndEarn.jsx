@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
-import { ArrowLeft, Headphones, ArrowRight, CheckCircle, Contact } from "lucide-react"
+import { ArrowLeft, ArrowRight, CheckCircle } from "lucide-react"
 import BottomPopup from "../components/BottomPopup"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 import { toast } from "sonner"
@@ -162,10 +162,7 @@ export default function ReferAndEarn() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-lg font-bold">Refer and earn</h1>
-        <div className="flex items-center gap-2">
-          <Headphones className="w-5 h-5" />
-          <span className="text-sm">Help</span>
-        </div>
+        <div className="w-9" />
       </div>
 
       {/* Black Background Section - Till below Active Referrals Card */}
@@ -201,18 +198,13 @@ export default function ReferAndEarn() {
             <label className="block text-sm text-gray-700 mb-2">
               Enter your friend's name
             </label>
-            <div className="relative">
-              <input
-                type="text"
-                value={friendName}
-                onChange={(e) => setFriendName(e.target.value)}
-                placeholder="Name"
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#ff8100] focus:border-transparent"
-              />
-              <button className="absolute right-3 top-1/2 -translate-y-1/2 p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                <Contact className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
+            <input
+              type="text"
+              value={friendName}
+              onChange={(e) => setFriendName(e.target.value)}
+              placeholder="Name"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#ff8100] focus:border-transparent"
+            />
           </div>
 
           {/* Mobile Number Input */}

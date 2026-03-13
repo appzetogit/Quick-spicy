@@ -37,6 +37,17 @@ export default function PocketDetails() {
   const [bonusTransactions, setBonusTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const safeWeekRange = useMemo(() => {
+    const fallback = getInitialWeekRange()
+    const start = weekRange?.start instanceof Date && !Number.isNaN(weekRange.start.getTime())
+      ? weekRange.start
+      : fallback.start
+    const end = weekRange?.end instanceof Date && !Number.isNaN(weekRange.end.getTime())
+      ? weekRange.end
+      : fallback.end
+    return { start, end }
+  }, [weekRange])
+
   // Load trips (orders), payment transactions, and bonus for selected week
   useEffect(() => {
     const fetchData = async () => {
@@ -46,41 +57,46 @@ export default function PocketDetails() {
         // 1) Fetch trips for selected week
         const params = {
           period: "weekly",
-          date: weekRange.start.toISOString().split("T")[0],
+          date: safeWeekRange.start.toISOString().split("T")[0],
           status: "Completed",
           limit: 1000
         }
         const response = await deliveryAPI.getTripHistory(params)
-        const trips = response?.data?.data?.trips || []
+        const trips = Array.isArray(response?.data?.data?.trips) ? response.data.data.trips : []
 
         // Filter trips within the selected week range
         const filteredTrips = trips.filter((trip) => {
           const tripDate = trip.deliveredAt || trip.completedAt || trip.createdAt || trip.date
           if (!tripDate) return false
           const d = new Date(tripDate)
-          return d >= weekRange.start && d <= weekRange.end
+          if (Number.isNaN(d.getTime())) return false
+          return d >= safeWeekRange.start && d <= safeWeekRange.end
         })
 
         // 2) Fetch payment transactions (earnings) for mapping by orderId
         const payments = await fetchWalletTransactions({ type: "payment", limit: 1000 })
+        const safePayments = Array.isArray(payments) ? payments : []
         
         // Filter payments within the selected week range
-        const filteredPayments = payments.filter((p) => {
+        const filteredPayments = safePayments.filter((p) => {
           const paymentDate = p.date || p.createdAt
           if (!paymentDate) return false
           const d = new Date(paymentDate)
-          return d >= weekRange.start && d <= weekRange.end && p.status === "Completed"
+          if (Number.isNaN(d.getTime())) return false
+          return d >= safeWeekRange.start && d <= safeWeekRange.end && p.status === "Completed"
         })
 
         // 3) Fetch bonus transactions for mapping by orderId
         const bonus = await fetchWalletTransactions({ type: "bonus", limit: 1000 })
+        const safeBonus = Array.isArray(bonus) ? bonus : []
         
         // Filter bonuses within the selected week range
-        const filteredBonuses = bonus.filter((b) => {
+        const filteredBonuses = safeBonus.filter((b) => {
           const bonusDate = b.date || b.createdAt
           if (!bonusDate) return false
           const d = new Date(bonusDate)
-          return d >= weekRange.start && d <= weekRange.end && b.status === "Completed"
+          if (Number.isNaN(d.getTime())) return false
+          return d >= safeWeekRange.start && d <= safeWeekRange.end && b.status === "Completed"
         })
 
         setOrders(filteredTrips)
@@ -97,7 +113,7 @@ export default function PocketDetails() {
     }
 
     fetchData()
-  }, [weekRange])
+  }, [safeWeekRange])
 
   // Compute summary for selected week
   const summary = useMemo(() => {
@@ -208,11 +224,19 @@ export default function PocketDetails() {
 
   // Get restaurant name from order
   const getRestaurantName = (order) => {
+    if (typeof order?.restaurant === "string" && order.restaurant.trim()) {
+      return order.restaurant.trim()
+    }
+    if (typeof order?.restaurantName === "string" && order.restaurantName.trim()) {
+      return order.restaurantName.trim()
+    }
+    if (typeof order?.restaurant?.name === "string" && order.restaurant.name.trim()) {
+      return order.restaurant.name.trim()
+    }
+    if (typeof order?.restaurantId?.name === "string" && order.restaurantId.name.trim()) {
+      return order.restaurantId.name.trim()
+    }
     return (
-      order.restaurant ||
-      order.restaurantName ||
-      order.restaurantId?.name ||
-      order.restaurant?.name ||
       "Restaurant"
     )
   }
@@ -262,7 +286,11 @@ export default function PocketDetails() {
         {/* Week Selector */}
         <div className="mb-6">
           <WeekSelector 
-            onChange={(range) => setWeekRange(range)}
+            onChange={(range) => {
+              if (range?.start instanceof Date && range?.end instanceof Date) {
+                setWeekRange(range)
+              }
+            }}
             weekStartsOn={0}
           />
         </div>

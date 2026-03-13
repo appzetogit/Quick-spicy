@@ -267,6 +267,7 @@ const parseLocalYMDDate = (value) => {
 
 function TimeSelector({ label, value, onChange }) {
   const timeValue = stringToTime(value)
+  const fallbackReferenceTime = stringToTime(label === "Closing time" ? "22:00" : "09:00")
 
   const handleTimeChange = (newValue) => {
     if (!newValue) {
@@ -285,6 +286,7 @@ function TimeSelector({ label, value, onChange }) {
       </div>
       <MobileTimePicker
         value={timeValue}
+        referenceDate={timeValue || fallbackReferenceTime}
         onChange={handleTimeChange}
         onAccept={handleTimeChange}
         slotProps={{
@@ -357,8 +359,8 @@ export default function RestaurantOnboarding() {
     menuImages: [],
     profileImage: null,
     cuisines: [],
-    openingTime: "",
-    closingTime: "",
+    openingTime: "09:00",
+    closingTime: "22:00",
     openDays: [],
   })
 
@@ -400,6 +402,7 @@ export default function RestaurantOnboarding() {
     fileNamePrefix: "camera-image",
     fallbackInputRef: null,
   })
+  const mainContentRef = useRef(null)
 
   const handleCloseOnboarding = () => {
     clearModuleAuth("restaurant")
@@ -598,8 +601,8 @@ export default function RestaurantOnboarding() {
           menuImages: [...restoredMenuImages, ...cachedMenuImages],
           profileImage: cachedProfileImage || restoredProfileImage,
           cuisines: localData.step2.cuisines || [],
-          openingTime: normalizeTimeValue(localData.step2.openingTime),
-          closingTime: normalizeTimeValue(localData.step2.closingTime),
+          openingTime: normalizeTimeValue(localData.step2.openingTime) || "09:00",
+          closingTime: normalizeTimeValue(localData.step2.closingTime) || "22:00",
           openDays: localData.step2.openDays || [],
         })
       }
@@ -670,6 +673,15 @@ export default function RestaurantOnboarding() {
   }, [step1, step2, step3, step4, step])
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "auto" })
+    }
+    if (mainContentRef.current) {
+      mainContentRef.current.scrollTo({ top: 0, behavior: "auto" })
+    }
+  }, [step])
+
+  useEffect(() => {
     syncOnboardingFileCache(step2, step3)
   }, [step2, step3])
 
@@ -719,8 +731,8 @@ export default function RestaurantOnboarding() {
                 menuImages: localMenuFiles.length > 0 ? [...apiMenuImages, ...localMenuFiles] : apiMenuImages,
                 profileImage: localProfileFile || data.step2.profileImageUrl || null,
                 cuisines: data.step2.cuisines || [],
-                openingTime: normalizeTimeValue(data.step2.deliveryTimings?.openingTime),
-                closingTime: normalizeTimeValue(data.step2.deliveryTimings?.closingTime),
+                openingTime: normalizeTimeValue(data.step2.deliveryTimings?.openingTime) || "09:00",
+                closingTime: normalizeTimeValue(data.step2.deliveryTimings?.closingTime) || "22:00",
                 openDays: data.step2.openDays || [],
               }
             })
@@ -2324,6 +2336,7 @@ export default function RestaurantOnboarding() {
         </header>
 
         <main
+          ref={mainContentRef}
           className="flex-1 px-4 sm:px-6 py-4 space-y-4"
           style={{ paddingBottom: keyboardInset ? `${keyboardInset + 20}px` : undefined }}
           onFocusCapture={(e) => {
