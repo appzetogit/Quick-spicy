@@ -940,6 +940,25 @@ function initializeScheduledTasks() {
   }).catch((error) => {
     console.error('❌ Failed to initialize auto-reject service:', error);
   });
+
+  // Import scheduled admin push notification processor
+  import('./modules/admin/controllers/pushNotificationController.js').then(({ processDueScheduledPushNotifications }) => {
+    // Run every minute to send due scheduled notifications.
+    cron.schedule('* * * * *', async () => {
+      try {
+        const result = await processDueScheduledPushNotifications({ limit: 20 });
+        if ((result?.processed || 0) > 0) {
+          console.log(`[Scheduled Push Cron] processed=${result.processed}, sent=${result.sent || 0}, failed=${result.failed || 0}`);
+        }
+      } catch (error) {
+        console.error('[Scheduled Push Cron] Error:', error);
+      }
+    });
+
+    console.log('✅ Scheduled push notification scheduler initialized (runs every minute)');
+  }).catch((error) => {
+    console.error('❌ Failed to initialize scheduled push notification service:', error);
+  });
 }
 
 // Handle unhandled promise rejections

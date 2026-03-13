@@ -75,6 +75,7 @@ export const updateBusinessSettings = asyncHandler(async (req, res) => {
       address,
       state,
       pincode,
+      orderSmsPhoneNumber,
       region,
       maintenanceMode,
     } = req.body;
@@ -103,6 +104,24 @@ export const updateBusinessSettings = asyncHandler(async (req, res) => {
     if (address !== undefined) settings.address = address;
     if (state !== undefined) settings.state = state;
     if (pincode !== undefined) settings.pincode = pincode;
+    if (orderSmsPhoneNumber !== undefined) {
+      const normalizedOrderSmsPhone = String(orderSmsPhoneNumber || "")
+        .trim()
+        .replace(/\s+/g, "");
+
+      if (
+        normalizedOrderSmsPhone &&
+        !/^\+?[0-9]{10,15}$/.test(normalizedOrderSmsPhone)
+      ) {
+        return errorResponse(
+          res,
+          400,
+          "Order SMS phone number must be 10 to 15 digits (optional leading +)",
+        );
+      }
+
+      settings.orderSmsPhoneNumber = normalizedOrderSmsPhone;
+    }
     if (region !== undefined) settings.region = region;
     if (maintenanceMode !== undefined) {
       settings.maintenanceMode.isEnabled = maintenanceMode.isEnabled || false;

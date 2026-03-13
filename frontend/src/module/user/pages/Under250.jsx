@@ -155,8 +155,22 @@ export default function Under250() {
   }
 
   // Sort and filter restaurants based on selected sort and filters
+  const sameZoneUnder250Restaurants = useMemo(() => {
+    if (!zoneId) return []
+    const zoneKey = String(zoneId)
+
+    return under250Restaurants.filter((restaurant) => {
+      if (typeof restaurant?.isInUserZone === "boolean") {
+        return restaurant.isInUserZone
+      }
+
+      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
+      return candidateZoneId ? String(candidateZoneId) === zoneKey : false
+    })
+  }, [under250Restaurants, zoneId])
+
   const sortedAndFilteredRestaurants = useMemo(() => {
-    let filtered = [...under250Restaurants]
+    let filtered = [...sameZoneUnder250Restaurants]
 
     // Apply "Under 30 mins" filter
     if (under30MinsFilter) {
@@ -203,7 +217,7 @@ export default function Under250() {
     }
 
     return filtered
-  }, [under250Restaurants, selectedSort, under30MinsFilter])
+  }, [sameZoneUnder250Restaurants, selectedSort, under30MinsFilter])
 
   // Fetch under 250 banners from API
   useEffect(() => {
@@ -233,7 +247,7 @@ export default function Under250() {
     const fetchRestaurantsUnder250 = async () => {
       try {
         setLoadingRestaurants(true)
-        // Optional: Add zoneId if available (for sorting/filtering, but show all restaurants)
+        // Pass zoneId so backend can return only restaurants from the user's current zone.
         const response = await restaurantAPI.getRestaurantsUnder250(zoneId)
         if (response.data.success && response.data.data.restaurants) {
           const normalizedRestaurants = response.data.data.restaurants
@@ -672,7 +686,7 @@ export default function Under250() {
         ) : sortedAndFilteredRestaurants.length === 0 ? (
           <div className="flex justify-center items-center py-12">
             <div className="text-gray-500 dark:text-gray-400">
-              {under250Restaurants.length === 0
+              {sameZoneUnder250Restaurants.length === 0
                 ? `No restaurants with dishes under ${RUPEE_SYMBOL}250 found.`
                 : "No restaurants match the selected filters."}
             </div>

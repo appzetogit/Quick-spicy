@@ -22,6 +22,9 @@ export default function PushNotification() {
     sendTo: "Customer",
     imageUrl: "",
     description: "",
+    sendMode: "now",
+    scheduleDate: "",
+    scheduleTime: "",
   })
   const [bannerPreview, setBannerPreview] = useState("")
   const [bannerFile, setBannerFile] = useState(null)
@@ -60,6 +63,24 @@ export default function PushNotification() {
       return
     }
 
+    if (formData.sendMode === "schedule") {
+      if (!formData.scheduleDate || !formData.scheduleTime) {
+        toast.error("Select scheduled date and time")
+        return
+      }
+
+      const scheduledDate = new Date(`${formData.scheduleDate}T${formData.scheduleTime}`)
+      if (Number.isNaN(scheduledDate.getTime())) {
+        toast.error("Invalid scheduled date/time")
+        return
+      }
+
+      if (scheduledDate <= new Date()) {
+        toast.error("Scheduled date/time must be in the future")
+        return
+      }
+    }
+
     setIsSending(true)
     let resolvedImageUrlForUi = formData.imageUrl.trim()
 
@@ -90,6 +111,11 @@ export default function PushNotification() {
         platform: "all",
         zone: formData.zone,
         ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+        ...(formData.sendMode === "schedule"
+          ? {
+            scheduleAt: new Date(`${formData.scheduleDate}T${formData.scheduleTime}`).toISOString(),
+          }
+          : {}),
       }
       resolvedImageUrlForUi = normalizedImageUrl
 
@@ -98,7 +124,12 @@ export default function PushNotification() {
       const sentCount = Number(data.sentCount || 0)
       const failedCount = Number(data.failedCount || 0)
 
-      if (sentCount > 0) {
+      if (formData.sendMode === "schedule") {
+        const scheduleLabel = data.scheduleAt
+          ? new Date(data.scheduleAt).toLocaleString()
+          : `${formData.scheduleDate} ${formData.scheduleTime}`
+        toast.success(`Notification scheduled for ${scheduleLabel}`)
+      } else if (sentCount > 0) {
         toast.success(`Notification sent to ${sentCount} device(s)${failedCount ? `, failed: ${failedCount}` : ""}`)
       } else if (failedCount > 0) {
         const firstFailure =
@@ -133,6 +164,11 @@ export default function PushNotification() {
       status: true,
       image: Boolean(resolvedImageUrlForUi || bannerPreview),
       imageUrl: resolvedImageUrlForUi || bannerPreview || null,
+      sendMode: formData.sendMode,
+      scheduledAt:
+        formData.sendMode === "schedule"
+          ? new Date(`${formData.scheduleDate}T${formData.scheduleTime}`).toISOString()
+          : null,
     }
 
     setNotifications((prev) => [newNotification, ...prev])
@@ -147,6 +183,9 @@ export default function PushNotification() {
       sendTo: "Customer",
       imageUrl: "",
       description: "",
+      sendMode: "now",
+      scheduleDate: "",
+      scheduleTime: "",
     })
     setBannerPreview("")
     setBannerFile(null)
@@ -255,6 +294,48 @@ export default function PushNotification() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Send Mode
+                </label>
+                <select
+                  value={formData.sendMode}
+                  onChange={(e) => handleInputChange("sendMode", e.target.value)}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="now">Send Now</option>
+                  <option value="schedule">Schedule</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Schedule Date
+                </label>
+                <input
+                  type="date"
+                  value={formData.scheduleDate}
+                  onChange={(e) => handleInputChange("scheduleDate", e.target.value)}
+                  disabled={formData.sendMode !== "schedule"}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Schedule Time
+                </label>
+                <input
+                  type="time"
+                  value={formData.scheduleTime}
+                  onChange={(e) => handleInputChange("scheduleTime", e.target.value)}
+                  disabled={formData.sendMode !== "schedule"}
+                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+            </div>
+
             {/* Notification Banner Upload */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-slate-700 mb-3">
@@ -324,7 +405,7 @@ export default function PushNotification() {
                 disabled={isSending}
                 className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md"
               >
-                  {isSending ? "Sending..." : "Send Notification"}
+                  {isSending ? (formData.sendMode === "schedule" ? "Scheduling..." : "Sending...") : (formData.sendMode === "schedule" ? "Schedule Notification" : "Send Notification")}
               </button>
                 <button className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all">
                   <Settings className="w-5 h-5" />
@@ -375,6 +456,8 @@ export default function PushNotification() {
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Image</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Zone</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Target</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Mode</th>
+                  <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Schedule</th>
                   <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Status</th>
                   <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">Action</th>
                 </tr>
@@ -423,6 +506,14 @@ export default function PushNotification() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-slate-700">{notification.target}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-slate-700 capitalize">{notification.sendMode || "now"}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-slate-700">
+                        {notification.scheduledAt ? new Date(notification.scheduledAt).toLocaleString() : "-"}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button

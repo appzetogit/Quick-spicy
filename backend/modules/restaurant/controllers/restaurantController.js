@@ -151,6 +151,19 @@ function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
   return null;
 }
 
+function extractRestaurantCoordinates(location = {}) {
+  const lat = location?.latitude
+    ?? (Array.isArray(location?.coordinates) ? location.coordinates[1] : null);
+  const lng = location?.longitude
+    ?? (Array.isArray(location?.coordinates) ? location.coordinates[0] : null);
+
+  if (lat === null || lng === null || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+    return { lat: null, lng: null };
+  }
+
+  return { lat: Number(lat), lng: Number(lng) };
+}
+
 // Get all restaurants (for user module)
 export const getRestaurants = async (req, res) => {
   try {
@@ -270,6 +283,13 @@ export const getRestaurants = async (req, res) => {
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
     const hasDeliveryFeeRanges = Array.isArray(feeSettings?.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
+    const userZoneId = zoneId ? String(zoneId) : null;
+    let activeZones = [];
+    if (userZoneId) {
+      activeZones = await Zone.find({ isActive: true })
+        .select('_id coordinates')
+        .lean();
+    }
 
     // Fetch restaurants - Show ALL restaurants regardless of zone
     let restaurants = await Restaurant.find(query)
@@ -312,11 +332,20 @@ export const getRestaurants = async (req, res) => {
       const isFreeDelivery = hasDeliveryFeeRanges
         ? false
         : (restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured);
+      const { lat, lng } = extractRestaurantCoordinates(restaurant.location);
+      const restaurantZoneId = activeZones.length > 0
+        ? getRestaurantZoneId(lat, lng, activeZones)
+        : null;
+      const isInUserZone = userZoneId
+        ? restaurantZoneId === userZoneId
+        : null;
 
       return {
         ...normalizedRestaurant,
         deliveryFee: noDeliveryFeeConfigured ? null : resolvedDeliveryFee,
-        freeDelivery: isFreeDelivery
+        freeDelivery: isFreeDelivery,
+        restaurantZoneId,
+        ...(userZoneId ? { isInUserZone } : {}),
       };
     });
     
@@ -949,6 +978,14 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
       }
     }
 
+    const userZoneId = zoneId ? String(zoneId) : null;
+    let activeZones = [];
+    if (userZoneId) {
+      activeZones = await Zone.find({ isActive: true })
+        .select('_id coordinates')
+        .lean();
+    }
+
     const MAX_PRICE = 250;
     
     // Helper function to calculate final price after discount
@@ -1025,6 +1062,14 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
 
         // Only include restaurant if it has at least one dish under ₹250
         if (dishesUnder250.length > 0) {
+          const { lat, lng } = extractRestaurantCoordinates(restaurant.location);
+          const restaurantZoneId = activeZones.length > 0
+            ? getRestaurantZoneId(lat, lng, activeZones)
+            : null;
+
+          if (userZoneId && restaurantZoneId !== userZoneId) {
+            return null;
+          }
           const hasRestaurantFee = restaurant.deliveryFee !== undefined && restaurant.deliveryFee !== null;
           const resolvedDeliveryFee = hasRestaurantFee
             ? Number(restaurant.deliveryFee)
@@ -1050,6 +1095,8 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
               : "Multi-cuisine",
             price: restaurant.priceRange || "$$",
             image: restaurant.profileImage?.url || restaurant.menuImages?.[0]?.url || "",
+            restaurantZoneId,
+            ...(userZoneId ? { isInUserZone: true } : {}),
             menuItems: dishesUnder250.map(item => ({
               id: item.id,
               name: item.name,
@@ -1070,14 +1117,11 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
       }
     };
 
-    // Get all active restaurants - Show ALL restaurants regardless of zone
+    // Get all active restaurants. If zoneId is provided, same-zone filtering is applied during processing.
     let restaurants = await Restaurant.find({ isActive: true })
       .select('-owner -createdAt -updatedAt')
       .lean()
       .limit(100); // Limit to first 100 restaurants for performance
-
-    // Note: We show all restaurants regardless of zone. Zone-based filtering is removed.
-    // Users in any zone will see all restaurants.
 
     // Process restaurants in parallel (batch processing for better performance)
     const batchSize = 10; // Process 10 restaurants at a time

@@ -233,6 +233,10 @@ const orderSchema = new mongoose.Schema({
     enum: ['user', 'restaurant', 'admin'],
     default: null
   },
+  adminOrderSmsAlertSentAt: {
+    type: Date,
+    default: null
+  },
   // Customer Review and Rating
   review: {
     rating: {

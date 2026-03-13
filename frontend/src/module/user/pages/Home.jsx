@@ -1270,6 +1270,8 @@ export default function Home() {
             offer: offerText,
             slug: restaurant.slug,
             restaurantId: restaurant.restaurantId,
+            restaurantZoneId: restaurant.restaurantZoneId || null,
+            isInUserZone: typeof restaurant.isInUserZone === "boolean" ? restaurant.isInUserZone : null,
             location: restaurant.location, // Store location for distance recalculation
             isActive: restaurant.isActive !== false, // Default to true if not specified
             isAcceptingOrders: restaurant.isAcceptingOrders !== false, // Default to true if not specified
@@ -1544,7 +1546,7 @@ export default function Home() {
 
   // Filter restaurants and foods based on active filters
   const filteredRestaurants = useMemo(() => {
-    // Use only API data - no mock data fallback
+    // Use only API data - no zone restriction on Home page
     let filtered = [...restaurantsData]
 
     filtered = filtered.filter(matchesVegMode)
@@ -1681,6 +1683,8 @@ export default function Home() {
         offer: null,
         isActive: true,
         isAcceptingOrders: true,
+        restaurantZoneId: restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id || null,
+        isInUserZone: typeof restaurant?.isInUserZone === 'boolean' ? restaurant.isInUserZone : null,
       }
     })
 

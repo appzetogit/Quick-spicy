@@ -49,6 +49,11 @@ const businessSettingsSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    orderSmsPhoneNumber: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     logo: {
       url: {
         type: String,
@@ -123,6 +128,7 @@ businessSettingsSchema.statics.getSettings = async function () {
           countryCode: "+91",
           number: "",
         },
+        orderSmsPhoneNumber: "",
         deliveryCashLimit: 750,
         deliveryWithdrawalLimit: 100,
       });
@@ -142,6 +148,7 @@ businessSettingsSchema.statics.getSettings = async function () {
           countryCode: "+91",
           number: "",
         },
+        orderSmsPhoneNumber: "",
         deliveryCashLimit: 750,
         deliveryWithdrawalLimit: 100,
       });

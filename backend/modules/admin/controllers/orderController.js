@@ -6,7 +6,34 @@ import { findNearestDeliveryBoys } from '../../order/services/deliveryAssignment
 import { notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
 import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNotificationService.js';
 import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
+import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotificationService.js';
 import { removeActiveOrderTracking } from '../../delivery/services/firebaseRealtimeTrackingService.js';
+
+const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
+
+async function sendAdminOrderSmsAlertsFromOrders(orders = []) {
+  const now = Date.now();
+  const candidates = (orders || [])
+    .filter((order) => {
+      const isEligibleStatus = ['pending', 'confirmed'].includes(String(order?.status || '').toLowerCase());
+      const isAlreadySent = !!order?.adminOrderSmsAlertSentAt;
+      const createdAtMs = order?.createdAt ? new Date(order.createdAt).getTime() : 0;
+      const isRecent = createdAtMs > 0 && now - createdAtMs <= ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS;
+      return isEligibleStatus && !isAlreadySent && isRecent;
+    })
+    .slice(0, 3);
+
+  for (const order of candidates) {
+    try {
+      await sendAdminOrderSmsAlertForOrder(order);
+    } catch (error) {
+      console.warn('Admin orders/all SMS fallback failed:', {
+        orderId: order?.orderId,
+        error: error?.message,
+      });
+    }
+  }
+}
 
 /**
  * Get all orders for admin
@@ -195,6 +222,12 @@ export const getOrders = asyncHandler(async (req, res) => {
       .limit(parseInt(limit))
       .skip(skip)
       .lean();
+
+    // Fallback path: when admin opens /orders/all, attempt SMS for recent unsent orders.
+    // This covers cases where realtime event delivery was missed.
+    if (!status || status === 'all') {
+      void sendAdminOrderSmsAlertsFromOrders(orders);
+    }
 
     // Get total count
     const total = await Order.countDocuments(query);
