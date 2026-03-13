@@ -387,6 +387,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     platform = "all",
     zone = "All",
     scheduleAt = null,
+    scheduleAtList = [],
   } = req.body || {};
 
   const normalizedTitle = String(title || "").trim();
@@ -411,35 +412,59 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     }
   }
 
-  const parsedScheduleAt = scheduleAt ? new Date(scheduleAt) : null;
-  const isScheduleRequest = Boolean(parsedScheduleAt && !Number.isNaN(parsedScheduleAt.getTime()));
+  const parsedScheduleAtList = Array.isArray(scheduleAtList)
+    ? scheduleAtList
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+    : [];
 
-  if (scheduleAt && !isScheduleRequest) {
+  const parsedScheduleAtSingle = scheduleAt ? new Date(scheduleAt) : null;
+  const hasSingleSchedule = Boolean(parsedScheduleAtSingle && !Number.isNaN(parsedScheduleAtSingle.getTime()));
+  const hasRecurringSchedule = parsedScheduleAtList.length > 0;
+  const isScheduleRequest = hasSingleSchedule || hasRecurringSchedule;
+
+  if (scheduleAt && !hasSingleSchedule) {
     return errorResponse(res, 400, "Invalid schedule date/time");
   }
 
-  if (isScheduleRequest && parsedScheduleAt <= new Date()) {
+  if (Array.isArray(scheduleAtList) && scheduleAtList.length > 0 && !hasRecurringSchedule) {
+    return errorResponse(res, 400, "Invalid recurring schedule date/time list");
+  }
+
+  const normalizedScheduleTimes = hasRecurringSchedule
+    ? parsedScheduleAtList
+    : (hasSingleSchedule ? [parsedScheduleAtSingle] : []);
+
+  if (normalizedScheduleTimes.some((date) => date <= new Date())) {
     return errorResponse(res, 400, "Scheduled date/time must be in the future");
   }
 
   if (isScheduleRequest) {
     const createdByAdminId = req?.admin?._id || req?.user?._id || null;
-    const scheduled = await ScheduledPushNotification.create({
+    const uniqueScheduleTimes = [...new Set(normalizedScheduleTimes.map((date) => date.toISOString()))]
+      .map((iso) => new Date(iso))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const docs = uniqueScheduleTimes.map((when) => ({
       title: normalizedTitle,
       description: normalizedDescription,
       imageUrl: normalizedImageUrl || null,
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: normalizedZone,
-      scheduleAt: parsedScheduleAt,
+      scheduleAt: when,
       status: "scheduled",
       createdBy: createdByAdminId,
-    });
+    }));
+
+    const created = await ScheduledPushNotification.insertMany(docs);
 
     return successResponse(res, 201, "Push notification scheduled successfully", {
-      id: scheduled._id,
-      status: scheduled.status,
-      scheduleAt: scheduled.scheduleAt,
+      ids: created.map((item) => item._id),
+      status: "scheduled",
+      scheduledCount: created.length,
+      scheduleAt: created[0]?.scheduleAt || null,
+      scheduleAtList: created.map((item) => item.scheduleAt),
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: normalizedZone,

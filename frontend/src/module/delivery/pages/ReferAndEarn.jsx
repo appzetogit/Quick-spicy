@@ -4,12 +4,58 @@ import { motion } from "framer-motion"
 import { ArrowLeft, Headphones, ArrowRight, CheckCircle, Contact } from "lucide-react"
 import BottomPopup from "../components/BottomPopup"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
 const STORAGE_KEY = "appzeto_food_referrals"
+const DEFAULT_DELIVERY_APP_LINK = "/delivery/sign-in"
+
+const normalizeMobileNumber = (value = "") => String(value).replace(/\D/g, "").slice(-10)
+
+const toWhatsAppRecipient = (value = "") => {
+  const digits = String(value).replace(/\D/g, "")
+  if (!digits) return ""
+  if (digits.length === 10) return `91${digits}`
+  return digits
+}
+
+const getDeliveryReferrerCode = () => {
+  try {
+    const raw = localStorage.getItem("delivery_user")
+    const user = raw ? JSON.parse(raw) : null
+    if (!user) return "DPREF"
+
+    if (user.referralCode && String(user.referralCode).trim()) {
+      return String(user.referralCode).trim().toUpperCase()
+    }
+
+    const source =
+      user.phone ||
+      user.mobile ||
+      user.phoneNumber ||
+      user._id ||
+      user.id ||
+      user.userId ||
+      ""
+    const normalized = String(source).replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+    if (!normalized) return "DPREF"
+    return `DP${normalized.slice(-6)}`
+  } catch (error) {
+    return "DPREF"
+  }
+}
+
+const getDeliveryAppLink = () => {
+  const envLink = import.meta.env?.VITE_DELIVERY_PARTNER_APP_LINK
+  if (envLink && String(envLink).trim()) return String(envLink).trim()
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${DEFAULT_DELIVERY_APP_LINK}`
+  }
+  return DEFAULT_DELIVERY_APP_LINK
+}
 
 export default function ReferAndEarn() {
   const navigate = useNavigate()
@@ -17,6 +63,8 @@ export default function ReferAndEarn() {
   const [mobileNumber, setMobileNumber] = useState("")
   const [showSuccessPopup, setShowSuccessPopup] = useState(false)
   const [referralCount, setReferralCount] = useState(0)
+  const referralCode = getDeliveryReferrerCode()
+  const appLink = getDeliveryAppLink()
 
   // Load referral count from localStorage on component mount
   useEffect(() => {
@@ -54,10 +102,21 @@ export default function ReferAndEarn() {
         }
       }
 
+      const normalizedInputMobile = normalizeMobileNumber(mobileNumber)
+      const alreadyExists = referrals.some(
+        (item) => normalizeMobileNumber(item?.mobile) === normalizedInputMobile
+      )
+      if (alreadyExists) {
+        toast.error("This number is already added in referrals")
+        return
+      }
+
       // Add new referral
       const newReferral = {
         name: friendName.trim(),
         mobile: mobileNumber,
+        referralCode,
+        appLink,
         timestamp: new Date().toISOString()
       }
       
@@ -75,9 +134,20 @@ export default function ReferAndEarn() {
   }
 
   const handleWhatsAppShare = async () => {
+    const recipient = toWhatsAppRecipient(mobileNumber)
+    if (!recipient) {
+      toast.error("Invalid mobile number for WhatsApp")
+      return
+    }
+
     const companyName = await getCompanyNameAsync()
-    const message = `Hey ${friendName}! Join ${companyName} as a delivery partner and earn together!`
-    const whatsappUrl = `https://wa.me/${mobileNumber}?text=${encodeURIComponent(message)}`
+    const linkWithReferral = `${appLink}${appLink.includes("?") ? "&" : "?"}ref=${encodeURIComponent(referralCode)}`
+    const message = [
+      `Hey ${friendName}! Join ${companyName} as a delivery partner and earn together!`,
+      `Referral code: ${referralCode}`,
+      `Download app: ${linkWithReferral}`
+    ].join("\n")
+    const whatsappUrl = `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }
 

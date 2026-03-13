@@ -483,6 +483,8 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
 
     // Calculate current cycle payout (total - commission)
     const currentCyclePayout = Math.round((currentCycleTotal - currentCycleCommission) * 100) / 100;
+    const wallet = await RestaurantWallet.findOrCreateByRestaurantId(restaurant._id);
+    const walletAvailableBalance = Math.max(0, Number(wallet?.totalBalance || 0));
 
     // Get all withdrawal requests (pending + approved) to subtract from estimatedPayout
     // This ensures that once a withdrawal is made, it's immediately reflected in the available balance
@@ -496,11 +498,14 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
     // Subtract all withdrawals (pending + approved) from estimatedPayout to show available balance
     // This ensures end-to-end withdrawal calculation works correctly
     const availablePayout = Math.max(0, Math.round((currentCyclePayout - totalWithdrawals) * 100) / 100);
+    const availableForWithdrawal = Math.max(availablePayout, walletAvailableBalance);
     
     console.log('💰 Finance Calculation:', {
       currentCyclePayout,
       totalWithdrawals,
       availablePayout,
+      walletAvailableBalance,
+      availableForWithdrawal,
       withdrawalsCount: allWithdrawals.length,
       withdrawals: allWithdrawals.map(w => ({ id: w._id, amount: w.amount, status: w.status }))
     });
@@ -513,6 +518,8 @@ export const getRestaurantFinance = asyncHandler(async (req, res) => {
         totalOrderValue: Math.round(currentCycleTotal * 100) / 100,
         totalCommission: Math.round(currentCycleCommission * 100) / 100,
         estimatedPayout: availablePayout, // Show available balance after pending withdrawals
+        availableForWithdrawal: Math.round(availableForWithdrawal * 100) / 100,
+        walletAvailableBalance: Math.round(walletAvailableBalance * 100) / 100,
         payoutDate: null, // Will be set when payout is processed
         orders: currentCycleOrdersData // Include orders array in response
       },

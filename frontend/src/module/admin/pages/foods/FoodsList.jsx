@@ -360,7 +360,7 @@ export default function FoodsList() {
       return
     }
     if (!foodForm.sectionName.trim()) {
-      toast.error("Please select or enter a category")
+      toast.error("Please select a category")
       return
     }
     if (!foodForm.name.trim()) {
@@ -881,18 +881,19 @@ export default function FoodsList() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-                <input
-                  list="food-category-options"
+                <select
                   value={foodForm.sectionName}
                   onChange={(e) => setFoodForm((prev) => ({ ...prev, sectionName: e.target.value }))}
-                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white"
-                  placeholder="Select or enter category"
-                />
-                <datalist id="food-category-options">
+                  disabled={!foodForm.restaurantId}
+                  className="w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white disabled:bg-slate-100"
+                >
+                  <option value="">{foodForm.restaurantId ? "Select category" : "Select restaurant first"}</option>
                   {categoryOptions.map((section) => (
-                    <option key={section.id} value={section.name} />
+                    <option key={section.id} value={section.name}>
+                      {section.name}
+                    </option>
                   ))}
-                </datalist>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Food Name</label>
