@@ -11,13 +11,15 @@ export const addStaff = asyncHandler(async (req, res) => {
   try {
     const restaurantId = req.restaurant._id;
     const { name, phone, email, role } = req.body;
+    const normalizedPhone = phone ? String(phone).replace(/\D/g, '') : null;
+    const normalizedEmail = email ? String(email).toLowerCase().trim() : null;
 
     // Validation
     if (!name || !name.trim()) {
       return errorResponse(res, 400, 'Name is required');
     }
 
-    if (!phone && !email) {
+    if (!normalizedPhone && !normalizedEmail) {
       return errorResponse(res, 400, 'Either phone or email is required');
     }
 
@@ -29,8 +31,8 @@ export const addStaff = asyncHandler(async (req, res) => {
     const existingStaff = await StaffManagement.findOne({
       restaurantId,
       $or: [
-        ...(phone ? [{ phone }] : []),
-        ...(email ? [{ email: email.toLowerCase() }] : [])
+        ...(normalizedPhone ? [{ phone: normalizedPhone }] : []),
+        ...(normalizedEmail ? [{ email: normalizedEmail }] : [])
       ],
       status: { $ne: 'removed' }
     });
@@ -65,8 +67,8 @@ export const addStaff = asyncHandler(async (req, res) => {
     const staff = new StaffManagement({
       restaurantId,
       name: name.trim(),
-      phone: phone || null,
-      email: email ? email.toLowerCase().trim() : null,
+      phone: normalizedPhone || null,
+      email: normalizedEmail || null,
       role,
       addedBy: restaurantId,
       status: 'active',
@@ -122,9 +124,23 @@ export const getStaff = asyncHandler(async (req, res) => {
       .sort({ addedAt: -1 })
       .lean();
 
+    const seenMembers = new Set();
+    const dedupedStaff = staff.filter((member) => {
+      const phoneKey = member.phone ? `phone:${String(member.phone).replace(/\D/g, '')}` : null;
+      const emailKey = member.email ? `email:${String(member.email).toLowerCase().trim()}` : null;
+      const dedupeKey = phoneKey || emailKey || `id:${member._id}`;
+
+      if (seenMembers.has(dedupeKey)) {
+        return false;
+      }
+
+      seenMembers.add(dedupeKey);
+      return true;
+    });
+
     return successResponse(res, 200, 'Staff retrieved successfully', {
-      staff,
-      total: staff.length
+      staff: dedupedStaff,
+      total: dedupedStaff.length
     });
   } catch (error) {
     console.error('Error fetching staff:', error);
@@ -248,4 +264,3 @@ export const deleteStaff = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to remove staff member');
   }
 });
-

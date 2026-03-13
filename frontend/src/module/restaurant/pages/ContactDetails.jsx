@@ -33,6 +33,23 @@ export default function ContactDetails() {
   const [loading, setLoading] = useState(true)
   const [loadingStaff, setLoadingStaff] = useState(true)
 
+  const normalizeStaffList = (staffList = []) => {
+    const seenUsers = new Set()
+
+    return staffList.filter((user) => {
+      const phoneKey = user?.phone ? `phone:${String(user.phone).replace(/\D/g, "")}` : null
+      const emailKey = user?.email ? `email:${String(user.email).toLowerCase().trim()}` : null
+      const dedupeKey = phoneKey || emailKey || `id:${user.id || user._id}`
+
+      if (seenUsers.has(dedupeKey)) {
+        return false
+      }
+
+      seenUsers.add(dedupeKey)
+      return true
+    })
+  }
+
   // Fetch restaurant data from backend
   useEffect(() => {
     const fetchRestaurantData = async () => {
@@ -130,7 +147,7 @@ export default function ContactDetails() {
           addedAt: staff.addedAt
         }))
         
-        setInvitedUsers(transformedStaff)
+        setInvitedUsers(normalizeStaffList(transformedStaff))
       } catch (error) {
         debugError("Error fetching staff:", error)
         setInvitedUsers([])
@@ -180,7 +197,7 @@ export default function ContactDetails() {
         
         if (response?.data?.success) {
           // Remove from local state
-          setInvitedUsers(prev => prev.filter(user => user.id !== userId))
+          setInvitedUsers(prev => normalizeStaffList(prev.filter(user => user.id !== userId)))
           // Dispatch event to notify other components
           window.dispatchEvent(new Event("invitesUpdated"))
         } else {

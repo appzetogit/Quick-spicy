@@ -1,10 +1,12 @@
 ﻿import { useState, useEffect } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
 import {
   ArrowLeft,
   ChevronDown,
+  Loader2,
   Mail,
   CheckCircle2,
   Upload,
@@ -77,6 +79,16 @@ export default function InviteUser() {
   const [addMethod, setAddMethod] = useState("phone") // "phone" or "email"
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [existingUsers, setExistingUsers] = useState([])
+  const photoInputRef = useRef(null)
+  const [sourcePicker, setSourcePicker] = useState({
+    isOpen: false,
+    title: "",
+    onSelectFile: null,
+    fileNamePrefix: "user-photo",
+    fallbackInputRef: null,
+  })
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -96,6 +108,21 @@ export default function InviteUser() {
     return () => {
       lenis.destroy()
     }
+  }, [])
+
+  useEffect(() => {
+    const fetchExistingUsers = async () => {
+      try {
+        const response = await restaurantAPI.getStaff()
+        const staffData = response?.data?.data?.staff || response?.data?.staff || []
+        setExistingUsers(Array.isArray(staffData) ? staffData : [])
+      } catch (error) {
+        debugError("Error fetching existing users:", error)
+        setExistingUsers([])
+      }
+    }
+
+    fetchExistingUsers()
   }, [])
 
   // Phone number validation
@@ -134,6 +161,12 @@ export default function InviteUser() {
     setPhoneNumber(value)
     if (value) {
       validatePhone(value)
+      const normalizedValue = value.replace(/\D/g, "")
+      const phoneExists = existingUsers.some((user) => String(user.phone || "").replace(/\D/g, "") === normalizedValue)
+      if (phoneExists) {
+        setPhoneError("This phone number is already added")
+        return
+      }
     } else {
       setPhoneError("")
     }
@@ -144,6 +177,12 @@ export default function InviteUser() {
     setEmail(value)
     if (value) {
       validateEmail(value)
+      const normalizedValue = value.toLowerCase().trim()
+      const emailExists = existingUsers.some((user) => String(user.email || "").toLowerCase().trim() === normalizedValue)
+      if (emailExists) {
+        setEmailError("This email is already added")
+        return
+      }
     } else {
       setEmailError("")
     }
@@ -173,30 +212,176 @@ export default function InviteUser() {
     }
   }
 
+  const applySelectedPhoto = (file) => {
+    if (!file) return
+    setPhoto(file)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setPhotoPreview(event.target?.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0]
     if (file) {
-      setPhoto(file)
-      // Create preview
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setPhotoPreview(event.target?.result)
-      }
-      reader.readAsDataURL(file)
+      applySelectedPhoto(file)
     }
+  }
+
+  const getExtensionFromMimeType = (mimeType) => {
+    const normalized = String(mimeType || "").toLowerCase()
+    if (normalized.includes("png")) return "png"
+    if (normalized.includes("webp")) return "webp"
+    if (normalized.includes("heic")) return "heic"
+    if (normalized.includes("heif")) return "heif"
+    return "jpg"
+  }
+
+  const convertBase64ToFile = (base64Value, mimeType = "image/jpeg", fileNamePrefix = "user-photo") => {
+    if (!base64Value || typeof base64Value !== "string") {
+      throw new Error("Invalid base64 image data")
+    }
+
+    let pureBase64 = base64Value
+    if (base64Value.includes(",")) {
+      pureBase64 = base64Value.split(",")[1]
+    }
+
+    const byteCharacters = atob(pureBase64)
+    const byteNumbers = new Array(byteCharacters.length)
+    for (let i = 0; i < byteCharacters.length; i += 1) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i)
+    }
+
+    const byteArray = new Uint8Array(byteNumbers)
+    const normalizedMimeType = mimeType || "image/jpeg"
+    const extension = getExtensionFromMimeType(normalizedMimeType)
+    const fileName = `${fileNamePrefix}-${Date.now()}.${extension}`
+    const blob = new Blob([byteArray], { type: normalizedMimeType })
+    return new File([blob], fileName, { type: normalizedMimeType })
+  }
+
+  const hasFlutterCameraBridge =
+    typeof window !== "undefined" &&
+    window.flutter_inappwebview &&
+    typeof window.flutter_inappwebview.callHandler === "function"
+
+  const isMobileView =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(max-width: 768px)").matches ||
+      window.matchMedia?.("(pointer: coarse)").matches)
+
+  const openBrowserCameraFallback = ({ onSelectFile }) => {
+    try {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/*"
+      input.capture = "environment"
+      input.onchange = (event) => {
+        const file = event?.target?.files?.[0] || null
+        if (file) onSelectFile(file)
+      }
+      input.click()
+    } catch (error) {
+      debugError("Browser camera fallback failed:", error)
+    }
+  }
+
+  const openImageSourcePicker = ({ title, onSelectFile, fileNamePrefix, fallbackInputRef }) => {
+    setSourcePicker({
+      isOpen: true,
+      title: title || "Select image source",
+      onSelectFile,
+      fileNamePrefix: fileNamePrefix || "user-photo",
+      fallbackInputRef: fallbackInputRef || null,
+    })
+  }
+
+  const closeImageSourcePicker = () => {
+    setSourcePicker((prev) => ({ ...prev, isOpen: false }))
+  }
+
+  const handlePickFromDevice = () => {
+    const fallbackRef = sourcePicker.fallbackInputRef
+    closeImageSourcePicker()
+    fallbackRef?.current?.click()
+  }
+
+  const openCameraFromFlutter = async ({ onSelectFile, fileNamePrefix }) => {
+    try {
+      if (!hasFlutterCameraBridge) {
+        openBrowserCameraFallback({ onSelectFile })
+        return
+      }
+
+      const result = await window.flutter_inappwebview.callHandler("openCamera", {
+        source: "camera",
+        accept: "image/*",
+        multiple: false,
+        quality: 0.8,
+      })
+
+      if (!result || !result.success) return
+
+      let selectedFile = null
+      if (result.file instanceof File) {
+        selectedFile = result.file
+      } else if (result.base64) {
+        selectedFile = convertBase64ToFile(
+          result.base64,
+          result.mimeType || "image/jpeg",
+          fileNamePrefix || "user-photo"
+        )
+      }
+
+      if (!selectedFile || !String(selectedFile.type || "").startsWith("image/")) {
+        return
+      }
+
+      onSelectFile(selectedFile)
+    } catch (error) {
+      debugError("openCamera bridge failed:", error)
+      openBrowserCameraFallback({ onSelectFile })
+    }
+  }
+
+  const handlePickFromCamera = async () => {
+    const pickerConfig = {
+      onSelectFile: sourcePicker.onSelectFile,
+      fileNamePrefix: sourcePicker.fileNamePrefix,
+    }
+    closeImageSourcePicker()
+    await openCameraFromFlutter(pickerConfig)
+  }
+
+  const handlePhotoUploadClick = () => {
+    if (isMobileView) {
+      openImageSourcePicker({
+        title: "Add user photo",
+        onSelectFile: applySelectedPhoto,
+        fileNamePrefix: "user-photo",
+        fallbackInputRef: photoInputRef,
+      })
+      return
+    }
+
+    photoInputRef.current?.click()
   }
 
   const handleRemovePhoto = () => {
     setPhoto(null)
     setPhotoPreview(null)
     // Reset file input
-    const fileInput = document.getElementById('photoInput')
+    const fileInput = photoInputRef.current
     if (fileInput) {
       fileInput.value = ''
     }
   }
 
   const handleAddUser = async () => {
+    if (isSubmitting) return
+
     // Validate name
     if (!validateName(name)) return
 
@@ -210,15 +395,35 @@ export default function InviteUser() {
 
     if (!isValid) return
 
+    const normalizedPhone = phoneNumber.replace(/\D/g, "")
+    const normalizedEmail = email.toLowerCase().trim()
+
+    if (addMethod === "phone") {
+      const phoneExists = existingUsers.some((user) => String(user.phone || "").replace(/\D/g, "") === normalizedPhone)
+      if (phoneExists) {
+        setPhoneError("This phone number is already added")
+        return
+      }
+    }
+
+    if (addMethod === "email") {
+      const emailExists = existingUsers.some((user) => String(user.email || "").toLowerCase().trim() === normalizedEmail)
+      if (emailExists) {
+        setEmailError("This email is already added")
+        return
+      }
+    }
+
     try {
+      setIsSubmitting(true)
       // Prepare FormData for API (to support file upload)
       const formData = new FormData()
       formData.append('name', name.trim())
       formData.append('role', selectedRole)
       if (addMethod === "phone") {
-        formData.append('phone', phoneNumber)
+        formData.append('phone', normalizedPhone)
       } else {
-        formData.append('email', email.trim())
+        formData.append('email', normalizedEmail)
       }
       
       // Add photo if selected
@@ -230,6 +435,10 @@ export default function InviteUser() {
       const response = await restaurantAPI.addStaff(formData)
       
       if (response?.data?.success) {
+        const createdStaff = response?.data?.data?.staff || response?.data?.staff
+        if (createdStaff) {
+          setExistingUsers((prev) => [...prev, createdStaff])
+        }
         // Dispatch event to notify ContactDetails page
         window.dispatchEvent(new Event("invitesUpdated"))
         
@@ -242,14 +451,16 @@ export default function InviteUser() {
       debugError("Error adding user:", error)
       const errorMessage = error.response?.data?.message || error.message || "Failed to add user. Please try again."
       alert(errorMessage)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleUserAddedClose = () => {
     setShowUserAddedDialog(false)
-    // Navigate back after a short delay
+    // Return to the contact list after a short delay
     setTimeout(() => {
-      navigate(-1)
+      navigate("/restaurant/contact-details")
     }, 300)
   }
 
@@ -399,16 +610,18 @@ export default function InviteUser() {
                   </button>
                 </div>
               ) : (
-                <label
-                  htmlFor="photoInput"
+                <button
+                  type="button"
+                  onClick={handlePhotoUploadClick}
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <Upload className="w-4 h-4" />
                   <span>Upload Photo</span>
-                </label>
+                </button>
               )}
               <input
                 id="photoInput"
+                ref={photoInputRef}
                 type="file"
                 accept="image/*"
                 className="hidden"
@@ -452,14 +665,21 @@ export default function InviteUser() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 py-4 z-40">
         <Button
           onClick={handleAddUser}
-          disabled={!isFormValid}
+          disabled={!isFormValid || isSubmitting}
           className={`w-full py-3 ${
-            isFormValid
+            isFormValid && !isSubmitting
               ? "bg-blue-600 hover:bg-blue-700 text-white"
               : "bg-gray-200 text-gray-500 cursor-not-allowed"
           } transition-colors`}
         >
-          Add user
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{selectedRole === "manager" ? "Adding manager..." : "Adding staff..."}</span>
+            </span>
+          ) : (
+            "Add user"
+          )}
         </Button>
       </div>
 
@@ -487,6 +707,23 @@ export default function InviteUser() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {sourcePicker.isOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-white rounded-lg p-4 space-y-3">
+            <h3 className="text-sm font-semibold text-black">{sourcePicker.title || "Select image source"}</h3>
+            <Button type="button" className="w-full" onClick={handlePickFromCamera}>
+              Use Camera
+            </Button>
+            <Button type="button" variant="outline" className="w-full" onClick={handlePickFromDevice}>
+              Upload from Device
+            </Button>
+            <Button type="button" variant="ghost" className="w-full text-gray-700" onClick={closeImageSourcePicker}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

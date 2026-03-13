@@ -316,6 +316,7 @@ export default function ToHub() {
     { id: "order-history", label: "Order history", icon: FaHistory, route: "/restaurant/orders/all" },
     { id: "complaints", label: "Complaints", icon: FaExclamationTriangle, route: "/restaurant/feedback?tab=complaints" },
     { id: "reviews", label: "Reviews", icon: FaStar, route: "/restaurant/feedback" },
+    { id: "help-center", label: "Help Center", icon: HelpCircle, route: "/restaurant/help-centre" },
     { id: "feedback", label: "Share your feedback", icon: FaCommentDots, route: "/restaurant/Share-Feedback" },
     { id: "zone-setup", label: "Zone Setup", icon: MapPin, route: "/restaurant/zone-setup" },
     { id: "settings", label: "Settings", icon: FaCog, route: "/restaurant/delivery-settings" },
