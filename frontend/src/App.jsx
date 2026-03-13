@@ -64,7 +64,6 @@ const ConversationListPage = lazy(() => import("@/module/restaurant/pages/Conver
 const ChatDetailPage = lazy(() => import("@/module/restaurant/pages/ChatDetailPage"))
 const RestaurantStatus = lazy(() => import("@/module/restaurant/pages/RestaurantStatus"))
 const ExploreMore = lazy(() => import("@/module/restaurant/pages/ExploreMore"))
-const DeliverySettings = lazy(() => import("@/module/restaurant/pages/DeliverySettings"))
 const RushHour = lazy(() => import("@/module/restaurant/pages/RushHour"))
 const OutletTimings = lazy(() => import("@/module/restaurant/pages/OutletTimings"))
 const DaySlots = lazy(() => import("@/module/restaurant/pages/DaySlots"))
@@ -410,7 +409,7 @@ export default function App() {
             path="/restaurant/delivery-settings"
             element={
               <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
-                <DeliverySettings />
+                <Navigate to="/restaurant/status" replace />
               </ProtectedRoute>
             }
           />
