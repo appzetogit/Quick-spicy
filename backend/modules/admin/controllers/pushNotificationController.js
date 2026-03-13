@@ -5,6 +5,7 @@ import firebaseAuthService from "../../auth/services/firebaseAuthService.js";
 import User from "../../auth/models/User.js";
 import Delivery from "../../delivery/models/Delivery.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
+import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 
 const BATCH_SIZE = 500;
 
@@ -168,53 +169,59 @@ const sendBatches = async (tokens = [], payload = {}) => {
   return { sentCount, failedCount, failedTokens, failureCodeCounts };
 };
 
-/**
- * Send push notification to saved FCM tokens by target.
- * POST /api/admin/push-notification/send
- */
-export const sendPushNotification = asyncHandler(async (req, res) => {
-  const {
-    title = "",
-    description = "",
-    message = "",
-    body = "",
-    imageUrl = "",
-    target = "customer",
-    platform = "all",
-    zone = "All",
-  } = req.body || {};
-
+const executePushNotification = async ({
+  title = "",
+  description = "",
+  imageUrl = "",
+  target = "customer",
+  platform = "all",
+  zone = "All",
+  notificationId: notificationIdOverride = "",
+} = {}) => {
   const normalizedTitle = String(title || "").trim();
-  const normalizedDescription = String(description || message || body || "").trim();
+  const normalizedDescription = String(description || "").trim();
   const normalizedImageUrl = String(imageUrl || "").trim();
   const normalizedTarget = normalizeTarget(target);
   const normalizedPlatform = normalizePlatform(platform);
   const normalizedZone = normalizeZone(zone);
   const targetLink = resolveTargetLink(normalizedTarget);
-  const notificationId = `admin-push:${normalizedTarget}:${normalizedPlatform}:${Date.now()}`;
+  const notificationId = String(notificationIdOverride || `admin-push:${normalizedTarget}:${normalizedPlatform}:${Date.now()}`);
 
   if (!normalizedTitle || !normalizedDescription) {
-    return errorResponse(res, 400, "Title and description are required");
+    return {
+      ok: false,
+      statusCode: 400,
+      message: "Title and description are required",
+    };
   }
 
   if (normalizedImageUrl) {
     try {
       const parsedUrl = new URL(normalizedImageUrl);
       if (parsedUrl.protocol !== "https:") {
-        return errorResponse(res, 400, "Notification image URL must be a valid HTTPS URL");
+        return {
+          ok: false,
+          statusCode: 400,
+          message: "Notification image URL must be a valid HTTPS URL",
+        };
       }
     } catch (_error) {
-      return errorResponse(res, 400, "Notification image URL is invalid");
+      return {
+        ok: false,
+        statusCode: 400,
+        message: "Notification image URL is invalid",
+      };
     }
   }
 
   await firebaseAuthService.init();
   if (!firebaseAuthService.isEnabled()) {
-    return errorResponse(
-      res,
-      500,
-      "Firebase is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY first.",
-    );
+    return {
+      ok: false,
+      statusCode: 500,
+      message:
+        "Firebase is not configured. Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY first.",
+    };
   }
 
   const targetTokens = await getTargetTokens(normalizedTarget, normalizedPlatform);
@@ -225,14 +232,19 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
   const totalTokens = webTokens.length + mobileTokens.length;
 
   if (totalTokens === 0) {
-    return successResponse(res, 200, "No FCM tokens found for selected audience", {
-      target: normalizedTarget,
-      platform: normalizedPlatform,
-      zone: normalizedZone,
-      totalTokens: 0,
-      sentCount: 0,
-      failedCount: 0,
-    });
+    return {
+      ok: true,
+      statusCode: 200,
+      message: "No FCM tokens found for selected audience",
+      data: {
+        target: normalizedTarget,
+        platform: normalizedPlatform,
+        zone: normalizedZone,
+        totalTokens: 0,
+        sentCount: 0,
+        failedCount: 0,
+      },
+    };
   }
 
   const baseData = {
@@ -343,14 +355,187 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
         ? "Push notification failed for all tokens"
         : "Push notification processed";
 
-  return successResponse(res, 200, responseMessage, {
+  return {
+    ok: true,
+    statusCode: 200,
+    message: responseMessage,
+    data: {
+      target: normalizedTarget,
+      platform: normalizedPlatform,
+      zone: normalizedZone,
+      totalTokens,
+      sentCount,
+      failedCount,
+      failureCodeCounts,
+      sampleFailures: failedTokens.slice(0, 20),
+    },
+  };
+};
+
+/**
+ * Send push notification to saved FCM tokens by target.
+ * POST /api/admin/push-notification/send
+ */
+export const sendPushNotification = asyncHandler(async (req, res) => {
+  const {
+    title = "",
+    description = "",
+    message = "",
+    body = "",
+    imageUrl = "",
+    target = "customer",
+    platform = "all",
+    zone = "All",
+    scheduleAt = null,
+  } = req.body || {};
+
+  const normalizedTitle = String(title || "").trim();
+  const normalizedDescription = String(description || message || body || "").trim();
+  const normalizedImageUrl = String(imageUrl || "").trim();
+  const normalizedTarget = normalizeTarget(target);
+  const normalizedPlatform = normalizePlatform(platform);
+  const normalizedZone = normalizeZone(zone);
+
+  if (!normalizedTitle || !normalizedDescription) {
+    return errorResponse(res, 400, "Title and description are required");
+  }
+
+  if (normalizedImageUrl) {
+    try {
+      const parsedUrl = new URL(normalizedImageUrl);
+      if (parsedUrl.protocol !== "https:") {
+        return errorResponse(res, 400, "Notification image URL must be a valid HTTPS URL");
+      }
+    } catch (_error) {
+      return errorResponse(res, 400, "Notification image URL is invalid");
+    }
+  }
+
+  const parsedScheduleAt = scheduleAt ? new Date(scheduleAt) : null;
+  const isScheduleRequest = Boolean(parsedScheduleAt && !Number.isNaN(parsedScheduleAt.getTime()));
+
+  if (scheduleAt && !isScheduleRequest) {
+    return errorResponse(res, 400, "Invalid schedule date/time");
+  }
+
+  if (isScheduleRequest && parsedScheduleAt <= new Date()) {
+    return errorResponse(res, 400, "Scheduled date/time must be in the future");
+  }
+
+  if (isScheduleRequest) {
+    const createdByAdminId = req?.admin?._id || req?.user?._id || null;
+    const scheduled = await ScheduledPushNotification.create({
+      title: normalizedTitle,
+      description: normalizedDescription,
+      imageUrl: normalizedImageUrl || null,
+      target: normalizedTarget,
+      platform: normalizedPlatform,
+      zone: normalizedZone,
+      scheduleAt: parsedScheduleAt,
+      status: "scheduled",
+      createdBy: createdByAdminId,
+    });
+
+    return successResponse(res, 201, "Push notification scheduled successfully", {
+      id: scheduled._id,
+      status: scheduled.status,
+      scheduleAt: scheduled.scheduleAt,
+      target: normalizedTarget,
+      platform: normalizedPlatform,
+      zone: normalizedZone,
+    });
+  }
+
+  const execution = await executePushNotification({
+    title: normalizedTitle,
+    description: normalizedDescription,
+    imageUrl: normalizedImageUrl,
     target: normalizedTarget,
     platform: normalizedPlatform,
     zone: normalizedZone,
-    totalTokens,
-    sentCount,
-    failedCount,
-    failureCodeCounts,
-    sampleFailures: failedTokens.slice(0, 20),
   });
+
+  if (!execution.ok) {
+    return errorResponse(res, execution.statusCode || 500, execution.message || "Failed to send push notification");
+  }
+
+  return successResponse(res, 200, execution.message, execution.data || {});
 });
+
+export const processDueScheduledPushNotifications = async ({ limit = 20 } = {}) => {
+  const now = new Date();
+  const dueNotifications = await ScheduledPushNotification.find({
+    status: "scheduled",
+    scheduleAt: { $lte: now },
+  })
+    .sort({ scheduleAt: 1 })
+    .limit(Math.max(1, Math.min(Number(limit) || 20, 100)))
+    .lean();
+
+  if (!dueNotifications.length) {
+    return { processed: 0, sent: 0, failed: 0 };
+  }
+
+  let processed = 0;
+  let sent = 0;
+  let failed = 0;
+
+  for (const due of dueNotifications) {
+    const claimed = await ScheduledPushNotification.findOneAndUpdate(
+      { _id: due._id, status: "scheduled" },
+      { $set: { status: "processing", processingStartedAt: new Date() } },
+      { new: true },
+    );
+
+    if (!claimed) {
+      continue;
+    }
+
+    processed += 1;
+
+    try {
+      const execution = await executePushNotification({
+        title: claimed.title,
+        description: claimed.description,
+        imageUrl: claimed.imageUrl || "",
+        target: claimed.target,
+        platform: claimed.platform,
+        zone: claimed.zone,
+        notificationId: `admin-push:scheduled:${claimed._id.toString()}`,
+      });
+
+      if (!execution.ok) {
+        failed += 1;
+        await ScheduledPushNotification.findByIdAndUpdate(claimed._id, {
+          $set: {
+            status: "failed",
+            sentAt: new Date(),
+            errorMessage: execution.message || "Failed to send scheduled notification",
+          },
+        });
+        continue;
+      }
+
+      sent += 1;
+      await ScheduledPushNotification.findByIdAndUpdate(claimed._id, {
+        $set: {
+          status: "sent",
+          sentAt: new Date(),
+          result: execution.data || {},
+          errorMessage: "",
+        },
+      });
+    } catch (error) {
+      failed += 1;
+      await ScheduledPushNotification.findByIdAndUpdate(claimed._id, {
+        $set: {
+          status: "failed",
+          sentAt: new Date(),
+          errorMessage: error?.message || "Unknown processing error",
+        },
+      });
+    }
+  }
+
+  return { processed, sent, failed };
+};
