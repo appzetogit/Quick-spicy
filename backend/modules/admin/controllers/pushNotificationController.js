@@ -8,6 +8,8 @@ import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 
 const BATCH_SIZE = 500;
+const RESTAURANT_ANDROID_CHANNEL_ID = "quick_spicy_fcm_v2";
+const RESTAURANT_ANDROID_SOUND = "original";
 
 const normalizeTarget = (target = "customer") => {
   const normalized = String(target || "").trim().toLowerCase();
@@ -275,6 +277,27 @@ const executePushNotification = async ({
     },
   };
 
+  const isRestaurantMobileTarget =
+    normalizedTarget === "restaurant" &&
+    (normalizedPlatform === "mobile" || normalizedPlatform === "all");
+
+  const androidNotificationConfig = isRestaurantMobileTarget
+    ? {
+      channelId: RESTAURANT_ANDROID_CHANNEL_ID,
+      sound: RESTAURANT_ANDROID_SOUND,
+      defaultSound: false,
+      defaultVibrateTimings: true,
+      vibrateTimingsMillis: [200, 100, 200, 100, 300],
+    }
+    : {
+      sound: "default",
+      defaultSound: true,
+      defaultVibrateTimings: true,
+      vibrateTimingsMillis: [200, 100, 200, 100, 300],
+    };
+
+  const apnsSound = isRestaurantMobileTarget ? "default" : "default";
+
   const mobilePayload = {
     notification: {
       title: normalizedTitle,
@@ -287,16 +310,13 @@ const executePushNotification = async ({
         android: {
           notification: {
             imageUrl: normalizedImageUrl,
-            sound: "default",
-            defaultSound: true,
-            defaultVibrateTimings: true,
-            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+            ...androidNotificationConfig,
           },
         },
         apns: {
           payload: {
             aps: {
-              sound: "default",
+              sound: apnsSound,
             },
           },
           fcmOptions: {
@@ -307,16 +327,13 @@ const executePushNotification = async ({
       : {
         android: {
           notification: {
-            sound: "default",
-            defaultSound: true,
-            defaultVibrateTimings: true,
-            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+            ...androidNotificationConfig,
           },
         },
         apns: {
           payload: {
             aps: {
-              sound: "default",
+              sound: apnsSound,
             },
           },
         },

@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 import admin from 'firebase-admin';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 
+const RESTAURANT_ANDROID_CHANNEL_ID = 'quick_spicy_fcm_v2';
+const RESTAURANT_ANDROID_SOUND = 'original';
+
 // Dynamic import to avoid circular dependency
 let getIO = null;
 
@@ -73,8 +76,8 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
       priority: 'high',
       ttl: 120000,
       notification: {
-        channelId: 'new_order_channel_v3',
-        sound: 'alert',
+        channelId: RESTAURANT_ANDROID_CHANNEL_ID,
+        sound: RESTAURANT_ANDROID_SOUND,
         defaultSound: false,
         defaultVibrateTimings: true,
         priority: 'max'
