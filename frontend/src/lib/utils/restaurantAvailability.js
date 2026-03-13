@@ -115,17 +115,17 @@ const formatClosingCountdown = (minutesUntilClose, closingTime) => {
   }
 
   if (minutesUntilClose < 60) {
-    return `Closes in ${minutesUntilClose} min`
+    return `Closing in ${minutesUntilClose} mins`
   }
 
   const hours = Math.floor(minutesUntilClose / 60)
   const minutes = minutesUntilClose % 60
 
   if (minutes === 0) {
-    return `Closes in ${hours}h`
+    return `Closing in ${hours} ${hours === 1 ? "hour" : "hours"}`
   }
 
-  return `Closes in ${hours}h ${minutes}m`
+  return `Closing in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} ${minutes === 1 ? "min" : "mins"}`
 }
 
 export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), options = {}) => {
