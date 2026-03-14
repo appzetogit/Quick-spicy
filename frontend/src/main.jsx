@@ -21,6 +21,27 @@ if (savedTheme === 'dark') {
   document.documentElement.classList.remove('dark')
 }
 
+// Prevent browser/page zoom on mobile pinch and desktop trackpad or ctrl/cmd+wheel.
+const preventZoomGesture = (event) => {
+  event.preventDefault()
+}
+
+window.addEventListener('wheel', (event) => {
+  if (event.ctrlKey || event.metaKey) {
+    event.preventDefault()
+  }
+}, { passive: false })
+
+window.addEventListener('gesturestart', preventZoomGesture, { passive: false })
+window.addEventListener('gesturechange', preventZoomGesture, { passive: false })
+window.addEventListener('gestureend', preventZoomGesture, { passive: false })
+
+window.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 1) {
+    event.preventDefault()
+  }
+}, { passive: false })
+
 // Suppress browser extension errors
 const originalError = console.error
 console.error = (...args) => {
