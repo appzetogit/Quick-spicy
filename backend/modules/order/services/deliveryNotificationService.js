@@ -6,7 +6,7 @@ import mongoose from 'mongoose';
 import admin from 'firebase-admin';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 
-const DELIVERY_ANDROID_CHANNEL_ID = 'quick_spicy_popup_v1';
+const DELIVERY_ANDROID_CHANNEL_ID = 'quick_spicy_popup_v2';
 const DELIVERY_ANDROID_SOUND = 'original';
 
 // Dynamic import to avoid circular dependency

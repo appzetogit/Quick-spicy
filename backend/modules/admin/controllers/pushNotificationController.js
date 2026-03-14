@@ -8,7 +8,7 @@ import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 
 const BATCH_SIZE = 500;
-const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v1";
+const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v2";
 const PARTNER_ANDROID_SOUND = "original";
 
 const normalizeTarget = (target = "customer") => {
