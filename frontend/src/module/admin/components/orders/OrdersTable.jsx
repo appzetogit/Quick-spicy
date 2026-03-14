@@ -41,6 +41,28 @@ export default function OrdersTable({
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const totalPages = Math.ceil(orders.length / itemsPerPage)
+
+  const isOrderAcceptable = (order) => {
+    const displayStatus = String(order?.orderStatus || "").toLowerCase()
+    const backendStatus = String(order?.status || "").toLowerCase()
+    return (
+      displayStatus === "pending" ||
+      displayStatus === "accepted" ||
+      backendStatus === "pending" ||
+      backendStatus === "confirmed"
+    )
+  }
+
+  const isOrderRejectable = (order) => {
+    const displayStatus = String(order?.orderStatus || "").toLowerCase()
+    const backendStatus = String(order?.status || "").toLowerCase()
+    return (
+      displayStatus === "pending" ||
+      displayStatus === "accepted" ||
+      backendStatus === "pending" ||
+      backendStatus === "confirmed"
+    )
+  }
   
   // Reset to page 1 when orders change
   useEffect(() => {
@@ -328,7 +350,7 @@ export default function OrdersTable({
                 {visibleColumns.actions && (
                   <td className="px-6 py-4 whitespace-nowrap text-center">
                     <div className="flex items-center justify-center gap-2">
-                      {order.orderStatus === "Pending" && onAcceptOrder && (
+                      {isOrderAcceptable(order) && onAcceptOrder && (
                         <button
                           onClick={() => onAcceptOrder(order)}
                           disabled={actionLoadingOrderId === (order.id || order.orderId)}
@@ -343,7 +365,7 @@ export default function OrdersTable({
                           <span>Accept</span>
                         </button>
                       )}
-                      {order.orderStatus === "Pending" && onRejectOrder && (
+                      {isOrderRejectable(order) && onRejectOrder && (
                         <button
                           onClick={() => onRejectOrder(order)}
                           disabled={actionLoadingOrderId === (order.id || order.orderId)}

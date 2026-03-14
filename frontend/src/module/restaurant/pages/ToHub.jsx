@@ -72,6 +72,24 @@ export default function ToHub() {
     window.addEventListener("focus", handleFocus)
     return () => window.removeEventListener("focus", handleFocus)
   }, [fetchRestaurantData])
+
+  const restaurantLocationLabel = useMemo(() => {
+    const location = restaurantData?.location
+    if (!location) return ""
+
+    if (location.formattedAddress && String(location.formattedAddress).trim()) {
+      return String(location.formattedAddress).trim()
+    }
+    if (location.address && String(location.address).trim()) {
+      return String(location.address).trim()
+    }
+
+    const parts = []
+    if (location.area) parts.push(String(location.area).trim())
+    if (location.city) parts.push(String(location.city).trim())
+    if (location.state) parts.push(String(location.state).trim())
+    return parts.filter(Boolean).join(", ")
+  }, [restaurantData])
   const topTabBarRef = useRef(null)
   const contentContainerRef = useRef(null)
   const touchStartX = useRef(0)
@@ -1874,13 +1892,25 @@ export default function ToHub() {
       <div className="">
         {/* Reuse Feedback-like navbar */}
         <div className="sticky bg-white top-0 z-40 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div>
+          <div className="min-w-0 pr-3">
             <p className="text-[10px] tracking-[0.12em] text-gray-500 uppercase">
               Showing data for
             </p>
             <p className="text-md font-semibold text-gray-900 mt-0.5">
               {loadingRestaurant ? "Loading..." : restaurantData?.name || "Restaurant"}
             </p>
+            {!loadingRestaurant && (
+              <button
+                onClick={() => navigate("/restaurant/edit-address")}
+                className="mt-1 inline-flex max-w-full items-center gap-1 rounded-md border border-gray-200 bg-gray-50 px-2 py-1 text-xs text-gray-700 hover:bg-gray-100 transition-colors"
+                title={restaurantLocationLabel || "Update location"}
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {restaurantLocationLabel || "Update location"}
+                </span>
+              </button>
+            )}
           </div>
 
           <div className="flex items-center">

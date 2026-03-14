@@ -15,6 +15,7 @@ const EMPTY_WALLET_STATE = {
   cashInHand: 0,
   totalWithdrawn: 0,
   totalEarned: 0,
+  totalTips: 0,
   transactions: [],
   joiningBonusClaimed: false,
   joiningBonusAmount: 0
@@ -64,6 +65,7 @@ export const fetchDeliveryWallet = async () => {
         cashInHand: Number(walletData.cashInHand ?? walletData.cash_in_hand) || 0,
         totalWithdrawn: Number(walletData.totalWithdrawn) || 0,
         totalEarned: Number(walletData.totalEarned) || 0,
+        totalTips: Number(walletData.totalTips) || 0,
         totalCashLimit: Number(walletData.totalCashLimit) || 0,
         availableCashLimit: Number(walletData.availableCashLimit) || 0,
         deliveryWithdrawalLimit: Number(walletData.deliveryWithdrawalLimit ?? walletData.delivery_withdrawal_limit) || 100,
@@ -145,8 +147,9 @@ export const calculateDeliveryBalances = (state) => {
   const cashInHand = state.cashInHand || 0
   const totalWithdrawn = state.totalWithdrawn || 0
   const totalEarned = state.totalEarned || 0
+  const totalTips = state.totalTips || 0
   
-  debugLog('📊 Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned })
+  debugLog('📊 Balance values:', { totalBalance, cashInHand, totalWithdrawn, totalEarned, totalTips })
   
   // Calculate pending withdrawals from transactions if available
   let pendingWithdrawals = state.pendingWithdrawals || 0
@@ -163,7 +166,7 @@ export const calculateDeliveryBalances = (state) => {
   let totalEarningsFromTransactions = totalEarned
   if (state.transactions && Array.isArray(state.transactions)) {
     const earningsFromTransactions = state.transactions
-      .filter(t => t.type === 'payment' && t.status === 'Completed') // Exclude bonus from earnings
+      .filter(t => (t.type === 'payment' || t.type === 'tip') && t.status === 'Completed')
       .reduce((sum, t) => sum + (t.amount || 0), 0)
     if (earningsFromTransactions > 0) {
       totalEarningsFromTransactions = earningsFromTransactions
@@ -215,7 +218,7 @@ export const calculatePeriodEarnings = (state, period) => {
   return state.transactions
     .filter(t => {
       // Include both payment and earning_addon transactions in earnings
-      if (t.type !== 'payment' && t.type !== 'earning_addon') return false
+      if (t.type !== 'payment' && t.type !== 'tip' && t.type !== 'earning_addon') return false
       if (t.status !== 'Completed') return false
       
       const transactionDate = t.date ? new Date(t.date) : (t.createdAt ? new Date(t.createdAt) : null)

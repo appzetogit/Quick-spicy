@@ -110,6 +110,11 @@ const orderSchema = new mongoose.Schema({
       default: 0,
       min: 0
     },
+    tip: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     total: {
       type: Number,
       required: true,
@@ -143,6 +148,43 @@ const orderSchema = new mongoose.Schema({
       type: String
     }
   },
+  additionalTip: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  tipPayments: [{
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed'],
+      default: 'pending'
+    },
+    razorpayOrderId: {
+      type: String
+    },
+    razorpayPaymentId: {
+      type: String
+    },
+    razorpaySignature: {
+      type: String
+    },
+    paymentRecordId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Payment'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    paidAt: {
+      type: Date
+    }
+  }],
   status: {
     type: String,
     enum: ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'],

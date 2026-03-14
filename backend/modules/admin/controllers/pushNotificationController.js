@@ -8,6 +8,8 @@ import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 
 const BATCH_SIZE = 500;
+const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v2";
+const PARTNER_ANDROID_SOUND = "original";
 
 const normalizeTarget = (target = "customer") => {
   const normalized = String(target || "").trim().toLowerCase();
@@ -275,6 +277,27 @@ const executePushNotification = async ({
     },
   };
 
+  const isPartnerMobileTarget =
+    (normalizedTarget === "restaurant" || normalizedTarget === "delivery") &&
+    (normalizedPlatform === "mobile" || normalizedPlatform === "all");
+
+  const androidNotificationConfig = isPartnerMobileTarget
+    ? {
+      channelId: PARTNER_ANDROID_CHANNEL_ID,
+      sound: PARTNER_ANDROID_SOUND,
+      defaultSound: false,
+      defaultVibrateTimings: true,
+      vibrateTimingsMillis: [200, 100, 200, 100, 300],
+    }
+    : {
+      sound: "default",
+      defaultSound: true,
+      defaultVibrateTimings: true,
+      vibrateTimingsMillis: [200, 100, 200, 100, 300],
+    };
+
+  const apnsSound = isPartnerMobileTarget ? "default" : "default";
+
   const mobilePayload = {
     notification: {
       title: normalizedTitle,
@@ -287,16 +310,13 @@ const executePushNotification = async ({
         android: {
           notification: {
             imageUrl: normalizedImageUrl,
-            sound: "default",
-            defaultSound: true,
-            defaultVibrateTimings: true,
-            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+            ...androidNotificationConfig,
           },
         },
         apns: {
           payload: {
             aps: {
-              sound: "default",
+              sound: apnsSound,
             },
           },
           fcmOptions: {
@@ -307,16 +327,13 @@ const executePushNotification = async ({
       : {
         android: {
           notification: {
-            sound: "default",
-            defaultSound: true,
-            defaultVibrateTimings: true,
-            vibrateTimingsMillis: [200, 100, 200, 100, 300],
+            ...androidNotificationConfig,
           },
         },
         apns: {
           payload: {
             aps: {
-              sound: "default",
+              sound: apnsSound,
             },
           },
         },
@@ -387,6 +404,7 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     platform = "all",
     zone = "All",
     scheduleAt = null,
+    scheduleAtList = [],
   } = req.body || {};
 
   const normalizedTitle = String(title || "").trim();
@@ -411,35 +429,59 @@ export const sendPushNotification = asyncHandler(async (req, res) => {
     }
   }
 
-  const parsedScheduleAt = scheduleAt ? new Date(scheduleAt) : null;
-  const isScheduleRequest = Boolean(parsedScheduleAt && !Number.isNaN(parsedScheduleAt.getTime()));
+  const parsedScheduleAtList = Array.isArray(scheduleAtList)
+    ? scheduleAtList
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+    : [];
 
-  if (scheduleAt && !isScheduleRequest) {
+  const parsedScheduleAtSingle = scheduleAt ? new Date(scheduleAt) : null;
+  const hasSingleSchedule = Boolean(parsedScheduleAtSingle && !Number.isNaN(parsedScheduleAtSingle.getTime()));
+  const hasRecurringSchedule = parsedScheduleAtList.length > 0;
+  const isScheduleRequest = hasSingleSchedule || hasRecurringSchedule;
+
+  if (scheduleAt && !hasSingleSchedule) {
     return errorResponse(res, 400, "Invalid schedule date/time");
   }
 
-  if (isScheduleRequest && parsedScheduleAt <= new Date()) {
+  if (Array.isArray(scheduleAtList) && scheduleAtList.length > 0 && !hasRecurringSchedule) {
+    return errorResponse(res, 400, "Invalid recurring schedule date/time list");
+  }
+
+  const normalizedScheduleTimes = hasRecurringSchedule
+    ? parsedScheduleAtList
+    : (hasSingleSchedule ? [parsedScheduleAtSingle] : []);
+
+  if (normalizedScheduleTimes.some((date) => date <= new Date())) {
     return errorResponse(res, 400, "Scheduled date/time must be in the future");
   }
 
   if (isScheduleRequest) {
     const createdByAdminId = req?.admin?._id || req?.user?._id || null;
-    const scheduled = await ScheduledPushNotification.create({
+    const uniqueScheduleTimes = [...new Set(normalizedScheduleTimes.map((date) => date.toISOString()))]
+      .map((iso) => new Date(iso))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    const docs = uniqueScheduleTimes.map((when) => ({
       title: normalizedTitle,
       description: normalizedDescription,
       imageUrl: normalizedImageUrl || null,
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: normalizedZone,
-      scheduleAt: parsedScheduleAt,
+      scheduleAt: when,
       status: "scheduled",
       createdBy: createdByAdminId,
-    });
+    }));
+
+    const created = await ScheduledPushNotification.insertMany(docs);
 
     return successResponse(res, 201, "Push notification scheduled successfully", {
-      id: scheduled._id,
-      status: scheduled.status,
-      scheduleAt: scheduled.scheduleAt,
+      ids: created.map((item) => item._id),
+      status: "scheduled",
+      scheduledCount: created.length,
+      scheduleAt: created[0]?.scheduleAt || null,
+      scheduleAtList: created.map((item) => item.scheduleAt),
       target: normalizedTarget,
       platform: normalizedPlatform,
       zone: normalizedZone,

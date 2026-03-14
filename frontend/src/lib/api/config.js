@@ -437,6 +437,8 @@ export const API_ENDPOINTS = {
     DETAILS: "/order/:id",
     UPDATE_STATUS: "/order/:id/status",
     VERIFY_PAYMENT: "/order/verify-payment",
+    TIP_CREATE_ORDER: "/order/:id/tip/create-order",
+    TIP_VERIFY_PAYMENT: "/order/:id/tip/verify-payment",
     CALCULATE: "/order/calculate",
     CANCEL: "/order/:id/cancel",
   },

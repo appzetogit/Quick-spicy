@@ -192,6 +192,12 @@ const deliverySchema = new mongoose.Schema(
       trim: true,
       sparse: true
     },
+    upiId: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      sparse: true
+    },
     profileImage: {
       url: String,
       publicId: String

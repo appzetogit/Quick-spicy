@@ -1,10 +1,8 @@
 /* eslint-disable no-undef */
-importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js");
 
-const sanitize = (value) => String(value || "").trim().replace(/^['"]|['"]$/g, "");
 const PUSH_DEBUG_PREFIX = "[push-sw]";
 const pushDebugLog = () => {};
+
 const getNotificationKey = (payload) =>
   payload?.data?.notificationId ||
   payload?.data?.messageId ||
@@ -17,7 +15,6 @@ const getNotificationKey = (payload) =>
   ].join("::");
 
 async function notifyOpenClients(payload) {
-  pushDebugLog(PUSH_DEBUG_PREFIX, "Broadcasting push to open clients", { payload });
   const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
   windowClients.forEach((client) => {
     client.postMessage({
@@ -47,152 +44,109 @@ async function hasVisibleClientForTarget(payload = {}) {
   const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
   const targetPath = getTargetPathFromPayload(payload);
   const targetRoot = `/${String(targetPath).split("/").filter(Boolean)[0] || ""}`;
-  const visibleClient = windowClients.find((client) => {
+
+  return windowClients.some((client) => {
     const isVisible = client.visibilityState === "visible" || client.focused;
     if (!isVisible) return false;
     try {
       const clientUrl = new URL(client.url);
-      if (targetRoot === "/" || !targetRoot) {
-        return true;
-      }
+      if (targetRoot === "/" || !targetRoot) return true;
       return clientUrl.pathname.startsWith(targetRoot);
     } catch {
       return false;
     }
   });
-  pushDebugLog(PUSH_DEBUG_PREFIX, "Visible client check", {
-    count: windowClients.length,
-    targetPath,
-    targetRoot,
-    hasVisibleClient: Boolean(visibleClient),
-    clients: windowClients.map((client) => ({
-      url: client.url,
-      visibilityState: client.visibilityState,
-      focused: client.focused,
-    })),
-  });
-  return Boolean(visibleClient);
 }
 
-async function loadFirebaseWebConfig() {
-  const candidates = ["/api/env/public"];
-  if (self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1") {
-    candidates.push("http://localhost:5000/api/env/public");
-  }
+function normalizePushPayload(rawPayload = {}) {
+  const data = rawPayload?.data && typeof rawPayload.data === "object" ? rawPayload.data : {};
+  const notification =
+    rawPayload?.notification && typeof rawPayload.notification === "object"
+      ? rawPayload.notification
+      : {};
 
-  for (const url of candidates) {
-    try {
-      const response = await fetch(url, { cache: "no-store" });
-      if (!response.ok) continue;
-      const json = await response.json();
-      const data = (json && json.data) || {};
-      const config = {
-        apiKey: sanitize(data.FIREBASE_API_KEY),
-        authDomain: sanitize(data.FIREBASE_AUTH_DOMAIN),
-        projectId: sanitize(data.FIREBASE_PROJECT_ID),
-        appId: sanitize(data.FIREBASE_APP_ID),
-        messagingSenderId: sanitize(data.FIREBASE_MESSAGING_SENDER_ID),
-        storageBucket: sanitize(data.FIREBASE_STORAGE_BUCKET),
-        measurementId: sanitize(data.MEASUREMENT_ID),
-      };
-
-      if (config.apiKey && config.projectId && config.appId && config.messagingSenderId) {
-        pushDebugLog(PUSH_DEBUG_PREFIX, "Loaded Firebase web config");
-        return config;
-      }
-    } catch {
-      // try next candidate
-    }
-  }
-
-  return null;
+  return {
+    ...rawPayload,
+    data,
+    notification,
+  };
 }
-
-(async () => {
-  const config = await loadFirebaseWebConfig();
-  if (!config || !config.apiKey || !config.projectId || !config.appId || !config.messagingSenderId) {
-    return;
-  }
-
-  firebase.initializeApp(config);
-  pushDebugLog(PUSH_DEBUG_PREFIX, "Firebase messaging service worker initialized");
-  const messaging = firebase.messaging();
-
-  messaging.onBackgroundMessage(async (payload) => {
-    pushDebugLog(PUSH_DEBUG_PREFIX, "Received Firebase background message", { payload });
-    const visibleClient = await hasVisibleClientForTarget(payload);
-    if (visibleClient) {
-      // Foreground/visible tab should render the notification itself.
-      // Only relay to page, and never show service-worker notification here.
-      await notifyOpenClients(payload);
-      pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping service worker notification because app tab is visible");
-      return;
-    }
-
-    if (payload?.notification?.title || payload?.notification?.body) {
-      pushDebugLog(PUSH_DEBUG_PREFIX, "Skipping manual showNotification because payload already has notification");
-      return;
-    }
-
-    const title = payload?.data?.title || "New Notification";
-    const body = payload?.data?.body || "";
-    const image =
-      payload?.data?.image ||
-      payload?.data?.imageUrl ||
-      undefined;
-    const notificationKey = getNotificationKey(payload);
-    pushDebugLog(PUSH_DEBUG_PREFIX, "Showing service worker notification", {
-      title,
-      body,
-      image,
-      notificationKey,
-    });
-
-    self.registration.showNotification(title, {
-      body,
-      icon: "/favicon.ico",
-      image,
-      tag: notificationKey,
-      renotify: false,
-      silent: false,
-      requireInteraction: false,
-      vibrate: [200, 100, 200, 100, 300],
-      data: payload?.data || {},
-    });
-  });
-})();
 
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
+  event.waitUntil(
+    (async () => {
+      if (!event.data) return;
 
-  try {
-    const payload = event.data.json();
-    pushDebugLog(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
-    // No client relay here. onBackgroundMessage handles delivery, and relaying in both
-    // places can produce duplicate notifications in web clients.
-    event.waitUntil(Promise.resolve());
-  } catch {
-    // Ignore malformed payloads.
-  }
+      let payload = {};
+      try {
+        payload = normalizePushPayload(event.data.json());
+      } catch {
+        return;
+      }
+
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Received raw push event", { payload });
+
+      const visibleClient = await hasVisibleClientForTarget(payload);
+      if (visibleClient) {
+        await notifyOpenClients(payload);
+        return;
+      }
+
+      const title = payload?.notification?.title || payload?.data?.title || "New Notification";
+      const body = payload?.notification?.body || payload?.data?.body || "";
+      const image =
+        payload?.notification?.image ||
+        payload?.data?.image ||
+        payload?.data?.imageUrl ||
+        undefined;
+      const notificationKey = getNotificationKey(payload);
+
+      await self.registration.showNotification(title, {
+        body,
+        icon: "/favicon.ico",
+        image,
+        tag: notificationKey,
+        renotify: false,
+        silent: false,
+        requireInteraction: false,
+        vibrate: [200, 100, 200, 100, 300],
+        data: payload?.data || {},
+      });
+    })(),
+  );
+});
+
+self.addEventListener("pushsubscriptionchange", (event) => {
+  pushDebugLog(PUSH_DEBUG_PREFIX, "pushsubscriptionchange received");
+  event.waitUntil(Promise.resolve());
 });
 
 self.addEventListener("notificationclick", (event) => {
-  pushDebugLog(PUSH_DEBUG_PREFIX, "Notification click received", {
+  pushDebugLog(PUSH_DEBUG_PREFIX, "notificationclick received", {
     data: event?.notification?.data || {},
   });
   event.notification.close();
+
   const rawLink =
     event?.notification?.data?.link ||
     event?.notification?.data?.click_action ||
     event?.notification?.data?.targetUrl ||
     "/";
   const targetUrl = String(rawLink || "/").startsWith("/") ? String(rawLink || "/") : "/";
+
   event.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
-      const client = windowClients.find((c) => c.url.includes(self.location.origin));
-      if (client) {
-        client.focus();
-        return client.navigate(targetUrl);
+      const sameOriginClient = windowClients.find((client) => {
+        try {
+          const clientUrl = new URL(client.url);
+          return clientUrl.origin === self.location.origin;
+        } catch {
+          return false;
+        }
+      });
+
+      if (sameOriginClient) {
+        return sameOriginClient.focus().then(() => sameOriginClient.navigate(targetUrl));
       }
       return clients.openWindow(targetUrl);
     }),

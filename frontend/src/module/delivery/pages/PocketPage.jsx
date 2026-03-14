@@ -49,6 +49,7 @@ export default function PocketPage() {
     cashInHand: 0,
     totalWithdrawn: 0,
     totalEarned: 0,
+    totalTips: 0,
     transactions: [],
     joiningBonusClaimed: false
   })
@@ -435,9 +436,11 @@ export default function PocketPage() {
   const depositAmount = pocketBalance < 0 ? Math.abs(pocketBalance) : 0
 
   // Customer tips balance - calculate from transactions
-  const customerTipsBalance = walletState.transactions
-    ?.filter(t => t.type === 'payment' && t.description?.toLowerCase().includes('tip'))
-    .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+  const customerTipsBalance = Number(walletState?.totalTips) || (
+    walletState.transactions
+      ?.filter(t => t.type === 'tip' || (t.type === 'payment' && t.description?.toLowerCase().includes('tip')))
+      .reduce((sum, t) => sum + (t.amount || 0), 0) || 0
+  )
 
   // Payout data - calculate from completed withdrawals in previous week
   const calculatePayoutAmount = () => {
@@ -502,6 +505,7 @@ export default function PocketPage() {
           cashInHand: 0,
           totalWithdrawn: 0,
           totalEarned: 0,
+          totalTips: 0,
           transactions: [],
           joiningBonusClaimed: false
         })
@@ -1000,6 +1004,16 @@ export default function PocketPage() {
                 <span className="text-black text-sm">Available cash limit</span>
                 <div className="flex items-center gap-2">
                   <span className="text-black text-sm font-medium">₹{availableCashLimit.toFixed(2)}</span>
+                  <ArrowRight className="w-4 h-4 text-gray-600" />
+                </div>
+              </div>
+
+              <hr />
+
+              <div onClick={() => navigate("/delivery/customer-tips-balance")} className="flex items-center justify-between">
+                <span className="text-black text-sm">Tip earnings</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-black text-sm font-medium">₹{customerTipsBalance.toFixed(2)}</span>
                   <ArrowRight className="w-4 h-4 text-gray-600" />
                 </div>
               </div>

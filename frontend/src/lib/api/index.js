@@ -2004,6 +2004,22 @@ export const orderAPI = {
     return apiClient.post(API_ENDPOINTS.ORDER.VERIFY_PAYMENT, paymentData);
   },
 
+  // Create tip payment order for delivered order
+  createTipPaymentOrder: (orderId, amount) => {
+    return apiClient.post(
+      API_ENDPOINTS.ORDER.TIP_CREATE_ORDER.replace(":id", orderId),
+      { amount },
+    );
+  },
+
+  // Verify tip payment and credit delivery wallet
+  verifyTipPayment: (orderId, paymentData) => {
+    return apiClient.post(
+      API_ENDPOINTS.ORDER.TIP_VERIFY_PAYMENT.replace(":id", orderId),
+      paymentData,
+    );
+  },
+
   // Get user orders
   getOrders: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ORDER.LIST, { params });

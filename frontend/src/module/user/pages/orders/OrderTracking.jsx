@@ -34,6 +34,7 @@ import { useProfile } from "../../context/ProfileContext"
 import { useLocation as useUserLocation } from "../../hooks/useLocation"
 import DeliveryTrackingMap from "../../components/DeliveryTrackingMap"
 import { orderAPI, restaurantAPI } from "@/lib/api"
+import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import circleIcon from "@/assets/circleicon.png"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -312,6 +313,9 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
       price: item.price
     })) || previousOrder?.items || [],
     total: apiOrder?.pricing?.total || previousOrder?.total || 0,
+    baseTip: Number(apiOrder?.pricing?.tip || previousOrder?.baseTip || 0),
+    additionalTip: Number(apiOrder?.additionalTip || previousOrder?.additionalTip || 0),
+    totalTip: Number(apiOrder?.pricing?.tip || 0) + Number(apiOrder?.additionalTip || 0),
     status: apiOrder?.status || previousOrder?.status || 'pending',
     deliveryPartner: apiOrder?.deliveryPartnerId ? {
       name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
@@ -352,6 +356,9 @@ export default function OrderTracking() {
   const [showOrderDetails, setShowOrderDetails] = useState(false)
   const [cancellationReason, setCancellationReason] = useState("")
   const [isCancelling, setIsCancelling] = useState(false)
+  const [selectedTipAmount, setSelectedTipAmount] = useState(0)
+  const [customTipAmount, setCustomTipAmount] = useState("")
+  const [isTipLoading, setIsTipLoading] = useState(false)
   const [timerNow, setTimerNow] = useState(Date.now())
   const lastRealtimeRefreshRef = useRef(0)
 
@@ -897,6 +904,72 @@ export default function OrderTracking() {
     }
   }
 
+  const handleTipPayment = async (amountToPay) => {
+    const tipAmount = Math.max(0, Number(amountToPay) || 0)
+    if (!tipAmount) {
+      toast.error("Please select a valid tip amount")
+      return
+    }
+
+    setIsTipLoading(true)
+    try {
+      const tipOrderResponse = await orderAPI.createTipPaymentOrder(orderId, tipAmount)
+      const razorpay = tipOrderResponse?.data?.data?.razorpay
+      if (!razorpay?.orderId || !razorpay?.key) {
+        throw new Error("Failed to initialize tip payment")
+      }
+
+      await initRazorpayPayment({
+        key: razorpay.key,
+        amount: razorpay.amount,
+        currency: razorpay.currency || "INR",
+        order_id: razorpay.orderId,
+        name: "Quick Spicy",
+        description: `Tip for ${order?.deliveryPartner?.name || "Delivery Partner"}`,
+        prefill: {
+          name: profile?.name || profile?.fullName || "",
+          email: profile?.email || "",
+          contact: profile?.phone || "",
+        },
+        notes: {
+          orderId: order?.orderId || orderId,
+          type: "delivery_tip",
+        },
+        handler: async (response) => {
+          try {
+            await orderAPI.verifyTipPayment(orderId, {
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            })
+
+            toast.success(`Tip of ₹${tipAmount.toFixed(0)} sent successfully`)
+            setSelectedTipAmount(0)
+            setCustomTipAmount("")
+            await handleRefresh()
+          } catch (verifyError) {
+            debugError("Tip payment verify error:", verifyError)
+            toast.error(verifyError?.response?.data?.message || "Tip payment verification failed")
+          } finally {
+            setIsTipLoading(false)
+          }
+        },
+        onError: (error) => {
+          debugError("Tip payment error:", error)
+          toast.error(error?.description || "Tip payment failed")
+          setIsTipLoading(false)
+        },
+        onClose: () => {
+          setIsTipLoading(false)
+        },
+      })
+    } catch (error) {
+      debugError("Error creating tip order:", error)
+      toast.error(error?.response?.data?.message || error?.message || "Unable to initiate tip payment")
+      setIsTipLoading(false)
+    }
+  }
+
   // Loading state
   if (loading) {
     return (
@@ -1168,6 +1241,90 @@ export default function OrderTracking() {
           // Don't show card if delivery partner has accepted pickup
           return null
         })()}
+
+        {(order?.deliveryPartner || order?.deliveryPartnerId || order?.assignmentInfo?.deliveryPartnerId) && (
+          <motion.div
+            className="bg-white rounded-xl p-4 shadow-sm border border-orange-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45 }}
+          >
+            <p className="text-base font-semibold text-gray-900">
+              Thank {order?.deliveryPartner?.name || "your delivery partner"} by leaving a tip
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              Tip is collected by platform and credited to delivery partner wallet.
+            </p>
+
+            {Number(order?.totalTip || 0) > 0 && (
+              <p className="text-sm text-green-700 font-medium mt-2">
+                Total tip paid for this order: ₹{Number(order.totalTip || 0).toFixed(0)}
+              </p>
+            )}
+
+            <div className="grid grid-cols-4 gap-2 mt-3">
+              {[30, 50, 100].map((amount) => (
+                <Button
+                  key={amount}
+                  type="button"
+                  variant={selectedTipAmount === amount ? "default" : "outline"}
+                  className="h-10"
+                  disabled={isTipLoading}
+                  onClick={() => {
+                    setSelectedTipAmount(amount)
+                    setCustomTipAmount("")
+                  }}
+                >
+                  ₹{amount}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant={selectedTipAmount === -1 ? "default" : "outline"}
+                className="h-10"
+                disabled={isTipLoading}
+                onClick={() => setSelectedTipAmount(-1)}
+              >
+                Other
+              </Button>
+            </div>
+
+            {selectedTipAmount === -1 && (
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={customTipAmount}
+                onChange={(e) => setCustomTipAmount(e.target.value)}
+                placeholder="Enter tip amount"
+                className="mt-3 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:border-orange-400 focus:outline-none"
+                disabled={isTipLoading}
+              />
+            )}
+
+            <Button
+              type="button"
+              className="w-full mt-3 bg-[#EB590E] hover:bg-[#d24f0c] text-white"
+              disabled={
+                isTipLoading ||
+                !(
+                  (selectedTipAmount > 0) ||
+                  (selectedTipAmount === -1 && Number(customTipAmount) > 0)
+                )
+              }
+              onClick={() => handleTipPayment(selectedTipAmount === -1 ? Number(customTipAmount) : selectedTipAmount)}
+            >
+              {isTipLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                "Pay Tip"
+              )}
+            </Button>
+          </motion.div>
+        )}
 
         {/* Delivery Partner Safety */}
         <motion.button
@@ -1466,6 +1623,12 @@ export default function OrderTracking() {
                 <span className="text-gray-600">Taxes & Charges</span>
                 <span className="text-gray-900 font-medium">₹{order?.gst || 0}</span>
               </div>
+              {Number(order?.totalTip || 0) > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Tip Paid</span>
+                  <span className="text-gray-900 font-medium">₹{Number(order.totalTip || 0).toFixed(0)}</span>
+                </div>
+              )}
               <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
                 <span className="text-base font-bold text-gray-900">Total Amount</span>
                 <span className="text-lg font-bold text-gray-900">₹{order?.totalAmount}</span>

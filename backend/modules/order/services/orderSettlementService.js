@@ -52,6 +52,7 @@ export const calculateOrderSettlement = async (orderId) => {
       platformFee: order.pricing.platformFee || platformFee,
       gst: order.pricing.tax || 0,
       packagingFee: 0, // Can be added later if needed
+      tip: order.pricing.tip || 0,
       total: order.pricing.total || 0
     };
 
@@ -84,6 +85,7 @@ export const calculateOrderSettlement = async (orderId) => {
       distanceCommission: 0,
       surgeMultiplier: 1,
       surgeAmount: 0,
+      tipAmount: 0,
       totalEarning: 0,
       status: 'pending'
     };
@@ -97,6 +99,7 @@ export const calculateOrderSettlement = async (orderId) => {
       const baseEarning = deliveryCommission.commission;
       const surgeAmount = baseEarning * (surgeMultiplier - 1);
 
+      const tipAmount = Math.max(0, Number(userPayment.tip) || 0);
       deliveryPartnerEarning = {
         basePayout: deliveryCommission.breakdown.basePayout,
         distance: distance,
@@ -104,9 +107,14 @@ export const calculateOrderSettlement = async (orderId) => {
         distanceCommission: deliveryCommission.breakdown.distanceCommission,
         surgeMultiplier: surgeMultiplier,
         surgeAmount: surgeAmount,
-        totalEarning: baseEarning + surgeAmount,
+        tipAmount,
+        totalEarning: baseEarning + surgeAmount + tipAmount,
         status: 'pending'
       };
+    } else if (order.deliveryPartnerId) {
+      const tipAmount = Math.max(0, Number(userPayment.tip) || 0);
+      deliveryPartnerEarning.tipAmount = tipAmount;
+      deliveryPartnerEarning.totalEarning = tipAmount;
     }
 
     // Calculate admin/platform earnings
@@ -121,12 +129,13 @@ export const calculateOrderSettlement = async (orderId) => {
     const adminTotal = Math.round((adminCommission + adminPlatformFee + adminDeliveryFee + adminGST) * 100) / 100;
     
     const adminEarning = {
-      commission: adminCommission, // Restaurant commission (₹30)
-      platformFee: adminPlatformFee, // Platform fee (₹6)
-      deliveryFee: adminDeliveryFee, // Delivery fee (₹0 if free, but still tracked)
-      gst: adminGST, // GST (₹10)
-      deliveryMargin: Math.max(0, Math.round(deliveryMargin * 100) / 100), // Delivery fee - delivery partner earning
-      totalEarning: adminTotal, // Total admin earnings
+      commission: adminCommission,
+      platformFee: adminPlatformFee,
+      deliveryFee: adminDeliveryFee,
+      gst: adminGST,
+      tipsCollected: Math.round((Number(userPayment.tip) || 0) * 100) / 100,
+      deliveryMargin: Math.max(0, Math.round(deliveryMargin * 100) / 100),
+      totalEarning: adminTotal,
       status: 'pending'
     };
 
@@ -162,6 +171,7 @@ export const calculateOrderSettlement = async (orderId) => {
           basePayout: deliveryPartnerEarning.basePayout,
           commissionPerKm: deliveryPartnerEarning.commissionPerKm
         } : null,
+        tip: Number(userPayment.tip) || 0,
         calculatedAt: new Date()
       }
     };

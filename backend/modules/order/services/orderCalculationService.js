@@ -190,7 +190,8 @@ export const calculateOrderPricing = async ({
   restaurantId,
   deliveryAddress = null,
   couponCode = null,
-  deliveryFleet = 'standard'
+  deliveryFleet = 'standard',
+  tipAmount = 0
 }) => {
   try {
     // Calculate subtotal from items
@@ -333,9 +334,11 @@ export const calculateOrderPricing = async ({
     
     // Calculate GST on subtotal after discount
     const gst = await calculateGST(subtotal, discount);
+
+    const normalizedTipAmount = Math.max(0, Number(tipAmount) || 0);
     
     // Calculate total
-    const total = subtotal - discount + finalDeliveryFee + platformFee + gst;
+    const total = subtotal - discount + finalDeliveryFee + platformFee + gst + normalizedTipAmount;
     
     // Calculate savings (discount + any delivery savings)
     const savings = discount + (deliveryFee > finalDeliveryFee ? deliveryFee - finalDeliveryFee : 0);
@@ -346,6 +349,7 @@ export const calculateOrderPricing = async ({
       deliveryFee: Math.round(finalDeliveryFee),
       platformFee: Math.round(platformFee),
       tax: gst, // Already rounded in calculateGST
+      tip: Math.round(normalizedTipAmount),
       total: Math.round(total),
       savings: Math.round(savings),
       appliedCoupon: appliedCoupon ? {
@@ -360,6 +364,7 @@ export const calculateOrderPricing = async ({
         deliveryFee: Math.round(finalDeliveryFee),
         platformFee: Math.round(platformFee),
         gst: gst,
+        tip: Math.round(normalizedTipAmount),
         total: Math.round(total)
       }
     };

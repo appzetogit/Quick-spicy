@@ -130,8 +130,8 @@ export default function PocketBalancePage() {
   // Amount withdrawn = approved + pending (requested) withdrawals. Withdraw ki hui amount yahin dikhegi.
   const amountWithdrawnDisplay = (balances.totalWithdrawn || 0) + (balances.pendingWithdrawals || 0)
   
-  // Withdrawal limit from admin (min amount above which withdrawal is allowed)
-  const withdrawalLimit = Number(walletState?.deliveryWithdrawalLimit) || 100
+  // Keep minimum withdrawal for this page at 0
+  const withdrawalLimit = 0
   
   // Withdrawable amount = pocket balance (includes bonus + earnings)
   const withdrawableAmount = pocketBalance > 0 ? pocketBalance : 0

@@ -16,6 +16,7 @@ const notificationImages = {
 
 export default function PushNotification() {
   const fileInputRef = useRef(null)
+  const [scheduledDates, setScheduledDates] = useState([])
   const [formData, setFormData] = useState({
     title: "",
     zone: "All",
@@ -48,6 +49,48 @@ export default function PushNotification() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const buildScheduleIsoList = () => {
+    const list = [...scheduledDates]
+    if (formData.scheduleDate && formData.scheduleTime) {
+      list.push(`${formData.scheduleDate}T${formData.scheduleTime}`)
+    }
+
+    return [...new Set(list
+      .map((value) => new Date(value))
+      .filter((value) => !Number.isNaN(value.getTime()))
+      .map((value) => value.toISOString()))]
+      .sort()
+  }
+
+  const handleAddScheduleDate = () => {
+    if (!formData.scheduleDate || !formData.scheduleTime) {
+      toast.error("Select date and time first")
+      return
+    }
+
+    const isoValue = new Date(`${formData.scheduleDate}T${formData.scheduleTime}`)
+    if (Number.isNaN(isoValue.getTime())) {
+      toast.error("Invalid date/time")
+      return
+    }
+
+    if (isoValue <= new Date()) {
+      toast.error("Scheduled date/time must be in the future")
+      return
+    }
+
+    setScheduledDates((prev) => {
+      const next = new Set(prev)
+      next.add(isoValue.toISOString())
+      return [...next].sort()
+    })
+    setFormData((prev) => ({ ...prev, scheduleDate: "", scheduleTime: "" }))
+  }
+
+  const handleRemoveScheduleDate = (isoToRemove) => {
+    setScheduledDates((prev) => prev.filter((iso) => iso !== isoToRemove))
+  }
+
   const resolveTarget = (sendTo) => {
     const normalized = String(sendTo || "").trim().toLowerCase()
     if (normalized === "customer") return "customer"
@@ -63,19 +106,16 @@ export default function PushNotification() {
       return
     }
 
+    const scheduleIsoList = buildScheduleIsoList()
+
     if (formData.sendMode === "schedule") {
-      if (!formData.scheduleDate || !formData.scheduleTime) {
-        toast.error("Select scheduled date and time")
+      if (scheduleIsoList.length === 0) {
+        toast.error("Add at least one scheduled date/time")
         return
       }
 
-      const scheduledDate = new Date(`${formData.scheduleDate}T${formData.scheduleTime}`)
-      if (Number.isNaN(scheduledDate.getTime())) {
-        toast.error("Invalid scheduled date/time")
-        return
-      }
-
-      if (scheduledDate <= new Date()) {
+      const hasPastDate = scheduleIsoList.some((iso) => new Date(iso) <= new Date())
+      if (hasPastDate) {
         toast.error("Scheduled date/time must be in the future")
         return
       }
@@ -113,7 +153,7 @@ export default function PushNotification() {
         ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
         ...(formData.sendMode === "schedule"
           ? {
-            scheduleAt: new Date(`${formData.scheduleDate}T${formData.scheduleTime}`).toISOString(),
+            scheduleAtList: scheduleIsoList,
           }
           : {}),
       }
@@ -125,10 +165,8 @@ export default function PushNotification() {
       const failedCount = Number(data.failedCount || 0)
 
       if (formData.sendMode === "schedule") {
-        const scheduleLabel = data.scheduleAt
-          ? new Date(data.scheduleAt).toLocaleString()
-          : `${formData.scheduleDate} ${formData.scheduleTime}`
-        toast.success(`Notification scheduled for ${scheduleLabel}`)
+        const count = Number(data.scheduledCount || scheduleIsoList.length || 1)
+        toast.success(`Notification scheduled for ${count} date${count > 1 ? "s" : ""}`)
       } else if (sentCount > 0) {
         toast.success(`Notification sent to ${sentCount} device(s)${failedCount ? `, failed: ${failedCount}` : ""}`)
       } else if (failedCount > 0) {
@@ -155,23 +193,33 @@ export default function PushNotification() {
         ? Math.max(...notifications.map((n) => Number(n.sl) || 0)) + 1
         : 1
 
-    const newNotification = {
-      sl: nextSl,
-      title: formData.title.trim(),
-      description: formData.description.trim(),
-      zone: formData.zone,
-      target: formData.sendTo,
-      status: true,
-      image: Boolean(resolvedImageUrlForUi || bannerPreview),
-      imageUrl: resolvedImageUrlForUi || bannerPreview || null,
-      sendMode: formData.sendMode,
-      scheduledAt:
-        formData.sendMode === "schedule"
-          ? new Date(`${formData.scheduleDate}T${formData.scheduleTime}`).toISOString()
-          : null,
-    }
+    const newNotificationRows = formData.sendMode === "schedule"
+      ? scheduleIsoList.map((iso, index) => ({
+        sl: nextSl + index,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        zone: formData.zone,
+        target: formData.sendTo,
+        status: true,
+        image: Boolean(resolvedImageUrlForUi || bannerPreview),
+        imageUrl: resolvedImageUrlForUi || bannerPreview || null,
+        sendMode: formData.sendMode,
+        scheduledAt: iso,
+      }))
+      : [{
+        sl: nextSl,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
+        zone: formData.zone,
+        target: formData.sendTo,
+        status: true,
+        image: Boolean(resolvedImageUrlForUi || bannerPreview),
+        imageUrl: resolvedImageUrlForUi || bannerPreview || null,
+        sendMode: formData.sendMode,
+        scheduledAt: null,
+      }]
 
-    setNotifications((prev) => [newNotification, ...prev])
+    setNotifications((prev) => [...newNotificationRows, ...prev])
     handleReset()
     setIsSending(false)
   }
@@ -189,6 +237,7 @@ export default function PushNotification() {
     })
     setBannerPreview("")
     setBannerFile(null)
+    setScheduledDates([])
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -326,15 +375,55 @@ export default function PushNotification() {
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
                   Schedule Time
                 </label>
-                <input
-                  type="time"
-                  value={formData.scheduleTime}
-                  onChange={(e) => handleInputChange("scheduleTime", e.target.value)}
-                  disabled={formData.sendMode !== "schedule"}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="time"
+                    value={formData.scheduleTime}
+                    onChange={(e) => handleInputChange("scheduleTime", e.target.value)}
+                    disabled={formData.sendMode !== "schedule"}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white disabled:bg-slate-100 disabled:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddScheduleDate}
+                    disabled={formData.sendMode !== "schedule"}
+                    className="px-3 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
+                  >
+                    Add
+                  </button>
+                </div>
               </div>
             </div>
+
+            {formData.sendMode === "schedule" && (
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Scheduled Dates
+                </label>
+                {scheduledDates.length === 0 ? (
+                  <p className="text-xs text-slate-500">No dates added yet</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {scheduledDates.map((iso) => (
+                      <div
+                        key={iso}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-300 bg-slate-50 text-slate-700 text-xs"
+                      >
+                        <span>{new Date(iso).toLocaleString()}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveScheduleDate(iso)}
+                          className="text-slate-500 hover:text-red-600"
+                          aria-label="Remove scheduled date"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Notification Banner Upload */}
             <div className="mb-6">

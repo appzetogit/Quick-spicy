@@ -44,6 +44,7 @@ const orderSettlementSchema = new mongoose.Schema({
     platformFee: { type: Number, default: 0, min: 0 },
     gst: { type: Number, default: 0, min: 0 },
     packagingFee: { type: Number, default: 0, min: 0 },
+    tip: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 }
   },
   
@@ -69,6 +70,7 @@ const orderSettlementSchema = new mongoose.Schema({
     distanceCommission: { type: Number, default: 0, min: 0 },
     surgeMultiplier: { type: Number, default: 1, min: 1 },
     surgeAmount: { type: Number, default: 0, min: 0 },
+    tipAmount: { type: Number, default: 0, min: 0 },
     totalEarning: { type: Number, default: 0, min: 0 },
     status: {
       type: String,
@@ -84,6 +86,7 @@ const orderSettlementSchema = new mongoose.Schema({
     platformFee: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, required: true, min: 0 },
     gst: { type: Number, required: true, min: 0 },
+    tipsCollected: { type: Number, default: 0, min: 0 }, // passthrough amount credited to delivery wallet
     deliveryMargin: { type: Number, default: 0, min: 0 }, // deliveryFee - deliveryPartnerEarning
     totalEarning: { type: Number, required: true, min: 0 },
     status: {

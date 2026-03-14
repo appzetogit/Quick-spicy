@@ -108,6 +108,7 @@ export default function Cart() {
   const [showFleetOptions, setShowFleetOptions] = useState(false)
   const [note, setNote] = useState("")
   const [showNoteInput, setShowNoteInput] = useState(false)
+  const [tipAmount, setTipAmount] = useState(0)
 
   const handleShare = async () => {
     try {
@@ -621,7 +622,8 @@ export default function Cart() {
           restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
           deliveryAddress: defaultAddress,
           couponCode: appliedCoupon?.code || couponCode || null,
-          deliveryFleet: deliveryFleet || 'standard'
+          deliveryFleet: deliveryFleet || 'standard',
+          tipAmount
         })
 
         if (response?.data?.success && response?.data?.data?.pricing) {
@@ -648,7 +650,7 @@ export default function Cart() {
     }
 
     calculatePricing()
-  }, [cart, defaultAddress, appliedCoupon, couponCode, deliveryFleet, restaurantId, feeSettings])
+  }, [cart, defaultAddress, appliedCoupon, couponCode, deliveryFleet, restaurantId, feeSettings, tipAmount])
 
   // Fetch wallet balance
   useEffect(() => {
@@ -763,8 +765,9 @@ export default function Cart() {
     : null
   const platformFee = pricing?.platformFee || feeSettings.platformFee
   const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
+  const tip = pricing?.tip ?? tipAmount
   const discount = pricing?.discount || (appliedCoupon ? Math.min(appliedCoupon.discount, subtotal * 0.5) : 0)
-  const totalBeforeDiscount = subtotal + deliveryFee + platformFee + gstCharges
+  const totalBeforeDiscount = subtotal + deliveryFee + platformFee + gstCharges + tip
   const total = pricing?.total || (totalBeforeDiscount - discount)
   const savings = pricing?.savings || (discount + (subtotal > 500 ? 32 : 0))
   const selectedPaymentLabel =
@@ -879,7 +882,8 @@ export default function Cart() {
             restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
             deliveryAddress: defaultAddress,
             couponCode: coupon.code,
-            deliveryFleet: deliveryFleet || 'standard'
+            deliveryFleet: deliveryFleet || 'standard',
+            tipAmount
           })
 
           if (response?.data?.success && response?.data?.data?.pricing) {
@@ -930,7 +934,8 @@ export default function Cart() {
         restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
         deliveryAddress: defaultAddress,
         couponCode: inputCode,
-        deliveryFleet: deliveryFleet || 'standard'
+        deliveryFleet: deliveryFleet || 'standard',
+        tipAmount
       })
 
       const pricingData = response?.data?.data?.pricing
@@ -987,7 +992,8 @@ export default function Cart() {
           restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
           deliveryAddress: defaultAddress,
           couponCode: null,
-          deliveryFleet: deliveryFleet || 'standard'
+          deliveryFleet: deliveryFleet || 'standard',
+          tipAmount
         })
 
         if (response?.data?.success && response?.data?.data?.pricing) {
@@ -1028,6 +1034,7 @@ export default function Cart() {
         deliveryFee,
         tax: gstCharges,
         platformFee,
+        tip,
         discount,
         total,
         couponCode: appliedCoupon?.code || null
@@ -1037,6 +1044,7 @@ export default function Cart() {
       if (!orderPricing.couponCode && appliedCoupon?.code) {
         orderPricing.couponCode = appliedCoupon.code;
       }
+      orderPricing.tip = Number(orderPricing.tip ?? tip ?? 0) || 0;
 
       // Include all cart items (main items + addons)
       // Note: Addons are added as separate cart items when user clicks the + button
@@ -1223,6 +1231,7 @@ export default function Cart() {
         restaurantName: finalRestaurantName,
         pricing: orderPricing,
         deliveryFleet: deliveryFleet || 'standard',
+        tipAmount,
         note: note || "",
         sendCutlery: sendCutlery !== false,
         paymentMethod: selectedPaymentMethod,
@@ -1986,6 +1995,26 @@ export default function Cart() {
                   <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                 </button>
 
+                <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700">
+                  <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200 mb-2">Tip your delivery partner</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[0, 10, 20, 50].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => setTipAmount(value)}
+                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                          Number(tipAmount) === value
+                            ? "bg-[#EB590E] text-white border-[#EB590E]"
+                            : "bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
+                        }`}
+                      >
+                        {value === 0 ? "No tip" : `${RUPEE_SYMBOL}${value}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {showBillDetails && (
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700 space-y-2 md:space-y-3">
                     <div className="flex justify-between text-sm md:text-base">
@@ -2010,6 +2039,10 @@ export default function Cart() {
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST and Restaurant Charges</span>
                       <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
+                    </div>
+                    <div className="flex justify-between text-sm md:text-base">
+                      <span className="text-gray-600 dark:text-gray-400">Tip</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(0)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
@@ -2056,6 +2089,10 @@ export default function Cart() {
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">GST</span>
                       <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
+                    </div>
+                    <div className="flex justify-between text-sm md:text-base">
+                      <span className="text-gray-600 dark:text-gray-400">Tip</span>
+                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(0)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">

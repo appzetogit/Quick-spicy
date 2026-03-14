@@ -16,6 +16,7 @@ import etaCalculationService from '../services/etaCalculationService.js';
 import etaWebSocketService from '../services/etaWebSocketService.js';
 import OrderEvent from '../models/OrderEvent.js';
 import UserWallet from '../../user/models/UserWallet.js';
+import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -149,7 +150,8 @@ export const createOrder = async (req, res) => {
       deliveryFleet,
       note,
       sendCutlery,
-      paymentMethod: bodyPaymentMethod
+      paymentMethod: bodyPaymentMethod,
+      tipAmount: bodyTipAmount
     } = req.body;
     // Support both camelCase and snake_case from client
     const paymentMethod = bodyPaymentMethod ?? req.body.payment_method;
@@ -392,12 +394,17 @@ export const createOrder = async (req, res) => {
     const dropOtpExpiresAt = new Date(Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
 
     const couponCode = pricing?.couponCode || pricing?.appliedCoupon?.code || null;
+    const tipAmount = Math.max(
+      0,
+      Number(bodyTipAmount ?? pricing?.tipAmount ?? pricing?.tip ?? 0) || 0
+    );
     const authoritativePricing = await calculateOrderPricing({
       items,
       restaurantId: assignedRestaurantId,
       deliveryAddress: address,
       couponCode,
-      deliveryFleet: deliveryFleet || 'standard'
+      deliveryFleet: deliveryFleet || 'standard',
+      tipAmount
     });
 
     if (!authoritativePricing || !authoritativePricing.total) {
@@ -1088,6 +1095,296 @@ export const verifyOrderPayment = async (req, res) => {
 };
 
 /**
+ * Create Razorpay order for post-delivery tip payment
+ * POST /api/order/:id/tip/create-order
+ */
+export const createOrderTipPayment = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const tipAmount = Math.max(0, Number(req.body?.amount) || 0);
+
+    if (!tipAmount || tipAmount < 1) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tip amount must be at least 1'
+      });
+    }
+
+    let order = null;
+    if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+      order = await Order.findOne({ _id: id, userId });
+    }
+    if (!order) {
+      order = await Order.findOne({ orderId: id, userId });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.deliveryPartnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery partner not assigned for this order'
+      });
+    }
+
+    const receipt = `TIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`.slice(0, 40);
+    const razorpayOrder = await createRazorpayOrder({
+      amount: Math.round(tipAmount * 100),
+      currency: 'INR',
+      receipt,
+      notes: {
+        type: 'delivery_tip',
+        orderId: order.orderId,
+        orderMongoId: order._id.toString(),
+        userId: String(userId),
+        deliveryPartnerId: String(order.deliveryPartnerId),
+        tipAmount: String(tipAmount)
+      }
+    });
+
+    order.tipPayments = Array.isArray(order.tipPayments) ? order.tipPayments : [];
+    order.tipPayments.push({
+      amount: tipAmount,
+      status: 'pending',
+      razorpayOrderId: razorpayOrder.id
+    });
+    await order.save();
+
+    let razorpayKeyId = null;
+    try {
+      const credentials = await getRazorpayCredentials();
+      razorpayKeyId = credentials.keyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
+    } catch (error) {
+      logger.warn(`Failed to get Razorpay key ID for tip payment: ${error.message}`);
+      razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
+    }
+
+    return res.status(201).json({
+      success: true,
+      data: {
+        orderId: order.orderId,
+        tipAmount,
+        razorpay: {
+          orderId: razorpayOrder.id,
+          amount: razorpayOrder.amount,
+          currency: razorpayOrder.currency,
+          key: razorpayKeyId
+        }
+      }
+    });
+  } catch (error) {
+    logger.error(`Error creating tip payment order: ${error.message}`, {
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to initiate tip payment'
+    });
+  }
+};
+
+/**
+ * Verify post-delivery tip payment and credit delivery wallet
+ * POST /api/order/:id/tip/verify-payment
+ */
+export const verifyOrderTipPayment = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { id } = req.params;
+    const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body || {};
+
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required payment verification fields'
+      });
+    }
+
+    let order = null;
+    if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+      order = await Order.findOne({ _id: id, userId });
+    }
+    if (!order) {
+      order = await Order.findOne({ orderId: id, userId });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    if (!order.deliveryPartnerId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Delivery partner not found for this order'
+      });
+    }
+
+    const existingPayment = await Payment.findOne({
+      orderId: order._id,
+      transactionId: razorpayPaymentId,
+      method: 'razorpay',
+      status: 'completed',
+      'razorpay.paymentId': razorpayPaymentId
+    });
+
+    if (existingPayment) {
+      return res.json({
+        success: true,
+        message: 'Tip payment already processed',
+        data: {
+          orderId: order.orderId,
+          paymentId: existingPayment.paymentId
+        }
+      });
+    }
+
+    const isValid = await verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
+    if (!isValid) {
+      const tipEntry = (order.tipPayments || []).find(t => t.razorpayOrderId === razorpayOrderId);
+      if (tipEntry) {
+        tipEntry.status = 'failed';
+        await order.save();
+      }
+
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment signature'
+      });
+    }
+
+    const tipEntry = (order.tipPayments || []).find(t => t.razorpayOrderId === razorpayOrderId);
+    if (!tipEntry) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tip payment session not found'
+      });
+    }
+
+    if (tipEntry.status === 'completed') {
+      return res.json({
+        success: true,
+        message: 'Tip payment already processed',
+        data: {
+          orderId: order.orderId
+        }
+      });
+    }
+
+    const tipAmount = Math.max(0, Number(tipEntry.amount) || 0);
+    if (!tipAmount) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tip amount'
+      });
+    }
+
+    const payment = new Payment({
+      paymentId: `TIP-PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      orderId: order._id,
+      userId,
+      amount: tipAmount,
+      currency: 'INR',
+      method: 'razorpay',
+      status: 'completed',
+      razorpay: {
+        orderId: razorpayOrderId,
+        paymentId: razorpayPaymentId,
+        signature: razorpaySignature,
+        notes: {
+          type: 'delivery_tip',
+          orderId: order.orderId
+        }
+      },
+      transactionId: razorpayPaymentId,
+      completedAt: new Date(),
+      logs: [{
+        action: 'completed',
+        timestamp: new Date(),
+        details: {
+          type: 'delivery_tip',
+          orderId: order.orderId,
+          razorpayOrderId,
+          razorpayPaymentId
+        },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
+      }]
+    });
+    await payment.save();
+
+    const wallet = await DeliveryWallet.findOrCreateByDeliveryId(order.deliveryPartnerId);
+    wallet.addTransaction({
+      amount: tipAmount,
+      type: 'tip',
+      status: 'Completed',
+      description: `Customer tip for order ${order.orderId}`,
+      orderId: order._id,
+      paymentMethod: 'upi',
+      paymentCollected: false,
+      metadata: {
+        source: 'post_delivery_tip',
+        razorpayOrderId,
+        razorpayPaymentId,
+        paymentRecordId: payment._id.toString()
+      },
+      processedAt: new Date()
+    });
+    await wallet.save();
+
+    tipEntry.status = 'completed';
+    tipEntry.razorpayPaymentId = razorpayPaymentId;
+    tipEntry.razorpaySignature = razorpaySignature;
+    tipEntry.paymentRecordId = payment._id;
+    tipEntry.paidAt = new Date();
+    order.additionalTip = Math.max(0, Number(order.additionalTip) || 0) + tipAmount;
+    await order.save();
+
+    logger.info(`Order tip payment verified: ${order.orderId}`, {
+      orderId: order.orderId,
+      tipAmount,
+      razorpayPaymentId,
+      deliveryPartnerId: String(order.deliveryPartnerId)
+    });
+
+    return res.json({
+      success: true,
+      data: {
+        order: {
+          id: order._id.toString(),
+          orderId: order.orderId,
+          additionalTip: order.additionalTip
+        },
+        payment: {
+          id: payment._id.toString(),
+          paymentId: payment.paymentId,
+          status: payment.status,
+          amount: tipAmount
+        }
+      }
+    });
+  } catch (error) {
+    logger.error(`Error verifying tip payment: ${error.message}`, {
+      error: error.message,
+      stack: error.stack
+    });
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to verify tip payment'
+    });
+  }
+};
+
+/**
  * Get user orders
  */
 export const getUserOrders = async (req, res) => {
@@ -1356,7 +1653,7 @@ export const cancelOrder = async (req, res) => {
  */
 export const calculateOrder = async (req, res) => {
   try {
-    const { items, restaurantId, deliveryAddress, couponCode, deliveryFleet } = req.body;
+    const { items, restaurantId, deliveryAddress, couponCode, deliveryFleet, tipAmount } = req.body;
 
     // Validate required fields
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -1372,7 +1669,8 @@ export const calculateOrder = async (req, res) => {
       restaurantId,
       deliveryAddress,
       couponCode,
-      deliveryFleet: deliveryFleet || 'standard'
+      deliveryFleet: deliveryFleet || 'standard',
+      tipAmount: Math.max(0, Number(tipAmount) || 0)
     });
 
     res.json({

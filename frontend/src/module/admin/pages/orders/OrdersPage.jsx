@@ -56,6 +56,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const socketRef = useRef(null)
   const recentRealtimeOrderRef = useRef(new Map())
   const activeOrderAlertRef = useRef(null)
+  const latestSeenOrderMarkerRef = useRef("")
   const alertLoopTimerRef = useRef(null)
   const alertLoopStartedAtRef = useRef(0)
   const ALERT_LOOP_INTERVAL_MS = 4500
@@ -318,6 +319,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       const params = {
         page: 1,
         limit: 1000,
+        _t: Date.now(),
         status:
           statusKey === "all"
             ? undefined
@@ -331,6 +333,13 @@ export default function OrdersPage({ statusKey = "all" }) {
 
       if (response.data?.success && response.data?.data?.orders) {
         const nextOrders = response.data.data.orders
+        const newestOrder = [...nextOrders]
+          .filter((order) => order?.createdAt)
+          .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
+        const newestOrderMarker = newestOrder
+          ? `${newestOrder.id || newestOrder._id || newestOrder.orderId || "unknown"}:${newestOrder.createdAt || ""}`
+          : ""
+
         const nextOrderIds = new Set(
           nextOrders
             .map((order) => order.id || order._id || order.orderId)
@@ -341,7 +350,11 @@ export default function OrdersPage({ statusKey = "all" }) {
           const hasNewOrder = [...nextOrderIds].some(
             (id) => !seenOrderIdsRef.current.has(id),
           )
-          if (hasNewOrder) {
+          const hasNewerTopOrder =
+            !!newestOrderMarker &&
+            newestOrderMarker !== latestSeenOrderMarkerRef.current
+
+          if (hasNewOrder || hasNewerTopOrder) {
             activeOrderAlertRef.current = { orderId: "polling-new-order" }
             playDefaultRing()
             startAlertLoop()
@@ -356,6 +369,7 @@ export default function OrdersPage({ statusKey = "all" }) {
           }
         }
 
+        latestSeenOrderMarkerRef.current = newestOrderMarker
         seenOrderIdsRef.current = nextOrderIds
         isFirstLoadRef.current = false
         setOrders(nextOrders)
@@ -378,6 +392,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   useEffect(() => {
     isFirstLoadRef.current = true
     seenOrderIdsRef.current = new Set()
+    latestSeenOrderMarkerRef.current = ""
     fetchOrders({ silent: false, withRingCheck: false })
   }, [fetchOrders])
 
@@ -431,17 +446,28 @@ export default function OrdersPage({ statusKey = "all" }) {
   }
 
   useEffect(() => {
+    const pollIntervalMs = statusKey === "all" ? 1200 : 5000
+
     const pollId = setInterval(() => {
       fetchOrders({ silent: true, withRingCheck: statusKey === "all" })
-    }, 5000)
+    }, pollIntervalMs)
 
     return () => clearInterval(pollId)
   }, [statusKey, fetchOrders])
 
   useEffect(() => {
-    const backendUrl = API_BASE_URL.replace(/\/api\/?$/, "")
+    let backendUrl = API_BASE_URL.replace(/\/api\/?$/, "")
+    try {
+      const parsed = new URL(API_BASE_URL, window.location.origin)
+      const normalizedPath = parsed.pathname.replace(/\/api(?:\/.*)?$/i, "")
+      backendUrl = `${parsed.origin}${normalizedPath}`.replace(/\/$/, "")
+    } catch (_) {}
+
     const socket = io(backendUrl, {
-      transports: ["websocket", "polling"],
+      path: "/socket.io/",
+      transports: ["polling", "websocket"],
+      upgrade: true,
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

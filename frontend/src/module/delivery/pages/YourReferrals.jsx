@@ -3,12 +3,56 @@ import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { ArrowLeft, Headphones, ArrowRight, Phone } from "lucide-react"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
 const STORAGE_KEY = "appzeto_food_referrals"
+const DEFAULT_DELIVERY_APP_LINK = "/delivery/sign-in"
+
+const toWhatsAppRecipient = (value = "") => {
+  const digits = String(value).replace(/\D/g, "")
+  if (!digits) return ""
+  if (digits.length === 10) return `91${digits}`
+  return digits
+}
+
+const getDeliveryReferrerCode = () => {
+  try {
+    const raw = localStorage.getItem("delivery_user")
+    const user = raw ? JSON.parse(raw) : null
+    if (!user) return "DPREF"
+
+    if (user.referralCode && String(user.referralCode).trim()) {
+      return String(user.referralCode).trim().toUpperCase()
+    }
+
+    const source =
+      user.phone ||
+      user.mobile ||
+      user.phoneNumber ||
+      user._id ||
+      user.id ||
+      user.userId ||
+      ""
+    const normalized = String(source).replace(/[^a-zA-Z0-9]/g, "").toUpperCase()
+    if (!normalized) return "DPREF"
+    return `DP${normalized.slice(-6)}`
+  } catch (error) {
+    return "DPREF"
+  }
+}
+
+const getDeliveryAppLink = () => {
+  const envLink = import.meta.env?.VITE_DELIVERY_PARTNER_APP_LINK
+  if (envLink && String(envLink).trim()) return String(envLink).trim()
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return `${window.location.origin}${DEFAULT_DELIVERY_APP_LINK}`
+  }
+  return DEFAULT_DELIVERY_APP_LINK
+}
 
 export default function YourReferrals() {
   const navigate = useNavigate()
@@ -61,9 +105,22 @@ export default function YourReferrals() {
   }
 
   const handleWhatsApp = async (mobile, name) => {
+    const recipient = toWhatsAppRecipient(mobile)
+    if (!recipient) {
+      toast.error("Invalid mobile number for WhatsApp")
+      return
+    }
+
     const companyName = await getCompanyNameAsync()
-    const message = `Hey ${name}! Join ${companyName} as a delivery partner and earn together!`
-    const whatsappUrl = `https://wa.me/${mobile}?text=${encodeURIComponent(message)}`
+    const referralCode = getDeliveryReferrerCode()
+    const appLink = getDeliveryAppLink()
+    const linkWithReferral = `${appLink}${appLink.includes("?") ? "&" : "?"}ref=${encodeURIComponent(referralCode)}`
+    const message = [
+      `Hey ${name}! Join ${companyName} as a delivery partner and earn together!`,
+      `Referral code: ${referralCode}`,
+      `Download app: ${linkWithReferral}`
+    ].join("\n")
+    const whatsappUrl = `https://wa.me/${recipient}?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, '_blank')
   }
 

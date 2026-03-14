@@ -40,7 +40,8 @@ export const getWallet = asyncHandler(async (req, res) => {
         totalBalance: 0,
         cashInHand: 0,
         totalWithdrawn: 0,
-        totalEarned: 0
+        totalEarned: 0,
+        totalTips: 0
       });
     }
 
@@ -170,6 +171,7 @@ export const getWallet = asyncHandler(async (req, res) => {
       cashInHand: cashInHandForLimit,
       totalWithdrawn: wallet.totalWithdrawn || 0,
       totalEarned: wallet.totalEarned || 0,
+      totalTips: wallet.totalTips || 0,
       totalCashLimit: totalCashLimit,
       availableCashLimit: Math.max(0, totalCashLimit - cashInHandForLimit),
       deliveryWithdrawalLimit: withdrawalLimit,
@@ -312,9 +314,20 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
     const { amount, paymentMethod, bankDetails, upiId } = req.body;
+    const resolvedUpiId = paymentMethod === 'upi'
+      ? String(upiId || delivery.upiId || '').trim().toLowerCase()
+      : upiId;
+
+    if (paymentMethod === 'upi' && !resolvedUpiId) {
+      return errorResponse(res, 400, 'UPI ID is required for UPI withdrawal');
+    }
 
     // Validation
-    const { error: validationError } = createWithdrawalSchema.validate(req.body);
+    const payloadForValidation = {
+      ...req.body,
+      upiId: resolvedUpiId
+    };
+    const { error: validationError } = createWithdrawalSchema.validate(payloadForValidation);
     if (validationError) {
       return errorResponse(res, 400, validationError.details[0].message);
     }
@@ -322,13 +335,8 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
     // Find or create wallet
     let wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
 
-    // Check minimum withdrawal amount (from BusinessSettings)
-    let minWithdrawalAmount = 100;
-    try {
-      const settings = await BusinessSettings.getSettings();
-      const wl = Number(settings?.deliveryWithdrawalLimit);
-      if (Number.isFinite(wl) && wl >= 0) minWithdrawalAmount = wl;
-    } catch (e) { /* keep default */ }
+    // Keep minimum withdrawal amount at 0
+    const minWithdrawalAmount = 0;
     if (amount < minWithdrawalAmount) {
       return errorResponse(res, 400, `Minimum withdrawal amount is ₹${minWithdrawalAmount}`);
     }
@@ -349,7 +357,7 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
       paymentMethod: paymentMethod,
       metadata: {
         bankDetails: bankDetails || null,
-        upiId: upiId || null
+        upiId: resolvedUpiId || null
       }
     });
 
@@ -373,7 +381,7 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
       status: 'Pending',
       paymentMethod,
       bankDetails: paymentMethod === 'bank_transfer' ? bankDetails : undefined,
-      upiId: paymentMethod === 'upi' ? upiId : undefined,
+      upiId: paymentMethod === 'upi' ? resolvedUpiId : undefined,
       transactionId,
       walletId: wallet._id,
       deliveryName,
@@ -699,7 +707,7 @@ export const getWalletStats = asyncHandler(async (req, res) => {
 
     // Calculate statistics
     const earnings = periodTransactions
-      .filter(t => (t.type === 'payment' || t.type === 'bonus') && t.status === 'Completed')
+      .filter(t => (t.type === 'payment' || t.type === 'tip' || t.type === 'bonus') && t.status === 'Completed')
       .reduce((sum, t) => sum + t.amount, 0);
 
     const withdrawals = periodTransactions
