@@ -75,11 +75,12 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
       }
     }
 
+    const baseDeliveryFee = feeSettings.deliveryFee || 25;
     return {
-      fee: 0,
+      fee: round2(baseDeliveryFee),
       breakdown: {
-        source: 'range',
-        total: 0
+        source: 'base',
+        total: round2(baseDeliveryFee)
       }
     };
   }
