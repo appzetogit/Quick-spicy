@@ -3,9 +3,8 @@ import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown, ChevronL
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugWarn = () => {}
+const debugError = () => {}
 
 
 const createFoodForm = () => ({
@@ -24,6 +23,7 @@ export default function FoodsList() {
   const CUSTOM_CATEGORY_VALUE = "__custom_category__"
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRestaurant, setSelectedRestaurant] = useState("all")
+  const [selectedCategory, setSelectedCategory] = useState("all")
   const [foods, setFoods] = useState([])
   const [restaurantsForFilter, setRestaurantsForFilter] = useState([])
   const [loading, setLoading] = useState(true)
@@ -234,9 +234,14 @@ export default function FoodsList() {
       result = result.filter((food) => String(food.restaurantId) === selectedRestaurant)
     }
 
+    if (selectedCategory !== "all") {
+      const normalizedCategory = selectedCategory.toLowerCase()
+      result = result.filter((food) => String(food.sectionName || "").trim().toLowerCase() === normalizedCategory)
+    }
+
     result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
     return result
-  }, [foods, searchQuery, selectedRestaurant])
+  }, [foods, searchQuery, selectedRestaurant, selectedCategory])
 
   const totalPages = useMemo(() => {
     if (filteredFoods.length === 0) return 1
@@ -250,7 +255,7 @@ export default function FoodsList() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedRestaurant, pageSize])
+  }, [searchQuery, selectedRestaurant, selectedCategory, pageSize])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -261,6 +266,36 @@ export default function FoodsList() {
   const restaurantOptions = useMemo(() => {
     return restaurantsForFilter
   }, [restaurantsForFilter])
+
+  const categoryFilterOptions = useMemo(() => {
+    const uniqueCategories = new Map()
+
+    foods.forEach((food) => {
+      if (selectedRestaurant !== "all" && String(food.restaurantId) !== selectedRestaurant) return
+
+      const categoryName = String(food.sectionName || "").trim()
+      if (!categoryName) return
+
+      const normalizedName = categoryName.toLowerCase()
+      if (!uniqueCategories.has(normalizedName)) {
+        uniqueCategories.set(normalizedName, categoryName)
+      }
+    })
+
+    return Array.from(uniqueCategories.values()).sort((a, b) => a.localeCompare(b))
+  }, [foods, selectedRestaurant])
+
+  useEffect(() => {
+    if (selectedCategory === "all") return
+
+    const hasSelectedCategory = categoryFilterOptions.some(
+      (category) => category.toLowerCase() === selectedCategory.toLowerCase()
+    )
+
+    if (!hasSelectedCategory) {
+      setSelectedCategory("all")
+    }
+  }, [categoryFilterOptions, selectedCategory])
 
   const openAddFoodModal = () => {
     setFoodFormMode("add")
@@ -340,7 +375,7 @@ export default function FoodsList() {
         if (!cancelled) {
           setCategoryOptions(mergedOptions)
         }
-      } catch (error) {
+      } catch {
         if (!cancelled) {
           setCategoryOptions([])
         }
@@ -633,6 +668,18 @@ export default function FoodsList() {
                 </option>
               ))}
             </select>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2.5 min-w-[200px] text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+            >
+              <option value="all">All Categories</option>
+              {categoryFilterOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
@@ -678,7 +725,7 @@ export default function FoodsList() {
                   <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-                      <p className="text-sm text-slate-500">No food items match your search or restaurant filter</p>
+                      <p className="text-sm text-slate-500">No food items match your search, restaurant, or category filter</p>
                     </div>
                   </td>
                 </tr>

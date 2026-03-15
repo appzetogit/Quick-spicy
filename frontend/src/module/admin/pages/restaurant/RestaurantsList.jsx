@@ -11,9 +11,9 @@ import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailabil
 import locationIcon from "../../assets/Dashboard-icons/image1.png"
 import restaurantIcon from "../../assets/Dashboard-icons/image2.png"
 import inactiveIcon from "../../assets/Dashboard-icons/image3.png"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugWarn = () => {}
+const debugError = () => {}
 
 
 export default function RestaurantsList() {
@@ -40,6 +40,7 @@ export default function RestaurantsList() {
     primaryContactNumber: "",
     email: "",
     cuisinesText: "",
+    foodPreference: "both",
     estimatedDeliveryTime: "",
     offer: "",
     openingTime: "",
@@ -122,7 +123,7 @@ export default function RestaurantsList() {
         try {
           // Try admin API first
           response = await adminAPI.getRestaurants()
-        } catch (adminErr) {
+        } catch {
           // Fallback to regular restaurant API if admin endpoint doesn't exist
           debugLog("Admin restaurants endpoint not available, using fallback")
           response = await restaurantAPI.getRestaurants()
@@ -142,6 +143,7 @@ export default function RestaurantsList() {
             cuisine: Array.isArray(restaurant.cuisines) && restaurant.cuisines.length > 0
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),
+            foodPreference: restaurant.foodPreference || restaurant.onboarding?.step2?.foodPreference || "both",
             status: restaurant.isActive !== false, // Default to true if not set
             rating: restaurant.ratings?.average || restaurant.rating || 0,
             logo: restaurant.profileImage?.url || restaurant.logo || "https://via.placeholder.com/40",
@@ -175,7 +177,7 @@ export default function RestaurantsList() {
   const [filters, setFilters] = useState({
     all: "All",
     businessModel: "",
-    cuisine: "",
+    foodPreference: "",
     zone: "",
   })
 
@@ -200,10 +202,11 @@ export default function RestaurantsList() {
       }
     }
 
-    if (filters.cuisine) {
-      result = result.filter(restaurant =>
-        restaurant.cuisine.toLowerCase().includes(filters.cuisine.toLowerCase())
-      )
+    if (filters.foodPreference) {
+      result = result.filter((restaurant) => {
+        const foodPreference = String(restaurant.foodPreference || "both").trim().toLowerCase()
+        return foodPreference === filters.foodPreference.toLowerCase()
+      })
     }
 
     if (filters.zone) {
@@ -232,9 +235,9 @@ export default function RestaurantsList() {
             aValue = a.zone.toLowerCase();
             bValue = b.zone.toLowerCase();
             break;
-          case 'cuisine':
-            aValue = a.cuisine.toLowerCase();
-            bValue = b.cuisine.toLowerCase();
+          case 'foodPreference':
+            aValue = String(a.foodPreference || "both").toLowerCase();
+            bValue = String(b.foodPreference || "both").toLowerCase();
             break;
           case 'status':
             aValue = getRestaurantAvailabilityStatus(a.originalData || a, now).isOpen ? 1 : 0;
@@ -269,19 +272,15 @@ export default function RestaurantsList() {
   const inactiveRestaurants = restaurants.filter(r => !r.status).length
 
   // Get unique cuisines from restaurants for filter dropdown
-  const uniqueCuisines = useMemo(() => {
-    const cuisines = restaurants
-      .map(r => r.cuisine)
-      .filter(c => c && c !== "N/A")
-      .filter((value, index, self) => self.indexOf(value) === index)
-      .sort()
-    return cuisines
-  }, [restaurants])
-
   // Show full phone number without masking
   const formatPhone = (phone) => {
     if (!phone) return ""
     return phone
+  }
+
+  const formatFoodPreference = (value) => {
+    const normalized = String(value || "both").trim().toLowerCase()
+    return normalized === "pure-veg" ? "Pure-Veg" : "Both"
   }
 
   const renderStars = (rating) => {
@@ -676,6 +675,7 @@ export default function RestaurantsList() {
         primaryContactNumber: "",
         email: "",
         cuisinesText: "",
+        foodPreference: "both",
         estimatedDeliveryTime: "",
         offer: "",
         openingTime: "",
@@ -692,6 +692,11 @@ export default function RestaurantsList() {
       primaryContactNumber: restaurant.primaryContactNumber || "",
       email: restaurant.email || "",
       cuisinesText: Array.isArray(restaurant.cuisines) ? restaurant.cuisines.join(", ") : "",
+      foodPreference: (
+        String(restaurant.foodPreference || restaurant.onboarding?.step2?.foodPreference || "both").trim().toLowerCase() === "pure-veg"
+          ? "pure-veg"
+          : "both"
+      ),
       estimatedDeliveryTime: restaurant.estimatedDeliveryTime || "",
       offer: restaurant.offer || "",
       openingTime: restaurant.deliveryTimings?.openingTime || "",
@@ -744,6 +749,7 @@ export default function RestaurantsList() {
           .split(",")
           .map((item) => item.trim())
           .filter(Boolean),
+        foodPreference: detailsForm.foodPreference,
         estimatedDeliveryTime: detailsForm.estimatedDeliveryTime.trim(),
         offer: detailsForm.offer.trim(),
         openingTime: detailsForm.openingTime.trim(),
@@ -771,6 +777,7 @@ export default function RestaurantsList() {
                 cuisine: Array.isArray(updatedRestaurant.cuisines) && updatedRestaurant.cuisines.length > 0
                   ? updatedRestaurant.cuisines[0]
                   : item.cuisine,
+                foodPreference: updatedRestaurant.foodPreference || item.foodPreference,
                 zone: updatedRestaurant.location?.area || updatedRestaurant.location?.city || item.zone,
                 status: updatedRestaurant.isActive !== false,
                 logo: updatedRestaurant.profileImage?.url || item.logo,
@@ -1001,6 +1008,15 @@ export default function RestaurantsList() {
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               </div>
+              <select
+                value={filters.foodPreference}
+                onChange={(e) => setFilters((prev) => ({ ...prev, foodPreference: e.target.value }))}
+                className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Preferences</option>
+                <option value="both">Both</option>
+                <option value="pure-veg">Pure-Veg</option>
+              </select>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1076,11 +1092,11 @@ export default function RestaurantsList() {
                     </th>
                     <th
                       className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
-                      onClick={() => handleSort('cuisine')}
+                      onClick={() => handleSort('foodPreference')}
                     >
                       <div className="flex items-center gap-1">
-                        <span>Cuisine</span>
-                        <ArrowUpDown className={`w-3 h-3 ${sortConfig.key === 'cuisine' ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <span>Food Preference</span>
+                        <ArrowUpDown className={`w-3 h-3 ${sortConfig.key === 'foodPreference' ? 'text-blue-600' : 'text-slate-400'}`} />
                       </div>
                     </th>
                     <th
@@ -1143,7 +1159,7 @@ export default function RestaurantsList() {
                           <span className="text-sm text-slate-700">{restaurant.zone}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{restaurant.cuisine}</span>
+                          <span className="text-sm text-slate-700">{formatFoodPreference(restaurant.foodPreference)}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
@@ -1331,6 +1347,17 @@ export default function RestaurantsList() {
                     <div className="md:col-span-2">
                       <label className="block text-xs text-slate-500 mb-1">Cuisines (comma separated)</label>
                       <input type="text" value={detailsForm.cuisinesText} onChange={(e) => setDetailsForm((prev) => ({ ...prev, cuisinesText: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Food Preference</label>
+                      <select
+                        value={detailsForm.foodPreference}
+                        onChange={(e) => setDetailsForm((prev) => ({ ...prev, foodPreference: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                      >
+                        <option value="both">Both</option>
+                        <option value="pure-veg">Pure-Veg</option>
+                      </select>
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">Opening Time</label>
@@ -1532,6 +1559,14 @@ export default function RestaurantsList() {
                               </span>
                             )}
                           </div>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500 mb-1">Food Preference</p>
+                          <span className="inline-flex px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                            {String(restaurantDetails?.foodPreference || restaurantDetails?.onboarding?.step2?.foodPreference || selectedRestaurant?.foodPreference || "both")
+                              .replace(/-/g, " ")
+                              .replace(/\b\w/g, (char) => char.toUpperCase())}
+                          </span>
                         </div>
                         {restaurantDetails?.offer && (
                           <div>

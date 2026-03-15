@@ -124,6 +124,11 @@ const restaurantSchema = new mongoose.Schema(
       },
     ],
     cuisines: [String],
+    foodPreference: {
+      type: String,
+      enum: ["both", "pure-veg"],
+      default: "both",
+    },
     deliveryTimings: deliveryTimingsSchema,
     openDays: [String],
     rating: {
@@ -192,6 +197,11 @@ const restaurantSchema = new mongoose.Schema(
           publicId: String,
         },
         cuisines: [String],
+        foodPreference: {
+          type: String,
+          enum: ["both", "pure-veg"],
+          default: "both",
+        },
         deliveryTimings: {
           openingTime: String,
           closingTime: String,

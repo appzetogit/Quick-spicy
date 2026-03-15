@@ -1769,6 +1769,27 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       restaurant.onboarding.step2.cuisines = cuisinesArray;
     }
 
+    if (payload.foodPreference !== undefined) {
+      const rawFoodPreference = String(payload.foodPreference || "")
+        .trim()
+        .toLowerCase();
+      const normalizedFoodPreference =
+        rawFoodPreference === "pure-veg" ? "pure-veg" : "both";
+      const allowedFoodPreferences = new Set(["both", "pure-veg"]);
+
+      if (!allowedFoodPreferences.has(normalizedFoodPreference)) {
+        return errorResponse(
+          res,
+          400,
+          "foodPreference must be one of both or pure-veg",
+        );
+      }
+
+      restaurant.foodPreference = normalizedFoodPreference;
+      ensureOnboarding();
+      restaurant.onboarding.step2.foodPreference = normalizedFoodPreference;
+    }
+
     // Delivery timings
     const openingTime = payload.openingTime ?? payload.deliveryTimings?.openingTime;
     const closingTime = payload.closingTime ?? payload.deliveryTimings?.closingTime;
