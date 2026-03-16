@@ -201,6 +201,7 @@ export const adminSidebarMenu = [
     type: "section",
     label: "ENV SETUP",
     items: [
+      { type: "link", label: "Business Settings", path: "/admin/business-setup", icon: "Building2" },
       { type: "link", label: "System .env", path: "/admin/system-addons", icon: "Settings" },
     ],
   },

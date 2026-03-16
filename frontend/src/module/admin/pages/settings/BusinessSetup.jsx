@@ -9,6 +9,8 @@ const debugError = (...args) => {}
 
 
 export default function BusinessSetup() {
+  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  const ALLOWED_EMAIL_TLDS = [".com", ".in", ".org", ".net", ".co.in"];
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -69,9 +71,19 @@ export default function BusinessSetup() {
   };
 
   const handleInputChange = (field, value) => {
+    let nextValue = value;
+
+    if (field === "phoneNumber" || field === "pincode") {
+      nextValue = value.replace(/\D/g, "");
+    }
+
+    if (field === "state") {
+      nextValue = value.replace(/[^a-zA-Z\s]/g, "");
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [field]: value,
+      [field]: nextValue,
     }));
   };
 
@@ -84,6 +96,16 @@ export default function BusinessSetup() {
       }
       if (!formData.email.trim()) {
         toast.error("Email is required");
+        return;
+      }
+      if (!EMAIL_REGEX.test(formData.email.trim())) {
+        toast.error("Please enter a valid email address");
+        return;
+      }
+      const normalizedEmail = formData.email.trim().toLowerCase();
+      const hasAllowedTld = ALLOWED_EMAIL_TLDS.some((suffix) => normalizedEmail.endsWith(suffix));
+      if (!hasAllowedTld) {
+        toast.error("Email must end with a valid domain like .com, .in, .org, .net, or .co.in");
         return;
       }
       if (!formData.phoneNumber.trim()) {
@@ -224,11 +246,13 @@ export default function BusinessSetup() {
                 </label>
                 <input
                   type="email"
-                  placeholder="Enter Your Email"
+                  pattern="^[^\s@]+@[^\s@]+\.[^\s@]{2,}$"
+                  placeholder="name@example.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="mt-1 text-[11px] text-slate-500">Use a valid email like `name@example.com` with domains such as `.com`, `.in`, `.org`, `.net`, or `.co.in`.</p>
               </div>
 
               <div>
@@ -465,13 +489,16 @@ export default function BusinessSetup() {
                     </span>
                   </div>
                   <input
-                    type="text"
-                    placeholder="Enter Your Phone Number"
+                    type="tel"
+                    inputMode="numeric"
+                    maxLength={15}
+                    placeholder="Enter 10 digit phone number"
                     value={formData.phoneNumber}
                     onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                     className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
+                <p className="mt-1 text-[11px] text-slate-500">Enter digits only with no spaces or special characters.</p>
               </div>
 
               <div className="md:col-span-2">
@@ -483,7 +510,7 @@ export default function BusinessSetup() {
                   placeholder="Enter Your Addresss"
                   value={formData.address}
                   onChange={(e) => handleInputChange("address", e.target.value)}
-                  className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                  className="w-full px-4 py-3 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                 />
               </div>
 
@@ -493,11 +520,12 @@ export default function BusinessSetup() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Enter Your State"
+                  placeholder="Enter state name"
                   value={formData.state}
                   onChange={(e) => handleInputChange("state", e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="mt-1 text-[11px] text-slate-500">Use letters only, for example `Madhya Pradesh`.</p>
               </div>
 
               <div>
@@ -506,11 +534,14 @@ export default function BusinessSetup() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Enter Your Pincode"
+                  inputMode="numeric"
+                  maxLength={10}
+                  placeholder="Enter postal / pincode"
                   value={formData.pincode}
                   onChange={(e) => handleInputChange("pincode", e.target.value)}
                   className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+                <p className="mt-1 text-[11px] text-slate-500">Enter numbers only, for example `452001`.</p>
               </div>
             </div>
 
@@ -551,7 +582,7 @@ export default function BusinessSetup() {
                 />
                 <div
                   onClick={() => logoInputRef.current?.click()}
-                  className="border border-dashed border-slate-300 rounded-lg bg-slate-50/60 h-28 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors relative overflow-hidden"
+                  className="border border-dashed border-slate-300 rounded-lg bg-slate-50/60 h-28 p-4 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors relative overflow-hidden"
                 >
                   {logoPreview ? (
                     <>
@@ -618,7 +649,7 @@ export default function BusinessSetup() {
                 />
                 <div
                   onClick={() => faviconInputRef.current?.click()}
-                  className="border border-dashed border-slate-300 rounded-lg bg-slate-50/60 h-28 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors relative overflow-hidden"
+                  className="border border-dashed border-slate-300 rounded-lg bg-slate-50/60 h-28 p-4 flex items-center justify-center cursor-pointer hover:bg-slate-100 transition-colors relative overflow-hidden"
                 >
                   {faviconPreview ? (
                     <>
