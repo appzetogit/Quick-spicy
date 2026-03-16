@@ -727,7 +727,7 @@ export default function Cart() {
   const subtotal = pricing?.subtotal || cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)
   const fallbackDeliveryFee = (() => {
     if (appliedCoupon?.freeDelivery) {
-      return 0
+      return Number(feeSettings.deliveryFee || 0)
     }
 
     const ranges = Array.isArray(feeSettings.deliveryFeeRanges) ? [...feeSettings.deliveryFeeRanges] : []
@@ -755,7 +755,7 @@ export default function Cart() {
 
     return Number(feeSettings.deliveryFee || 0)
   })()
-  const deliveryFee = pricing?.deliveryFee || fallbackDeliveryFee
+  const deliveryFee = pricing?.deliveryFee ?? fallbackDeliveryFee
   const deliveryFeeBreakdown = pricing?.deliveryFeeBreakdown || null
   const hasDistanceDeliveryBreakdown =
     deliveryFeeBreakdown?.source === "distance" &&
