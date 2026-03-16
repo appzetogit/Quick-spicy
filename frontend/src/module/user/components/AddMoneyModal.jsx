@@ -178,7 +178,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md p-6 bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-800">
         <DialogHeader>
           <DialogTitle className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
             Add Money to Wallet
@@ -203,7 +203,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
                 value={amount}
                 onChange={handleAmountChange}
                 placeholder="Enter amount"
-                className="pl-10 h-12 text-lg"
+                className="pl-10 h-12 text-lg bg-white dark:bg-[#111111] border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
                 disabled={loading || processing}
               />
             </div>
@@ -223,7 +223,11 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
                   key={quickAmount}
                   type="button"
                   variant={amount === quickAmount.toString() ? "default" : "outline"}
-                  className="h-10"
+                  className={`h-10 ${
+                    amount === quickAmount.toString()
+                      ? "bg-black text-white hover:bg-gray-900 dark:bg-green-600 dark:hover:bg-green-700 dark:text-white"
+                      : "bg-white text-gray-900 border-gray-300 hover:bg-gray-50 dark:bg-[#111111] dark:text-white dark:border-gray-700 dark:hover:bg-[#202020]"
+                  }`}
                   onClick={() => handleAmountSelect(quickAmount)}
                   disabled={loading || processing}
                 >

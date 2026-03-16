@@ -160,6 +160,18 @@ export const adminSidebarMenu = [
   },
   {
     type: "section",
+    label: "PAGES & POLICIES",
+    items: [
+      { type: "link", label: "Terms & Conditions", path: "/admin/pages-social-media/terms", icon: "FileText" },
+      { type: "link", label: "Privacy Policy", path: "/admin/pages-social-media/privacy", icon: "Shield" },
+      { type: "link", label: "About Us", path: "/admin/pages-social-media/about", icon: "Info" },
+      { type: "link", label: "Refund Policy", path: "/admin/pages-social-media/refund", icon: "RotateCcw" },
+      { type: "link", label: "Shipping Policy", path: "/admin/pages-social-media/shipping", icon: "Truck" },
+      { type: "link", label: "Cancellation Policy", path: "/admin/pages-social-media/cancellation", icon: "Ban" },
+    ],
+  },
+  {
+    type: "section",
     label: "REPORT MANAGEMENT",
     items: [
       { type: "link", label: "Transaction Report", path: "/admin/transaction-report", icon: "FileText" },

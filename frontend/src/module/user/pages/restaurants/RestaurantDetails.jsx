@@ -81,7 +81,6 @@ function RestaurantDetailsContent() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
   const [expandedCoupons, setExpandedCoupons] = useState(new Set())
   const [showMenuSheet, setShowMenuSheet] = useState(false)
-  const [showLargeOrderMenu, setShowLargeOrderMenu] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
@@ -2446,30 +2445,6 @@ function RestaurantDetailsContent() {
                           </div>
                         </button>
                       ))}
-                    </div>
-
-                    {/* Large Order Menu Section */}
-                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-800">
-                      <button
-                        className="w-full flex items-center justify-between py-3 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors"
-                        onClick={() => setShowLargeOrderMenu(!showLargeOrderMenu)}
-                      >
-                        <span className="text-base font-semibold text-gray-900 dark:text-white">
-                          LARGE ORDER MENU
-                        </span>
-                        <ChevronDown
-                          className={`h-4 w-4 text-gray-500 dark:text-gray-400 transition-transform ${showLargeOrderMenu ? "rotate-180" : ""
-                            }`}
-                        />
-                      </button>
-                      {showLargeOrderMenu && (
-                        <div className="mt-2 space-y-1 pl-4">
-                          {/* Add large order menu items here if needed */}
-                          <p className="text-sm text-gray-500 dark:text-gray-400 py-2">
-                            Large order options coming soon
-                          </p>
-                        </div>
-                      )}
                     </div>
                   </div>
 

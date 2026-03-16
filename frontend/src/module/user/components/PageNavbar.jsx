@@ -961,9 +961,7 @@ export default function PageNavbar({
     openLocationSelector()
   }
 
-  const textColorClass = textColor === "white" ? "text-white" : "text-black"
-  const iconFill = textColor === "white" ? "white" : "black"
-  const ringColor = textColor === "white" ? "ring-white/30" : "ring-gray-800/30"
+  const textColorClass = textColor === "white" ? "text-white" : "text-black dark:text-white"
 
   const zIndexClass = zIndex === 50 ? "z-50" : "z-20"
 
@@ -1016,7 +1014,7 @@ export default function PageNavbar({
                   <ChevronDown className={`h-3 w-3 sm:h-4 sm:w-4 ${textColorClass} flex-shrink-0`} strokeWidth={2.5} />
                 </div>
                 {locationSubText && (
-                  <span className={`text-[10px] sm:text-xs font-medium ${textColorClass}/80 truncate max-w-[140px] sm:max-w-[200px] text-center`}>
+                  <span className={`text-[10px] sm:text-xs font-medium ${textColor === "white" ? "text-white/80" : "text-black/80 dark:text-white/80"} truncate max-w-[140px] sm:max-w-[200px] text-center`}>
                     {locationSubText}
                   </span>
                 )}
@@ -1068,7 +1066,7 @@ export default function PageNavbar({
                 title="Profile"
               >
                 <div className={`h-full w-full rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center shadow-sm`}>
-                  <span className={`text-xs sm:text-sm font-extrabold ${textColor === "white" ? "text-black" : "text-gray-900"}`}>
+                  <span className={`text-xs sm:text-sm font-extrabold ${textColor === "white" ? "text-black dark:text-white" : "text-gray-900 dark:text-white"}`}>
                     A
                   </span>
                 </div>

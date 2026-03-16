@@ -1907,7 +1907,7 @@ export default function Home() {
       {hasScrolledPastBanner && (
         <div
           ref={stickyHeaderRef}
-          className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-200 transition-all duration-300"
+          className="md:hidden fixed top-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#0f0f0f]/95 backdrop-blur-sm shadow-sm border-b border-gray-200 dark:border-gray-800 transition-all duration-300"
         >
         <motion.div
           className="relative z-50 pt-2 sm:pt-3 lg:pt-4"
@@ -1939,7 +1939,7 @@ export default function Home() {
         )}
 
         <motion.div
-          className="w-full py-3 sm:py-4 bg-white/95 transition-colors duration-300"
+          className="w-full py-3 sm:py-4 bg-white/95 dark:bg-[#0f0f0f]/95 transition-colors duration-300"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
