@@ -442,6 +442,7 @@ export const API_ENDPOINTS = {
     TIP_VERIFY_PAYMENT: "/order/:id/tip/verify-payment",
     CALCULATE: "/order/calculate",
     CANCEL: "/order/:id/cancel",
+    REVIEW: "/order/:id/review",
   },
   // Payment endpoints
   PAYMENT: {

@@ -962,12 +962,6 @@ function RestaurantDetailsContent() {
       return
     }
 
-    // Update local state
-    setQuantities((prev) => ({
-      ...prev,
-      [item.id]: newQuantity,
-    }))
-
     // CRITICAL: Validate restaurant data before adding to cart
     if (!restaurant || !restaurant.name) {
       debugError('? Cannot add item to cart: Restaurant data is missing!');
@@ -987,6 +981,13 @@ function RestaurantDetailsContent() {
       toast.error('Restaurant ID is missing. Please refresh the page.');
       return;
     }
+
+    const previousQuantity = quantities[item.id] || 0
+    // Update local state after validation
+    setQuantities((prev) => ({
+      ...prev,
+      [item.id]: newQuantity,
+    }))
 
     // Log for debugging
     debugLog('? Adding item to cart:', {
@@ -1052,9 +1053,9 @@ function RestaurantDetailsContent() {
         name: item.name,
         imageUrl: item.image,
       }
-      removeFromCart(item.id, sourcePosition, productInfo)
+      removeFromCart(item.id, sourcePosition, productInfo, validRestaurantId)
     } else {
-      const existingCartItem = getCartItem(item.id)
+      const existingCartItem = getCartItem(item.id, validRestaurantId)
       if (existingCartItem) {
         // Prepare product info for animation
         const productInfo = {
@@ -1067,31 +1068,33 @@ function RestaurantDetailsContent() {
         if (newQuantity > existingCartItem.quantity && sourcePosition) {
           const result = addToCart(cartItem, sourcePosition)
           if (result?.ok === false) {
+            setQuantities((prev) => ({ ...prev, [item.id]: previousQuantity }))
             toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
             return
           }
           if (newQuantity > existingCartItem.quantity + 1) {
-            updateQuantity(item.id, newQuantity)
+            updateQuantity(item.id, newQuantity, null, null, validRestaurantId)
           }
         }
         // If decreasing quantity, trigger removal animation with sourcePosition
         else if (newQuantity < existingCartItem.quantity && sourcePosition) {
-          updateQuantity(item.id, newQuantity, sourcePosition, productInfo)
+          updateQuantity(item.id, newQuantity, sourcePosition, productInfo, validRestaurantId)
         }
         // Otherwise just update quantity without animation
         else {
-          updateQuantity(item.id, newQuantity)
+          updateQuantity(item.id, newQuantity, null, null, validRestaurantId)
         }
       } else {
         // Add to cart first (adds with quantity 1), then update to desired quantity
         // Pass sourcePosition when adding a new item
         const result = addToCart(cartItem, sourcePosition)
         if (result?.ok === false) {
+          setQuantities((prev) => ({ ...prev, [item.id]: previousQuantity }))
           toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
           return
         }
         if (newQuantity > 1) {
-          updateQuantity(item.id, newQuantity)
+          updateQuantity(item.id, newQuantity, null, null, validRestaurantId)
         }
       }
     }

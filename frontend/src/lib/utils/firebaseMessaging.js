@@ -73,22 +73,39 @@ function sanitize(value) {
   return String(value || "").trim().replace(/^['"]|['"]$/g, "");
 }
 
-function getNotificationKey(payload = {}) {
-  return (
-    payload?.data?.notificationId ||
-    payload?.data?.messageId ||
-    payload?.messageId ||
-    [
-      payload?.notification?.title || "",
-      payload?.notification?.body || "",
-      payload?.data?.orderId || "",
-      payload?.data?.targetUrl || "",
-    ].join("::")
-  );
+function normalizeNotificationText(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
 }
 
-function wasRecentlyHandled(notificationKey) {
-  if (!notificationKey) return false;
+function getNotificationKeys(payload = {}) {
+  const data = isRecord(payload?.data) ? payload.data : {};
+  const notification = isRecord(payload?.notification) ? payload.notification : {};
+
+  const title = normalizeNotificationText(notification?.title || data?.title || "");
+  const body = normalizeNotificationText(notification?.body || data?.body || data?.message || "");
+  const orderId = normalizeNotificationText(data?.orderId || data?.orderMongoId || "");
+  const targetUrl = normalizeNotificationText(data?.targetUrl || data?.link || data?.click_action || "");
+  const type = normalizeNotificationText(data?.type || "");
+
+  const keys = [
+    data?.notificationId,
+    data?.messageId,
+    payload?.messageId,
+    [title, body, orderId, targetUrl, type].join("::"),
+    [title, body, type].join("::"),
+    [title, body].join("::"),
+  ]
+    .map((key) => String(key || "").trim())
+    .filter(Boolean);
+
+  return [...new Set(keys)];
+}
+
+function wasRecentlyHandled(notificationKeys = []) {
+  const keys = Array.isArray(notificationKeys)
+    ? notificationKeys.map((key) => String(key || "").trim()).filter(Boolean)
+    : [String(notificationKeys || "").trim()].filter(Boolean);
+  if (keys.length === 0) return false;
   const now = Date.now();
 
   for (const [key, timestamp] of recentForegroundNotifications.entries()) {
@@ -97,12 +114,16 @@ function wasRecentlyHandled(notificationKey) {
     }
   }
 
-  if (recentForegroundNotifications.has(notificationKey)) {
-    pushDebugLog(PUSH_DEBUG_PREFIX, "Duplicate notification skipped", { notificationKey });
-    return true;
+  for (const key of keys) {
+    if (recentForegroundNotifications.has(key)) {
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Duplicate notification skipped", { key });
+      return true;
+    }
   }
 
-  recentForegroundNotifications.set(notificationKey, now);
+  keys.forEach((key) => {
+    recentForegroundNotifications.set(key, now);
+  });
   return false;
 }
 
@@ -486,9 +507,10 @@ function showForegroundNotification(payload = {}) {
     pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed foreground notification payload", { payload });
     return;
   }
-  const notificationKey = getNotificationKey(payload);
-  pushDebugLog(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKey, payload });
-  if (wasRecentlyHandled(notificationKey)) {
+  const notificationKeys = getNotificationKeys(payload);
+  const notificationKey = notificationKeys[0] || "";
+  pushDebugLog(PUSH_DEBUG_PREFIX, "showForegroundNotification received", { notificationKeys, payload });
+  if (wasRecentlyHandled(notificationKeys)) {
     return;
   }
 

@@ -71,8 +71,17 @@ async function sendEachMulticast(tokens = [], message = {}) {
 }
 
 async function sendUserPushNotifications(tokenGroups = {}, payload = {}) {
-  const webTokens = Array.isArray(tokenGroups?.webTokens) ? tokenGroups.webTokens : [];
-  const mobileTokens = Array.isArray(tokenGroups?.mobileTokens) ? tokenGroups.mobileTokens : [];
+  const normalizedWebTokens = Array.isArray(tokenGroups?.webTokens)
+    ? tokenGroups.webTokens.map((token) => String(token || "").trim()).filter((token) => token.length >= 10)
+    : [];
+  const normalizedMobileTokens = Array.isArray(tokenGroups?.mobileTokens)
+    ? tokenGroups.mobileTokens.map((token) => String(token || "").trim()).filter((token) => token.length >= 10)
+    : [];
+
+  const webTokens = [...new Set(normalizedWebTokens)];
+  const webTokenSet = new Set(webTokens);
+  const mobileTokens = [...new Set(normalizedMobileTokens.filter((token) => !webTokenSet.has(token)))];
+
   if (webTokens.length === 0 && mobileTokens.length === 0) {
     return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
   }

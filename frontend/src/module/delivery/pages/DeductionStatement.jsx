@@ -1,83 +1,82 @@
-import { useState, useMemo, useRef, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { 
-  ArrowLeft,
-  ChevronDown,
-  Calendar,
-  CheckCircle
-} from "lucide-react"
+import { ArrowLeft, Clock, Loader2, MinusCircle } from "lucide-react"
 import { formatCurrency } from "../../restaurant/utils/currency"
-import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
-import WeekSelector from "../components/WeekSelector"
+import { fetchWalletTransactions } from "../utils/deliveryWalletState"
+const debugError = (...args) => {}
 
-export default function TipsStatement() {
-  const navigate = useNavigate()
-  
-  // Date range state
-  const [startDate, setStartDate] = useState(() => {
-    const today = new Date()
-    const weekAgo = new Date(today)
-    weekAgo.setDate(today.getDate() - 7)
-    return weekAgo
+const formatDateTime = (value) => {
+  if (!value) return "N/A"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "N/A"
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   })
-  const [endDate, setEndDate] = useState(new Date())
-  const [showCalendar, setShowCalendar] = useState(false)
-  const calendarRef = useRef(null)
-  
-  // Format date range display
-  const dateRangeDisplay = useMemo(() => {
-    if (!startDate || !endDate) return "Select date range"
-    const formatDate = (date) => {
-      const day = date.getDate()
-      const month = date.toLocaleString('en-US', { month: 'short' })
-      return `${day} ${month}`
-    }
-    return `${formatDate(startDate)} - ${formatDate(endDate)}`
-  }, [startDate, endDate])
-  
-  // Handle date range change from calendar
-  const handleDateRangeChange = (start, end) => {
-    setStartDate(start)
-    setEndDate(end)
-    // Here you would fetch tips data for the selected date range
-    // fetchTipsData(start, end)
-  }
-  
-  // Close calendar when clicking outside
+}
+
+export default function DeductionStatement() {
+  const navigate = useNavigate()
+  const [deductions, setDeductions] = useState([])
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (calendarRef.current && !calendarRef.current.contains(event.target)) {
-        setShowCalendar(false)
+    const loadDeductions = async () => {
+      try {
+        setLoading(true)
+        const fetchedTransactions = await fetchWalletTransactions({
+          type: "deduction",
+          limit: 1000,
+        })
+
+        const formatted = fetchedTransactions
+          .map((transaction) => ({
+            id: transaction._id || transaction.id,
+            amount: Number(transaction.amount) || 0,
+            status: transaction.status || "Completed",
+            description: transaction.description || "Deduction",
+            date: formatDateTime(transaction.date || transaction.createdAt),
+            processedAt: formatDateTime(transaction.processedAt),
+            failureReason: transaction.failureReason || null,
+          }))
+          .sort((a, b) => new Date(b.processedAt || b.date) - new Date(a.processedAt || a.date))
+
+        setDeductions(formatted)
+      } catch (error) {
+        debugError("Error loading deduction transactions:", error)
+        setDeductions([])
+      } finally {
+        setLoading(false)
       }
     }
-    
-    if (showCalendar) {
-      document.addEventListener('mousedown', handleClickOutside)
+
+    loadDeductions()
+
+    const refreshDeductions = () => {
+      loadDeductions()
     }
-    
+
+    window.addEventListener("deliveryWalletStateUpdated", refreshDeductions)
+    window.addEventListener("storage", refreshDeductions)
+
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener("deliveryWalletStateUpdated", refreshDeductions)
+      window.removeEventListener("storage", refreshDeductions)
     }
-  }, [showCalendar])
-  
-  // Fetch tips data based on selected date range (mock function - replace with actual API call)
-  const getTipsDataForDateRange = (start, end) => {
-    // This would be an API call in a real application
-    // For now, return empty array
-    return []
-  }
-  
-  // Get tips data for current selected date range
-  const tips = useMemo(() => {
-    if (!startDate || !endDate) return []
-    return getTipsDataForDateRange(startDate, endDate)
-  }, [startDate, endDate])
-  
+  }, [])
+
+  const summary = useMemo(() => {
+    const completed = deductions.filter((item) => item.status === "Completed")
+    return completed.reduce((sum, item) => sum + item.amount, 0)
+  }, [deductions])
+
   return (
     <div className="min-h-screen bg-white overflow-x-hidden pb-24 md:pb-6">
-      {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 md:py-6 flex items-center gap-4 rounded-b-3xl md:rounded-b-none">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
         >
@@ -86,74 +85,58 @@ export default function TipsStatement() {
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Deduction statement</h1>
       </div>
 
-      {/* Main Content */}
       <div className="px-4 py-6">
-        {/* Date Range Selector with Calendar */}
-          <WeekSelector />
+        <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 mb-4">
+          <p className="text-sm text-gray-500 mb-1">Total deductions</p>
+          <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary)}</p>
+        </div>
 
-        {/* Transactions List */}
-        {tips.length === 0 ? (
+        {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            {/* Empty State Illustration */}
-            <div className="flex flex-col gap-2 mb-6">
-              <div className="bg-white rounded-lg p-4 shadow-md border border-gray-200 w-64">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-green-500 rounded mt-1"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-2 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-md border border-gray-200 w-64">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-orange-500 rounded mt-1"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-2 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-white rounded-lg p-4 shadow-md border border-gray-200 w-64">
-                <div className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-blue-500 rounded mt-1"></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-2 bg-gray-200 rounded w-3/4"></div>
-                    <div className="h-2 bg-gray-200 rounded w-1/2"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <p className="text-gray-600 text-base font-medium">No transactions</p>
+            <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
+            <p className="text-gray-600 text-base">Loading deductions...</p>
           </div>
-        ) : (
-          <div className="space-y-3 mb-6">
-            {tips.map((tip, index) => (
+        ) : deductions.length > 0 ? (
+          <div className="space-y-3">
+            {deductions.map((item) => (
               <div
-                key={index}
-                className="bg-white rounded-xl p-4 shadow-md border border-gray-100"
+                key={item.id}
+                className="bg-white rounded-xl p-4 shadow-sm border border-gray-200"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded ${ 
-                      index % 3 === 0 ? 'bg-green-500' : 
-                      index % 3 === 1 ? 'bg-orange-500' : 'bg-blue-500'
-                    }`}></div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <MinusCircle className="w-5 h-5 text-red-500 mt-0.5" />
                     <div>
-                      <p className="text-gray-900 text-sm font-medium">{tip.description}</p>
-                      <p className="text-gray-500 text-xs">{tip.date}</p>
+                      <p className="text-sm font-semibold text-gray-900">{item.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">Created: {item.date}</p>
+                      {item.processedAt !== "N/A" && (
+                        <p className="text-xs text-gray-500">Processed: {item.processedAt}</p>
+                      )}
+                      {item.failureReason && (
+                        <p className="text-xs text-red-600 mt-1">Reason: {item.failureReason}</p>
+                      )}
                     </div>
                   </div>
-                  <div className="text-green-600 text-sm font-medium">
-                    +{formatCurrency(Math.abs(tip.amount))}
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-red-600">- {formatCurrency(item.amount)}</p>
+                    <p className="text-xs text-gray-500 mt-1">{item.status}</p>
                   </div>
                 </div>
               </div>
             ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
+              <Clock className="w-8 h-8 text-gray-400" />
+            </div>
+            <p className="text-gray-900 text-lg font-semibold mb-2">No deductions yet</p>
+            <p className="text-gray-600 text-sm text-center max-w-xs">
+              Deductions added by admin will appear here automatically.
+            </p>
           </div>
         )}
       </div>
     </div>
   )
 }
-

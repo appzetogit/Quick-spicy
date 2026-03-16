@@ -12,7 +12,6 @@ import {
   HelpCircle,
   Wallet,
   CheckCircle,
-  Receipt,
   FileText as FileTextIcon,
   Wallet as WalletIcon,
   Sparkles,
@@ -434,6 +433,13 @@ export default function PocketPage() {
       ? Number(walletState.availableCashLimit)
       : Math.max(0, totalCashLimit - (Number(balances.cashInHand) || 0))
   const depositAmount = pocketBalance < 0 ? Math.abs(pocketBalance) : 0
+  const settlementTransactions = walletState?.transactions?.filter(
+    (transaction) => transaction.type === "deposit" && transaction.status === "Completed",
+  ) || []
+  const totalSettledAmount = settlementTransactions.reduce(
+    (sum, transaction) => sum + (Number(transaction.amount) || 0),
+    0,
+  )
 
   // Customer tips balance - calculate from transactions
   const customerTipsBalance = Number(walletState?.totalTips) || (
@@ -1070,10 +1076,13 @@ export default function PocketPage() {
               onClick={() => navigate("/delivery/limit-settlement")}
             >
               <CardContent className="p-4 flex flex-col items-start text-start">
-                <div className="w-12 h-12 flex items-start mb-3">
-                  <Receipt className="w-8 h-8 text-black" />
-                </div>
+                <div className="text-black text-2xl font-bold mb-2">₹{totalSettledAmount.toFixed(2)}</div>
                 <div className="text-black text-sm font-medium text-start">Available limit settlement</div>
+                <div className="text-gray-600 text-xs">
+                  {settlementTransactions.length > 0
+                    ? `${settlementTransactions.length} settlement${settlementTransactions.length === 1 ? "" : "s"} recorded`
+                    : "No settlement history yet"}
+                </div>
               </CardContent>
             </Card>
 

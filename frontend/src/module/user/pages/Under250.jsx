@@ -50,6 +50,8 @@ export default function Under250() {
   const bannerShellRef = useRef(null)
   const stickyHeaderRef = useRef(null)
 
+  const getItemKey = (itemId, restaurantId) => `${String(restaurantId || "unknown")}::${String(itemId || "unknown")}`
+
   const sortOptions = [
     { id: null, label: 'Relevance' },
     { id: 'rating-high', label: 'Rating: High to Low' },
@@ -105,6 +107,8 @@ export default function Under250() {
       menuItems: menuItems.map((item, itemIndex) => ({
         ...item,
         id: item?.id || item?._id || `${restaurantId}-item-${itemIndex}`,
+        restaurantId,
+        restaurant: normalizedName,
         name:
           typeof item?.name === "string" && item.name.trim()
             ? item.name.trim()
@@ -313,7 +317,8 @@ export default function Under250() {
   useEffect(() => {
     const cartQuantities = {}
     cart.forEach((item) => {
-      cartQuantities[item.id] = item.quantity || 0
+      const itemKey = getItemKey(item.id, item.restaurantId)
+      cartQuantities[itemKey] = item.quantity || 0
     })
     setQuantities(cartQuantities)
   }, [cart])
@@ -386,9 +391,12 @@ export default function Under250() {
     }
 
     // Update local state
+    const effectiveRestaurantId = item?.restaurantId || item?.restaurant?._id || item?.restaurant?.restaurantId || null
+    const quantityKey = getItemKey(item?.id, effectiveRestaurantId)
+    const previousQuantity = quantities[quantityKey] || 0
     setQuantities((prev) => ({
       ...prev,
-      [item.id]: newQuantity,
+      [quantityKey]: newQuantity,
     }))
 
     // Find restaurant name from the item or use provided parameter
@@ -401,6 +409,7 @@ export default function Under250() {
       price: item.price,
       image: item.image,
       restaurant: restaurant,
+      restaurantId: effectiveRestaurantId,
       description: item.description || "",
       originalPrice: item.originalPrice || item.price,
     }
@@ -435,9 +444,9 @@ export default function Under250() {
         name: item.name,
         imageUrl: item.image,
       }
-      removeFromCart(item.id, sourcePosition, productInfo)
+      removeFromCart(item.id, sourcePosition, productInfo, effectiveRestaurantId)
     } else {
-      const existingCartItem = getCartItem(item.id)
+      const existingCartItem = getCartItem(item.id, effectiveRestaurantId)
       if (existingCartItem) {
         const productInfo = {
           id: item.id,
@@ -448,25 +457,27 @@ export default function Under250() {
         if (newQuantity > existingCartItem.quantity && sourcePosition) {
           const result = addToCart(cartItem, sourcePosition)
           if (result?.ok === false) {
+            setQuantities((prev) => ({ ...prev, [quantityKey]: previousQuantity }))
             toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
             return
           }
           if (newQuantity > existingCartItem.quantity + 1) {
-            updateQuantity(item.id, newQuantity)
+            updateQuantity(item.id, newQuantity, null, null, effectiveRestaurantId)
           }
         } else if (newQuantity < existingCartItem.quantity && sourcePosition) {
-          updateQuantity(item.id, newQuantity, sourcePosition, productInfo)
+          updateQuantity(item.id, newQuantity, sourcePosition, productInfo, effectiveRestaurantId)
         } else {
-          updateQuantity(item.id, newQuantity)
+          updateQuantity(item.id, newQuantity, null, null, effectiveRestaurantId)
         }
       } else {
         const result = addToCart(cartItem, sourcePosition)
         if (result?.ok === false) {
+          setQuantities((prev) => ({ ...prev, [quantityKey]: previousQuantity }))
           toast.error(result.error || 'Cannot add item from different restaurant. Please clear cart first.')
           return
         }
         if (newQuantity > 1) {
-          updateQuantity(item.id, newQuantity)
+          updateQuantity(item.id, newQuantity, null, null, effectiveRestaurantId)
         }
       }
     }
@@ -477,6 +488,7 @@ export default function Under250() {
     const itemWithRestaurant = {
       ...item,
       restaurant: restaurant.name,
+      restaurantId: restaurant.id || restaurant._id || restaurant.restaurantId || item.restaurantId,
       restaurantSlug: restaurant.slug || restaurant.restaurantId || "",
       description: item.description || `${item.name} from ${restaurant.name}`,
       customisable: item.customisable || false,
@@ -733,7 +745,7 @@ export default function Under250() {
                       }}
                     >
                       {restaurant.menuItems.map((item, itemIndex) => {
-                        const quantity = quantities[item.id] || 0
+                        const quantity = quantities[getItemKey(item.id, item.restaurantId || restaurant.id || restaurant._id || restaurant.restaurantId)] || 0
                         return (
                           <motion.div
                             key={item.id}
@@ -1096,10 +1108,14 @@ export default function Under250() {
                     <button
                       onClick={(e) => {
                         if (!shouldShowGrayscale) {
-                          updateItemQuantity(selectedItem, Math.max(0, (quantities[selectedItem.id] || 0) - 1), e)
+                          updateItemQuantity(
+                            selectedItem,
+                            Math.max(0, (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) - 1),
+                            e
+                          )
                         }
                       }}
-                      disabled={(quantities[selectedItem.id] || 0) === 0 || shouldShowGrayscale}
+                      disabled={(quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) === 0 || shouldShowGrayscale}
                       className={`${shouldShowGrayscale
                         ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed'
@@ -1111,12 +1127,16 @@ export default function Under250() {
                       ? 'text-gray-400 dark:text-gray-600'
                       : 'text-gray-900 dark:text-white'
                       }`}>
-                      {quantities[selectedItem.id] || 0}
+                      {quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0}
                     </span>
                     <button
                       onClick={(e) => {
                         if (!shouldShowGrayscale) {
-                          updateItemQuantity(selectedItem, (quantities[selectedItem.id] || 0) + 1, e)
+                          updateItemQuantity(
+                            selectedItem,
+                            (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) + 1,
+                            e
+                          )
                         }
                       }}
                       disabled={shouldShowGrayscale}
@@ -1137,7 +1157,11 @@ export default function Under250() {
                       }`}
                     onClick={(e) => {
                       if (!shouldShowGrayscale) {
-                        updateItemQuantity(selectedItem, (quantities[selectedItem.id] || 0) + 1, e)
+                        updateItemQuantity(
+                          selectedItem,
+                          (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) + 1,
+                          e
+                        )
                         setShowItemDetail(false)
                       }
                     }}

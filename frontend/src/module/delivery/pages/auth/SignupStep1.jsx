@@ -62,6 +62,7 @@ export default function SignupStep1() {
 
   // Save data to session storage whenever formData changes
   useEffect(() => {
+    localStorage.setItem("delivery_signup_required", "true")
     sessionStorage.setItem("deliverySignupDetails", JSON.stringify(formData))
   }, [formData])
 

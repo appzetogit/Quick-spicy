@@ -2038,6 +2038,14 @@ export const orderAPI = {
       reason,
     });
   },
+
+  // Submit order review (restaurant and/or delivery partner)
+  submitReview: (orderId, data) => {
+    return apiClient.patch(
+      API_ENDPOINTS.ORDER.REVIEW.replace(":id", orderId),
+      data,
+    );
+  },
 };
 
 // Export hero banner API helper functions

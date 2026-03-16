@@ -25,6 +25,15 @@ export default function AuthRedirect({ children, module, redirectTo = null }) {
 
   // If authenticated, redirect to module home page
   if (isAuthenticated) {
+    if (module === "delivery" && localStorage.getItem("delivery_signup_required") === "true") {
+      const hasSavedDetails = Boolean(sessionStorage.getItem("deliverySignupDetails"))
+      const pendingSignupPath = hasSavedDetails
+        ? "/delivery/signup/documents"
+        : "/delivery/signup/details"
+
+      return <Navigate to={pendingSignupPath} replace />
+    }
+
     const homePath = redirectTo || moduleHomePages[module] || "/"
     return <Navigate to={homePath} replace />
   }

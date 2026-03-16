@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion } from "framer-motion"
 import { 
@@ -12,6 +12,8 @@ import {
   ChevronRight
 } from "lucide-react"
 import BottomNavOrders from "../components/BottomNavOrders"
+
+const RESTAURANT_HELP_LANGUAGE_KEY = "restaurant_help_center_language"
 
 const helpTopics = [
   {
@@ -54,6 +56,10 @@ const helpTopics = [
 export default function HelpCentre() {
   const navigate = useNavigate()
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeLanguage] = useState(() => {
+    const saved = localStorage.getItem(RESTAURANT_HELP_LANGUAGE_KEY)
+    return saved === "hi" ? "hi" : "en"
+  })
 
   const contentByLanguage = {
     en: {
@@ -61,22 +67,31 @@ export default function HelpCentre() {
       helpTitle: "How can we help you",
       searchPlaceholder: "Search by issue",
       noResultPrefix: "No help topics found matching",
+      languageLabel: "Language",
+    },
+    hi: {
+      headerTitle: "Help Center",
+      helpTitle: "How can we help you",
+      searchPlaceholder: "Search by issue",
+      noResultPrefix: "No help topics found matching",
+      languageLabel: "Language",
     },
   }
 
-  const content = contentByLanguage.en
+  const content = contentByLanguage[activeLanguage] || contentByLanguage.en
 
   const filteredTopics = helpTopics.filter(topic =>
     topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     topic.subtitle.toLowerCase().includes(searchQuery.toLowerCase())
   )
+  const languageValue = useMemo(() => (activeLanguage === "hi" ? "Hindi" : "English"), [activeLanguage])
 
   return (
     <div className="min-h-screen bg-white flex flex-col">
       {/* Header */}
       <div className="sticky top-0 bg-white z-50 border-b border-gray-200">
-        <div className="px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="px-4 py-3 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <button
               onClick={() => navigate(-1)}
               className="p-1 hover:bg-gray-100 rounded-full transition-colors"
@@ -85,6 +100,13 @@ export default function HelpCentre() {
             </button>
             <h1 className="text-lg font-bold text-gray-900">{content.headerTitle}</h1>
           </div>
+          <button
+            type="button"
+            onClick={() => navigate("/restaurant/language")}
+            className="text-xs sm:text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors whitespace-nowrap"
+          >
+            {content.languageLabel}: {languageValue}
+          </button>
         </div>
       </div>
 

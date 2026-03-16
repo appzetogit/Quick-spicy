@@ -82,6 +82,27 @@ const normalizeCartData = (rawCart) => {
     })
 }
 
+const normalizeIdentifier = (value) => {
+  if (value === undefined || value === null || value === "") return null
+  return String(value).trim()
+}
+
+const matchesCartItem = (cartItem, itemId, restaurantId = null) => {
+  const normalizedItemId = normalizeIdentifier(itemId)
+  const normalizedCartItemId = normalizeIdentifier(cartItem?.id)
+  if (!normalizedItemId || !normalizedCartItemId || normalizedItemId !== normalizedCartItemId) {
+    return false
+  }
+
+  const normalizedRestaurantId = normalizeIdentifier(restaurantId)
+  if (!normalizedRestaurantId) return true
+
+  const normalizedCartRestaurantId = normalizeIdentifier(cartItem?.restaurantId)
+  if (!normalizedCartRestaurantId) return true
+
+  return normalizedCartRestaurantId === normalizedRestaurantId
+}
+
 export function CartProvider({ children }) {
   // Safe init (works with SSR and bad JSON)
   const [cart, setCart] = useState(() => {
@@ -188,7 +209,7 @@ export function CartProvider({ children }) {
         }
       }
       
-      const existing = safePrev.find((i) => i.id === item.id)
+      const existing = safePrev.find((i) => matchesCartItem(i, item.id, item.restaurantId))
       if (existing) {
         // Set last add event for animation when incrementing existing item
         if (sourcePosition) {
@@ -204,7 +225,9 @@ export function CartProvider({ children }) {
           setTimeout(() => setLastAddEvent(null), 1500)
         }
         return safePrev.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
+          matchesCartItem(i, item.id, item.restaurantId)
+            ? { ...i, quantity: i.quantity + 1 }
+            : i
         )
       }
       
@@ -236,10 +259,10 @@ export function CartProvider({ children }) {
     return { ok: true }
   }
 
-  const removeFromCart = (itemId, sourcePosition = null, productInfo = null) => {
+  const removeFromCart = (itemId, sourcePosition = null, productInfo = null, restaurantId = null) => {
     setCart((prev) => {
       const safePrev = normalizeCartData(prev)
-      const itemToRemove = safePrev.find((i) => i.id === itemId)
+      const itemToRemove = safePrev.find((i) => matchesCartItem(i, itemId, restaurantId))
       if (itemToRemove && sourcePosition && productInfo) {
         // Set last remove event for animation
         setLastRemoveEvent({
@@ -253,15 +276,15 @@ export function CartProvider({ children }) {
         // Clear after animation completes
         setTimeout(() => setLastRemoveEvent(null), 1500)
       }
-      return safePrev.filter((i) => i.id !== itemId)
+      return safePrev.filter((i) => !matchesCartItem(i, itemId, restaurantId))
     })
   }
 
-  const updateQuantity = (itemId, quantity, sourcePosition = null, productInfo = null) => {
+  const updateQuantity = (itemId, quantity, sourcePosition = null, productInfo = null, restaurantId = null) => {
     if (quantity <= 0) {
       setCart((prev) => {
         const safePrev = normalizeCartData(prev)
-        const itemToRemove = safePrev.find((i) => i.id === itemId)
+        const itemToRemove = safePrev.find((i) => matchesCartItem(i, itemId, restaurantId))
         if (itemToRemove && sourcePosition && productInfo) {
           // Set last remove event for animation
           setLastRemoveEvent({
@@ -275,7 +298,7 @@ export function CartProvider({ children }) {
           // Clear after animation completes
           setTimeout(() => setLastRemoveEvent(null), 1500)
         }
-        return safePrev.filter((i) => i.id !== itemId)
+        return safePrev.filter((i) => !matchesCartItem(i, itemId, restaurantId))
       })
       return
     }
@@ -283,7 +306,7 @@ export function CartProvider({ children }) {
     // When quantity decreases (but not to 0), also trigger removal animation
     setCart((prev) => {
       const safePrev = normalizeCartData(prev)
-      const existingItem = safePrev.find((i) => i.id === itemId)
+      const existingItem = safePrev.find((i) => matchesCartItem(i, itemId, restaurantId))
       if (existingItem && quantity < existingItem.quantity && sourcePosition && productInfo) {
         // Set last remove event for animation when decreasing quantity
         setLastRemoveEvent({
@@ -297,16 +320,20 @@ export function CartProvider({ children }) {
         // Clear after animation completes
         setTimeout(() => setLastRemoveEvent(null), 1500)
       }
-      return safePrev.map((i) => (i.id === itemId ? { ...i, quantity } : i))
+      return safePrev.map((i) => (
+        matchesCartItem(i, itemId, restaurantId) ? { ...i, quantity } : i
+      ))
     })
   }
 
   const getCartCount = () =>
     normalizeCartData(cart).reduce((total, item) => total + (item.quantity || 0), 0)
 
-  const isInCart = (itemId) => normalizeCartData(cart).some((i) => i.id === itemId)
+  const isInCart = (itemId, restaurantId = null) =>
+    normalizeCartData(cart).some((i) => matchesCartItem(i, itemId, restaurantId))
 
-  const getCartItem = (itemId) => normalizeCartData(cart).find((i) => i.id === itemId)
+  const getCartItem = (itemId, restaurantId = null) =>
+    normalizeCartData(cart).find((i) => matchesCartItem(i, itemId, restaurantId))
 
   const clearCart = () => setCart([])
 

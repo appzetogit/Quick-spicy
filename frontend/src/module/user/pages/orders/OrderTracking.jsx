@@ -1,5 +1,6 @@
 ﻿import { useParams, Link, useSearchParams } from "react-router-dom"
 import { useState, useEffect, useMemo, useRef } from "react"
+import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
 import {
@@ -337,6 +338,7 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
 
 export default function OrderTracking() {
   const { orderId } = useParams()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const confirmed = searchParams.get("confirmed") === "true"
   const { getOrderById } = useOrders()
@@ -359,8 +361,15 @@ export default function OrderTracking() {
   const [selectedTipAmount, setSelectedTipAmount] = useState(0)
   const [customTipAmount, setCustomTipAmount] = useState("")
   const [isTipLoading, setIsTipLoading] = useState(false)
+  const [localDeliveryInstruction, setLocalDeliveryInstruction] = useState("")
   const [timerNow, setTimerNow] = useState(Date.now())
   const lastRealtimeRefreshRef = useRef(0)
+
+  useEffect(() => {
+    if (!orderId) return
+    const savedInstruction = localStorage.getItem(`user_order_instruction_${orderId}`) || ""
+    setLocalDeliveryInstruction(savedInstruction)
+  }, [orderId])
 
   const defaultAddress = getDefaultAddress()
   const fallbackCustomerCoords = useMemo(() => {
@@ -816,16 +825,20 @@ export default function OrderTracking() {
   };
 
   const handleShare = async () => {
+    const shareUrl = window.location.href;
+    const shareText = `Hey! Track my order from ${order?.restaurant || 'Quick Spicy'} with ID #${order?.orderId || order?.id}.`;
+
     try {
       if (navigator.share) {
         await navigator.share({
           title: `Track my order from ${order?.restaurant || 'Quick Spicy'}`,
-          text: `Hey! Track my order from ${order?.restaurant || 'Quick Spicy'} with ID #${order?.orderId || order?.id}.`,
-          url: window.location.href,
+          text: shareText,
+          url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Tracking link copied to clipboard!");
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`;
+        window.open(whatsappUrl, "_blank", "noopener,noreferrer");
+        toast.success("Opened share options");
       }
     } catch (error) {
       if (error.name !== 'AbortError') {
@@ -833,6 +846,47 @@ export default function OrderTracking() {
         toast.error("Failed to share link");
       }
     }
+  };
+
+  const handleOpenDeliverySafety = () => {
+    navigate("/user/profile/report-safety-emergency");
+  };
+
+  const handleOpenDeliveryLocation = () => {
+    const coords = order?.address?.location?.coordinates || order?.address?.coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const [lng, lat] = coords;
+      const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
+      window.open(mapUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    const fallbackAddress =
+      order?.address?.formattedAddress ||
+      [order?.address?.street, order?.address?.additionalDetails, order?.address?.city, order?.address?.state, order?.address?.zipCode]
+        .filter(Boolean)
+        .join(", ");
+
+    if (fallbackAddress) {
+      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fallbackAddress)}`;
+      window.open(mapUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    toast.info("Delivery location is not available yet");
+  };
+
+  const handleEditDeliveryInstruction = () => {
+    const currentInstruction = order?.note || localDeliveryInstruction || "";
+    const nextInstruction = window.prompt("Add delivery instructions", currentInstruction);
+    if (nextInstruction === null) return;
+
+    const normalized = nextInstruction.trim();
+    setLocalDeliveryInstruction(normalized);
+    if (orderId) {
+      localStorage.setItem(`user_order_instruction_${orderId}`, normalized);
+    }
+    toast.success("Delivery instruction saved");
   };
 
   const handleRefresh = async () => {
@@ -1329,6 +1383,7 @@ export default function OrderTracking() {
         {/* Delivery Partner Safety */}
         <motion.button
           className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3"
+          onClick={handleOpenDeliverySafety}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
@@ -1377,6 +1432,7 @@ export default function OrderTracking() {
               defaultAddress?.phone ||
               'Phone number not available'
             }
+            onClick={() => navigate("/user/profile/edit")}
           />
           <SectionItem
             icon={HomeIcon}
@@ -1420,11 +1476,13 @@ export default function OrderTracking() {
 
               return 'Add delivery address'
             })()}
+            onClick={handleOpenDeliveryLocation}
           />
           <SectionItem
             icon={MessageSquare}
             title="Add delivery instructions"
-            subtitle=""
+            subtitle={order?.note || localDeliveryInstruction || "Tap to add instructions"}
+            onClick={handleEditDeliveryInstruction}
           />
         </motion.div>
 

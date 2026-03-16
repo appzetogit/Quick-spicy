@@ -84,6 +84,7 @@ export default function SignupStep2() {
   })
 
   useEffect(() => {
+    localStorage.setItem("delivery_signup_required", "true")
     window.scrollTo({ top: 0, left: 0, behavior: "auto" })
     document.documentElement.scrollTop = 0
     document.body.scrollTop = 0
@@ -362,6 +363,7 @@ export default function SignupStep2() {
       })
 
       if (response?.data?.success) {
+        localStorage.removeItem("delivery_signup_required")
         toast.success("Signup completed successfully!")
         // Redirect to delivery home page
         setTimeout(() => {

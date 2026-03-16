@@ -16,12 +16,12 @@ const debugError = (...args) => {}
 
 export default function Payout() {
   const navigate = useNavigate()
-  const [withdrawals, setWithdrawals] = useState([])
+  const [payouts, setPayouts] = useState([])
   const [loading, setLoading] = useState(true)
   
   // Fetch withdrawal transactions
   useEffect(() => {
-    const loadWithdrawals = async () => {
+    const loadPayouts = async () => {
       try {
         setLoading(true)
         
@@ -62,20 +62,20 @@ export default function Payout() {
           return dateB - dateA
         })
         
-        setWithdrawals(formattedTransactions)
+        setPayouts(formattedTransactions)
       } catch (error) {
         debugError('Error loading withdrawal transactions:', error)
-        setWithdrawals([])
+        setPayouts([])
       } finally {
         setLoading(false)
       }
     }
     
-    loadWithdrawals()
+    loadPayouts()
 
     // Listen for wallet state updates
     const handleWalletUpdate = () => {
-      loadWithdrawals()
+      loadPayouts()
     }
 
     window.addEventListener('deliveryWalletStateUpdated', handleWalletUpdate)
@@ -133,7 +133,7 @@ export default function Payout() {
           >
           <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-        <h1 className="text-lg md:text-xl font-bold text-gray-900">Withdrawal Transactions</h1>
+        <h1 className="text-lg md:text-xl font-bold text-gray-900">Payout history</h1>
       </div>
 
       {/* Main Content */}
@@ -143,15 +143,15 @@ export default function Payout() {
             <Loader2 className="w-8 h-8 animate-spin text-gray-400 mb-4" />
             <p className="text-gray-600 text-base">Loading transactions...</p>
           </div>
-        ) : withdrawals.length > 0 ? (
+        ) : payouts.length > 0 ? (
           <div className="space-y-4">
-            {withdrawals.map((withdrawal, index) => {
-              const statusInfo = getStatusInfo(withdrawal.status)
+            {payouts.map((payout, index) => {
+              const statusInfo = getStatusInfo(payout.status)
               const StatusIcon = statusInfo.icon
               
               return (
             <div
-                  key={withdrawal.id || index}
+                  key={payout.id || index}
                   className={`bg-white rounded-xl p-4 shadow-sm border ${statusInfo.borderColor} transition-all hover:shadow-md`}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -159,36 +159,36 @@ export default function Payout() {
                       <div className="flex items-center gap-2 mb-2">
                         <StatusIcon className={`w-5 h-5 ${statusInfo.color}`} />
                         <span className={`text-sm font-semibold px-2.5 py-1 rounded-full ${statusInfo.bgColor} ${statusInfo.color}`}>
-                          {withdrawal.status}
+                          {payout.status}
                         </span>
                       </div>
                       <p className="text-gray-900 text-xl font-bold mb-1">
-                        {formatCurrency(withdrawal.amount)}
+                        {formatCurrency(payout.amount)}
                       </p>
                       <p className="text-gray-600 text-sm mb-1">
-                        {withdrawal.description}
+                        {payout.description || "Payout request"}
                       </p>
                       <p className="text-gray-500 text-xs">
-                        Requested: {withdrawal.date}
+                        Requested: {payout.date}
                       </p>
-                      {withdrawal.processedAt && (
+                      {payout.processedAt && (
                         <p className="text-gray-500 text-xs mt-1">
-                          Processed: {withdrawal.processedAt}
+                          Processed: {payout.processedAt}
                         </p>
                       )}
-                      {withdrawal.failureReason && (
+                      {payout.failureReason && (
                         <p className="text-red-600 text-xs mt-2 font-medium">
-                          Reason: {withdrawal.failureReason}
+                          Reason: {payout.failureReason}
                         </p>
                       )}
                     </div>
                   </div>
                   
                   {/* Payment Method Badge */}
-                  {withdrawal.paymentMethod && (
+                  {payout.paymentMethod && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <span className="text-xs text-gray-500 capitalize">
-                        Payment Method: {withdrawal.paymentMethod.replace('_', ' ')}
+                        Payment method: {payout.paymentMethod.replace('_', ' ')}
                 </span>
                     </div>
                   )}
@@ -201,9 +201,9 @@ export default function Payout() {
             <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
               <Clock className="w-8 h-8 text-gray-400" />
             </div>
-            <p className="text-gray-900 text-lg font-semibold mb-2">No withdrawal transactions</p>
+            <p className="text-gray-900 text-lg font-semibold mb-2">No payouts yet</p>
             <p className="text-gray-600 text-sm text-center max-w-xs">
-              You haven't made any withdrawal requests yet. Your withdrawal history will appear here.
+              Completed and pending payout requests will appear here.
             </p>
         </div>
         )}

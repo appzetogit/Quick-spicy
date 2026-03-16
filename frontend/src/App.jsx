@@ -79,6 +79,7 @@ const Feedback = lazy(() => import("@/module/restaurant/pages/Feedback"))
 const ShareFeedback = lazy(() => import("@/module/restaurant/pages/ShareFeedback"))
 const DishRatings = lazy(() => import("@/module/restaurant/pages/DishRatings"))
 const HelpCentre = lazy(() => import("@/module/restaurant/pages/HelpCentre"))
+const RestaurantLanguage = lazy(() => import("@/module/restaurant/pages/Language"))
 const FssaiDetails = lazy(() => import("@/module/restaurant/pages/FssaiDetails"))
 const FssaiUpdate = lazy(() => import("@/module/restaurant/pages/FssaiUpdate"))
 const Hyperpure = lazy(() => import("@/module/restaurant/pages/Hyperpure"))
@@ -172,6 +173,30 @@ function RestaurantGlobalNotificationListener() {
   }
 
   return <RestaurantGlobalNotificationListenerInner />
+}
+
+function getDeliverySignupResumePath() {
+  if (localStorage.getItem("delivery_signup_required") !== "true") {
+    return null
+  }
+
+  const hasSavedDetails = Boolean(sessionStorage.getItem("deliverySignupDetails"))
+  return hasSavedDetails ? "/delivery/signup/documents" : "/delivery/signup/details"
+}
+
+function DeliverySignupFlowGuard({ children }) {
+  const location = useLocation()
+  const resumePath = getDeliverySignupResumePath()
+
+  if (
+    resumePath &&
+    !location.pathname.startsWith("/delivery/signup/") &&
+    location.pathname !== resumePath
+  ) {
+    return <Navigate to={resumePath} replace />
+  }
+
+  return children
 }
 
 export default function App() {
@@ -622,10 +647,19 @@ export default function App() {
             }
           />
           <Route
-            path="/restaurant/help-centre"
+            path="/restaurant/help-center"
             element={
               <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
                 <HelpCentre />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/restaurant/help-centre" element={<Navigate to="/restaurant/help-center" replace />} />
+          <Route
+            path="/restaurant/language"
+            element={
+              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
+                <RestaurantLanguage />
               </ProtectedRoute>
             }
           />
@@ -884,7 +918,9 @@ export default function App() {
             path="/delivery/*"
             element={
               <ProtectedRoute requiredRole="delivery" loginPath="/delivery/sign-in">
-                <DeliveryRouter />
+                <DeliverySignupFlowGuard>
+                  <DeliveryRouter />
+                </DeliverySignupFlowGuard>
               </ProtectedRoute>
             }
           />
