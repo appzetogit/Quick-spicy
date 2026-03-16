@@ -25,15 +25,6 @@ export default function Settings() {
           <CardContent className="space-y-6">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Email Notifications</Label>
-                <p className="text-sm text-muted-foreground">
-                  Receive updates about your orders via email
-                </p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
                 <Label>Push Notifications</Label>
                 <p className="text-sm text-muted-foreground">
                   Receive push notifications on your device
@@ -47,4 +38,3 @@ export default function Settings() {
     </AnimatedPage>
   )
 }
-

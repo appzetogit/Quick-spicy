@@ -760,13 +760,13 @@ export default function CreatePercentageDiscount() {
                           <div className={`w-2 h-2 rounded-full ${
                             item.foodType === "Veg" ? "bg-green-600" : "bg-red-600"
                           }`} />
+                        </div>
+                      </div>
                     </div>
-            </div>
-          </div>
 
                     {/* Item Details */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <h3 className="text-base font-bold text-gray-900 mb-1 line-clamp-1">
                             {item.name}
@@ -776,31 +776,30 @@ export default function CreatePercentageDiscount() {
                               {item.description}
                             </p>
                           )}
-              <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3">
                             <span className="text-sm font-semibold text-gray-900">
                               ₹{item.price || 0}
                             </span>
-                </div>
-              </div>
-            </div>
+                          </div>
+                        </div>
 
-
-                      {/* Make Offer Button */}
-                      <div className="-mt-13.5 pt-2">
-                  <button
-                          onClick={() => openMakeOfferModal(item)}
-                          className="ml-32 mb-2 w-30  py-1.5 px-3 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5"
-                  >
-                          <Tag className="w-3.5 h-3.5" />
-                          Make Offer
-                  </button>
+                        {/* Make Offer Button */}
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={() => openMakeOfferModal(item)}
+                            className="py-1.5 px-3 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5 whitespace-nowrap"
+                          >
+                            <Tag className="w-3.5 h-3.5" />
+                            Make Offer
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
                 </motion.div>
               )
             })}
-              </div>
+          </div>
         )
         ) : (
           loadingOffers ? (
