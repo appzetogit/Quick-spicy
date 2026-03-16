@@ -37,6 +37,7 @@ export default function AddToCartAnimation({
   const removedThumbnailRef = useRef(null);
   const flyingThumbnailRef = useRef(null);
   const prevItemsRef = useRef(items);
+  const [mobileBottomOffset, setMobileBottomOffset] = useState(bottomOffset);
 
   // Hide pill on cart pages, order pages, and account page (if enabled)
   const iscartPage = location.pathname === '/cart' ||
@@ -46,6 +47,59 @@ export default function AddToCartAnimation({
   const isOrderPage = location.pathname.startsWith('/orders/');
   const isAccountPage = location.pathname === '/account';
   const shouldHidePill = hideOnPages && (iscartPage || isOrderPage || isAccountPage);
+
+  const resolvedBottomOffset = (() => {
+    if (typeof dynamicBottom === 'number') {
+      return mobileBottomOffset + dynamicBottom;
+    }
+
+    if (typeof dynamicBottom === 'string') {
+      const match = dynamicBottom.match(/bottom-(\d+)/);
+      if (match) {
+        const tailwindUnit = Number(match[1]);
+        if (!Number.isNaN(tailwindUnit)) {
+          return mobileBottomOffset + (tailwindUnit * 4);
+        }
+      }
+    }
+
+    return mobileBottomOffset || 20;
+  })();
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const updateBottomOffset = () => {
+      const bottomNav = document.querySelector('[data-bottom-navigation="true"]');
+      const bottomNavHeight = bottomNav instanceof HTMLElement ? bottomNav.offsetHeight : 0;
+      const safeAreaInset = 16;
+      const nextOffset = bottomNavHeight > 0
+        ? bottomNavHeight + safeAreaInset
+        : bottomOffset;
+
+      setMobileBottomOffset(nextOffset);
+    };
+
+    updateBottomOffset();
+
+    let resizeObserver;
+    const bottomNav = document.querySelector('[data-bottom-navigation="true"]');
+    if (bottomNav && typeof ResizeObserver !== 'undefined') {
+      resizeObserver = new ResizeObserver(() => {
+        updateBottomOffset();
+      });
+      resizeObserver.observe(bottomNav);
+    }
+
+    window.addEventListener('resize', updateBottomOffset);
+    window.addEventListener('orientationchange', updateBottomOffset);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateBottomOffset);
+      window.removeEventListener('orientationchange', updateBottomOffset);
+    };
+  }, [bottomOffset, location.pathname]);
 
   // Handle removal animation when product is removed
   useEffect(() => {
@@ -441,7 +495,7 @@ export default function AddToCartAnimation({
             }}
             style={{
               position: 'fixed',
-              bottom: dynamicBottom ? undefined : `${bottomOffset || 20}px`,
+              bottom: `${resolvedBottomOffset}px`,
               pointerEvents: 'auto',
             }}
             className={`left-0 right-0 z-[9999] flex justify-center px-4 pb-4 md:pb-6 transition-all duration-300 ease-in-out bg-transparent`}
