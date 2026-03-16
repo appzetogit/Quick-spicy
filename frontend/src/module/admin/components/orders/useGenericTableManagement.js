@@ -33,6 +33,30 @@ export function useGenericTableManagement(data, title, searchFields = []) {
     Object.entries(filters).forEach(([key, value]) => {
       if (value && value !== "") {
         result = result.filter(item => {
+          if (key === "restaurant") {
+            const restaurantValue = item.restaurant || item.restaurantName || ""
+            return restaurantValue.toString().toLowerCase().includes(String(value).toLowerCase())
+          }
+
+          if (key === "fromDate" || key === "toDate") {
+            const rawDate = item.createdAt || item.originalOrder?.createdAt || item.date
+            if (!rawDate) return false
+
+            const itemDate = new Date(rawDate)
+            if (Number.isNaN(itemDate.getTime())) return false
+
+            const filterDate = new Date(value)
+            if (Number.isNaN(filterDate.getTime())) return true
+
+            if (key === "fromDate") {
+              filterDate.setHours(0, 0, 0, 0)
+              return itemDate >= filterDate
+            }
+
+            filterDate.setHours(23, 59, 59, 999)
+            return itemDate <= filterDate
+          }
+
           const itemValue = item[key]
           if (typeof value === 'string') {
             return itemValue === value || itemValue?.toString().toLowerCase() === value.toLowerCase()

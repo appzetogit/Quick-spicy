@@ -6,6 +6,7 @@ import OrdersTopbar from "../components/orders/OrdersTopbar"
 import OrderDetectDeliveryTable from "../components/orders/OrderDetectDeliveryTable"
 import ViewOrderDetectDeliveryDialog from "../components/orders/ViewOrderDetectDeliveryDialog"
 import SettingsDialog from "../components/orders/SettingsDialog"
+import DispatchFilterPanel from "../components/orders/DispatchFilterPanel"
 import { useGenericTableManagement } from "../components/orders/useGenericTableManagement"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -210,8 +211,11 @@ const transformOrder = (order, index) => {
     deliveryBoyNumber: order.deliveryPartnerPhone || order.deliveryPartnerId?.phone || null,
     status: displayStatus,
     statusHistory: statusHistory,
+    restaurant: order.restaurant || order.restaurantName || 'Unknown Restaurant',
+    zone: order.zone || order.zoneName || order.restaurantZone || "",
     orderDate: dateStr,
     orderTime: timeStr,
+    createdAt: order.createdAt,
     // Keep original order data for detail view
     originalOrder: order
   }
@@ -311,6 +315,14 @@ export default function OrderDetectDelivery() {
     return { total, ordered, restaurantAccepted, rejected, deliveryBoyAssigned, reachedPickup, orderIdAccepted, reachedDrop, delivered }
   }, [filteredData, orders.length])
 
+  const restaurants = useMemo(() => {
+    return [...new Set(
+      orders
+        .map((order) => order.restaurantName || order.restaurant)
+        .filter(Boolean)
+    )].sort((a, b) => a.localeCompare(b))
+  }, [orders])
+
   const resetColumns = () => {
     setVisibleColumns({
       si: true,
@@ -367,6 +379,7 @@ export default function OrderDetectDelivery() {
         activeFiltersCount={activeFiltersCount}
         onExport={handleExport}
         onSettingsClick={() => setIsSettingsOpen(true)}
+        showSettings={false}
       />
 
       {/* Statistics Cards */}
@@ -487,6 +500,15 @@ export default function OrderDetectDelivery() {
           status: "Status",
           actions: "Actions",
         }}
+      />
+      <DispatchFilterPanel
+        isOpen={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        filters={filters}
+        setFilters={setFilters}
+        onApply={handleApplyFilters}
+        onReset={handleResetFilters}
+        restaurants={restaurants}
       />
       <ViewOrderDetectDeliveryDialog
         isOpen={isViewOrderOpen}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Printer, ArrowUpDown } from "lucide-react"
+import { Eye, Download, ArrowUpDown } from "lucide-react"
 
 export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrder, onPrintOrder }) {
   const [currentPage, setCurrentPage] = useState(1)
@@ -173,9 +173,9 @@ export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrde
                       <button 
                         onClick={() => onPrintOrder(order)}
                         className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Print Order"
+                        title="Download Invoice"
                       >
-                        <Printer className="w-4 h-4" />
+                        <Download className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -241,4 +241,3 @@ export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrde
     </div>
   )
 }
-

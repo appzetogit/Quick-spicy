@@ -130,7 +130,7 @@ export default function RestaurantComplaints() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="Search by order, customer, restaurant..."
+              placeholder="Search by order, Customer ,Restaurant name"
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value.replace(/\s/g, ''), page: 1 })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

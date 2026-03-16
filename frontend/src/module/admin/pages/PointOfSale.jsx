@@ -9,10 +9,8 @@ const debugError = (...args) => {}
 export default function PointOfSale() {
   const [restaurants, setRestaurants] = useState([])
   const [selectedRestaurant, setSelectedRestaurant] = useState('')
-  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(false)
   const [restaurantData, setRestaurantData] = useState(null)
-  const [showSearchResults, setShowSearchResults] = useState(false)
 
   // Default analytics shape before the API responds
   const [analyticsData, setAnalyticsData] = useState({
@@ -232,39 +230,6 @@ export default function PointOfSale() {
     }
   }
 
-  const filteredRestaurants = restaurants.filter(restaurant => {
-    if (!searchQuery.trim()) return true
-    const query = searchQuery.toLowerCase()
-    return (
-      restaurant.name?.toLowerCase().includes(query) ||
-      restaurant.restaurantId?.toLowerCase().includes(query) ||
-      restaurant._id?.toLowerCase().includes(query)
-    )
-  })
-
-  // Handle restaurant selection from search
-  const handleRestaurantSelect = (restaurantId) => {
-    setSelectedRestaurant(restaurantId)
-    const selected = restaurants.find(r => r._id === restaurantId)
-    if (selected) {
-      setSearchQuery(`${selected.name} (${selected.restaurantId || selected._id})`)
-    }
-    setShowSearchResults(false)
-  }
-
-  // Handle search input change
-  const handleSearchChange = (e) => {
-    const value = e.target.value
-    setSearchQuery(value)
-    setShowSearchResults(value.trim().length > 0)
-    
-    // If search is cleared, clear selection
-    if (!value.trim()) {
-      setSelectedRestaurant('')
-      setShowSearchResults(false)
-    }
-  }
-
   const formatCurrency = (amount) => {
     return `₹ ${amount?.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`
   }
@@ -291,97 +256,35 @@ export default function PointOfSale() {
         {/* Restaurant Selection Card */}
         <div className="bg-white rounded-lg shadow-sm border border-[#e3e6ef] p-6 mb-6">
           <div className="flex flex-col gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[#334257] mb-2">
-                Search Restaurant by Name or ID <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5 z-10" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                  onChange={handleSearchChange}
-                  onFocus={() => {
-                    if (searchQuery.trim()) {
-                      setShowSearchResults(true)
-                    }
-                  }}
-                  onBlur={() => {
-                    // Delay to allow click on results
-                    setTimeout(() => setShowSearchResults(false), 200)
-                  }}
-                  placeholder="Type restaurant name or ID to search..."
-                  className="w-full h-11 pl-10 pr-3 rounded-md border border-[#e3e6ef] bg-white text-sm text-[#4a5671] focus:outline-none focus:ring-1 focus:ring-[#006fbd]"
-                />
-                
-                {/* Search Results Dropdown */}
-                {showSearchResults && filteredRestaurants.length > 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-[#e3e6ef] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                    {filteredRestaurants.map(restaurant => (
-                      <div
-                        key={restaurant._id}
-                        onClick={() => handleRestaurantSelect(restaurant._id)}
-                        className="px-4 py-3 hover:bg-[#f9fafc] cursor-pointer border-b border-[#e3e6ef] last:border-b-0 transition-colors"
-                      >
-                          <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-[#334257]">{restaurant.name}</p>
-                            <p className="text-xs text-[#8a94aa]">ID: {restaurant.restaurantId || restaurant._id}</p>
-                          </div>
-                          {selectedRestaurant === restaurant._id && (
-                            <div className="w-2 h-2 bg-[#006fbd] rounded-full"></div>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* No Results Message */}
-                {showSearchResults && searchQuery.trim() && filteredRestaurants.length === 0 && (
-                  <div className="absolute z-50 w-full mt-1 bg-white border border-[#e3e6ef] rounded-md shadow-lg p-4">
-                    <p className="text-sm text-[#8a94aa] text-center">No restaurants found matching "{searchQuery}"</p>
-                  </div>
-                )}
-                  </div>
+            <div>
+              <label className="block text-sm font-medium text-[#334257] mb-2">
+                Select Restaurant
+              </label>
+              <div className="relative">
+                <select 
+                  value={selectedRestaurant}
+                  onChange={(e) => setSelectedRestaurant(e.target.value)}
+                  className="w-full h-11 rounded-md border border-[#e3e6ef] bg-white px-3 pr-10 text-sm text-[#4a5671] focus:outline-none focus:ring-1 focus:ring-[#006fbd]"
+                >
+                  <option value="">Select Restaurant</option>
+                  {restaurants.map(restaurant => (
+                    <option key={restaurant._id} value={restaurant._id}>
+                      {restaurant.name} ({restaurant.restaurantId || restaurant._id})
+                    </option>
+                  ))}
+                </select>
+                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">
+                  ▼
+                </span>
+              </div>
               {selectedRestaurant && (
                 <p className="text-xs text-green-600 mt-2">
                   ✓ Selected: {getSelectedRestaurantName()}
                 </p>
               )}
+            </div>
+          </div>
         </div>
-
-            {/* Alternative: Dropdown Selector */}
-            <div>
-                    <label className="block text-sm font-medium text-[#334257] mb-2">
-                Or Select from Dropdown
-                    </label>
-                    <div className="relative">
-                      <select 
-                  value={selectedRestaurant}
-                  onChange={(e) => {
-                    setSelectedRestaurant(e.target.value)
-                    const selected = restaurants.find(r => r._id === e.target.value)
-                    if (selected) {
-                      setSearchQuery(`${selected.name} (${selected.restaurantId || selected._id})`)
-                    }
-                  }}
-                        className="w-full h-11 rounded-md border border-[#e3e6ef] bg-white px-3 pr-10 text-sm text-[#4a5671] focus:outline-none focus:ring-1 focus:ring-[#006fbd]"
-                      >
-                  <option value="">Select Restaurant</option>
-                  {restaurants.map(restaurant => (
-                    <option key={restaurant._id} value={restaurant._id}>
-                      {restaurant.name} ({restaurant.restaurantId || restaurant._id})
-                          </option>
-                        ))}
-                      </select>
-                      <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">
-                        ▼
-                      </span>
-                    </div>
-                  </div>
-                  </div>
-                </div>
 
         {/* Analytics Dashboard */}
         {selectedRestaurant && !loading ? (

@@ -18,6 +18,7 @@ export default function OrdersTopbar({
   activeFiltersCount,
   onExport,
   onSettingsClick,
+  showSettings = true,
 }) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
@@ -82,15 +83,16 @@ export default function OrdersTopbar({
               </span>
             )}
           </button>
-          <button 
-            onClick={onSettingsClick}
-            className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
-          >
-            <Settings className="w-5 h-5" />
-          </button>
+          {showSettings ? (
+            <button 
+              onClick={onSettingsClick}
+              className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          ) : null}
         </div>
       </div>
     </div>
   )
 }
-

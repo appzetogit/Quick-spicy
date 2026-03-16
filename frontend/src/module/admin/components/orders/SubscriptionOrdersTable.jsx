@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Printer, ArrowUpDown } from "lucide-react"
+import { Eye, Download, ArrowUpDown } from "lucide-react"
 
 const getStatusColor = (status) => {
   if (status === "Expired") return "bg-blue-100 text-blue-700"
@@ -177,9 +177,9 @@ export default function SubscriptionOrdersTable({ orders, visibleColumns, onView
                       <button 
                         onClick={() => onPrintOrder(order)}
                         className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Print Order"
+                        title="Download Invoice"
                       >
-                        <Printer className="w-4 h-4" />
+                        <Download className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -245,4 +245,3 @@ export default function SubscriptionOrdersTable({ orders, visibleColumns, onView
     </div>
   )
 }
-

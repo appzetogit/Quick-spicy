@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Printer, ArrowUpDown, Phone, User } from "lucide-react"
+import { Eye, Download, ArrowUpDown, Phone, User } from "lucide-react"
 
 const getStatusColor = (status) => {
   const colors = {
@@ -181,9 +181,9 @@ export default function OrderDetectDeliveryTable({ orders, visibleColumns, onVie
                       <button 
                         onClick={() => onPrintOrder(order)}
                         className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Print Order"
+                        title="Download Invoice"
                       >
-                        <Printer className="w-4 h-4" />
+                        <Download className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
@@ -249,4 +249,3 @@ export default function OrderDetectDeliveryTable({ orders, visibleColumns, onVie
     </div>
   )
 }
-
