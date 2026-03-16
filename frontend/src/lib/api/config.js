@@ -470,23 +470,6 @@ export const API_ENDPOINTS = {
     TOP_10_PUBLIC: "/hero-banners/top-10/public",
     GOURMET_PUBLIC: "/hero-banners/gourmet/public",
   },
-  // Dining endpoints
-  DINING: {
-    RESTAURANTS: "/dining/restaurants",
-    RESTAURANT_BY_SLUG: "/dining/restaurants/:slug",
-    CATEGORIES: "/dining/categories",
-    LIMELIGHT: "/dining/limelight",
-    BANK_OFFERS: "/dining/bank-offers",
-    MUST_TRIES: "/dining/must-tries",
-    OFFER_BANNERS: "/dining/offer-banners",
-    STORIES: "/dining/stories",
-    BOOKING_CREATE: "/dining/bookings",
-    BOOKING_MY: "/dining/bookings/my",
-    BOOKING_RESTAURANT: "/dining/bookings/restaurant/:restaurantId",
-    BOOKING_STATUS: "/dining/bookings/:bookingId/status",
-    BOOKING_STATUS_RESTAURANT: "/dining/bookings/:bookingId/status/restaurant",
-    REVIEW_CREATE: "/dining/reviews",
-  },
 };
 
 export default {

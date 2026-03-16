@@ -1285,27 +1285,6 @@ export default function Feedback() {
                       <label className="flex items-center gap-3 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={filterValues.reviewType.includes("dining")}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFilterValues(prev => ({
-                                ...prev,
-                                reviewType: [...prev.reviewType, "dining"]
-                              }))
-                            } else {
-                              setFilterValues(prev => ({
-                                ...prev,
-                                reviewType: prev.reviewType.filter(t => t !== "dining")
-                              }))
-                            }
-                          }}
-                          className="w-5 h-5 text-black border-gray-300 focus:ring-black rounded"
-                        />
-                        <span className="text-sm text-gray-900 font-medium">Dining</span>
-                      </label>
-                      <label className="flex items-center gap-3 cursor-pointer">
-                        <input
-                          type="checkbox"
                           checked={filterValues.reviewType.includes("delivery")}
                           onChange={(e) => {
                             if (e.target.checked) {

@@ -732,14 +732,6 @@ export default function OutletInfo() {
               <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 ml-auto" />
             </button>
 
-            {/* Dining Reviews */}
-            <div className="flex items-center gap-2">
-              <div className="bg-gray-300 px-2.5 py-1.5 rounded flex items-center gap-1 shrink-0">
-                <span className="text-white text-sm font-normal">-</span>
-                <Star className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span className="text-gray-800 text-sm font-normal">NOT ENOUGH DINING REVIEWS</span>
-            </div>
           </div>
         </div>
       </div>

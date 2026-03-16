@@ -2,7 +2,7 @@
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { restaurantAPI, diningAPI, orderAPI } from "@/lib/api"
+import { restaurantAPI, orderAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import { useLocation } from "../../hooks/useLocation"
@@ -127,74 +127,44 @@ function RestaurantDetailsContent() {
         setRestaurantError(null)
 
         debugLog('Fetching restaurant with slug:', slug)
-        let response = null
         let apiRestaurant = null
 
-        // Try dining API first
         try {
-          response = await diningAPI.getRestaurantBySlug(slug)
+          const response = await restaurantAPI.getRestaurantById(slug)
           if (response.data && response.data.success && response.data.data) {
             apiRestaurant = response.data.data
-            debugLog('? Found restaurant in dining API:', apiRestaurant)
+            debugLog('? Found restaurant in restaurant API by slug/ID:', apiRestaurant)
           }
-        } catch (diningError) {
-          // If dining API fails with 404, try restaurant API
-          if (diningError.response?.status === 404) {
-            debugLog('? Restaurant not found in dining API, trying restaurant API...')
+        } catch (directLookupError) {
+          debugLog('? Direct lookup failed, trying search by name...')
+
+          const searchVariants = zoneId
+            ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
+            : [{ limit: 100, _ts: Date.now() }]
+
+          for (const searchParams of searchVariants) {
             try {
-              // First, try to get restaurant directly by slug (getRestaurantById supports both ID and slug)
-              // This doesn't require zoneId, so it works even if zone is not detected
-              try {
-                response = await restaurantAPI.getRestaurantById(slug)
-                if (response.data && response.data.success && response.data.data) {
-                  apiRestaurant = response.data.data
-                  debugLog('? Found restaurant in restaurant API by slug/ID:', apiRestaurant)
-                }
-              } catch (directLookupError) {
-                // If direct lookup fails, try searching by name.
-                // Fallback without zoneId so missing live location never blocks this page.
-                debugLog('? Direct lookup failed, trying search by name...')
+              const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
+              const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
 
-                const searchVariants = zoneId
-                  ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
-                  : [{ limit: 100, _ts: Date.now() }]
+              const restaurantName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+              const matchingRestaurant = restaurants.find(r =>
+                r.slug === slug ||
+                r.name?.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
+                r.name?.toLowerCase() === restaurantName.toLowerCase()
+              )
 
-                for (const searchParams of searchVariants) {
-                  try {
-                    const searchResponse = await restaurantAPI.getRestaurants(searchParams, { noCache: true })
-                    const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
-
-                    // Try to find by slug match or name match
-                    const restaurantName = slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
-                    const matchingRestaurant = restaurants.find(r =>
-                      r.slug === slug ||
-                      r.name?.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
-                      r.name?.toLowerCase() === restaurantName.toLowerCase()
-                    )
-
-                    if (matchingRestaurant) {
-                      // Get full restaurant details by ID
-                      const fullResponse = await restaurantAPI.getRestaurantById(matchingRestaurant._id || matchingRestaurant.restaurantId)
-                      if (fullResponse.data && fullResponse.data.success && fullResponse.data.data) {
-                        apiRestaurant = fullResponse.data.data
-                        debugLog('? Found restaurant in restaurant API by name search:', apiRestaurant)
-                        break
-                      }
-                    }
-                  } catch (searchError) {
-                    debugWarn('? Search fallback failed for params:', searchParams, searchError?.message)
-                  }
+              if (matchingRestaurant) {
+                const fullResponse = await restaurantAPI.getRestaurantById(matchingRestaurant._id || matchingRestaurant.restaurantId)
+                if (fullResponse.data && fullResponse.data.success && fullResponse.data.data) {
+                  apiRestaurant = fullResponse.data.data
+                  debugLog('? Found restaurant in restaurant API by name search:', apiRestaurant)
+                  break
                 }
               }
-            } catch (restaurantError) {
-              debugError('? Restaurant not found in restaurant API either:', restaurantError)
-              // Only throw if we haven't found the restaurant yet
-              if (!apiRestaurant) {
-                throw diningError // Throw original error to show "Restaurant not found"
-              }
+            } catch (searchError) {
+              debugWarn('? Search fallback failed for params:', searchParams, searchError?.message)
             }
-          } else {
-            throw diningError // Re-throw if it's not a 404
           }
         }
 

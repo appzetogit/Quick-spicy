@@ -118,8 +118,6 @@ Total files: 218
 - pages/system/AnalyticsScript.jsx
 - pages/system/AppWebSettings.jsx
 - pages/system/CleanDatabase.jsx
-- pages/system/DiningList.jsx
-- pages/system/DiningManagement.jsx
 - pages/system/FirebaseNotification.jsx
 - pages/system/JoinUsPageSetup.jsx
 - pages/system/LandingPageManagement.jsx

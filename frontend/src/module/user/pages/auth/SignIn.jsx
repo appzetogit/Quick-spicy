@@ -113,7 +113,7 @@ export default function SignIn() {
         <div className="max-w-md lg:max-w-lg xl:max-w-xl mx-auto w-full h-full flex flex-col">
           <div className="text-center space-y-2 md:space-y-3">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-black dark:text-white leading-tight">
-              India&apos;s #1 Food Delivery and Dining App
+              India&apos;s #1 Food Delivery App
             </h2>
             <p className="text-sm sm:text-base md:text-lg text-gray-600 dark:text-gray-400">Log in with your phone number</p>
           </div>

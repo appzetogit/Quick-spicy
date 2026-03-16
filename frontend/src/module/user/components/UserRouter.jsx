@@ -9,21 +9,10 @@ import Loader from "@/components/Loader"
 
 // Home & Discovery
 const Home = lazy(() => import("../pages/Home"))
-const Dining = lazy(() => import("../pages/Dining"))
-const DiningRestaurants = lazy(() => import("../pages/DiningRestaurants"))
-const DiningCategory = lazy(() => import("../pages/DiningCategory"))
-const DiningExplore50 = lazy(() => import("../pages/DiningExplore50"))
-const DiningExploreNear = lazy(() => import("../pages/DiningExploreNear"))
-const Coffee = lazy(() => import("../pages/Coffee"))
 const Under250 = lazy(() => import("../pages/Under250"))
 const CategoryPage = lazy(() => import("../pages/CategoryPage"))
 const Restaurants = lazy(() => import("../pages/restaurants/Restaurants"))
 const RestaurantDetails = lazy(() => import("../pages/restaurants/RestaurantDetails"))
-const DiningRestaurantDetails = lazy(() => import("../pages/dining/DiningRestaurantDetails"))
-const TableBooking = lazy(() => import("../pages/dining/TableBooking"))
-const TableBookingConfirmation = lazy(() => import("../pages/dining/TableBookingConfirmation"))
-const TableBookingSuccess = lazy(() => import("../pages/dining/TableBookingSuccess"))
-const MyBookings = lazy(() => import("../pages/dining/MyBookings"))
 const SearchResults = lazy(() => import("../pages/SearchResults"))
 const ProductDetail = lazy(() => import("../pages/ProductDetail"))
 
@@ -100,38 +89,6 @@ export default function UserRouter() {
         <Route element={<UserLayout />}>
           {/* Home & Discovery */}
           <Route path="/" element={<Home />} />
-          <Route path="/dining" element={<Dining />} />
-          <Route path="/dining/restaurants" element={<DiningRestaurants />} />
-          <Route path="/dining/:category" element={<DiningCategory />} />
-          <Route path="/dining/explore/upto50" element={<DiningExplore50 />} />
-          <Route path="/dining/explore/near-rated" element={<DiningExploreNear />} />
-          <Route path="/dining/coffee" element={<Coffee />} />
-          <Route path="/dining/:diningType/:slug" element={<DiningRestaurantDetails />} />
-          <Route path="/dining/book/:slug" element={<TableBooking />} />
-          <Route
-            path="/dining/book-confirmation"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
-                <TableBookingConfirmation />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dining/book-success"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
-                <TableBookingSuccess />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/bookings"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
-                <MyBookings />
-              </ProtectedRoute>
-            }
-          />
           <Route path="/under-250" element={<Under250 />} />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/restaurants" element={<Restaurants />} />
@@ -387,4 +344,3 @@ export default function UserRouter() {
     </Suspense>
   )
 }
-

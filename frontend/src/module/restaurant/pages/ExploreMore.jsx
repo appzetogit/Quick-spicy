@@ -707,8 +707,7 @@ export default function ExploreMore() {
   const manageOutletItems = [
     { id: 1, label: "Outlet info", icon: Info, route: "/restaurant/outlet-info" },
     { id: 2, label: "Outlet timings", icon: Clock, route: "/restaurant/outlet-timings" },
-    { id: 3, label: "Dining Reservations", icon: Calendar, route: "/restaurant/reservations" },
-    { id: 4, label: "Manage staff", icon: Users, route: "/restaurant/contact-details" },
+    { id: 3, label: "Manage staff", icon: Users, route: "/restaurant/contact-details" },
   ]
 
   const settingsItems = [

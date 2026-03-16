@@ -29,7 +29,6 @@ import {
   rejectRestaurant,
   reverifyRestaurant,
   deleteRestaurant,
-  updateRestaurantDiningSettings,
   getAllOffers,
   createAdminOffer,
   updateOfferCartVisibility,
@@ -307,7 +306,6 @@ router.post("/restaurants/:id/reject", rejectRestaurant);
 router.post("/restaurants/:id/reverify", reverifyRestaurant);
 router.put("/restaurants/:id/location", updateRestaurantLocation);
 router.put("/restaurants/:id/status", updateRestaurantStatus);
-router.put("/restaurants/:id/dining-settings", updateRestaurantDiningSettings);
 router.delete("/restaurants/:id", deleteRestaurant);
 
 // Category Management

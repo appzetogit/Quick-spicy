@@ -51,10 +51,9 @@ export default function DesktopNavbar() {
     }
 
     // Check active routes - support both /user/* and /* paths
-    const isDining = location.pathname === "/dining" || location.pathname === "/user/dining"
     const isUnder250 = location.pathname === "/under-250" || location.pathname === "/user/under-250"
     const isProfile = location.pathname.startsWith("/profile") || location.pathname.startsWith("/user/profile")
-    const isDelivery = !isDining && !isUnder250 && !isProfile && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
+    const isDelivery = !isUnder250 && !isProfile && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
     const isBannerRoute =
         location.pathname === "/" ||
         location.pathname === "/user" ||
@@ -330,26 +329,6 @@ export default function DesktopNavbar() {
                             >
                                 <span className="text-sm font-bold tracking-wide uppercase">Under 250</span>
                                 {isUnder250 && (
-                                    <motion.div
-                                        layoutId="navIndicator"
-                                        className="absolute -bottom-3 left-0 right-0 h-0.5 bg-orange-600 dark:bg-orange-500"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        transition={{ duration: 0.3 }}
-                                    />
-                                )}
-                            </Link>
-
-                            {/* Dining Tab */}
-                            <Link
-                                to="/user/dining"
-                                className={`flex flex-col items-center gap-1 px-2 py-1 transition-colors relative group ${isDining
-                                    ? "text-orange-600 dark:text-orange-500"
-                                    : "text-gray-600 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-500"
-                                    }`}
-                            >
-                                <span className="text-sm font-bold tracking-wide uppercase">Dining</span>
-                                {isDining && (
                                     <motion.div
                                         layoutId="navIndicator"
                                         className="absolute -bottom-3 left-0 right-0 h-0.5 bg-orange-600 dark:bg-orange-500"
