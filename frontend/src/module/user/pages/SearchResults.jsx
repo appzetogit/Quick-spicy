@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react"
-import { useSearchParams, Link, useNavigate } from "react-router-dom"
+import { useSearchParams, Link, useNavigate, useLocation as useRouterLocation } from "react-router-dom"
 import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, Loader2, Grid2x2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -10,9 +10,9 @@ import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { restaurantAPI, adminAPI } from "@/lib/api"
 
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugWarn = () => {}
+const debugError = () => {}
 
 // Filter options
 const filterOptions = [
@@ -29,13 +29,15 @@ export default function SearchResults() {
   const [searchParams, setSearchParams] = useSearchParams()
   const query = searchParams.get("q") || ""
   const navigate = useNavigate()
+  const routerLocation = useRouterLocation()
   const { location } = useLocation()
   const { zoneId, isOutOfService } = useZone(location)
-  const { addFavorite, removeFavorite, isFavorite } = useProfile()
+  const { addFavorite, removeFavorite, isFavorite, vegMode } = useProfile()
   const [searchQuery, setSearchQuery] = useState(query)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [activeFilters, setActiveFilters] = useState(new Set())
   const categoryScrollRef = useRef(null)
+  const searchInputRef = useRef(null)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [categories, setCategories] = useState([
@@ -44,6 +46,10 @@ export default function SearchResults() {
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [categoryKeywords, setCategoryKeywords] = useState({})
   const slugify = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+  const pureVegOnly =
+    vegMode &&
+    typeof window !== "undefined" &&
+    localStorage.getItem("userVegModeOption") === "pure-veg"
   const normalizedQuery = String(query || "").trim().toLowerCase()
   const uniqueRestaurants = (list) => {
     const seen = new Set()
@@ -433,6 +439,11 @@ export default function SearchResults() {
               return {
                 id: restaurantId,
                 name: restaurant.name,
+                foodPreference: (
+                  String(restaurant.foodPreference || restaurant.onboarding?.step2?.foodPreference || "").trim().toLowerCase() === "pure-veg"
+                    ? "pure-veg"
+                    : "both"
+                ),
                 cuisine: cuisine,
                 rating: restaurant.rating || null, // Use backend rating or null
                 deliveryTime: deliveryTime,
@@ -518,7 +529,11 @@ export default function SearchResults() {
 
           // Prefer real categories derived from menu sections that are common across restaurants.
           const sectionStatsMap = new Map()
-          transformedRestaurants.forEach((restaurant) => {
+          const categorySourceRestaurants = pureVegOnly
+            ? transformedRestaurants.filter((restaurant) => String(restaurant?.foodPreference || "").trim().toLowerCase() === "pure-veg")
+            : transformedRestaurants
+
+          categorySourceRestaurants.forEach((restaurant) => {
             const sections = restaurant?.menu?.sections
             if (!Array.isArray(sections)) return
             const seenInRestaurant = new Set()
@@ -541,6 +556,9 @@ export default function SearchResults() {
 
             const getCategoryImageFromMenus = (slug, categoryName) => {
               for (const restaurant of transformedRestaurants) {
+                if (pureVegOnly && String(restaurant?.foodPreference || "").trim().toLowerCase() !== "pure-veg") {
+                  continue
+                }
                 const menuSections = Array.isArray(restaurant?.menu?.sections) ? restaurant.menu.sections : []
                 for (const section of menuSections) {
                   const sectionSlug = slugify(section?.name || "")
@@ -570,7 +588,7 @@ export default function SearchResults() {
 
             const dynamicCategories = [
               { id: 'all', name: "All", image: "" },
-              ...sourceEntries.map(([slug, name], idx) => ({
+              ...sourceEntries.map(([slug, name]) => ({
                 id: slug,
                 name,
                 image: getCategoryImageFromMenus(slug, name),
@@ -608,7 +626,7 @@ export default function SearchResults() {
     }
 
     fetchRestaurants()
-  }, [zoneId, isOutOfService])
+  }, [zoneId, isOutOfService, pureVegOnly])
 
   // Update search query when URL changes
   useEffect(() => {
@@ -683,7 +701,9 @@ export default function SearchResults() {
   const filteredAllRestaurants = useMemo(() => {
     // Use ONLY backend data - no hardcoded fallback
     const sourceData = restaurantsData.length > 0 ? restaurantsData : []
-    let filtered = [...sourceData]
+    let filtered = pureVegOnly
+      ? sourceData.filter((restaurant) => String(restaurant?.foodPreference || "").trim().toLowerCase() === "pure-veg")
+      : [...sourceData]
 
     // Filter by search query - Search in name, cuisine, featured dish
     if (query.trim()) {
@@ -740,8 +760,8 @@ export default function SearchResults() {
     }
 
     return uniqueRestaurants(filtered)
-  }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories, matchedCategory])
-  const matchingDishes = useMemo(() => {
+  }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories, matchedCategory, pureVegOnly])
+  const _matchingDishes = useMemo(() => {
     const dishes = []
     const seen = new Set()
 
@@ -782,6 +802,16 @@ export default function SearchResults() {
   }, [filteredAllRestaurants, query, selectedCategory])
   const filteredRecommended = []
 
+  useEffect(() => {
+    const shouldAutoFocus = routerLocation.state?.autoFocusSearch
+    if (!shouldAutoFocus) return
+
+    window.setTimeout(() => {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select?.()
+    }, 120)
+  }, [routerLocation.state])
+
   // Check if should show grayscale (user out of service)
   const shouldShowGrayscale = isOutOfService
 
@@ -802,6 +832,7 @@ export default function SearchResults() {
             <form onSubmit={handleSearch} className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
               <Input
+                ref={searchInputRef}
                 placeholder="Restaurant name or a dish..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

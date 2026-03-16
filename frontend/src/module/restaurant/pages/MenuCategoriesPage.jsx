@@ -12,11 +12,44 @@ import {
   Eye,
   EyeOff
 } from "lucide-react"
-import { restaurantAPI } from "@/lib/api"
+import { restaurantAPI, adminAPI } from "@/lib/api"
 import { toast } from "sonner"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugError = () => {}
+
+const mergeCategoryOptions = (restaurantCategories = [], adminCategories = []) => {
+  const categoryMap = new Map()
+
+  ;(Array.isArray(adminCategories) ? adminCategories : []).forEach((category, index) => {
+    const name = String(category?.name || "").trim()
+    if (!name) return
+    const key = name.toLowerCase()
+    if (!categoryMap.has(key)) {
+      categoryMap.set(key, {
+        _id: category?._id || category?.id || `admin-category-${index}`,
+        id: category?.id || category?._id || `admin-category-${index}`,
+        name,
+        itemCount: 0,
+        isActive: true,
+        source: "admin",
+      })
+    }
+  })
+
+  ;(Array.isArray(restaurantCategories) ? restaurantCategories : []).forEach((category, index) => {
+    const name = String(category?.name || "").trim()
+    if (!name) return
+    const key = name.toLowerCase()
+    categoryMap.set(key, {
+      ...category,
+      _id: category?._id || category?.id || `restaurant-category-${index}`,
+      id: category?.id || category?._id || `restaurant-category-${index}`,
+      name,
+      source: "restaurant",
+    })
+  })
+
+  return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
 
 
 export default function MenuCategoriesPage() {
@@ -39,10 +72,19 @@ export default function MenuCategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true)
-      const response = await restaurantAPI.getAllCategories()
-      if (response.data.success) {
-        setCategories(response.data.data.categories || [])
-      }
+      const [restaurantResponse, adminResponse] = await Promise.all([
+        restaurantAPI.getAllCategories(),
+        adminAPI.getPublicCategories(),
+      ])
+
+      const restaurantCategories = restaurantResponse?.data?.success
+        ? restaurantResponse?.data?.data?.categories || []
+        : []
+      const adminCategories = adminResponse?.data?.success
+        ? adminResponse?.data?.data?.categories || []
+        : []
+
+      setCategories(mergeCategoryOptions(restaurantCategories, adminCategories))
     } catch (error) {
       debugError('Error fetching categories:', error)
       toast.error('Failed to load categories')
@@ -182,6 +224,9 @@ export default function MenuCategoriesPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <h3 className="font-semibold text-gray-900">{category.name}</h3>
+                      {category.source === "admin" && (
+                        <span className="text-[10px] px-2 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded-full font-medium">Admin</span>
+                      )}
                       {!category.isActive && (
                         <span className="text-[10px] px-2 py-0.5 bg-red-50 text-red-600 border border-red-100 rounded-full font-medium">Deactivated</span>
                       )}
@@ -192,35 +237,41 @@ export default function MenuCategoriesPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleToggleActive(category)}
-                    className={`p-2 rounded-lg transition-all ${category.isActive
-                        ? 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
-                        : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
-                      }`}
-                    title={category.isActive ? 'Deactivate' : 'Activate'}
-                  >
-                    {category.isActive ? (
-                      <Eye className="w-4 h-4" />
-                    ) : (
-                      <EyeOff className="w-4 h-4" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => handleEditCategory(category)}
-                    className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
-                    title="Edit"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteCategory(category)}
-                    className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
-                    title="Delete"
-                    disabled={category.itemCount > 0}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {category.source === "restaurant" ? (
+                    <>
+                      <button
+                        onClick={() => handleToggleActive(category)}
+                        className={`p-2 rounded-lg transition-all ${category.isActive
+                            ? 'bg-green-50 text-green-600 hover:bg-green-100 border border-green-100'
+                            : 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-100'
+                          }`}
+                        title={category.isActive ? 'Deactivate' : 'Activate'}
+                      >
+                        {category.isActive ? (
+                          <Eye className="w-4 h-4" />
+                        ) : (
+                          <EyeOff className="w-4 h-4" />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => handleEditCategory(category)}
+                        className="p-2 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCategory(category)}
+                        className="p-2 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors"
+                        title="Delete"
+                        disabled={category.itemCount > 0}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs font-medium text-gray-400 px-2">Managed in admin</span>
+                  )}
                 </div>
               </motion.div>
             ))}

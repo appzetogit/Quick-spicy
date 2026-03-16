@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom"
 import { X, Search, Clock, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { restaurantAPI, adminAPI } from "@/lib/api"
+import { restaurantAPI } from "@/lib/api"
+import { useProfile } from "../context/ProfileContext"
 
 const SEARCH_HISTORY_KEY = "user_recent_searches_v1"
+const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
 
 export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchChange }) {
   const navigate = useNavigate()
+  const { vegMode } = useProfile()
   const inputRef = useRef(null)
   const [allFoods, setAllFoods] = useState([])
   const [filteredFoods, setFilteredFoods] = useState([])
@@ -25,6 +28,11 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
 
   useEffect(() => {
     if (!isOpen) return
+
+    const pureVegOnly =
+      vegMode &&
+      typeof window !== "undefined" &&
+      localStorage.getItem(USER_VEG_MODE_OPTION_KEY) === "pure-veg"
 
     const loadRecentSuggestions = () => {
       try {
@@ -59,36 +67,83 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
     const fetchSearchData = async () => {
       setLoadingFoods(true)
       try {
-        const [dishesRes, categoriesRes] = await Promise.all([
-          restaurantAPI.getPublicDishes({ limit: 800 }),
-          adminAPI.getPublicCategories(),
-        ])
-
-        const dishes =
-          dishesRes?.data?.data?.dishes ||
-          dishesRes?.data?.dishes ||
+        const restaurantsRes = await restaurantAPI.getRestaurants({ limit: 500 })
+        const restaurants =
+          restaurantsRes?.data?.data?.restaurants ||
+          restaurantsRes?.data?.restaurants ||
           []
 
-        const normalizedDishes = (Array.isArray(dishes) ? dishes : [])
-          .filter((dish) => dish?.name)
-          .map((dish, index) => ({
-            id: dish?.id || dish?._id || `dish-${index}`,
-            name: String(dish.name).trim(),
-            image: getImageUrl(dish?.image),
-          }))
+        const eligibleRestaurants = (Array.isArray(restaurants) ? restaurants : []).filter((restaurant) => {
+          if (!pureVegOnly) return true
+          const foodPreference = String(
+            restaurant?.foodPreference || restaurant?.onboarding?.step2?.foodPreference || ""
+          ).trim().toLowerCase()
+          return foodPreference === "pure-veg"
+        })
 
-        const categories =
-          categoriesRes?.data?.data?.categories ||
-          categoriesRes?.data?.categories ||
-          []
+        const menus = await Promise.all(
+          eligibleRestaurants.map(async (restaurant) => {
+            const restaurantId = restaurant?._id || restaurant?.restaurantId || restaurant?.id
+            if (!restaurantId) return null
+            try {
+              const menuRes = await restaurantAPI.getMenuByRestaurantId(restaurantId)
+              return {
+                restaurant,
+                menu: menuRes?.data?.data?.menu || menuRes?.data?.menu || null,
+              }
+            } catch {
+              return {
+                restaurant,
+                menu: null,
+              }
+            }
+          })
+        )
 
-        const normalizedCategories = (Array.isArray(categories) ? categories : [])
-          .filter((category) => category?.name)
-          .map((category, index) => ({
-            id: category?.id || category?._id || category?.slug || `category-${index}`,
-            name: String(category.name).trim(),
-            image: getImageUrl(category?.image || category?.imageUrl),
-          }))
+        const foodsMap = new Map()
+        const categoriesMap = new Map()
+
+        menus.filter(Boolean).forEach(({ restaurant, menu }) => {
+          const sections = Array.isArray(menu?.sections) ? menu.sections : []
+
+          sections.forEach((section) => {
+            const sectionName = String(section?.name || "").trim()
+            const sectionKey = sectionName.toLowerCase()
+            const sectionItems = Array.isArray(section?.items) ? section.items : []
+            const subsectionItems = Array.isArray(section?.subsections)
+              ? section.subsections.flatMap((subsection) => Array.isArray(subsection?.items) ? subsection.items : [])
+              : []
+            const allItems = [...sectionItems, ...subsectionItems]
+
+            if (sectionName && !categoriesMap.has(sectionKey)) {
+              const sectionImage = getImageUrl(allItems.find((item) => item?.image)?.image) || getImageUrl(restaurant?.profileImage?.url)
+              categoriesMap.set(sectionKey, {
+                id: sectionKey,
+                name: sectionName,
+                image: sectionImage,
+              })
+            }
+
+            allItems.forEach((item, index) => {
+              const itemName = String(item?.name || "").trim()
+              if (!itemName) return
+              const itemKey = itemName.toLowerCase()
+              const itemImage = getImageUrl(item?.image) || getImageUrl(restaurant?.profileImage?.url)
+              if (!foodsMap.has(itemKey)) {
+                foodsMap.set(itemKey, {
+                  id: item?.id || item?._id || `${sectionKey || "dish"}-${index}`,
+                  name: itemName,
+                  image: itemImage,
+                })
+              } else if (!foodsMap.get(itemKey).image && itemImage) {
+                foodsMap.get(itemKey).image = itemImage
+              }
+            })
+          })
+        })
+
+        const normalizedDishes = Array.from(foodsMap.values())
+        const normalizedCategories = Array.from(categoriesMap.values())
 
         setAllFoods(normalizedDishes)
         setAllCategories(normalizedCategories)
@@ -102,7 +157,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
 
     loadRecentSuggestions()
     fetchSearchData()
-  }, [isOpen])
+  }, [isOpen, vegMode])
 
   useEffect(() => {
     const handleEscape = (e) => {
@@ -336,10 +391,10 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
                 <>
                   <Search className="h-12 w-12 sm:h-16 sm:w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                   <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg font-semibold">
-                    {searchValue.trim() ? `No results found for "${searchValue}"` : "No dishes found in database"}
+                    {searchValue.trim() ? `No results found for "${searchValue}"` : "No dishes available right now"}
                   </p>
                   <p className="text-sm sm:text-base text-gray-500 dark:text-gray-500 mt-2">
-                    {searchValue.trim() ? "Try a different search term" : "Add menu items in restaurant menus to show here"}
+                    {searchValue.trim() ? "Try a different search term" : "Please check back in a little while."}
                   </p>
                 </>
               )}

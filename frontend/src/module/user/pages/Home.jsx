@@ -303,7 +303,7 @@ export default function Home() {
   const [searchParams] = useSearchParams()
   const query = searchParams.get("q") || ""
   const [heroSearch, setHeroSearch] = useState("")
-  const { openSearch, closeSearch, searchValue, setSearchValue } = useSearchOverlay()
+  const { closeSearch } = useSearchOverlay()
   const { openLocationSelector } = useLocationSelector()
   const { vegMode, setVegMode: setVegModeContext } = useProfile()
   const [prevVegMode, setPrevVegMode] = useState(vegMode)
@@ -547,10 +547,26 @@ export default function Home() {
   }, [landingCategories, normalizeImageUrl, slugifyCategory])
 
   const displayCategories = useMemo(() => {
-    if (menuCategories.length > 0) return menuCategories
+    const visibleCategoryKeys = new Set(
+      (Array.isArray(realCategories) ? realCategories : []).map((category) =>
+        slugifyCategory(category?.slug || category?.name || category?.label || "")
+      ).filter(Boolean)
+    )
+
+    const filteredMenuCategories =
+      visibleCategoryKeys.size > 0
+        ? menuCategories.filter((category) =>
+            visibleCategoryKeys.has(
+              slugifyCategory(category?.slug || category?.name || category?.label || "")
+            )
+          )
+        : menuCategories
+
+    if (vegMode) return filteredMenuCategories
+    if (filteredMenuCategories.length > 0) return filteredMenuCategories
     if (realCategories.length > 0) return realCategories
     return normalizedLandingCategories
-  }, [menuCategories, realCategories, normalizedLandingCategories])
+  }, [menuCategories, normalizedLandingCategories, realCategories, slugifyCategory, vegMode])
 
   // Swipe functionality for hero banner carousel
   const touchStartX = useRef(0)
@@ -1432,7 +1448,11 @@ export default function Home() {
   // Build a union of menu categories across all restaurants.
   useEffect(() => {
     const fetchMenuCategories = async () => {
-      if (!Array.isArray(restaurantsData) || restaurantsData.length === 0) {
+      const sourceRestaurants = vegMode
+        ? restaurantsData.filter((restaurant) => String(restaurant?.foodPreference || "").trim().toLowerCase() === "pure-veg")
+        : restaurantsData
+
+      if (!Array.isArray(sourceRestaurants) || sourceRestaurants.length === 0) {
         setMenuCategories([])
         return
       }
@@ -1441,7 +1461,7 @@ export default function Home() {
       try {
         const categoryMap = new Map()
         const menuResponses = await Promise.all(
-          restaurantsData.map(async (restaurant) => {
+          sourceRestaurants.map(async (restaurant) => {
             const id = restaurant?.restaurantId || restaurant?.id
             if (!id) return { id: null, menu: null }
             try {
@@ -1509,7 +1529,7 @@ export default function Home() {
     }
 
     fetchMenuCategories()
-  }, [restaurantsData, normalizeImageUrl, slugifyCategory])
+  }, [restaurantsData, normalizeImageUrl, slugifyCategory, vegMode])
 
   const matchesVegMode = useCallback((restaurant) => {
     if (!vegMode) return true
@@ -1709,12 +1729,18 @@ export default function Home() {
   }, [openLocationSelector])
 
   const handleSearchFocus = useCallback(() => {
-    // Sync heroSearch with global searchValue when opening overlay
-    if (heroSearch) {
-      setSearchValue(heroSearch)
-    }
-    openSearch()
-  }, [heroSearch, openSearch, setSearchValue])
+    const trimmedQuery = heroSearch.trim()
+    const searchPath = trimmedQuery
+      ? `/user/search?q=${encodeURIComponent(trimmedQuery)}`
+      : "/user/search"
+
+    navigate(searchPath, {
+      state: {
+        fromHome: true,
+        autoFocusSearch: true,
+      },
+    })
+  }, [heroSearch, navigate])
 
   const handleSearchClose = useCallback(() => {
     closeSearch()

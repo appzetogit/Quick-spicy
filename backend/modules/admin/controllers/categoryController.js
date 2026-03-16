@@ -1,4 +1,5 @@
 import AdminCategoryManagement from '../models/AdminCategoryManagement.js';
+import Menu from '../../restaurant/models/Menu.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
@@ -14,25 +15,88 @@ const logger = winston.createLogger({
   ]
 });
 
+const ALLOWED_CATEGORY_TYPES = new Set(['Starters', 'Main course', 'Desserts', 'Beverages', 'Varieties']);
+const normalizeCategoryType = (value) => {
+  const trimmed = String(value || '').trim();
+  return ALLOWED_CATEGORY_TYPES.has(trimmed) ? trimmed : undefined;
+};
+
 /**
  * Get All Categories (Public - for user frontend)
  * GET /api/categories/public
  */
 export const getPublicCategories = asyncHandler(async (req, res) => {
   try {
-    // Only get active categories for public access
     const categories = await AdminCategoryManagement.find({ status: true })
-      .select('name image _id type')
-      .sort({ createdAt: -1 })
+      .select('name image _id type showOnHome')
       .lean();
 
-    const formattedCategories = categories.map((category) => ({
-      id: category._id.toString(),
-      name: category.name,
-      image: category.image,
-      type: category.type || null,
-      slug: category.name.toLowerCase().replace(/\s+/g, '-')
-    }));
+    const adminCategoryMap = new Map(
+      categories.map((category) => [String(category.name || '').trim().toLowerCase(), category])
+    );
+
+    const menus = await Menu.find({ isActive: true })
+      .select('sections')
+      .lean();
+
+    const menuCategoryMap = new Map();
+    for (const menu of menus) {
+      const sections = Array.isArray(menu?.sections) ? menu.sections : [];
+      for (const section of sections) {
+        const name = String(section?.name || '').trim();
+        if (!name) continue;
+
+        const key = name.toLowerCase();
+        if (!menuCategoryMap.has(key)) {
+          const directImage = Array.isArray(section?.items)
+            ? section.items.find((item) => item?.image)?.image
+            : '';
+          const nestedImage = Array.isArray(section?.subsections)
+            ? section.subsections
+              .flatMap((subsection) => (Array.isArray(subsection?.items) ? subsection.items : []))
+              .find((item) => item?.image)?.image
+            : '';
+
+          menuCategoryMap.set(key, {
+            id: key,
+            name,
+            image: directImage || nestedImage || '',
+            type: 'Menu Section',
+          });
+        }
+      }
+    }
+
+    const formattedCategoryMap = new Map();
+
+    for (const [key, category] of menuCategoryMap.entries()) {
+      const adminCategory = adminCategoryMap.get(key);
+      if (adminCategory && adminCategory.showOnHome === false) continue;
+
+      formattedCategoryMap.set(key, {
+        id: adminCategory?._id?.toString() || category.id,
+        name: adminCategory?.name || category.name,
+        image: adminCategory?.image || category.image,
+        type: adminCategory?.type || category.type || null,
+        slug: (adminCategory?.name || category.name).toLowerCase().replace(/\s+/g, '-'),
+      });
+    }
+
+    for (const category of categories) {
+      const key = String(category.name || '').trim().toLowerCase();
+      if (!key || category.showOnHome === false || formattedCategoryMap.has(key)) continue;
+
+      formattedCategoryMap.set(key, {
+        id: category._id.toString(),
+        name: category.name,
+        image: category.image,
+        type: category.type || null,
+        slug: category.name.toLowerCase().replace(/\s+/g, '-'),
+      });
+    }
+
+    const formattedCategories = Array.from(formattedCategoryMap.values())
+      .sort((a, b) => a.name.localeCompare(b.name));
 
     return successResponse(res, 200, 'Categories retrieved successfully', {
       categories: formattedCategories
@@ -133,7 +197,7 @@ export const getCategoryById = asyncHandler(async (req, res) => {
  */
 export const createCategory = asyncHandler(async (req, res) => {
   try {
-    const { name, image, status, type } = req.body;
+    const { name, image, status, type, showOnHome } = req.body;
 
     // Validation
     if (!name || !name.trim()) {
@@ -178,9 +242,10 @@ export const createCategory = asyncHandler(async (req, res) => {
     const categoryData = {
       name: name.trim(),
       image: imageUrl,
-      type: type && type.trim() ? type.trim() : undefined,
+      type: normalizeCategoryType(type),
       priority: 'Normal', // Default priority
       status: status !== undefined ? status : true,
+      showOnHome: showOnHome !== undefined ? showOnHome === 'true' || showOnHome === true : true,
       description: '',
       createdBy: req.user._id,
       updatedBy: req.user._id,
@@ -217,7 +282,7 @@ export const createCategory = asyncHandler(async (req, res) => {
 export const updateCategory = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, image, status, type } = req.body;
+    const { name, image, status, type, showOnHome } = req.body;
 
     const category = await AdminCategoryManagement.findById(id);
 
@@ -265,8 +330,9 @@ export const updateCategory = asyncHandler(async (req, res) => {
     // Update fields
     if (name !== undefined) category.name = name.trim();
     if (imageUrl !== undefined) category.image = imageUrl;
-    if (type !== undefined) category.type = type && type.trim() ? type.trim() : undefined;
+    if (type !== undefined) category.type = normalizeCategoryType(type);
     if (status !== undefined) category.status = status;
+    if (showOnHome !== undefined) category.showOnHome = showOnHome === 'true' || showOnHome === true;
     category.updatedBy = req.user._id;
 
     await category.save();
@@ -391,6 +457,64 @@ export const updateCategoryPriority = asyncHandler(async (req, res) => {
   } catch (error) {
     logger.error(`Error updating category priority: ${error.message}`);
     return errorResponse(res, 500, 'Failed to update category priority');
+  }
+});
+
+/**
+ * Toggle category home visibility by name
+ * PATCH /api/admin/categories/home-visibility
+ */
+export const updateCategoryHomeVisibility = asyncHandler(async (req, res) => {
+  try {
+    const { name, image, type, showOnHome } = req.body;
+
+    if (!name || !String(name).trim()) {
+      return errorResponse(res, 400, 'Category name is required');
+    }
+
+    const trimmedName = String(name).trim();
+    const normalizedShowOnHome = showOnHome === 'true' || showOnHome === true;
+
+    let category = await AdminCategoryManagement.findOne({
+      name: { $regex: new RegExp(`^${trimmedName}$`, 'i') }
+    });
+
+    if (!category) {
+      category = await AdminCategoryManagement.create({
+        name: trimmedName,
+        image: image && String(image).trim() ? String(image).trim() : '',
+        type: normalizeCategoryType(type),
+        priority: 'Normal',
+        status: true,
+        showOnHome: normalizedShowOnHome,
+        description: '',
+        createdBy: req.user._id,
+        updatedBy: req.user._id,
+      });
+    } else {
+      if ((!category.image || category.image === 'https://via.placeholder.com/40') && image && String(image).trim()) {
+        category.image = String(image).trim();
+      }
+      if (!category.type) {
+        const normalizedType = normalizeCategoryType(type);
+        if (normalizedType) {
+          category.type = normalizedType;
+        }
+      }
+      category.showOnHome = normalizedShowOnHome;
+      category.updatedBy = req.user._id;
+      await category.save();
+    }
+
+    return successResponse(res, 200, 'Category visibility updated successfully', {
+      category: {
+        ...category.toObject(),
+        id: category._id.toString(),
+      }
+    });
+  } catch (error) {
+    logger.error(`Error updating category home visibility: ${error.message}`);
+    return errorResponse(res, 500, 'Failed to update category visibility');
   }
 });
 

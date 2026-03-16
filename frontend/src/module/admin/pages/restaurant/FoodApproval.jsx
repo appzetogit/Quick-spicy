@@ -11,9 +11,8 @@ import {
 } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugError = () => {}
 
 
 export default function FoodApproval() {
@@ -238,9 +237,6 @@ export default function FoodApproval() {
                         Type
                       </th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                        Section
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Status
                       </th>
                       <th className="px-3 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -257,7 +253,7 @@ export default function FoodApproval() {
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {filteredRequests.length === 0 ? (
                       <tr>
-                        <td colSpan="10" className="px-3 py-8 text-center text-sm text-gray-500">
+                        <td colSpan="9" className="px-3 py-8 text-center text-sm text-gray-500">
                           {loading ? "Loading..." : "No food or category records found."}
                         </td>
                       </tr>
@@ -281,9 +277,6 @@ export default function FoodApproval() {
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700 capitalize">
                             {request.entityType || request.type || 'food'}
-                          </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-700">
-                            {request.subsectionName ? `${request.sectionName || '-'} / ${request.subsectionName}` : (request.sectionName || '-')}
                           </td>
                           <td className="px-3 py-3 whitespace-nowrap text-sm">
                             <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium capitalize ${

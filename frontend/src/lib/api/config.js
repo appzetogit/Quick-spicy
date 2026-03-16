@@ -387,6 +387,7 @@ export const API_ENDPOINTS = {
     CATEGORY_BY_ID: "/admin/categories/:id",
     CATEGORY_STATUS: "/admin/categories/:id/status",
     CATEGORY_PRIORITY: "/admin/categories/:id/priority",
+    CATEGORY_HOME_VISIBILITY: "/admin/categories/home-visibility",
     FEE_SETTINGS: "/admin/fee-settings",
     FEE_SETTINGS_PUBLIC: "/fee-settings/public",
     FEE_SETTINGS_HISTORY: "/admin/fee-settings/history",

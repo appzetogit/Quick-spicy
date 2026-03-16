@@ -1648,11 +1648,14 @@ export const adminAPI = {
   },
 
   updateCategoryPriority: (id, priority) => {
-    return apiClient.patch(
-      API_ENDPOINTS.ADMIN.CATEGORY_PRIORITY.replace(":id", id),
-      { priority },
-    );
-  },
+      return apiClient.patch(
+        API_ENDPOINTS.ADMIN.CATEGORY_PRIORITY.replace(":id", id),
+        { priority },
+      );
+    },
+  updateCategoryHomeVisibility: (data) => {
+      return apiClient.patch(API_ENDPOINTS.ADMIN.CATEGORY_HOME_VISIBILITY, data);
+    },
 
   // Fee Settings Management (Delivery & Platform Fee)
   getFeeSettings: () => {

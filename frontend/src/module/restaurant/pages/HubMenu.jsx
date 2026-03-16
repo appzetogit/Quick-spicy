@@ -28,6 +28,42 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const isUploadableFile = (value) =>
+  typeof File !== "undefined" && value instanceof File
+
+const getExtensionFromMimeType = (mimeType) => {
+  const normalized = String(mimeType || "").toLowerCase()
+  if (normalized.includes("png")) return "png"
+  if (normalized.includes("webp")) return "webp"
+  if (normalized.includes("heic")) return "heic"
+  if (normalized.includes("heif")) return "heif"
+  return "jpg"
+}
+
+const convertBase64ToFile = (base64Value, mimeType = "image/jpeg", fileNamePrefix = "camera-image") => {
+  if (!base64Value || typeof base64Value !== "string") {
+    throw new Error("Invalid base64 image data")
+  }
+
+  let pureBase64 = base64Value
+  if (base64Value.includes(",")) {
+    pureBase64 = base64Value.split(",")[1]
+  }
+
+  const byteCharacters = atob(pureBase64)
+  const byteNumbers = new Array(byteCharacters.length)
+  for (let i = 0; i < byteCharacters.length; i += 1) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  }
+
+  const byteArray = new Uint8Array(byteNumbers)
+  const normalizedMimeType = mimeType || "image/jpeg"
+  const extension = getExtensionFromMimeType(normalizedMimeType)
+  const fileName = `${fileNamePrefix}-${Date.now()}.${extension}`
+  const blob = new Blob([byteArray], { type: normalizedMimeType })
+  return new File([blob], fileName, { type: normalizedMimeType })
+}
+
 
 const getUploadErrorMessage = (error, fileName = "image") => {
   const message =
@@ -65,8 +101,8 @@ export default function HubMenu() {
   const [editCategoryName, setEditCategoryName] = useState("")
   const [expandedGroups, setExpandedGroups] = useState(new Set())
   const hasInitializedExpandedGroups = useRef(false)
-  const [selectedFilter, setSelectedFilter] = useState(null)
-  const [activeFilter, setActiveFilter] = useState(null) // Active filter for filtering menu
+  const [activeFoodFilter, setActiveFoodFilter] = useState(null)
+  const [activeAddonFilter, setActiveAddonFilter] = useState(null)
   const [availabilityReason, setAvailabilityReason] = useState(null)
   const [switchingOffTarget, setSwitchingOffTarget] = useState(null) // { type: 'item' | 'group', id: string, groupId?: string }
   const [customDateTime, setCustomDateTime] = useState('')
@@ -99,6 +135,12 @@ export default function HubMenu() {
   const [uploadingAddonImages, setUploadingAddonImages] = useState(false)
   const [editingAddon, setEditingAddon] = useState(null) // Store addon being edited
   const addonFileInputRef = useRef(null)
+  const addonCameraInputRef = useRef(null)
+  const [isAddonImageSourcePickerOpen, setIsAddonImageSourcePickerOpen] = useState(false)
+  const isMobileDevice =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(max-width: 768px)")?.matches ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator?.userAgent || ""))
 
   // Restaurant info - fetch from backend
   const restaurantName = restaurantData?.name || ""
@@ -121,67 +163,51 @@ export default function HubMenu() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Calculate filter counts from menu data
-  const calculateFilterCounts = useMemo(() => {
-    // Get all items from menuData (including subsections)
+  // Keep only approval-request filters in hub menu
+  const foodFilterOptions = useMemo(() => {
     const allItems = []
-    menuData.forEach(section => {
-      if (section.items && Array.isArray(section.items)) {
-        allItems.push(...section.items)
+    menuData.forEach((group) => {
+      if (Array.isArray(group?.items)) {
+        allItems.push(...group.items)
       }
-      if (section.subsections && Array.isArray(section.subsections)) {
-        section.subsections.forEach(subsection => {
-          if (subsection.items && Array.isArray(subsection.items)) {
+      if (Array.isArray(group?.subsections)) {
+        group.subsections.forEach((subsection) => {
+          if (Array.isArray(subsection?.items)) {
             allItems.push(...subsection.items)
           }
         })
       }
     })
 
-    // Calculate counts for each filter (matching the filtering logic exactly)
     const counts = {
-      recommended: allItems.filter(item => item.isRecommended === true).length,
-      "out-of-stock": allItems.filter(item => !item.isAvailable).length,
-      "no-photos": allItems.filter(item => !item.image || item.photoCount === 0).length,
-      "without-description": allItems.filter(item => !item.description || item.description.trim() === "").length,
-      "without-serving-info": allItems.filter(item => !item.variations || item.variations.length === 0).length,
-      "item-not-live": allItems.filter(item => !item.isAvailable).length,
-      "photos-rejected": 0, // This would need a status field in the item model
-      "under-review": 0, // This would need a status field in the item model
-      goods: 0, // This would need a category type field
-      services: 0, // This would need a category type field
+      pending: allItems.filter((item) => String(item?.approvalStatus || "pending").toLowerCase() === "pending").length,
+      approved: allItems.filter((item) => String(item?.approvalStatus || "").toLowerCase() === "approved").length,
+      rejected: allItems.filter((item) => String(item?.approvalStatus || "").toLowerCase() === "rejected").length,
     }
 
-    return counts
+    return [
+      { id: "pending", label: "Pending", count: counts.pending },
+      { id: "approved", label: "Approved request", count: counts.approved },
+      { id: "rejected", label: "Rejected", count: counts.rejected },
+    ]
   }, [menuData])
 
-  // Filter options with dynamic counts
-  const filterOptions = useMemo(() => [
-    { id: "recommended", label: "Recommended", count: calculateFilterCounts.recommended },
-    { id: "out-of-stock", label: "Out of stock", count: calculateFilterCounts["out-of-stock"] },
-    { id: "goods", label: "Goods", count: calculateFilterCounts.goods },
-    { id: "services", label: "Services", count: calculateFilterCounts.services },
-    { id: "item-not-live", label: "Item not live", count: calculateFilterCounts["item-not-live"] },
-    { id: "photos-rejected", label: "Photos rejected", count: calculateFilterCounts["photos-rejected"] },
-    { id: "no-photos", label: "No photos", count: calculateFilterCounts["no-photos"] },
-    { id: "under-review", label: "Under review", count: calculateFilterCounts["under-review"] },
-    { id: "without-description", label: "Without description", count: calculateFilterCounts["without-description"] },
-    { id: "without-serving-info", label: "Without serving info", count: calculateFilterCounts["without-serving-info"] },
-  ], [calculateFilterCounts])
+  const addonFilterOptions = useMemo(() => {
+    const counts = {
+      pending: addons.filter((addon) => String(addon?.approvalStatus || "pending").toLowerCase() === "pending").length,
+      approved: addons.filter((addon) => String(addon?.approvalStatus || "").toLowerCase() === "approved").length,
+      rejected: addons.filter((addon) => String(addon?.approvalStatus || "").toLowerCase() === "rejected").length,
+    }
 
-  // Quick filter buttons (horizontally scrollable) - only show filters with count > 0
-  const quickFilters = useMemo(() => {
-    const filters = [
-      { id: "out-of-stock", label: "Out of stock", count: calculateFilterCounts["out-of-stock"] },
-      { id: "no-photos", label: "No photos", count: calculateFilterCounts["no-photos"] },
-      { id: "recommended", label: "Recommended", count: calculateFilterCounts.recommended },
-      { id: "services", label: "Services", count: calculateFilterCounts.services },
-      { id: "photos-rejected", label: "Photos Rejected", count: calculateFilterCounts["photos-rejected"] },
+    return [
+      { id: "pending", label: "Pending", count: counts.pending },
+      { id: "approved", label: "Approved request", count: counts.approved },
+      { id: "rejected", label: "Rejected", count: counts.rejected },
     ]
-    // Only return filters with count > 0
-    return filters.filter(f => f.count > 0)
-  }, [calculateFilterCounts])
+  }, [addons])
 
+  const activeFilter = activeTab === "add-ons" ? activeAddonFilter : activeFoodFilter
+  const filterOptions = activeTab === "add-ons" ? addonFilterOptions : foodFilterOptions
   // Menu groups are now directly from menuData (fetched from backend)
 
   // Fetch restaurant data on mount
@@ -454,11 +480,11 @@ export default function HubMenu() {
   }, [activeTab])
 
   // Handle add-on image add
-  const handleAddonImageAdd = (e) => {
-    const files = Array.from(e.target.files)
+  const processAddonImageFiles = (files = []) => {
+    const normalizedFiles = Array.from(files)
     
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/heic", "image/heif"]
-    const validFiles = files.filter(file => {
+    const validFiles = normalizedFiles.filter(file => {
       if (!allowedTypes.includes(file.type)) {
         toast.error(`${file.name}: Invalid file type. Please upload PNG, JPG, JPEG, WEBP, HEIC, or HEIF.`)
         return false
@@ -471,7 +497,7 @@ export default function HubMenu() {
       return true
     })
 
-    if (validFiles.length === 0) return
+    if (validFiles.length === 0) return false
 
     const newImagePreviews = []
     const newImageFilesMap = new Map(addonImageFiles)
@@ -488,6 +514,99 @@ export default function HubMenu() {
     if (addonFileInputRef.current) {
       addonFileInputRef.current.value = ""
     }
+
+    if (addonCameraInputRef.current) {
+      addonCameraInputRef.current.value = ""
+    }
+
+    return true
+  }
+
+  const handleAddonImageAdd = (e) => {
+    processAddonImageFiles(e.target.files)
+  }
+
+  const handleOpenAddonBrowserCameraFallback = () => {
+    if (addonCameraInputRef.current) {
+      addonCameraInputRef.current.click()
+      return
+    }
+
+    try {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/*"
+      input.capture = "environment"
+      input.onchange = (event) => {
+        const file = event?.target?.files?.[0] || null
+        if (file) {
+          processAddonImageFiles([file])
+        }
+      }
+      input.click()
+    } catch (error) {
+      debugError("Browser camera fallback failed:", error)
+      toast.error("Failed to open camera")
+    }
+  }
+
+  const handleOpenAddonCamera = async () => {
+    try {
+      const hasBridge =
+        typeof window !== "undefined" &&
+        window.flutter_inappwebview &&
+        typeof window.flutter_inappwebview.callHandler === "function"
+
+      if (!hasBridge) {
+        handleOpenAddonBrowserCameraFallback()
+        setIsAddonImageSourcePickerOpen(false)
+        return
+      }
+
+      const result = await window.flutter_inappwebview.callHandler("openCamera", {
+        source: "camera",
+        accept: "image/*",
+        multiple: false,
+        quality: 0.8,
+      })
+
+      if (!result || !result.success) {
+        setIsAddonImageSourcePickerOpen(false)
+        return
+      }
+
+      let selectedFile = null
+      if (isUploadableFile(result.file)) {
+        selectedFile = result.file
+      } else if (result.base64) {
+        selectedFile = convertBase64ToFile(
+          result.base64,
+          result.mimeType || "image/jpeg",
+          "addon-image"
+        )
+      }
+
+      if (!selectedFile || !String(selectedFile.type || "").startsWith("image/")) {
+        toast.error("Failed to capture image from camera")
+        return
+      }
+
+      processAddonImageFiles([selectedFile])
+      setIsAddonImageSourcePickerOpen(false)
+    } catch (error) {
+      debugError("openCamera bridge failed:", error)
+      handleOpenAddonBrowserCameraFallback()
+      setIsAddonImageSourcePickerOpen(false)
+    }
+  }
+
+  const handleOpenAddonImagePicker = () => {
+    if (isMobileDevice) {
+      setIsAddonImageSourcePickerOpen(true)
+      return
+    }
+
+    addonFileInputRef.current?.click()
   }
 
   // Handle add-on image delete
@@ -518,8 +637,20 @@ export default function HubMenu() {
       toast.error("Please enter add-on name")
       return
     }
-    if (!addonPrice || parseFloat(addonPrice) < 0) {
+
+    if (!addonDescription.trim()) {
+      toast.error("Please enter add-on description")
+      return
+    }
+
+    if (!addonPrice || parseFloat(addonPrice) <= 0) {
       toast.error("Please enter a valid price")
+      return
+    }
+
+    const hasAnyImage = addonImages.some((image) => typeof image === "string" && image.trim() !== "")
+    if (!hasAnyImage) {
+      toast.error("Please add an add-on image")
       return
     }
 
@@ -739,40 +870,56 @@ export default function HubMenu() {
   const filteredMenuGroups = useMemo(() => {
     let filtered = menuData
 
-    // Apply filter-based filtering
     if (activeFilter) {
-      filtered = filtered.map(group => {
-        const filteredItems = group.items.filter(item => {
-          switch (activeFilter) {
-            case "recommended":
-              return item.isRecommended
-            case "out-of-stock":
-              return !item.isAvailable
-            case "no-photos":
-              return !item.image || item.photoCount === 0
-            case "without-description":
-              return !item.description || item.description.trim() === ""
-            case "without-serving-info":
-              return !item.variations || item.variations.length === 0
-            default:
-              return true
+      filtered = filtered
+        .map((group) => {
+          const filteredItems = (group.items || []).filter(
+            (item) => String(item?.approvalStatus || "pending").toLowerCase() === activeFilter
+          )
+
+          const filteredSubsections = Array.isArray(group.subsections)
+            ? group.subsections
+                .map((subsection) => ({
+                  ...subsection,
+                  items: (subsection.items || []).filter(
+                    (item) => String(item?.approvalStatus || "pending").toLowerCase() === activeFilter
+                  ),
+                }))
+                .filter((subsection) => subsection.items.length > 0)
+            : []
+
+          return {
+            ...group,
+            items: filteredItems,
+            subsections: filteredSubsections,
           }
         })
-        return { ...group, items: filteredItems }
-      }).filter(group => group.items.length > 0)
+        .filter((group) => group.items.length > 0 || group.subsections.length > 0)
     }
 
     // Apply search query filtering
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim()
       filtered = filtered.map(group => {
-        const filteredItems = group.items.filter(item => {
+        const filteredItems = (group.items || []).filter(item => {
           return item.name.toLowerCase().includes(query) ||
                  item.category.toLowerCase().includes(query) ||
                  (item.description && item.description.toLowerCase().includes(query))
         })
-        return { ...group, items: filteredItems }
-      }).filter(group => group.items.length > 0)
+        const filteredSubsections = Array.isArray(group.subsections)
+          ? group.subsections
+              .map((subsection) => ({
+                ...subsection,
+                items: (subsection.items || []).filter((item) => {
+                  return item.name.toLowerCase().includes(query) ||
+                    item.category.toLowerCase().includes(query) ||
+                    (item.description && item.description.toLowerCase().includes(query))
+                }),
+              }))
+              .filter((subsection) => subsection.items.length > 0)
+          : []
+        return { ...group, items: filteredItems, subsections: filteredSubsections }
+      }).filter(group => group.items.length > 0 || group.subsections.length > 0)
     }
 
     // Always show newest items first
@@ -791,6 +938,29 @@ export default function HubMenu() {
         : [],
     }))
   }, [menuData, activeFilter, searchQuery])
+
+  const filteredAddons = useMemo(() => {
+    let filtered = [...addons]
+
+    if (activeAddonFilter) {
+      filtered = filtered.filter(
+        (addon) => String(addon?.approvalStatus || "pending").toLowerCase() === activeAddonFilter
+      )
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim()
+      filtered = filtered.filter((addon) => {
+        return (
+          String(addon?.name || "").toLowerCase().includes(query) ||
+          String(addon?.description || "").toLowerCase().includes(query) ||
+          String(addon?.approvalStatus || "").toLowerCase().includes(query)
+        )
+      })
+    }
+
+    return filtered
+  }, [addons, activeAddonFilter, searchQuery])
 
   // Toggle group expansion
   const toggleGroup = (groupId) => {
@@ -900,8 +1070,11 @@ export default function HubMenu() {
 
   // Handle filter selection
   const handleFilterSelect = (filterId) => {
-    setSelectedFilter(filterId)
-    setActiveFilter(filterId)
+    if (activeTab === "add-ons") {
+      setActiveAddonFilter(filterId)
+    } else {
+      setActiveFoodFilter(filterId)
+    }
     setIsFilterOpen(false)
   }
 
@@ -1150,35 +1323,6 @@ export default function HubMenu() {
                 display: none;
               }
             `}</style>
-            {activeFilter && (
-              <button
-                onClick={() => {
-                  setActiveFilter(null)
-                  setSelectedFilter(null)
-                }}
-                className="flex items-center gap-2 px-2 py-1 text-semibold border-2 border-gray-300 rounded-md text-sm font-medium whitespace-nowrap shrink-0 bg-white text-gray-900"
-              >
-                <X className="w-3 h-3" />
-                <span>Clear</span>
-              </button>
-            )}
-            {quickFilters.map((filter) => (
-              <button
-                key={filter.id}
-                onClick={() => handleFilterSelect(filter.id)}
-                className={`flex items-center gap-2 px-2 py-1 text-semibold border-2 rounded-md text-sm font-medium whitespace-nowrap shrink-0 ${
-                  activeFilter === filter.id
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white border-gray-200 text-gray-900"
-                }`}
-              >
-                <span>{filter.label}</span>
-                <span className="bg-red-100 border-2 border-red-400 text-red-400 text-xs  font-bold p-0.5 py-0.25 rounded-sm">
-                  {filter.count}
-                </span>
-              </button>
-
-            ))}
             <button
               onClick={() => setIsFilterOpen(true)}
               className="z-10 shrink-0 bg-black text-white border-2 border-black flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap"
@@ -1187,6 +1331,7 @@ export default function HubMenu() {
               <span>Filter</span>
             </button>
           </div>
+
         </div>
 
         {/* Tabs */}
@@ -1234,16 +1379,22 @@ export default function HubMenu() {
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
               </div>
-            ) : addons.length === 0 ? (
+            ) : filteredAddons.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 px-4">
                 <div className="text-center">
-                  <p className="text-lg font-medium text-gray-500">No add-ons available</p>
-                  <p className="text-sm text-gray-400 mt-2">Add-ons will appear here when you create them</p>
+                  <p className="text-lg font-medium text-gray-500">
+                    {searchQuery.trim() || activeAddonFilter ? "No add-ons found" : "No add-ons available"}
+                  </p>
+                  <p className="text-sm text-gray-400 mt-2">
+                    {searchQuery.trim() || activeAddonFilter
+                      ? "Try a different search or filter"
+                      : "Add-ons will appear here when you create them"}
+                  </p>
                 </div>
               </div>
             ) : (
               <div className="space-y-4">
-                {addons.map((addon) => (
+                {filteredAddons.map((addon) => (
                   <div
                     key={addon.id}
                     className="bg-white rounded-lg border border-gray-200 p-4"
@@ -1471,7 +1622,9 @@ export default function HubMenu() {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-bold text-gray-900">Filters</h2>
+                <h2 className="text-lg font-bold text-gray-900">
+                  {activeTab === "add-ons" ? "Add-on Filters" : "Food Filters"}
+                </h2>
                 <button
                   onClick={() => setIsFilterOpen(false)}
                   className="p-1 rounded-full hover:bg-gray-100"
@@ -1506,8 +1659,11 @@ export default function HubMenu() {
                 {activeFilter && (
                   <button
                     onClick={() => {
-                      setActiveFilter(null)
-                      setSelectedFilter(null)
+                      if (activeTab === "add-ons") {
+                        setActiveAddonFilter(null)
+                      } else {
+                        setActiveFoodFilter(null)
+                      }
                       setIsFilterOpen(false)
                     }}
                     className="w-full py-2 rounded-lg font-medium text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
@@ -2097,7 +2253,7 @@ export default function HubMenu() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search for food items..."
+                    placeholder={activeTab === "add-ons" ? "Search add-ons..." : "Search for food items..."}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     autoFocus
                   />
@@ -2113,7 +2269,69 @@ export default function HubMenu() {
               </div>
               <div className="flex-1 overflow-y-auto px-4 py-4">
                 {searchQuery.trim() ? (
-                  filteredMenuGroups.length > 0 ? (
+                  activeTab === "add-ons" ? (
+                    filteredAddons.length > 0 ? (
+                      <div className="space-y-3">
+                        {filteredAddons.map((addon) => (
+                          <div
+                            key={addon.id}
+                            onClick={() => {
+                              if (!isPendingApproval(addon.approvalStatus)) {
+                                toast.error("Approved add-ons cannot be edited")
+                                return
+                              }
+                              setIsSearchOpen(false)
+                              handleEditAddon(addon)
+                            }}
+                            className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 transition-colors ${
+                              isPendingApproval(addon.approvalStatus)
+                                ? "hover:bg-gray-50 cursor-pointer"
+                                : "bg-gray-50/60 cursor-not-allowed"
+                            }`}
+                          >
+                            {addon.images?.[0] ? (
+                              <img
+                                src={addon.images[0]}
+                                alt={addon.name}
+                                className="w-16 h-16 rounded-lg object-cover"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                                <Camera className="w-5 h-5 text-gray-400" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="text-sm font-bold text-gray-900 truncate">{addon.name}</h4>
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                  String(addon.approvalStatus || "pending").toLowerCase() === "approved"
+                                    ? "bg-green-100 text-green-700"
+                                    : String(addon.approvalStatus || "pending").toLowerCase() === "rejected"
+                                      ? "bg-red-100 text-red-700"
+                                      : "bg-yellow-100 text-yellow-700"
+                                }`}>
+                                  {String(addon.approvalStatus || "pending")}
+                                </span>
+                              </div>
+                              <p className="text-sm font-medium text-gray-700">₹{addon.price}</p>
+                              {addon.description && (
+                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{addon.description}</p>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-20 px-4">
+                        <div className="text-center">
+                          <p className="text-lg font-medium text-gray-500">No add-ons found</p>
+                          <p className="text-sm text-gray-400 mt-2">
+                            Try searching with different keywords
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  ) : filteredMenuGroups.length > 0 ? (
                     <div className="space-y-4">
                       {filteredMenuGroups.map((group) => (
                         <div key={group.id} className="space-y-3">
@@ -2181,7 +2399,9 @@ export default function HubMenu() {
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 px-4">
                       <div className="text-center">
-                        <p className="text-lg font-medium text-gray-500">No items found</p>
+                        <p className="text-lg font-medium text-gray-500">
+                          {activeTab === "add-ons" ? "No add-ons found" : "No items found"}
+                        </p>
                         <p className="text-sm text-gray-400 mt-2">
                           Try searching with different keywords
                         </p>
@@ -2194,19 +2414,26 @@ export default function HubMenu() {
                       <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-lg font-medium text-gray-500">Start searching</p>
                       <p className="text-sm text-gray-400 mt-2">
-                        Type to search for food items by name or category
+                        {activeTab === "add-ons"
+                          ? "Type to search add-ons by name, description, or status"
+                          : "Type to search for food items by name or category"}
                       </p>
                     </div>
                   </div>
                 )}
               </div>
-              {searchQuery.trim() && filteredMenuGroups.length > 0 && (
+              {searchQuery.trim() && (
                 <div className="px-4 py-3 border-t border-gray-200">
                   <button
                     onClick={() => setIsSearchOpen(false)}
                     className="w-full py-3 rounded-lg font-semibold text-sm bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                   >
-                    View Results ({filteredMenuGroups.reduce((acc, group) => acc + group.items.length, 0)} items)
+                    View Results (
+                    {activeTab === "add-ons"
+                      ? filteredAddons.length
+                      : filteredMenuGroups.reduce((acc, group) => acc + group.items.length, 0)}
+                    {" "}
+                    items)
                   </button>
                 </div>
               )}
@@ -2264,7 +2491,7 @@ export default function HubMenu() {
                 {/* Description Field */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
+                    Description <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={addonDescription}
@@ -2294,7 +2521,7 @@ export default function HubMenu() {
                 {/* Images Section */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Images
+                    Images <span className="text-red-500">*</span>
                   </label>
                   
                   {/* Image Preview Grid */}
@@ -2333,13 +2560,25 @@ export default function HubMenu() {
                     className="hidden"
                     id="addon-image-upload"
                   />
-                  <label
-                    htmlFor="addon-image-upload"
+                  <input
+                    ref={addonCameraInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleAddonImageAdd}
+                    className="hidden"
+                    id="addon-camera-image-upload"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleOpenAddonImagePicker}
                     className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors"
                   >
                     <Camera className="h-5 w-5 text-gray-500" />
-                    <span className="text-sm font-medium text-gray-700">Add Images</span>
-                  </label>
+                    <span className="text-sm font-medium text-gray-700">
+                      {isMobileDevice ? "Add Images" : "Choose Local Files"}
+                    </span>
+                  </button>
                   <p className="text-xs text-gray-500 mt-1">Add multiple images (PNG, JPG, WEBP - max 5MB each)</p>
                 </div>
               </div>
@@ -2354,7 +2593,13 @@ export default function HubMenu() {
                 </button>
                 <button
                   onClick={handleSaveAddon}
-                  disabled={!addonName.trim() || !addonPrice || uploadingAddonImages}
+                  disabled={
+                    !addonName.trim() ||
+                    !addonDescription.trim() ||
+                    !addonPrice ||
+                    addonImages.length === 0 ||
+                    uploadingAddonImages
+                  }
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   {uploadingAddonImages ? (
@@ -2367,6 +2612,56 @@ export default function HubMenu() {
                   )}
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isAddonImageSourcePickerOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-end justify-center p-4"
+            onClick={() => setIsAddonImageSourcePickerOpen(false)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-4 space-y-3"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold text-gray-900">Select image source</h3>
+                <button
+                  onClick={() => setIsAddonImageSourcePickerOpen(false)}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleOpenAddonCamera}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-black text-white font-semibold hover:bg-gray-800 transition-colors"
+              >
+                <Camera className="h-4 w-4" />
+                Camera
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddonImageSourcePickerOpen(false)
+                  addonFileInputRef.current?.click()
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50 transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Local files
+              </button>
             </motion.div>
           </motion.div>
         )}

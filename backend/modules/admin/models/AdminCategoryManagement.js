@@ -25,6 +25,10 @@ const adminCategoryManagementSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    showOnHome: {
+      type: Boolean,
+      default: true,
+    },
     description: {
       type: String,
       trim: true,
@@ -46,6 +50,7 @@ const adminCategoryManagementSchema = new mongoose.Schema(
 // Indexes
 adminCategoryManagementSchema.index({ name: 1 });
 adminCategoryManagementSchema.index({ status: 1 });
+adminCategoryManagementSchema.index({ showOnHome: 1 });
 adminCategoryManagementSchema.index({ priority: 1 });
 adminCategoryManagementSchema.index({ createdAt: -1 });
 

@@ -48,6 +48,7 @@ import {
   deleteCategory,
   toggleCategoryStatus,
   updateCategoryPriority,
+  updateCategoryHomeVisibility,
 } from "../controllers/categoryController.js";
 import {
   getJoinRequests,
@@ -317,6 +318,7 @@ router.put("/categories/:id", uploadMiddleware.single("image"), updateCategory);
 router.delete("/categories/:id", deleteCategory);
 router.patch("/categories/:id/status", toggleCategoryStatus);
 router.patch("/categories/:id/priority", updateCategoryPriority);
+router.patch("/categories/home-visibility", updateCategoryHomeVisibility);
 
 // Fee Settings Management (Delivery & Platform Fee)
 router.get("/fee-settings", getFeeSettings);

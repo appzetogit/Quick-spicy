@@ -18,11 +18,77 @@ import {
 import { Switch } from "@/components/ui/switch"
 // Removed getAllFoods and saveFood - now using menu API
 import api from "@/lib/api"
-import { restaurantAPI, uploadAPI } from "@/lib/api"
+import { restaurantAPI, adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+
+const isUploadableFile = (value) =>
+  typeof File !== "undefined" && value instanceof File
+
+const getExtensionFromMimeType = (mimeType) => {
+  const normalized = String(mimeType || "").toLowerCase()
+  if (normalized.includes("png")) return "png"
+  if (normalized.includes("webp")) return "webp"
+  if (normalized.includes("heic")) return "heic"
+  if (normalized.includes("heif")) return "heif"
+  return "jpg"
+}
+
+const convertBase64ToFile = (base64Value, mimeType = "image/jpeg", fileNamePrefix = "camera-image") => {
+  if (!base64Value || typeof base64Value !== "string") {
+    throw new Error("Invalid base64 image data")
+  }
+
+  let pureBase64 = base64Value
+  if (base64Value.includes(",")) {
+    pureBase64 = base64Value.split(",")[1]
+  }
+
+  const byteCharacters = atob(pureBase64)
+  const byteNumbers = new Array(byteCharacters.length)
+  for (let i = 0; i < byteCharacters.length; i += 1) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i)
+  }
+
+  const byteArray = new Uint8Array(byteNumbers)
+  const normalizedMimeType = mimeType || "image/jpeg"
+  const extension = getExtensionFromMimeType(normalizedMimeType)
+  const fileName = `${fileNamePrefix}-${Date.now()}.${extension}`
+  const blob = new Blob([byteArray], { type: normalizedMimeType })
+  return new File([blob], fileName, { type: normalizedMimeType })
+}
+
+const mergeCategoryOptions = (restaurantCategories = [], adminCategories = []) => {
+  const categoryMap = new Map()
+
+  ;(Array.isArray(adminCategories) ? adminCategories : []).forEach((cat, index) => {
+    const name = String(cat?.name || "").trim()
+    if (!name) return
+    const key = name.toLowerCase()
+    if (!categoryMap.has(key)) {
+      categoryMap.set(key, {
+        id: cat?.id || cat?._id || `admin-category-${index}`,
+        name,
+        source: "admin",
+      })
+    }
+  })
+
+  ;(Array.isArray(restaurantCategories) ? restaurantCategories : []).forEach((cat, index) => {
+    const name = String(cat?.name || "").trim()
+    if (!name) return
+    const key = name.toLowerCase()
+    categoryMap.set(key, {
+      id: cat?._id || cat?.id || `restaurant-category-${index}`,
+      name,
+      source: "restaurant",
+    })
+  })
+
+  return Array.from(categoryMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+}
 
 
 const getUploadErrorMessage = (error, fileName = "image") => {
@@ -40,8 +106,9 @@ export default function ItemDetailsPage() {
   const location = useLocation()
   const isNewItem = id === "new"
   const groupId = location.state?.groupId
-  const defaultCategory = location.state?.category || "Varieties"
+  const defaultCategory = location.state?.category || ""
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
 
   // Initialize state with empty values - will be populated from API
   const [itemData, setItemData] = useState(null) // Store the full item data for saving
@@ -84,12 +151,17 @@ export default function ItemDetailsPage() {
   const [loadingCategories, setLoadingCategories] = useState(true)
   const [loadingItem, setLoadingItem] = useState(false)
   const [keyboardInset, setKeyboardInset] = useState(0)
+  const [isImageSourcePickerOpen, setIsImageSourcePickerOpen] = useState(false)
 
   const maxNameLength = 70
   const maxDescriptionLength = 1000
   const descriptionLength = itemDescription.length
   const minDescriptionLength = 5
   const nameLength = itemName.length
+  const isMobileDevice =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(max-width: 768px)")?.matches ||
+      /Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator?.userAgent || ""))
 
   // Fetch item data from menu API when editing
   useEffect(() => {
@@ -107,7 +179,7 @@ export default function ItemDetailsPage() {
         setItemSizeQuantity(item.itemSizeQuantity || "")
         setItemSizeUnit(item.itemSizeUnit || "piece")
         setItemDescription(item.description || "")
-        setFoodType(item.foodType === "Veg" ? "Veg" : (item.foodType === "Egg" ? "Egg" : "Non-Veg"))
+        setFoodType(item.foodType === "Veg" ? "Veg" : "Non-Veg")
         setBasePrice(item.price?.toString() || "")
         setPreparationTime(item.preparationTime || "")
         setGst(item.gst?.toString() || "5.0")
@@ -199,7 +271,7 @@ export default function ItemDetailsPage() {
             setItemSizeQuantity(foundItem.itemSizeQuantity || "")
             setItemSizeUnit(foundItem.itemSizeUnit || "piece")
             setItemDescription(foundItem.description || "")
-            setFoodType(foundItem.foodType === "Veg" ? "Veg" : (foundItem.foodType === "Egg" ? "Egg" : "Non-Veg"))
+            setFoodType(foundItem.foodType === "Veg" ? "Veg" : "Non-Veg")
             setBasePrice(foundItem.price?.toString() || "")
             setPreparationTime(foundItem.preparationTime || "")
             setGst(foundItem.gst?.toString() || "5.0")
@@ -260,23 +332,23 @@ export default function ItemDetailsPage() {
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true)
-        const response = await restaurantAPI.getCategories()
-        if (response.data.success && response.data.data.categories) {
-          // Format categories for the UI - flat list, no subcategories
-          const formattedCategories = response.data.data.categories.map(cat => ({
-            id: cat._id || cat.id,
-            name: cat.name
-          }))
+        const [restaurantResponse, adminResponse] = await Promise.all([
+          restaurantAPI.getCategories(),
+          adminAPI.getPublicCategories(),
+        ])
 
-          debugLog('Formatted restaurant categories:', formattedCategories)
-          setCategories(formattedCategories)
-        } else {
-          // If no categories exist, show empty array (user can add categories)
-          setCategories([])
-        }
+        const restaurantCategories = restaurantResponse?.data?.success
+          ? restaurantResponse?.data?.data?.categories || []
+          : []
+        const adminCategories = adminResponse?.data?.success
+          ? adminResponse?.data?.data?.categories || []
+          : []
+
+        const formattedCategories = mergeCategoryOptions(restaurantCategories, adminCategories)
+        debugLog('Formatted merged categories:', formattedCategories)
+        setCategories(formattedCategories)
       } catch (error) {
         debugError('Error fetching restaurant categories:', error)
-        // Show empty array on error - user can add categories
         setCategories([])
       } finally {
         setLoadingCategories(false)
@@ -368,12 +440,12 @@ export default function ItemDetailsPage() {
     }
   ]
 
-  const handleImageAdd = (e) => {
-    const files = Array.from(e.target.files)
+  const processSelectedImageFiles = (files = []) => {
+    const normalizedFiles = Array.from(files)
 
     // Validate file types
     const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/heic", "image/heif"]
-    const validFiles = files.filter(file => {
+    const validFiles = normalizedFiles.filter(file => {
       if (!allowedTypes.includes(file.type)) {
         toast.error(`${file.name}: Invalid file type. Please upload PNG, JPG, JPEG, WEBP, HEIC, or HEIF.`)
         return false
@@ -387,7 +459,7 @@ export default function ItemDetailsPage() {
       return true
     })
 
-    if (validFiles.length === 0) return
+    if (validFiles.length === 0) return false
 
     // Single-image mode: keep only the first selected valid file
     const file = validFiles[0]
@@ -408,6 +480,99 @@ export default function ItemDetailsPage() {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
+
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ""
+    }
+
+    return true
+  }
+
+  const handleImageAdd = (e) => {
+    processSelectedImageFiles(e.target.files)
+  }
+
+  const handleOpenBrowserCameraFallback = () => {
+    if (cameraInputRef.current) {
+      cameraInputRef.current.click()
+      return
+    }
+
+    try {
+      const input = document.createElement("input")
+      input.type = "file"
+      input.accept = "image/*"
+      input.capture = "environment"
+      input.onchange = (event) => {
+        const file = event?.target?.files?.[0] || null
+        if (file) {
+          processSelectedImageFiles([file])
+        }
+      }
+      input.click()
+    } catch (error) {
+      debugError("Browser camera fallback failed:", error)
+      toast.error("Failed to open camera")
+    }
+  }
+
+  const handleOpenCamera = async () => {
+    try {
+      const hasBridge =
+        typeof window !== "undefined" &&
+        window.flutter_inappwebview &&
+        typeof window.flutter_inappwebview.callHandler === "function"
+
+      if (!hasBridge) {
+        handleOpenBrowserCameraFallback()
+        setIsImageSourcePickerOpen(false)
+        return
+      }
+
+      const result = await window.flutter_inappwebview.callHandler("openCamera", {
+        source: "camera",
+        accept: "image/*",
+        multiple: false,
+        quality: 0.8,
+      })
+
+      if (!result || !result.success) {
+        setIsImageSourcePickerOpen(false)
+        return
+      }
+
+      let selectedFile = null
+      if (isUploadableFile(result.file)) {
+        selectedFile = result.file
+      } else if (result.base64) {
+        selectedFile = convertBase64ToFile(
+          result.base64,
+          result.mimeType || "image/jpeg",
+          "item-image"
+        )
+      }
+
+      if (!selectedFile || !String(selectedFile.type || "").startsWith("image/")) {
+        toast.error("Failed to capture image from camera")
+        return
+      }
+
+      processSelectedImageFiles([selectedFile])
+      setIsImageSourcePickerOpen(false)
+    } catch (error) {
+      debugError("openCamera bridge failed:", error)
+      handleOpenBrowserCameraFallback()
+      setIsImageSourcePickerOpen(false)
+    }
+  }
+
+  const handleOpenImagePicker = () => {
+    if (isMobileDevice) {
+      setIsImageSourcePickerOpen(true)
+      return
+    }
+
+    fileInputRef.current?.click()
   }
 
   const handleImageDelete = (index) => {
@@ -529,6 +694,33 @@ export default function ItemDetailsPage() {
   const handleSave = async () => {
     if (!itemName.trim()) {
       toast.error("Please enter an item name")
+      return
+    }
+
+    if (!String(category || "").trim()) {
+      toast.error("Please choose a category")
+      return
+    }
+
+    if (!itemDescription.trim() || itemDescription.trim().length < minDescriptionLength) {
+      toast.error("Please enter an item description")
+      return
+    }
+
+    const normalizedBasePrice = String(basePrice || "").trim()
+    if (!normalizedBasePrice || Number.isNaN(Number(normalizedBasePrice)) || Number(normalizedBasePrice) <= 0) {
+      toast.error("Please enter a valid base price")
+      return
+    }
+
+    if (!String(preparationTime || "").trim()) {
+      toast.error("Please select preparation time")
+      return
+    }
+
+    const hasAnyImage = images.some((image) => typeof image === "string" && image.trim() !== "")
+    if (!hasAnyImage) {
+      toast.error("Please add an item image")
       return
     }
 
@@ -714,12 +906,12 @@ export default function ItemDetailsPage() {
         category: category,
         rating: itemData?.rating || 0.0,
         reviews: itemData?.reviews || 0,
-        price: parseFloat(basePrice) || 0,
+        price: parseFloat(normalizedBasePrice),
         preparationTime: preparationTime || "",
         stock: "Unlimited",
         discount: null,
         originalPrice: null,
-        foodType: foodType === "Egg" ? "Non-Veg" : foodType, // Menu model only supports Veg/Non-Veg
+        foodType: foodType,
         availabilityTimeStart: "12:01 AM",
         availabilityTimeEnd: "11:57 PM",
         description: itemDescription.trim(),
@@ -951,15 +1143,25 @@ export default function ItemDetailsPage() {
               className="hidden"
               id="image-upload"
             />
-            <label
-              htmlFor="image-upload"
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={handleImageAdd}
+              className="hidden"
+              id="camera-image-upload"
+            />
+            <button
+              type="button"
+              onClick={handleOpenImagePicker}
               className="flex items-center justify-center gap-2.5 px-6 py-3.5 bg-gradient-to-r from-gray-900 to-gray-800 text-white rounded-xl text-sm font-semibold cursor-pointer hover:from-gray-800 hover:to-gray-700 transition-all shadow-md hover:shadow-lg active:scale-95"
             >
               <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
                 <Plus className="w-4 h-4" />
               </div>
-              <span>Add Image</span>
-            </label>
+              <span>{isMobileDevice ? "Add Item Image" : "Choose Local File"}</span>
+            </button>
           </div>
         </div>
 
@@ -968,14 +1170,14 @@ export default function ItemDetailsPage() {
           {/* Category Selector */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Category
+              Category *
             </label>
             <button
               onClick={() => setIsCategoryPopupOpen(true)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-left flex items-center justify-between bg-white hover:bg-gray-50 transition-colors"
             >
               <span className="text-sm text-gray-900">
-                {category}
+                {category || "Select category"}
               </span>
               <ChevronDown className="w-5 h-5 text-gray-500" />
             </button>
@@ -1010,7 +1212,7 @@ export default function ItemDetailsPage() {
           {/* Item Description */}
           <div>
             <label className="block text-sm font-medium text-gray-900 mb-2">
-              Item description
+              Item description *
             </label>
             <div className="relative">
               <textarea
@@ -1018,7 +1220,7 @@ export default function ItemDetailsPage() {
                 onChange={(e) => setItemDescription(e.target.value)}
                 maxLength={maxDescriptionLength}
                 rows={4}
-                placeholder="Eg: Yummy veg paneer burger with a soft patty, veggies, cheese, and special sauce"
+                placeholder="Enter item description"
                 className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
               />
               <button className="absolute right-3 top-3 p-1 rounded-full hover:bg-gray-100">
@@ -1055,16 +1257,6 @@ export default function ItemDetailsPage() {
                 {foodType === "Non-Veg" && <Check className="w-4 h-4" />}
                 <span>Non-Veg</span>
               </button>
-              <button
-                onClick={() => setFoodType("Egg")}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${foodType === "Egg"
-                  ? "border-yellow-600 border-2 text-yellow-600"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-              >
-                {foodType === "Egg" && <Check className="w-4 h-4" />}
-                <span>Egg</span>
-              </button>
             </div>
           </div>
 
@@ -1075,10 +1267,11 @@ export default function ItemDetailsPage() {
             </label>
             <div className="space-y-3">
               <div className="relative">
-                <label className="block text-xs text-gray-600 mb-1">Base price</label>
+                <label className="block text-xs text-gray-600 mb-1">Base price *</label>
                 <div className="relative">
                   <input
                     type="text"
+                    required
                     value={basePrice}
                     onChange={(e) => {
                       // Remove rupee symbol and any non-numeric characters except decimal point
@@ -1096,7 +1289,7 @@ export default function ItemDetailsPage() {
                         e.target.value = e.target.value.replace(/₹\s*/g, '')
                       }
                     }}
-                    placeholder="Enter price"
+                    placeholder="Enter base price"
                     className="w-full pl-8 pr-12 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-600">₹</span>
@@ -1108,9 +1301,10 @@ export default function ItemDetailsPage() {
 
               {/* Preparation Time */}
               <div className="relative">
-                <label className="block text-xs text-gray-600 mb-1">Preparation Time</label>
+                <label className="block text-xs text-gray-600 mb-1">Preparation Time *</label>
                 <div className="relative">
                   <select
+                    required
                     value={preparationTime}
                     onChange={(e) => setPreparationTime(e.target.value)}
                     className="w-full pl-4 pr-10 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
@@ -1240,6 +1434,59 @@ export default function ItemDetailsPage() {
                     ))}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isImageSourcePickerOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsImageSourcePickerOpen(false)}
+              className="fixed inset-0 bg-black/50 z-50"
+            />
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-4 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-bold text-gray-900">Select image source</h2>
+                <button
+                  onClick={() => setIsImageSourcePickerOpen(false)}
+                  className="p-1 rounded-full hover:bg-gray-100"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+              <div className="p-4 space-y-3">
+                <button
+                  type="button"
+                  onClick={handleOpenCamera}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-black text-white font-semibold hover:bg-gray-800 transition-colors"
+                >
+                  <Camera className="w-4 h-4" />
+                  Camera
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsImageSourcePickerOpen(false)
+                    fileInputRef.current?.click()
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-gray-300 text-gray-900 font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                  Local files
+                </button>
               </div>
             </motion.div>
           </>

@@ -1,17 +1,79 @@
-﻿import { useState, useMemo, useRef, useEffect } from "react"
+import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
-import { Search, Download, ChevronDown, Plus, Edit, Trash2, Info, MapPin, SlidersHorizontal, ArrowDownUp, Timer, Star, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, X, Loader2, Upload } from "lucide-react"
+import { Search, Download, ChevronDown, ChevronLeft, ChevronRight, Info, MapPin, SlidersHorizontal, ArrowDownUp, Timer, Star, IndianRupee, UtensilsCrossed, BadgePercent, ShieldCheck, X, Loader2, Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { adminAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugWarn = () => {}
+const debugError = () => {}
+const CATEGORY_IMAGE_FALLBACK = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%23e2e8f0'/><text x='64' y='72' text-anchor='middle' font-family='Arial, sans-serif' font-size='18' fill='%2364758b'>No Image</text></svg>"
 
+const toArray = (value) => (Array.isArray(value) ? value : [])
+const normalizeCategoryName = (value) => String(value || "").trim()
+const buildRestaurantCategories = (menuEntries = []) => {
+  const categoryMap = new Map()
+
+  menuEntries.forEach(({ restaurant, menu }) => {
+    const restaurantId = String(restaurant?._id || restaurant?.id || "")
+    const restaurantName = String(restaurant?.name || "Unknown Restaurant").trim() || "Unknown Restaurant"
+    const sections = toArray(menu?.sections)
+
+    sections.forEach((section) => {
+      const rawName = normalizeCategoryName(section?.name)
+      if (!rawName) return
+
+      const key = rawName.toLowerCase()
+      const directImage = toArray(section?.items).find((item) => item?.image)?.image
+      const nestedImage = toArray(section?.subsections)
+        .flatMap((subsection) => toArray(subsection?.items))
+        .find((item) => item?.image)?.image
+      const image = directImage || nestedImage || CATEGORY_IMAGE_FALLBACK
+
+      if (!categoryMap.has(key)) {
+        categoryMap.set(key, {
+          id: key,
+          name: rawName,
+          image,
+          type: "Menu Section",
+          status: true,
+          restaurantIds: new Set(),
+          restaurantNames: [],
+        })
+      }
+
+      const existing = categoryMap.get(key)
+      existing.restaurantIds.add(restaurantId || restaurantName)
+      if (!existing.restaurantNames.includes(restaurantName)) {
+        existing.restaurantNames.push(restaurantName)
+      }
+      if (
+        (!existing.image || existing.image === CATEGORY_IMAGE_FALLBACK) &&
+        image &&
+        image !== CATEGORY_IMAGE_FALLBACK
+      ) {
+        existing.image = image
+      }
+    })
+  })
+
+  return Array.from(categoryMap.values())
+    .map((category, index) => ({
+      ...category,
+      sl: index + 1,
+      restaurantCount: category.restaurantIds.size,
+      restaurantsLabel: category.restaurantNames.join(", "),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((category, index) => ({
+      ...category,
+      sl: index + 1,
+    }))
+}
 
 export default function Category() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -27,17 +89,19 @@ export default function Category() {
   const [editingCategory, setEditingCategory] = useState(null)
   const [formData, setFormData] = useState({
     name: "",
-    image: "https://via.placeholder.com/40",
+    image: CATEGORY_IMAGE_FALLBACK,
     status: true,
     type: ""
   })
   const [selectedImageFile, setSelectedImageFile] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState(10)
+  const [updatingHomeVisibility, setUpdatingHomeVisibility] = useState({})
   const fileInputRef = useRef(null)
   const filterSectionRefs = useRef({})
   const rightContentRef = useRef(null)
-
   // Simple filter toggle function
   const toggleFilter = (filterId) => {
     setActiveFilters(prev => {
@@ -50,32 +114,6 @@ export default function Category() {
       return newSet
     })
   }
-
-  // Fetch categories from API
-  useEffect(() => {
-    // Check if admin is authenticated
-    const adminToken = localStorage.getItem('admin_accessToken')
-    if (!adminToken) {
-      debugWarn('No admin token found. User may need to login.')
-      toast.error('Please login to access categories')
-      setLoading(false)
-      return
-    }
-    
-    // Log API base URL for debugging
-    debugLog('API Base URL:', API_BASE_URL)
-    debugLog('Admin Token:', adminToken ? 'Present' : 'Missing')
-    
-    fetchCategories()
-  }, [])
-
-  // Debounced search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      fetchCategories()
-    }, 500)
-    return () => clearTimeout(timeoutId)
-  }, [searchQuery])
 
   // Scroll tracking effect for filter modal
   useEffect(() => {
@@ -107,19 +145,59 @@ export default function Category() {
   }, [isFilterOpen])
 
   // Fetch categories
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
-      const params = {}
-      if (searchQuery) params.search = searchQuery
-      
-      const response = await adminAPI.getCategories(params)
-      if (response.data.success) {
-        setCategories(response.data.data.categories || [])
-      } else {
-        toast.error(response.data.message || 'Failed to load categories')
+      const [restaurantsResponse, adminCategoriesResponse] = await Promise.all([
+        adminAPI.getRestaurants({ limit: 1000 }),
+        adminAPI.getCategories({ limit: 1000 }),
+      ])
+      const restaurants =
+        restaurantsResponse?.data?.data?.restaurants ||
+        restaurantsResponse?.data?.restaurants ||
+        []
+      const adminCategories =
+        adminCategoriesResponse?.data?.data?.categories ||
+        adminCategoriesResponse?.data?.categories ||
+        []
+
+      if (!Array.isArray(restaurants) || restaurants.length === 0) {
         setCategories([])
+        return
       }
+
+      const menuEntries = await Promise.all(
+        restaurants.map(async (restaurant) => {
+          try {
+            const restaurantId = restaurant?._id || restaurant?.id
+            if (!restaurantId) return null
+            const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
+            const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu || { sections: [] }
+            return { restaurant, menu }
+          } catch (menuError) {
+            debugWarn(`Failed to fetch menu for restaurant ${restaurant?._id || restaurant?.id}`, menuError)
+            return null
+          }
+        })
+      )
+
+      const adminCategoryMap = new Map(
+        (Array.isArray(adminCategories) ? adminCategories : []).map((category) => [
+          String(category?.name || "").trim().toLowerCase(),
+          category,
+        ])
+      )
+
+      setCategories(
+        buildRestaurantCategories(menuEntries.filter(Boolean)).map((category) => {
+          const adminCategory = adminCategoryMap.get(String(category?.name || "").trim().toLowerCase())
+          return {
+            ...category,
+            adminCategoryId: adminCategory?.id || adminCategory?._id || null,
+            showOnHome: adminCategory?.showOnHome !== false,
+          }
+        })
+      )
     } catch (error) {
       // More detailed error logging
       debugError('Error fetching categories:', error)
@@ -169,7 +247,23 @@ export default function Category() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  // Fetch categories from API
+  useEffect(() => {
+    const adminToken = localStorage.getItem('admin_accessToken')
+    if (!adminToken) {
+      debugWarn('No admin token found. User may need to login.')
+      toast.error('Please login to access categories')
+      setLoading(false)
+      return
+    }
+
+    debugLog('API Base URL:', API_BASE_URL)
+    debugLog('Admin Token:', adminToken ? 'Present' : 'Missing')
+
+    fetchCategories()
+  }, [fetchCategories])
 
   const filteredCategories = useMemo(() => {
     let result = [...categories]
@@ -178,14 +272,68 @@ export default function Category() {
       const query = searchQuery.toLowerCase().trim()
       result = result.filter(cat =>
         cat.name?.toLowerCase().includes(query) ||
-        cat.id?.toString().includes(query)
+        cat.id?.toString().includes(query) ||
+        cat.restaurantsLabel?.toLowerCase().includes(query)
       )
     }
 
     return result
   }, [categories, searchQuery])
 
-  const handleToggleStatus = async (id) => {
+  const handleToggleHomeVisibility = async (category) => {
+    const categoryKey = String(category?.id || category?.name || "")
+    if (!categoryKey) return
+
+    const nextShowOnHome = !(category?.showOnHome !== false)
+    setUpdatingHomeVisibility((prev) => ({ ...prev, [categoryKey]: true }))
+
+    try {
+      const response = await adminAPI.updateCategoryHomeVisibility({
+        name: category.name,
+        image: category.image,
+        type: category.type,
+        showOnHome: nextShowOnHome,
+      })
+
+      const savedCategory = response?.data?.data?.category
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.id === category.id
+            ? {
+                ...item,
+                adminCategoryId: savedCategory?.id || item.adminCategoryId,
+                showOnHome: nextShowOnHome,
+              }
+            : item
+        )
+      )
+      toast.success(`Category will ${nextShowOnHome ? "show" : "hide"} on home`)
+    } catch (error) {
+      debugError("Error updating category home visibility:", error)
+      toast.error(error.response?.data?.message || "Failed to update category visibility")
+    } finally {
+      setUpdatingHomeVisibility((prev) => ({ ...prev, [categoryKey]: false }))
+    }
+  }
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const totalPages = Math.max(1, Math.ceil(filteredCategories.length / pageSize))
+  const paginatedCategories = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages)
+    const startIndex = (safePage - 1) * pageSize
+    return filteredCategories.slice(startIndex, startIndex + pageSize)
+  }, [filteredCategories, currentPage, pageSize, totalPages])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
+
+  const _handleToggleStatus = async (id) => {
     try {
       const response = await adminAPI.toggleCategoryStatus(id)
       if (response.data.success) {
@@ -207,7 +355,7 @@ export default function Category() {
   }
 
 
-  const handleDelete = async (id) => {
+  const _handleDelete = async (id) => {
     const categoryName = categories.find(cat => cat.id === id)?.name || 'this category'
     if (window.confirm(`Are you sure you want to delete "${categoryName}"? This action cannot be undone.`)) {
       try {
@@ -227,11 +375,11 @@ export default function Category() {
     }
   }
 
-  const handleEdit = (category) => {
+  const _handleEdit = (category) => {
     setEditingCategory(category)
     setFormData({
       name: category.name || "",
-      image: category.image || "https://via.placeholder.com/40",
+      image: category.image || CATEGORY_IMAGE_FALLBACK,
       status: category.status !== undefined ? category.status : true,
       type: category.type || ""
     })
@@ -240,11 +388,11 @@ export default function Category() {
     setIsModalOpen(true)
   }
 
-  const handleAddNew = () => {
+  const _handleAddNew = () => {
     setEditingCategory(null)
     setFormData({
       name: "",
-      image: "https://via.placeholder.com/40",
+      image: CATEGORY_IMAGE_FALLBACK,
       status: true,
       type: ""
     })
@@ -280,14 +428,15 @@ export default function Category() {
         category.sl || index + 1,
         category.name || 'N/A',
         category.type || 'N/A',
-        category.status ? 'Active' : 'Inactive',
-        category.id || 'N/A'
+        category.restaurantCount || 0,
+        category.showOnHome !== false ? 'Yes' : 'No',
+        category.restaurantsLabel || 'N/A'
       ])
       
       // Add table
       autoTable(doc, {
         startY: 35,
-        head: [['SL', 'Category Name', 'Type', 'Status', 'ID']],
+        head: [['SL', 'Category Name', 'Source', 'Restaurants', 'Show On Home', 'Restaurant Names']],
         body: tableData,
         theme: 'striped',
         headStyles: {
@@ -311,9 +460,10 @@ export default function Category() {
         columnStyles: {
           0: { cellWidth: 20 }, // SL
           1: { cellWidth: 70 }, // Category Name
-          2: { cellWidth: 50 }, // Type
-          3: { cellWidth: 40 }, // Status
-          4: { cellWidth: 50 }  // ID
+          2: { cellWidth: 40 }, // Source
+          3: { cellWidth: 25 }, // Restaurants
+          4: { cellWidth: 25 }, // Show On Home
+          5: { cellWidth: 70 }  // Restaurant Names
         }
       })
       
@@ -384,7 +534,7 @@ export default function Category() {
     setImagePreview(null)
     setFormData({
       name: "",
-      image: "https://via.placeholder.com/40",
+      image: CATEGORY_IMAGE_FALLBACK,
       status: true,
       type: ""
     })
@@ -407,7 +557,7 @@ export default function Category() {
       // Add image file if selected, otherwise use existing image URL
       if (selectedImageFile) {
         formDataToSend.append('image', selectedImageFile)
-      } else if (formData.image && formData.image !== 'https://via.placeholder.com/40') {
+      } else if (formData.image && formData.image !== CATEGORY_IMAGE_FALLBACK) {
         // If no new file but existing image URL, send it as string
         formDataToSend.append('image', formData.image)
       }
@@ -523,13 +673,9 @@ export default function Category() {
               <ChevronDown className="w-3 h-3" />
             </button>
 
-            <button 
-              onClick={handleAddNew}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2 transition-all shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add New Category</span>
-            </button>
+            <div className="px-4 py-2.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-600">
+              Showing categories from all restaurant menus
+            </div>
           </div>
         </div>
       </div>
@@ -613,20 +759,23 @@ export default function Category() {
                   Title
                 </th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Type
+                  Source
                 </th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Status
+                  Restaurants
                 </th>
                 <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  Action
+                  Show On Home
+                </th>
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                  Restaurant Names
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-2" />
                       <p className="text-sm text-slate-500">Loading categories...</p>
@@ -635,7 +784,7 @@ export default function Category() {
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-20 text-center">
+                  <td colSpan={7} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
                       <p className="text-sm text-slate-500">No categories match your search</p>
@@ -643,13 +792,13 @@ export default function Category() {
                   </td>
                 </tr>
               ) : (
-                filteredCategories.map((category, index) => (
+                paginatedCategories.map((category, index) => (
                   <tr
                     key={category.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-slate-700">{category.sl || index + 1}</span>
+                      <span className="text-sm font-medium text-slate-700">{((currentPage - 1) * pageSize) + index + 1}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 flex items-center justify-center">
@@ -658,7 +807,7 @@ export default function Category() {
                           alt={category.name}
                           className="w-full h-full object-cover"
                           onError={(e) => {
-                            e.target.src = "https://via.placeholder.com/40"
+                            e.target.src = CATEGORY_IMAGE_FALLBACK
                           }}
                         />
                       </div>
@@ -670,40 +819,21 @@ export default function Category() {
                       <span className="text-sm font-medium text-slate-700">{category.type || 'N/A'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleStatus(category.id)}
-                        disabled={loading}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
-                          category.status
-                            ? "bg-blue-600"
-                            : "bg-slate-300"
-                        }`}
-                        title={category.status ? "Click to deactivate" : "Click to activate"}
-                      >
-                        <span
-                          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            category.status ? "translate-x-6" : "translate-x-1"
-                          }`}
-                        />
-                      </button>
+                      <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                        {category.restaurantCount || 0}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => handleEdit(category)}
-                          className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(category.id)}
-                          className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+                    <td className="px-6 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={category.showOnHome !== false}
+                        disabled={Boolean(updatingHomeVisibility[String(category?.id || category?.name || "")])}
+                        onChange={() => handleToggleHomeVisibility(category)}
+                        className="h-4 w-4 cursor-pointer rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-slate-700">{category.restaurantsLabel || 'N/A'}</span>
                     </td>
                   </tr>
                 ))
@@ -711,6 +841,60 @@ export default function Category() {
             </tbody>
           </table>
         </div>
+
+        {!loading && filteredCategories.length > 0 && (
+          <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-sm text-slate-600">
+              Showing {Math.min((currentPage - 1) * pageSize + 1, filteredCategories.length)} to {Math.min(currentPage * pageSize, filteredCategories.length)} of {filteredCategories.length} categories
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">Rows per page</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                  className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  {[10, 20, 50, 100].map((size) => (
+                    <option key={size} value={size}>
+                      {size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Prev
+                </button>
+
+                <span className="text-sm font-medium text-slate-700">
+                  Page {currentPage} of {totalPages}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Filter Modal - Bottom Sheet */}
@@ -942,7 +1126,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹200</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-200') ? 'text-green-600' : 'text-gray-700'}`}>Under ?200</span>
                           </button>
                           <button 
                             onClick={() => toggleFilter('price-under-500')}
@@ -952,7 +1136,7 @@ export default function Category() {
                                 : 'border-gray-200 hover:border-green-600'
                             }`}
                           >
-                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ₹500</span>
+                            <span className={`text-sm font-medium ${activeFilters.has('price-under-500') ? 'text-green-600' : 'text-gray-700'}`}>Under ?500</span>
                           </button>
                         </div>
                       </div>
@@ -1108,7 +1292,7 @@ export default function Category() {
                               alt="Category preview"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                e.target.src = "https://via.placeholder.com/128"
+                                e.target.src = CATEGORY_IMAGE_FALLBACK
                               }}
                             />
                             {imagePreview && (
@@ -1202,4 +1386,10 @@ export default function Category() {
     </div>
   )
 }
+
+
+
+
+
+
 
