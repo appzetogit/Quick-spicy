@@ -179,6 +179,20 @@ export default function App() {
   const location = useLocation()
 
   useEffect(() => {
+    const savedTheme = localStorage.getItem("appTheme") || "light"
+    const allowDarkTheme =
+      !location.pathname.startsWith("/admin") &&
+      !location.pathname.startsWith("/restaurant") &&
+      !location.pathname.startsWith("/delivery")
+
+    if (savedTheme === "dark" && allowDarkTheme) {
+      document.documentElement.classList.add("dark")
+    } else {
+      document.documentElement.classList.remove("dark")
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
     registerWebPushForCurrentModule(location.pathname)
   }, [location.pathname])
 

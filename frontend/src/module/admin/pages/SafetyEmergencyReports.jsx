@@ -426,49 +426,49 @@ export default function SafetyEmergencyReports() {
       {/* View Report Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
-            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
+            <DialogTitle className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <AlertTriangle className="h-6 w-6 text-red-600" />
               Safety Emergency Report Details
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <DialogDescription className="text-sm text-slate-600 mt-1">
               Complete information about the safety emergency report
             </DialogDescription>
           </DialogHeader>
           {selectedReport && (
             <div className="px-6 py-6 space-y-6">
               {/* User Information Section */}
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
                   User Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">User Name</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white">{selectedReport.userName || 'N/A'}</p>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">User Name</label>
+                    <p className="text-base font-semibold text-slate-900">{selectedReport.userName || 'N/A'}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white break-all">{getDisplayEmail(selectedReport)}</p>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Email Address</label>
+                    <p className="text-base font-semibold text-slate-900 break-all">{getDisplayEmail(selectedReport)}</p>
                   </div>
                   {selectedReport.userId?.phone && (
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phone Number</label>
-                      <p className="text-base font-semibold text-slate-900 dark:text-white">{selectedReport.userId.phone}</p>
+                      <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                      <p className="text-base font-semibold text-slate-900">{selectedReport.userId.phone}</p>
                     </div>
                   )}
                 </div>
               </div>
 
               {/* Emergency Report Section */}
-              <div className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 rounded-xl p-5 border border-red-200 dark:border-red-800">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+              <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-5 border border-red-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-red-500 to-orange-600 rounded-full"></div>
                   Safety Emergency Report
                 </h3>
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {selectedReport.message}
                   </p>
                 </div>
@@ -476,20 +476,20 @@ export default function SafetyEmergencyReports() {
 
               {/* Priority and Status Section */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Priority</label>
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Priority</label>
                   <div>{getPriorityBadge(selectedReport.priority)}</div>
                 </div>
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Status</label>
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Status</label>
                   <div>{getStatusBadge(selectedReport.status)}</div>
                 </div>
               </div>
 
               {/* Metadata Section */}
-              <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Reported At</label>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Reported At</label>
+                <p className="text-sm font-semibold text-slate-900">
                   {new Date(selectedReport.createdAt).toLocaleString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -502,17 +502,17 @@ export default function SafetyEmergencyReports() {
 
               {/* Admin Response Section */}
               {selectedReport.adminResponse && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-5 border border-green-200 dark:border-green-800">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                     <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full"></div>
                     Admin Response
                   </h3>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                       {selectedReport.adminResponse}
                     </p>
                   </div>
-                  <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
                     {selectedReport.respondedAt && (
                       <span>
                         Responded on: {new Date(selectedReport.respondedAt).toLocaleString('en-US', {
@@ -526,7 +526,7 @@ export default function SafetyEmergencyReports() {
                     )}
                     {selectedReport.respondedBy?.name && (
                       <span>
-                        Responded by: <span className="font-semibold text-slate-700 dark:text-slate-300">{selectedReport.respondedBy.name}</span>
+                        Responded by: <span className="font-semibold text-slate-700">{selectedReport.respondedBy.name}</span>
                       </span>
                     )}
                   </div>
@@ -534,7 +534,7 @@ export default function SafetyEmergencyReports() {
               )}
 
               {/* Close Button */}
-              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex justify-end pt-4 border-t border-slate-200">
                 <Button
                   variant="outline"
                   onClick={() => setIsViewDialogOpen(false)}

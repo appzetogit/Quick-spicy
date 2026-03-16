@@ -72,9 +72,7 @@ export default function DeliveryWithdrawal() {
     return requests.filter(
       (r) =>
         r.deliveryName?.toLowerCase().includes(q) ||
-        r.deliveryIdString?.toLowerCase().includes(q) ||
-        r.deliveryPhone?.toLowerCase().includes(q) ||
-        r.amount?.toString().includes(q)
+        r.deliveryIdString?.toLowerCase().includes(q)
     )
   }, [requests, searchQuery])
 
@@ -194,7 +192,7 @@ export default function DeliveryWithdrawal() {
             <div className="relative flex-1 sm:flex-initial min-w-[200px] max-w-xs">
               <input
                 type="text"
-                placeholder="Search by delivery name, ID, phone"
+                placeholder="Search by name,id"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
@@ -314,10 +312,6 @@ export default function DeliveryWithdrawal() {
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase">Delivery ID</label>
                   <p className="text-sm font-medium text-slate-900 mt-1">{selectedRequest.deliveryIdString || "N/A"}</p>
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 uppercase">Phone</label>
-                  <p className="text-sm font-medium text-slate-900 mt-1">{selectedRequest.deliveryPhone || "N/A"}</p>
                 </div>
                 <div>
                   <label className="text-xs font-semibold text-slate-500 uppercase">Request time</label>

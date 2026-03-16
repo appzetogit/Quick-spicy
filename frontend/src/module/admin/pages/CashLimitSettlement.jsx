@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import { Search, Receipt, Loader2, Package } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -100,7 +101,7 @@ export default function CashLimitSettlement() {
             <div className="relative flex-1 sm:flex-initial min-w-[200px] max-w-xs">
               <input
                 type="text"
-                placeholder="Search by name, ID, phone"
+                placeholder="Search by name,id"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
@@ -152,7 +153,16 @@ export default function CashLimitSettlement() {
                           {tx.deliveryName || "—"}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                          {tx.deliveryIdString || "—"}
+                          {tx.deliveryId ? (
+                            <Link
+                              to={`/admin/delivery-partners/${tx.deliveryId}`}
+                              className="font-medium text-blue-600 hover:text-blue-700 hover:underline"
+                            >
+                              {tx.deliveryIdString || String(tx.deliveryId)}
+                            </Link>
+                          ) : (
+                            tx.deliveryIdString || "—"
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
                           {formatCurrency(tx.amount)}

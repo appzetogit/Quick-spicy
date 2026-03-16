@@ -13,9 +13,15 @@ loadBusinessSettings().catch(() => {
 })
 
 
-// Apply theme on app initialization
+// Apply theme on app initialization only for user-facing routes.
 const savedTheme = localStorage.getItem('appTheme') || 'light'
-if (savedTheme === 'dark') {
+const path = window.location.pathname || '/'
+const allowDarkTheme =
+  !path.startsWith('/admin') &&
+  !path.startsWith('/restaurant') &&
+  !path.startsWith('/delivery')
+
+if (savedTheme === 'dark' && allowDarkTheme) {
   document.documentElement.classList.add('dark')
 } else {
   document.documentElement.classList.remove('dark')

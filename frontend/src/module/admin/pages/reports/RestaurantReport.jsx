@@ -1,13 +1,14 @@
 ﻿import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Filter, Briefcase, RefreshCw, Settings, ArrowUpDown, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
+import { Search, Download, ChevronDown, Briefcase, RefreshCw, ArrowUpDown, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+
+const PAGE_SIZE = 10
 
 
 export default function RestaurantReport() {
@@ -21,7 +22,7 @@ export default function RestaurantReport() {
     time: "All Time",
   })
   const [zones, setZones] = useState([])
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
 
   // Fetch zones for filter dropdown
   useEffect(() => {
@@ -48,8 +49,7 @@ export default function RestaurantReport() {
           zone: filters.zone !== "All Zones" ? filters.zone : undefined,
           all: filters.all !== "All" ? filters.all : undefined,
           type: filters.type !== "All types" ? filters.type : undefined,
-          time: filters.time !== "All Time" ? filters.time : undefined,
-          search: searchQuery || undefined
+          time: filters.time !== "All Time" ? filters.time : undefined
         }
 
         const response = await adminAPI.getRestaurantReport(params)
@@ -72,13 +72,28 @@ export default function RestaurantReport() {
     }
 
     fetchRestaurantReport()
-  }, [filters, searchQuery])
+  }, [filters])
 
   const filteredRestaurants = useMemo(() => {
-    return restaurants // Backend already filters, so just return restaurants
-  }, [restaurants])
+    const normalizedSearch = String(searchQuery || "").trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return restaurants
+    }
+
+    return restaurants.filter((restaurant) =>
+      String(restaurant.restaurantName || "").toLowerCase().includes(normalizedSearch)
+    )
+  }, [restaurants, searchQuery])
 
   const totalRestaurants = filteredRestaurants.length
+  const totalPages = Math.max(1, Math.ceil(totalRestaurants / PAGE_SIZE))
+
+  const paginatedRestaurants = useMemo(() => {
+    const safePage = Math.min(currentPage, totalPages)
+    const start = (safePage - 1) * PAGE_SIZE
+    return filteredRestaurants.slice(start, start + PAGE_SIZE)
+  }, [filteredRestaurants, currentPage, totalPages])
 
   const handleReset = () => {
     setFilters({
@@ -88,6 +103,7 @@ export default function RestaurantReport() {
       time: "All Time",
     })
     setSearchQuery("")
+    setCurrentPage(1)
   }
 
   const handleExport = (format) => {
@@ -114,12 +130,6 @@ export default function RestaurantReport() {
     }
   }
 
-  const handleFilterApply = () => {
-    // Filters are already applied via useMemo
-  }
-
-  const activeFiltersCount = (filters.zone !== "All Zones" ? 1 : 0) + (filters.all !== "All" ? 1 : 0) + (filters.type !== "All types" ? 1 : 0) + (filters.time !== "All Time" ? 1 : 0)
-
   const renderStars = (rating, reviews) => {
     if (rating === 0) {
       return "★0"
@@ -127,6 +137,21 @@ export default function RestaurantReport() {
     const fullStars = Math.floor(rating)
     const hasHalfStar = rating % 1 !== 0
     return "★".repeat(fullStars) + (hasHalfStar ? "½" : "") + "☆".repeat(5 - Math.ceil(rating)) + ` (${reviews})`
+  }
+
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setCurrentPage(1)
+  }
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value)
+    setCurrentPage(1)
+  }
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return
+    setCurrentPage(newPage)
   }
 
   if (loading) {
@@ -164,7 +189,7 @@ export default function RestaurantReport() {
                 </label>
                 <select
                   value={filters.zone}
-                  onChange={(e) => setFilters(prev => ({ ...prev, zone: e.target.value }))}
+                  onChange={(e) => handleFilterChange("zone", e.target.value)}
                   className="w-full px-4 py-2.5 pr-8 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="All Zones">All Zones</option>
@@ -181,7 +206,7 @@ export default function RestaurantReport() {
                 </label>
                 <select
                   value={filters.all}
-                  onChange={(e) => setFilters(prev => ({ ...prev, all: e.target.value }))}
+                  onChange={(e) => handleFilterChange("all", e.target.value)}
                   className="w-full px-4 py-2.5 pr-8 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="All">All</option>
@@ -197,7 +222,7 @@ export default function RestaurantReport() {
                 </label>
                 <select
                   value={filters.type}
-                  onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
+                  onChange={(e) => handleFilterChange("type", e.target.value)}
                   className="w-full px-4 py-2.5 pr-8 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="All types">All types</option>
@@ -213,7 +238,7 @@ export default function RestaurantReport() {
                 </label>
                 <select
                   value={filters.time}
-                  onChange={(e) => setFilters(prev => ({ ...prev, time: e.target.value }))}
+                  onChange={(e) => handleFilterChange("time", e.target.value)}
                   className="w-full px-4 py-2.5 pr-8 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 appearance-none cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="All Time">All Time</option>
@@ -234,20 +259,6 @@ export default function RestaurantReport() {
                 <RefreshCw className="w-4 h-4" />
                 Reset
               </button>
-              <button 
-                onClick={handleFilterApply}
-                className={`px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all flex items-center gap-2 relative ${
-                  activeFiltersCount > 0 ? "ring-2 ring-blue-300" : ""
-                }`}
-              >
-                <Filter className="w-4 h-4" />
-                Filter
-                {activeFiltersCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-white rounded-full text-[10px] flex items-center justify-center font-bold">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </button>
             </div>
           </div>
         </div>
@@ -261,9 +272,9 @@ export default function RestaurantReport() {
               <div className="relative flex-1 sm:flex-initial min-w-[250px]">
                 <input
                   type="text"
-                  placeholder="Ex: search restaurant nam"
+                  placeholder="Search by restaurant name"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-4 pr-10 py-2.5 w-full text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -298,12 +309,6 @@ export default function RestaurantReport() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
-              >
-                <Settings className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
@@ -369,7 +374,7 @@ export default function RestaurantReport() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-100">
-                {filteredRestaurants.length === 0 ? (
+                {paginatedRestaurants.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center justify-center">
@@ -379,7 +384,7 @@ export default function RestaurantReport() {
                     </td>
                   </tr>
                 ) : (
-                  filteredRestaurants.map((restaurant) => (
+                  paginatedRestaurants.map((restaurant) => (
                     <tr key={restaurant.sl} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-medium text-slate-700">{restaurant.sl}</span>
@@ -438,33 +443,49 @@ export default function RestaurantReport() {
               </tbody>
             </table>
           </div>
+
+          <div className="flex items-center justify-between mt-6">
+            <p className="text-xs text-slate-500">
+              Showing{" "}
+              <span className="font-semibold text-slate-700">
+                {paginatedRestaurants.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1} -{" "}
+                {(currentPage - 1) * PAGE_SIZE + paginatedRestaurants.length}
+              </span>{" "}
+              of <span className="font-semibold text-slate-700">{filteredRestaurants.length}</span> restaurants
+            </p>
+
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                Prev
+              </button>
+              {Array.from({ length: totalPages }).map((_, idx) => (
+                <button
+                  key={idx + 1}
+                  onClick={() => handlePageChange(idx + 1)}
+                  className={`w-8 h-8 text-xs rounded border ${
+                    currentPage === idx + 1
+                      ? "bg-blue-600 border-blue-600 text-white"
+                      : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {idx + 1}
+                </button>
+              ))}
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 text-xs rounded border border-slate-300 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-md bg-white p-0 opacity-0 data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:scale-100 data-[state=closed]:scale-100">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Report Settings
-            </DialogTitle>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <p className="text-sm text-slate-700">
-              Restaurant report settings and preferences will be available here.
-            </p>
-          </div>
-          <div className="px-6 pb-6 flex items-center justify-end">
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-md"
-            >
-              Close
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

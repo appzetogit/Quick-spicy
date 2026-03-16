@@ -98,17 +98,9 @@ export default function ContactMessages() {
     const query = searchQuery.toLowerCase().trim()
     return feedbacks.filter((feedback) =>
       feedback.userName?.toLowerCase().includes(query) ||
-      feedback.userEmail?.toLowerCase().includes(query) ||
-      feedback.message?.toLowerCase().includes(query),
+      String(feedback.orderId || "").toLowerCase().includes(query),
     )
   }, [feedbacks, searchQuery])
-
-  const getDisplayEmail = (feedback) => {
-    const rawEmail = typeof feedback?.userEmail === "string" ? feedback.userEmail.trim() : ""
-    if (!rawEmail) return "N/A"
-    if (rawEmail.startsWith("Phone:") || rawEmail.startsWith("User ID:")) return "N/A"
-    return rawEmail
-  }
 
   const getDisplayPhone = (feedback) => {
     if (feedback?.userId?.phone) return feedback.userId.phone
@@ -174,7 +166,7 @@ export default function ContactMessages() {
             <div className="relative flex-1 sm:flex-initial min-w-[250px]">
               <input
                 type="text"
-                placeholder="Ex: Search by name, email or message"
+                placeholder="Search by name, order id"
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value)
@@ -207,12 +199,6 @@ export default function ContactMessages() {
                 </th>
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
-                    <span>Email</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400" />
-                  </div>
-                </th>
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
-                  <div className="flex items-center gap-2">
                     <span>Phone</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400" />
                   </div>
@@ -240,7 +226,7 @@ export default function ContactMessages() {
             <tbody className="bg-white divide-y divide-slate-100">
               {filteredFeedbacks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20">
+                    <td colSpan={6} className="px-6 py-20">
                     <div className="flex flex-col items-center justify-center">
                       <div className="relative mb-6">
                         <div className="w-32 h-32 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center shadow-inner">
@@ -267,9 +253,6 @@ export default function ContactMessages() {
                     </td>
                     <td className="px-6 py-4">
                       <span className="text-sm font-medium text-slate-900">{feedback.userName || "N/A"}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-slate-700">{getDisplayEmail(feedback)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-slate-700">{getDisplayPhone(feedback)}</span>
@@ -339,62 +322,58 @@ export default function ContactMessages() {
 
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto p-0">
-          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700">
-            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-slate-200">
+            <DialogTitle className="text-2xl font-bold text-slate-900 flex items-center gap-2">
               <Mail className="h-6 w-6 text-blue-600" />
               User Feedback Details
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <DialogDescription className="text-sm text-slate-600 mt-1">
               Complete information about the submitted feedback
             </DialogDescription>
           </DialogHeader>
           {selectedFeedback && (
             <div className="px-6 py-6 space-y-6">
-              <div className="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-700">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+              <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-5 border border-slate-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-blue-600 rounded-full"></div>
                   User Information
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">User Name</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white">{selectedFeedback.userName || "N/A"}</p>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">User Name</label>
+                    <p className="text-base font-semibold text-slate-900">{selectedFeedback.userName || "N/A"}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Email Address</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white break-all">{getDisplayEmail(selectedFeedback)}</p>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Phone Number</label>
+                    <p className="text-base font-semibold text-slate-900">{getDisplayPhone(selectedFeedback)}</p>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Phone Number</label>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white">{getDisplayPhone(selectedFeedback)}</p>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Status</label>
+                    <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</label>
                     <div>{getStatusBadge(selectedFeedback.status)}</div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-5 border border-blue-200 dark:border-blue-800">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
+                <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                   <div className="w-1 h-6 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-full"></div>
                   Feedback Message
                 </h3>
-                <div className="bg-white dark:bg-slate-800 rounded-lg p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-                  <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                     {selectedFeedback.message || "N/A"}
                   </p>
                 </div>
               </div>
 
               {selectedFeedback.adminReply && (
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-5 border border-green-200 dark:border-green-800">
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-5 flex items-center gap-3">
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-200">
+                  <h3 className="text-lg font-bold text-slate-900 mb-5 flex items-center gap-3">
                     <div className="w-1 h-6 bg-gradient-to-b from-green-500 to-emerald-600 rounded-full"></div>
                     Admin Reply
                   </h3>
-                  <div className="bg-white dark:bg-slate-800 rounded-lg p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
-                    <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                  <div className="bg-white rounded-lg p-5 border border-slate-200 shadow-sm">
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                       {selectedFeedback.adminReply}
                     </p>
                   </div>
@@ -402,9 +381,9 @@ export default function ContactMessages() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
-                  <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Submitted At</label>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                  <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider block mb-2">Submitted At</label>
+                  <p className="text-sm font-semibold text-slate-900">
                     {selectedFeedback.createdAt
                       ? new Date(selectedFeedback.createdAt).toLocaleString("en-US", {
                           year: "numeric",
@@ -418,7 +397,7 @@ export default function ContactMessages() {
                 </div>
               </div>
 
-              <div className="flex justify-end pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div className="flex justify-end pt-4 border-t border-slate-200">
                 <Button
                   variant="outline"
                   onClick={() => setIsViewDialogOpen(false)}

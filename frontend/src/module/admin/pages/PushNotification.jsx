@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef } from "react"
-import { Search, Download, ChevronDown, Bell, Edit, Trash2, Upload, Settings, Image as ImageIcon } from "lucide-react"
+import { Search, Bell, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { emptyNotifications } from "../utils/adminFallbackData"
@@ -17,6 +17,7 @@ const notificationImages = {
 export default function PushNotification() {
   const fileInputRef = useRef(null)
   const [scheduledDates, setScheduledDates] = useState([])
+  const [editingNotificationId, setEditingNotificationId] = useState(null)
   const [formData, setFormData] = useState({
     title: "",
     zone: "All",
@@ -121,8 +122,32 @@ export default function PushNotification() {
       }
     }
 
-    setIsSending(true)
     let resolvedImageUrlForUi = formData.imageUrl.trim()
+
+    if (editingNotificationId !== null) {
+      setNotifications((prev) =>
+        prev.map((notification) =>
+          notification.sl === editingNotificationId
+            ? {
+                ...notification,
+                title: formData.title.trim(),
+                description: formData.description.trim(),
+                zone: formData.zone,
+                target: formData.sendTo,
+                image: Boolean(resolvedImageUrlForUi || bannerPreview),
+                imageUrl: resolvedImageUrlForUi || bannerPreview || null,
+                sendMode: formData.sendMode,
+                scheduledAt: formData.sendMode === "schedule" ? scheduleIsoList[0] || null : null,
+              }
+            : notification,
+        ),
+      )
+      toast.success("Notification updated")
+      handleReset()
+      return
+    }
+
+    setIsSending(true)
 
     try {
       let normalizedImageUrl = formData.imageUrl.trim()
@@ -225,6 +250,7 @@ export default function PushNotification() {
   }
 
   const handleReset = () => {
+    setEditingNotificationId(null)
     setFormData({
       title: "",
       zone: "All",
@@ -271,6 +297,32 @@ export default function PushNotification() {
   const handleDelete = (sl) => {
     if (window.confirm("Are you sure you want to delete this notification?")) {
       setNotifications(notifications.filter(notification => notification.sl !== sl))
+      if (editingNotificationId === sl) {
+        handleReset()
+      }
+    }
+  }
+
+  const handleEdit = (notification) => {
+    const scheduledAt = notification?.scheduledAt ? new Date(notification.scheduledAt) : null
+    const isValidScheduledAt = scheduledAt && !Number.isNaN(scheduledAt.getTime())
+
+    setEditingNotificationId(notification.sl)
+    setFormData({
+      title: notification.title || "",
+      zone: notification.zone || "All",
+      sendTo: notification.target || "Customer",
+      imageUrl: notification.imageUrl || "",
+      description: notification.description || "",
+      sendMode: notification.sendMode || "now",
+      scheduleDate: isValidScheduledAt ? scheduledAt.toISOString().slice(0, 10) : "",
+      scheduleTime: isValidScheduledAt ? scheduledAt.toTimeString().slice(0, 5) : "",
+    })
+    setScheduledDates(isValidScheduledAt ? [scheduledAt.toISOString()] : [])
+    setBannerPreview(notification.imageUrl || resolveNotificationImageSrc(notification) || "")
+    setBannerFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
     }
   }
 
@@ -285,6 +337,19 @@ export default function PushNotification() {
     }
 
     return notificationImages[notification?.sl] || notificationImage1
+  }
+
+  const canEditNotification = (notification) => {
+    if (!notification?.scheduledAt) {
+      return true
+    }
+
+    const scheduledTime = new Date(notification.scheduledAt)
+    if (Number.isNaN(scheduledTime.getTime())) {
+      return true
+    }
+
+    return scheduledTime > new Date()
   }
 
   return (
@@ -488,18 +553,17 @@ export default function PushNotification() {
               >
                 Reset
               </button>
-              <div className="flex items-center gap-2">
               <button
                 type="submit"
                 disabled={isSending}
                 className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all shadow-md"
               >
-                  {isSending ? (formData.sendMode === "schedule" ? "Scheduling..." : "Sending...") : (formData.sendMode === "schedule" ? "Schedule Notification" : "Send Notification")}
+                {editingNotificationId !== null
+                  ? "Update Notification"
+                  : isSending
+                    ? (formData.sendMode === "schedule" ? "Scheduling..." : "Sending...")
+                    : (formData.sendMode === "schedule" ? "Schedule Notification" : "Send Notification")}
               </button>
-                <button className="p-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all">
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
             </div>
           </form>
         </div>
@@ -526,11 +590,6 @@ export default function PushNotification() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               </div>
 
-              <button className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all">
-                <Download className="w-4 h-4" />
-                <span>Export</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
             </div>
           </div>
 
@@ -620,12 +679,15 @@ export default function PushNotification() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <div className="flex items-center justify-center gap-2">
-                        <button
-                          className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
+                        {canEditNotification(notification) ? (
+                          <button
+                            onClick={() => handleEdit(notification)}
+                            className="p-1.5 rounded text-blue-600 hover:bg-blue-50 transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        ) : null}
                         <button
                           onClick={() => handleDelete(notification.sl)}
                           className="p-1.5 rounded text-red-600 hover:bg-red-50 transition-colors"

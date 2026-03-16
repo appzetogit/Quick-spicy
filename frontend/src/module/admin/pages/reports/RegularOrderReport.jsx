@@ -1,9 +1,8 @@
 ﻿import { useMemo, useState, useEffect } from "react"
-import { BarChart3, ChevronDown, Settings, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
+import { BarChart3, ChevronDown, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
 import searchIcon from "../../assets/Dashboard-icons/image8.png"
 import exportIcon from "../../assets/Dashboard-icons/image9.png"
@@ -34,11 +33,29 @@ const statusMeta = {
   Refunded: { label: "Refunded", color: "text-teal-600", bg: "bg-teal-50", icon: refundedIcon },
 }
 
+const normalizeOrderStatus = (status) => {
+  const normalized = String(status || "").trim().toLowerCase()
+
+  if (!normalized) return "Pending"
+  if (normalized === "scheduled") return "Scheduled"
+  if (normalized === "pending") return "Pending"
+  if (normalized === "accepted" || normalized === "confirmed") return "Accepted"
+  if (normalized === "processing" || normalized === "preparing" || normalized === "ready") return "Processing"
+  if (normalized === "food on the way" || normalized === "out_for_delivery" || normalized === "out for delivery") return "Food On The Way"
+  if (normalized === "delivered") return "Delivered"
+  if (normalized === "canceled" || normalized === "cancelled" || normalized.startsWith("cancelled by")) return "Canceled"
+  if (normalized === "payment failed" || normalized === "failed") return "Payment Failed"
+  if (normalized === "refunded") return "Refunded"
+
+  return status
+}
+
 const PAGE_SIZE = 25
 
 export default function RegularOrderReport() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
   const [error, setError] = useState(null)
   const [zones, setZones] = useState([])
   const [restaurants, setRestaurants] = useState([])
@@ -52,8 +69,6 @@ export default function RegularOrderReport() {
   })
   const [searchQuery, setSearchQuery] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
   // Fetch zones, restaurants, and customers for filter dropdowns
   useEffect(() => {
@@ -117,14 +132,18 @@ export default function RegularOrderReport() {
   // Fetch orders from backend
   useEffect(() => {
     const fetchOrders = async () => {
-      setLoading(true)
+      const isInitialLoad = orders.length === 0
+      if (isInitialLoad) {
+        setLoading(true)
+      } else {
+        setIsFetching(true)
+      }
       setError(null)
       try {
         const { fromDate, toDate } = getDateRange()
         const params = {
           page: 1,
           limit: 10000, // Fetch all orders for report (can be optimized later)
-          search: searchQuery || undefined,
           zone: filters.zone !== "All Zones" ? filters.zone : undefined,
           restaurant: filters.restaurant !== "All restaurants" ? filters.restaurant : undefined,
           customer: filters.customer !== "All customers" ? filters.customer : undefined,
@@ -136,20 +155,25 @@ export default function RegularOrderReport() {
         
         if (response.data?.success) {
           // Transform backend orders to match frontend format
-          const transformedOrders = (response.data.data.orders || []).map(order => ({
-            orderId: order.orderId,
-            restaurant: order.restaurant,
-            customerName: order.customerName,
-            totalItemAmount: order.totalItemAmount || 0,
-            itemDiscount: order.itemDiscount || 0,
-            discountedAmount: order.discountedAmount || 0,
-            couponDiscount: order.couponDiscount || 0,
-            referralDiscount: order.referralDiscount || 0,
-            vatTax: order.vatTax || 0,
-            deliveryCharge: order.deliveryCharge || 0,
-            totalAmount: order.totalAmount || 0,
-            orderStatus: order.orderStatus,
-          }))
+          const transformedOrders = (response.data.data.orders || []).map((order) => {
+            const totalItemAmount = order.totalItemAmount ?? order.pricing?.subtotal ?? 0
+            const itemDiscount = order.itemDiscount ?? order.pricing?.discount ?? 0
+
+            return {
+              orderId: order.orderId,
+              restaurant: order.restaurant,
+              customerName: order.customerName,
+              totalItemAmount,
+              itemDiscount,
+              discountedAmount: order.discountedAmount ?? Math.max(0, totalItemAmount - itemDiscount),
+              couponDiscount: order.couponDiscount ?? 0,
+              referralDiscount: order.referralDiscount ?? 0,
+              vatTax: order.vatTax ?? order.pricing?.tax ?? 0,
+              deliveryCharge: order.deliveryCharge ?? order.pricing?.deliveryFee ?? 0,
+              totalAmount: order.totalAmount ?? order.pricing?.total ?? 0,
+              orderStatus: normalizeOrderStatus(order.orderStatus),
+            }
+          })
           setOrders(transformedOrders)
         } else {
           setError(response.data?.message || "Failed to fetch orders")
@@ -161,15 +185,24 @@ export default function RegularOrderReport() {
         toast.error(err.response?.data?.message || "Failed to fetch orders")
       } finally {
         setLoading(false)
+        setIsFetching(false)
       }
     }
 
     fetchOrders()
-  }, [filters, searchQuery])
+  }, [filters])
 
   const filteredOrders = useMemo(() => {
-    return orders // Orders are already filtered by backend
-  }, [orders])
+    const normalizedSearch = String(searchQuery || "").trim().toLowerCase()
+
+    if (!normalizedSearch) {
+      return orders
+    }
+
+    return orders.filter((order) =>
+      String(order.orderId || "").toLowerCase().includes(normalizedSearch)
+    )
+  }, [orders, searchQuery])
 
   const handleExport = (format) => {
     if (filteredOrders.length === 0) {
@@ -198,10 +231,6 @@ export default function RegularOrderReport() {
     }
   }
 
-  const handleFilterApply = () => {
-    // Filters are already applied via useMemo
-  }
-
   const handleResetFilters = () => {
     setFilters({
       zone: "All Zones",
@@ -210,8 +239,6 @@ export default function RegularOrderReport() {
       time: "All Time",
     })
   }
-
-  const activeFiltersCount = (filters.zone !== "All Zones" ? 1 : 0) + (filters.restaurant !== "All restaurants" ? 1 : 0) + (filters.customer !== "All customers" ? 1 : 0) + (filters.time !== "All Time" ? 1 : 0)
 
   const totalPages = Math.max(1, Math.ceil(filteredOrders.length / PAGE_SIZE))
 
@@ -246,7 +273,7 @@ export default function RegularOrderReport() {
   )
 
   const formatAmount = (amount) =>
-    `$ ${Number(amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    `₹ ${Number(amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -288,7 +315,7 @@ export default function RegularOrderReport() {
     )
   }
 
-  if (error) {
+  if (error && orders.length === 0) {
     return (
       <div className="p-2 lg:p-3 bg-slate-50 min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -324,11 +351,11 @@ export default function RegularOrderReport() {
               <select
                 value={filters.zone}
                 onChange={(e) => handleFilterChange("zone", e.target.value)}
-                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
+                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option value="All Zones">All Zones</option>
+                <option value="All Zones" className="text-slate-900 bg-white">All Zones</option>
                 {zones.map((zone) => (
-                  <option key={zone._id} value={zone.name}>
+                  <option key={zone._id} value={zone.name} className="text-slate-900 bg-white">
                     {zone.name}
                   </option>
                 ))}
@@ -340,11 +367,11 @@ export default function RegularOrderReport() {
               <select
                 value={filters.restaurant}
                 onChange={(e) => handleFilterChange("restaurant", e.target.value)}
-                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
+                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option value="All restaurants">All restaurants</option>
+                <option value="All restaurants" className="text-slate-900 bg-white">All restaurants</option>
                 {restaurants.map((restaurant) => (
-                  <option key={restaurant._id} value={restaurant.name}>
+                  <option key={restaurant._id} value={restaurant.name} className="text-slate-900 bg-white">
                     {restaurant.name}
                   </option>
                 ))}
@@ -356,11 +383,11 @@ export default function RegularOrderReport() {
               <select
                 value={filters.customer}
                 onChange={(e) => handleFilterChange("customer", e.target.value)}
-                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
+                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option value="All customers">All customers</option>
+                <option value="All customers" className="text-slate-900 bg-white">All customers</option>
                 {customers.map((customer) => (
-                  <option key={customer._id} value={customer.name}>
+                  <option key={customer._id} value={customer.name} className="text-slate-900 bg-white">
                     {customer.name}
                   </option>
                 ))}
@@ -372,12 +399,12 @@ export default function RegularOrderReport() {
               <select
                 value={filters.time}
                 onChange={(e) => handleFilterChange("time", e.target.value)}
-                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
+                className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option key="all-time" value="All Time">All Time</option>
-                <option key="today" value="Today">Today</option>
-                <option key="this-week" value="This Week">This Week</option>
-                <option key="this-month" value="This Month">This Month</option>
+                <option key="all-time" value="All Time" className="text-slate-900 bg-white">All Time</option>
+                <option key="today" value="Today" className="text-slate-900 bg-white">Today</option>
+                <option key="this-week" value="This Week" className="text-slate-900 bg-white">This Week</option>
+                <option key="this-month" value="This Month" className="text-slate-900 bg-white">This Month</option>
               </select>
               <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
             </div>
@@ -388,24 +415,11 @@ export default function RegularOrderReport() {
             >
               Reset
             </button>
-            <button 
-              onClick={handleFilterApply}
-              className={`px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all whitespace-nowrap relative ${
-                activeFiltersCount > 0 ? "ring-2 ring-blue-300" : ""
-              }`}
-            >
-              Filter
-              {activeFiltersCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white rounded-full text-[8px] flex items-center justify-center font-bold">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </button>
           </div>
         </div>
 
         {/* Status Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-3">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2 mb-3 transition-opacity ${isFetching ? "opacity-70" : "opacity-100"}`}>
           {renderStatusRow("Scheduled")}
           {renderStatusRow("Pending")}
           {renderStatusRow("Processing")}
@@ -418,7 +432,7 @@ export default function RegularOrderReport() {
         </div>
 
         {/* Total Orders & Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+        <div className={`bg-white rounded-lg shadow-sm border border-slate-200 p-3 transition-opacity ${isFetching ? "opacity-80" : "opacity-100"}`}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
             <h2 className="text-base font-bold text-slate-900">
               Total Orders <span className="text-blue-600">{statusCounts.total}</span>
@@ -437,6 +451,9 @@ export default function RegularOrderReport() {
                   className="pl-7 pr-2 py-1.5 w-full text-[11px] rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <img src={searchIcon} alt="Search" className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3" />
+                {isFetching && (
+                  <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 animate-spin text-slate-500" />
+                )}
               </div>
 
               <DropdownMenu>
@@ -468,30 +485,24 @@ export default function RegularOrderReport() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-1.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 transition-all"
-              >
-                <Settings className="w-3 h-3" />
-              </button>
             </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto scrollbar-hide">
-            <table className="w-full" style={{ tableLayout: "fixed", width: "100%" }}>
+            <table className="w-full min-w-[1400px]" style={{ tableLayout: "fixed", width: "100%" }}>
               <thead className="bg-slate-50 border-b border-slate-200">
                 <tr>
                   <th className="px-1.5 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "3%" }}>
                     SI
                   </th>
-                  <th className="px-1.5 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "8%" }}>
+                  <th className="px-2 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "12%" }}>
                     Order Id
                   </th>
-                  <th className="px-1.5 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "12%" }}>
+                  <th className="px-2 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "16%" }}>
                     Restaurant
                   </th>
-                  <th className="px-1.5 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "12%" }}>
+                  <th className="px-2 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "12%" }}>
                     Customer Name
                   </th>
                   <th className="px-1.5 py-1 text-left text-[8px] font-bold text-slate-700 uppercase tracking-wider" style={{ width: "8%" }}>
@@ -541,13 +552,13 @@ export default function RegularOrderReport() {
                           {(currentPage - 1) * PAGE_SIZE + index + 1}
                         </span>
                       </td>
-                      <td className="px-1.5 py-1">
-                        <span className="text-[10px] text-blue-600 hover:underline cursor-pointer">{order.orderId}</span>
+                      <td className="px-2 py-1">
+                        <span className="text-[10px] text-blue-600 hover:underline cursor-pointer whitespace-nowrap">{order.orderId}</span>
                       </td>
-                      <td className="px-1.5 py-1">
+                      <td className="px-2 py-1">
                         <span className="text-[10px] text-slate-700 truncate block">{order.restaurant}</span>
                       </td>
-                      <td className="px-1.5 py-1">
+                      <td className="px-2 py-1">
                         <span className="text-[10px] text-slate-700 truncate block">{order.customerName}</span>
                       </td>
                       <td className="px-1.5 py-1">
@@ -630,30 +641,6 @@ export default function RegularOrderReport() {
         </div>
       </div>
 
-      {/* Settings Dialog */}
-      <Dialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
-        <DialogContent className="max-w-md bg-white p-0 opacity-0 data-[state=open]:opacity-100 data-[state=closed]:opacity-0 transition-opacity duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:scale-100 data-[state=closed]:scale-100">
-          <DialogHeader className="px-6 pt-6 pb-4">
-            <DialogTitle className="flex items-center gap-2">
-              <Settings className="w-5 h-5" />
-              Report Settings
-            </DialogTitle>
-          </DialogHeader>
-          <div className="px-6 pb-6">
-            <p className="text-sm text-slate-700">
-              Regular order report settings and preferences will be available here.
-            </p>
-          </div>
-          <div className="px-6 pb-6 flex items-center justify-end">
-            <button
-              onClick={() => setIsSettingsOpen(false)}
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-all shadow-md"
-            >
-              Close
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

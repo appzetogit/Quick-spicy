@@ -35,12 +35,12 @@ const iconOptions = [
 ]
 
 const colorOptions = [
-  { value: 'text-pink-600 dark:text-pink-400', label: 'Pink', bg: 'bg-pink-100 dark:bg-pink-900/30' },
-  { value: 'text-blue-600 dark:text-blue-400', label: 'Blue', bg: 'bg-blue-100 dark:bg-blue-900/30' },
-  { value: 'text-green-600 dark:text-green-400', label: 'Green', bg: 'bg-green-100 dark:bg-green-900/30' },
-  { value: 'text-orange-600 dark:text-orange-400', label: 'Orange', bg: 'bg-orange-100 dark:bg-orange-900/30' },
-  { value: 'text-purple-600 dark:text-purple-400', label: 'Purple', bg: 'bg-purple-100 dark:bg-purple-900/30' },
-  { value: 'text-red-600 dark:text-red-400', label: 'Red', bg: 'bg-red-100 dark:bg-red-900/30' }
+  { value: 'text-pink-600', label: 'Pink', bg: 'bg-pink-100' },
+  { value: 'text-blue-600', label: 'Blue', bg: 'bg-blue-100' },
+  { value: 'text-green-600', label: 'Green', bg: 'bg-green-100' },
+  { value: 'text-orange-600', label: 'Orange', bg: 'bg-orange-100' },
+  { value: 'text-purple-600', label: 'Purple', bg: 'bg-purple-100' },
+  { value: 'text-red-600', label: 'Red', bg: 'bg-red-100' }
 ]
 
 export default function AboutUs() {
@@ -99,8 +99,8 @@ export default function AboutUs() {
           icon: 'Heart',
           title: '',
           description: '',
-          color: 'text-pink-600 dark:text-pink-400',
-          bgColor: 'bg-pink-100 dark:bg-pink-900/30',
+          color: 'text-pink-600',
+          bgColor: 'bg-pink-100',
           order: prev.features.length
         }
       ]

@@ -876,6 +876,21 @@ export const getUsers = asyncHandler(async (req, res) => {
       query.createdAt = { $gte: startDate, $lte: endDate };
     }
 
+    // Order date filter
+    if (orderDate) {
+      const startDate = new Date(orderDate);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(orderDate);
+      endDate.setHours(23, 59, 59, 999);
+
+      const orderDateUserIds = await Order.distinct("userId", {
+        createdAt: { $gte: startDate, $lte: endDate },
+        userId: { $ne: null },
+      });
+
+      query._id = { $in: orderDateUserIds };
+    }
+
     // Get users
     const users = await User.find(query)
       .select("-password -__v")
@@ -965,17 +980,10 @@ export const getUsers = asyncHandler(async (req, res) => {
       }
     }
 
-    // Order date filter (filter by order date after aggregation)
-    let filteredUsers = formattedUsers;
-    if (orderDate) {
-      // This would require additional query to filter by order date
-      // For now, we'll skip this as it's complex and may require different approach
-    }
-
     const total = await User.countDocuments(query);
 
     return successResponse(res, 200, "Users retrieved successfully", {
-      users: filteredUsers,
+      users: formattedUsers,
       total,
       limit: parseInt(limit),
       offset: parseInt(offset),

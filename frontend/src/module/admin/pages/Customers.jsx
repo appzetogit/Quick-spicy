@@ -1,5 +1,5 @@
 ﻿import { useState, useMemo, useEffect } from "react"
-import { Search, Download, ChevronDown, Calendar, Eye, FileDown, FileSpreadsheet, FileText, X, Mail, Phone, MapPin, Package, IndianRupee, Calendar as CalendarIcon, User, CheckCircle, XCircle } from "lucide-react"
+import { Search, Download, ChevronDown, Calendar, Eye, FileDown, FileSpreadsheet, FileText, X, Mail, Phone, MapPin, Package, IndianRupee, Calendar as CalendarIcon, User, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportCustomersToCSV, exportCustomersToExcel, exportCustomersToPDF } from "../components/customers/customersExportUtils"
 import { adminAPI } from "@/lib/api"
@@ -9,23 +9,32 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const getSafeName = (customer) => String(customer?.name || "").trim().toLowerCase()
+const getSafeOrderCount = (customer) => Number(customer?.totalOrder) || 0
+
 
 export default function Customers() {
+  const PAGE_SIZE = 20
+  const initialFilters = {
+    orderDate: "",
+    joiningDate: "",
+    status: "",
+    sortBy: "",
+  }
+
   const [searchQuery, setSearchQuery] = useState("")
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [isFetching, setIsFetching] = useState(false)
+  const [isApplyingFilters, setIsApplyingFilters] = useState(false)
   const [totalCustomers, setTotalCustomers] = useState(0)
   const [selectedCustomer, setSelectedCustomer] = useState(null)
   const [userDetails, setUserDetails] = useState(null)
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [showUserDetails, setShowUserDetails] = useState(false)
-  const [filters, setFilters] = useState({
-    orderDate: "",
-    joiningDate: "",
-    status: "",
-    sortBy: "",
-    chooseFirst: "",
-  })
+  const [draftFilters, setDraftFilters] = useState(initialFilters)
+  const [appliedFilters, setAppliedFilters] = useState(initialFilters)
+  const [currentPage, setCurrentPage] = useState(1)
 
   const filteredCustomers = useMemo(() => {
     let result = [...customers]
@@ -43,61 +52,90 @@ export default function Customers() {
     // Filter by order date when that field is available in the API payload.
 
     // Filter by joining date
-    if (filters.joiningDate) {
+    if (appliedFilters.joiningDate) {
       result = result.filter(customer => {
         // Parse joining date from format "17 Oct 2021"
         const customerDate = new Date(customer.joiningDate)
-        const filterDate = new Date(filters.joiningDate)
+        const filterDate = new Date(appliedFilters.joiningDate)
         return customerDate.toDateString() === filterDate.toDateString()
       })
     }
 
     // Filter by status
-    if (filters.status) {
-      if (filters.status === "active") {
+    if (appliedFilters.status) {
+      if (appliedFilters.status === "active") {
         result = result.filter(customer => customer.status === true)
-      } else if (filters.status === "inactive") {
+      } else if (appliedFilters.status === "inactive") {
         result = result.filter(customer => customer.status === false)
       }
     }
 
-    // Sort by options
-    if (filters.sortBy) {
-      if (filters.sortBy === "name-asc") {
-        result.sort((a, b) => a.name.localeCompare(b.name))
-      } else if (filters.sortBy === "name-desc") {
-        result.sort((a, b) => b.name.localeCompare(a.name))
-      } else if (filters.sortBy === "orders-asc") {
-        result.sort((a, b) => a.totalOrder - b.totalOrder)
-      } else if (filters.sortBy === "orders-desc") {
-        result.sort((a, b) => b.totalOrder - a.totalOrder)
-      }
-    }
+    if (appliedFilters.sortBy) {
+      result.sort((a, b) => {
+        if (appliedFilters.sortBy === "name-asc") {
+          return getSafeName(a).localeCompare(getSafeName(b), undefined, { sensitivity: "base" })
+        } else if (appliedFilters.sortBy === "name-desc") {
+          return getSafeName(b).localeCompare(getSafeName(a), undefined, { sensitivity: "base" })
+        } else if (appliedFilters.sortBy === "orders-asc") {
+          const orderComparison = getSafeOrderCount(a) - getSafeOrderCount(b)
+          return orderComparison !== 0
+            ? orderComparison
+            : getSafeName(a).localeCompare(getSafeName(b), undefined, { sensitivity: "base" })
+        } else if (appliedFilters.sortBy === "orders-desc") {
+          const orderComparison = getSafeOrderCount(b) - getSafeOrderCount(a)
+          return orderComparison !== 0
+            ? orderComparison
+            : getSafeName(a).localeCompare(getSafeName(b), undefined, { sensitivity: "base" })
+        }
 
-    // Limit results if "Choose First" is set
-    if (filters.chooseFirst && parseInt(filters.chooseFirst) > 0) {
-      result = result.slice(0, parseInt(filters.chooseFirst))
+        return 0
+      })
     }
 
     return result
-  }, [customers, searchQuery, filters])
+  }, [customers, searchQuery, appliedFilters])
 
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({ ...prev, [field]: value }))
+    setDraftFilters(prev => ({ ...prev, [field]: value }))
   }
+
+  const hasRemoteFilterChanges =
+    draftFilters.orderDate !== appliedFilters.orderDate ||
+    draftFilters.joiningDate !== appliedFilters.joiningDate ||
+    draftFilters.status !== appliedFilters.status
+
+  const totalPages = Math.max(1, Math.ceil(filteredCustomers.length / PAGE_SIZE))
+  const paginatedCustomers = filteredCustomers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE,
+  )
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery, appliedFilters, customers])
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages)
+    }
+  }, [currentPage, totalPages])
 
   // Fetch customers from API
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        setLoading(true)
+        if (loading) {
+          setLoading(true)
+        } else {
+          setIsFetching(true)
+        }
         const params = {
           limit: 1000, // Get all customers
           offset: 0,
           ...(searchQuery && { search: searchQuery }),
-          ...(filters.status && { status: filters.status }),
-          ...(filters.joiningDate && { joiningDate: filters.joiningDate }),
-          ...(filters.sortBy && { sortBy: filters.sortBy }),
+          ...(appliedFilters.orderDate && { orderDate: appliedFilters.orderDate }),
+          ...(appliedFilters.status && { status: appliedFilters.status }),
+          ...(appliedFilters.joiningDate && { joiningDate: appliedFilters.joiningDate }),
         }
 
         const response = await adminAPI.getUsers(params)
@@ -113,10 +151,10 @@ export default function Customers() {
       } catch (error) {
         debugError('Error fetching customers:', error)
         toast.error('Failed to load customers')
-        setCustomers([])
-        setTotalCustomers(0)
       } finally {
         setLoading(false)
+        setIsFetching(false)
+        setIsApplyingFilters(false)
       }
     }
 
@@ -126,7 +164,7 @@ export default function Customers() {
     const intervalId = setInterval(fetchCustomers, 30000)
 
     return () => clearInterval(intervalId)
-  }, [searchQuery, filters.status, filters.joiningDate, filters.sortBy])
+  }, [searchQuery, appliedFilters.orderDate, appliedFilters.status, appliedFilters.joiningDate])
 
   const handleToggleStatus = async (customerId) => {
     try {
@@ -225,7 +263,7 @@ export default function Customers() {
       <div className="max-w-7xl mx-auto">
         {/* Filters Section */}
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-2">
                 Order Date
@@ -233,7 +271,7 @@ export default function Customers() {
               <div className="relative">
                 <input
                   type="date"
-                  value={filters.orderDate}
+                  value={draftFilters.orderDate}
                   onChange={(e) => handleFilterChange("orderDate", e.target.value)}
                   className="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
@@ -248,7 +286,7 @@ export default function Customers() {
               <div className="relative">
                 <input
                   type="date"
-                  value={filters.joiningDate}
+                  value={draftFilters.joiningDate}
                   onChange={(e) => handleFilterChange("joiningDate", e.target.value)}
                   className="w-full px-4 py-2.5 pr-10 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
@@ -261,7 +299,7 @@ export default function Customers() {
                 Customer status
               </label>
               <select
-                value={filters.status}
+                value={draftFilters.status}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
@@ -276,7 +314,7 @@ export default function Customers() {
                 Sort By
               </label>
               <select
-                value={filters.sortBy}
+                value={draftFilters.sortBy}
                 onChange={(e) => handleFilterChange("sortBy", e.target.value)}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
@@ -288,39 +326,25 @@ export default function Customers() {
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">
-                Choose First
-              </label>
-              <input
-                type="number"
-                value={filters.chooseFirst}
-                onChange={(e) => handleFilterChange("chooseFirst", e.target.value)}
-                placeholder="Ex: 100"
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-            </div>
           </div>
 
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => {
-                  // Filters are applied automatically via useMemo
+                  setIsApplyingFilters(hasRemoteFilterChanges)
+                  setAppliedFilters({ ...draftFilters })
                 }}
-                className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all"
+                disabled={isApplyingFilters}
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-all disabled:cursor-not-allowed disabled:opacity-70"
               >
+                {isApplyingFilters ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Apply Filters
               </button>
               <button
                 onClick={() => {
-                  setFilters({
-                    orderDate: "",
-                    joiningDate: "",
-                    status: "",
-                    sortBy: "",
-                    chooseFirst: "",
-                  })
+                  setDraftFilters(initialFilters)
+                  setAppliedFilters({ ...initialFilters })
                 }}
                 className="px-6 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-all"
               >
@@ -328,7 +352,7 @@ export default function Customers() {
               </button>
             </div>
             <div className="text-sm text-slate-600">
-              {loading ? 'Loading...' : `Showing ${filteredCustomers.length} of ${totalCustomers} customers`}
+              {loading ? 'Loading...' : isFetching ? 'Updating customers...' : `Showing ${filteredCustomers.length} of ${totalCustomers} customers`}
             </div>
           </div>
         </div>
@@ -412,10 +436,10 @@ export default function Customers() {
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map((customer, index) => (
+                  paginatedCustomers.map((customer, index) => (
                     <tr key={customer.id || customer.sl} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="text-sm font-medium text-slate-700">{index + 1}</span>
+                        <span className="text-sm font-medium text-slate-700">{(currentPage - 1) * PAGE_SIZE + index + 1}</span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -466,6 +490,46 @@ export default function Customers() {
               </tbody>
             </table>
           </div>
+
+          {filteredCustomers.length > 0 && (
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-slate-600">
+                Showing {(currentPage - 1) * PAGE_SIZE + 1} - {Math.min(currentPage * PAGE_SIZE, filteredCustomers.length)} of {filteredCustomers.length} customers
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+                  <button
+                    key={pageNumber}
+                    type="button"
+                    onClick={() => setCurrentPage(pageNumber)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                      currentPage === pageNumber
+                        ? "bg-blue-600 text-white"
+                        : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {pageNumber}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
+                  className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
