@@ -962,6 +962,39 @@ export default function HubMenu() {
     return filtered
   }, [addons, activeAddonFilter, searchQuery])
 
+  const searchedMenuGroups = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim()
+    if (!query) return []
+
+    return menuData
+      .map((group) => {
+        const matchedItems = (group.items || []).filter((item) => {
+          return item.name.toLowerCase().includes(query) ||
+            item.category.toLowerCase().includes(query) ||
+            (item.description && item.description.toLowerCase().includes(query))
+        })
+
+        return {
+          ...group,
+          items: [...matchedItems].sort((a, b) => getItemCreatedMs(b) - getItemCreatedMs(a)),
+        }
+      })
+      .filter((group) => group.items.length > 0)
+  }, [menuData, searchQuery])
+
+  const searchedAddons = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim()
+    if (!query) return []
+
+    return addons.filter((addon) => {
+      return (
+        String(addon?.name || "").toLowerCase().includes(query) ||
+        String(addon?.description || "").toLowerCase().includes(query) ||
+        String(addon?.approvalStatus || "").toLowerCase().includes(query)
+      )
+    })
+  }, [addons, searchQuery])
+
   // Toggle group expansion
   const toggleGroup = (groupId) => {
     setExpandedGroups(prev => {
@@ -2253,7 +2286,7 @@ export default function HubMenu() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={activeTab === "add-ons" ? "Search add-ons..." : "Search for food items..."}
+                    placeholder="Search menu items and add-ons..."
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     autoFocus
                   />
@@ -2269,139 +2302,138 @@ export default function HubMenu() {
               </div>
               <div className="flex-1 overflow-y-auto px-4 py-4">
                 {searchQuery.trim() ? (
-                  activeTab === "add-ons" ? (
-                    filteredAddons.length > 0 ? (
-                      <div className="space-y-3">
-                        {filteredAddons.map((addon) => (
-                          <div
-                            key={addon.id}
-                            onClick={() => {
-                              if (!isPendingApproval(addon.approvalStatus)) {
-                                toast.error("Approved add-ons cannot be edited")
-                                return
-                              }
-                              setIsSearchOpen(false)
-                              handleEditAddon(addon)
-                            }}
-                            className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 transition-colors ${
-                              isPendingApproval(addon.approvalStatus)
-                                ? "hover:bg-gray-50 cursor-pointer"
-                                : "bg-gray-50/60 cursor-not-allowed"
-                            }`}
-                          >
-                            {addon.images?.[0] ? (
-                              <img
-                                src={addon.images[0]}
-                                alt={addon.name}
-                                className="w-16 h-16 rounded-lg object-cover"
-                              />
-                            ) : (
-                              <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
-                                <Camera className="w-5 h-5 text-gray-400" />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h4 className="text-sm font-bold text-gray-900 truncate">{addon.name}</h4>
-                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                  String(addon.approvalStatus || "pending").toLowerCase() === "approved"
-                                    ? "bg-green-100 text-green-700"
-                                    : String(addon.approvalStatus || "pending").toLowerCase() === "rejected"
-                                      ? "bg-red-100 text-red-700"
-                                      : "bg-yellow-100 text-yellow-700"
-                                }`}>
-                                  {String(addon.approvalStatus || "pending")}
-                                </span>
-                              </div>
-                              <p className="text-sm font-medium text-gray-700">₹{addon.price}</p>
-                              {addon.description && (
-                                <p className="text-xs text-gray-500 mt-1 line-clamp-2">{addon.description}</p>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center py-20 px-4">
-                        <div className="text-center">
-                          <p className="text-lg font-medium text-gray-500">No add-ons found</p>
-                          <p className="text-sm text-gray-400 mt-2">
-                            Try searching with different keywords
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  ) : filteredMenuGroups.length > 0 ? (
-                    <div className="space-y-4">
-                      {filteredMenuGroups.map((group) => (
-                        <div key={group.id} className="space-y-3">
+                  searchedMenuGroups.length > 0 || searchedAddons.length > 0 ? (
+                    <div className="space-y-6">
+                      {searchedMenuGroups.length > 0 && (
+                        <div className="space-y-4">
                           <h3 className="text-sm font-bold text-gray-900 uppercase">
-                            {group.name} ({group.items.length})
+                            Menu Items ({searchedMenuGroups.reduce((acc, group) => acc + group.items.length, 0)})
                           </h3>
-                          <div className="space-y-3">
-                            {group.items.map((item) => (
-                              <div
-                                key={item.id}
-                                onClick={() => {
-                                  if (!isPendingApproval(item.approvalStatus)) {
-                                    toast.error("Approved or rejected items cannot be edited")
-                                    return
-                                  }
-                                  setIsSearchOpen(false)
-                                  navigate(`/restaurant/hub-menu/item/${item.id}`, { 
-                                    state: { item, groupId: group.id } 
-                                  })
-                                }}
-                                className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 transition-colors ${
-                                  isPendingApproval(item.approvalStatus)
-                                    ? "hover:bg-gray-50 cursor-pointer"
-                                    : "bg-gray-50/60 cursor-not-allowed"
-                                }`}
-                              >
+                          {searchedMenuGroups.map((group) => (
+                            <div key={group.id} className="space-y-3">
+                              <h4 className="text-sm font-bold text-gray-700 uppercase">
+                                {group.name} ({group.items.length})
+                              </h4>
+                              <div className="space-y-3">
+                                {group.items.map((item) => (
+                                  <div
+                                    key={item.id}
+                                    onClick={() => {
+                                      if (!isPendingApproval(item.approvalStatus)) {
+                                        toast.error("Approved or rejected items cannot be edited")
+                                        return
+                                      }
+                                      setIsSearchOpen(false)
+                                      navigate(`/restaurant/hub-menu/item/${item.id}`, {
+                                        state: { item, groupId: group.id }
+                                      })
+                                    }}
+                                    className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 transition-colors ${
+                                      isPendingApproval(item.approvalStatus)
+                                        ? "hover:bg-gray-50 cursor-pointer"
+                                        : "bg-gray-50/60 cursor-not-allowed"
+                                    }`}
+                                  >
+                                    <img
+                                      src={item.image}
+                                      alt={item.name}
+                                      className="w-16 h-16 rounded-lg object-cover"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <div
+                                          className={`w-4 h-4 rounded-sm border-2 shrink-0 flex items-center justify-center ${
+                                            item.foodType === "Veg"
+                                              ? "bg-green-50 border-green-600"
+                                              : "bg-red-50 border-red-600"
+                                          }`}
+                                        >
+                                          <div className={`w-2 h-2 rounded-full ${
+                                            item.foodType === "Veg"
+                                              ? "bg-green-600"
+                                              : "bg-red-600"
+                                          }`} />
+                                        </div>
+                                        <h4 className="text-sm font-bold text-gray-900 truncate">
+                                          {item.name}
+                                        </h4>
+                                      </div>
+                                      <p className="text-sm font-medium text-gray-700">₹{item.price}</p>
+                                      {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
+                                        <p className="text-xs text-red-600 mt-1">Reason: {item.rejectionReason}</p>
+                                      )}
+                                      {!item.isAvailable && (
+                                        <span className="text-xs text-red-600 font-medium">Out of stock</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {searchedAddons.length > 0 && (
+                        <div className="space-y-3">
+                          <h3 className="text-sm font-bold text-gray-900 uppercase">
+                            Add-ons ({searchedAddons.length})
+                          </h3>
+                          {searchedAddons.map((addon) => (
+                            <div
+                              key={addon.id}
+                              onClick={() => {
+                                if (!isPendingApproval(addon.approvalStatus)) {
+                                  toast.error("Approved add-ons cannot be edited")
+                                  return
+                                }
+                                setIsSearchOpen(false)
+                                handleEditAddon(addon)
+                              }}
+                              className={`flex items-start gap-3 p-3 rounded-lg border border-gray-200 transition-colors ${
+                                isPendingApproval(addon.approvalStatus)
+                                  ? "hover:bg-gray-50 cursor-pointer"
+                                  : "bg-gray-50/60 cursor-not-allowed"
+                              }`}
+                            >
+                              {addon.images?.[0] ? (
                                 <img
-                                  src={item.image}
-                                  alt={item.name}
+                                  src={addon.images[0]}
+                                  alt={addon.name}
                                   className="w-16 h-16 rounded-lg object-cover"
                                 />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div
-                                      className={`w-4 h-4 rounded-sm border-2 shrink-0 flex items-center justify-center ${
-                                        item.foodType === "Veg"
-                                          ? "bg-green-50 border-green-600"
-                                          : "bg-red-50 border-red-600"
-                                      }`}
-                                    >
-                                      <div className={`w-2 h-2 rounded-full ${
-                                        item.foodType === "Veg"
-                                          ? "bg-green-600"
-                                          : "bg-red-600"
-                                      }`} />
-                                    </div>
-                                    <h4 className="text-sm font-bold text-gray-900 truncate">
-                                      {item.name}
-                                    </h4>
-                                  </div>
-                                  <p className="text-sm font-medium text-gray-700">₹{item.price}</p>
-                                  {isRejectedApproval(item.approvalStatus) && item.rejectionReason && (
-                                    <p className="text-xs text-red-600 mt-1">Reason: {item.rejectionReason}</p>
-                                  )}
-                                  {!item.isAvailable && (
-                                    <span className="text-xs text-red-600 font-medium">Out of stock</span>
-                                  )}
+                              ) : (
+                                <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center">
+                                  <Camera className="w-5 h-5 text-gray-400" />
                                 </div>
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="text-sm font-bold text-gray-900 truncate">{addon.name}</h4>
+                                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                                    String(addon.approvalStatus || "pending").toLowerCase() === "approved"
+                                      ? "bg-green-100 text-green-700"
+                                      : String(addon.approvalStatus || "pending").toLowerCase() === "rejected"
+                                        ? "bg-red-100 text-red-700"
+                                        : "bg-yellow-100 text-yellow-700"
+                                  }`}>
+                                    {String(addon.approvalStatus || "pending")}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-medium text-gray-700">₹{addon.price}</p>
+                                {addon.description && (
+                                  <p className="text-xs text-gray-500 mt-1 line-clamp-2">{addon.description}</p>
+                                )}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center py-20 px-4">
                       <div className="text-center">
-                        <p className="text-lg font-medium text-gray-500">
-                          {activeTab === "add-ons" ? "No add-ons found" : "No items found"}
-                        </p>
+                        <p className="text-lg font-medium text-gray-500">No items found</p>
                         <p className="text-sm text-gray-400 mt-2">
                           Try searching with different keywords
                         </p>
@@ -2414,9 +2446,7 @@ export default function HubMenu() {
                       <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                       <p className="text-lg font-medium text-gray-500">Start searching</p>
                       <p className="text-sm text-gray-400 mt-2">
-                        {activeTab === "add-ons"
-                          ? "Type to search add-ons by name, description, or status"
-                          : "Type to search for food items by name or category"}
+                        Type to search menu items and add-ons
                       </p>
                     </div>
                   </div>
@@ -2429,9 +2459,8 @@ export default function HubMenu() {
                     className="w-full py-3 rounded-lg font-semibold text-sm bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                   >
                     View Results (
-                    {activeTab === "add-ons"
-                      ? filteredAddons.length
-                      : filteredMenuGroups.reduce((acc, group) => acc + group.items.length, 0)}
+                    {searchedAddons.length +
+                      searchedMenuGroups.reduce((acc, group) => acc + group.items.length, 0)}
                     {" "}
                     items)
                   </button>
