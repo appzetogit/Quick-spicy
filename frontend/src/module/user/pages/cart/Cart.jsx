@@ -61,6 +61,7 @@ const formatFullAddress = (address) => {
 }
 
 const RUPEE_SYMBOL = "\u20B9"
+const CANCELLATION_NOTE_TEXT = "If a cancellation is made within 1 minute without the vendor accepting, a 100% refund will be issued. No refund will be given for cancellations made after 1 minute"
 
 export default function Cart() {
   const navigate = useNavigate()
@@ -216,6 +217,26 @@ export default function Cart() {
     : currentLocation
   const { zoneId } = useZone(zoneLocation) // Prefer selected/saved address zone
   const defaultPayment = getDefaultPaymentMethod()
+
+  const cancellationPolicyNotice = (
+    <div className="mt-3 md:mt-4 rounded-xl border border-gray-200 bg-white px-3 md:px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-[#1a1a1a]">
+      <p className="text-sm md:text-base font-semibold leading-snug text-slate-700 dark:text-gray-200">
+        Review your order and address details to avoid cancellations
+      </p>
+      <div className="mt-3 rounded-xl border border-gray-200 bg-[#fcfcfc] px-3 md:px-4 py-3 dark:border-gray-700 dark:bg-[#111111]">
+        <p className="text-sm md:text-base leading-relaxed text-gray-700 dark:text-gray-300">
+          <span className="font-semibold text-[#d36b5f]">Note:</span>{" "}
+          {CANCELLATION_NOTE_TEXT}
+        </p>
+        <Link
+          to="/profile/cancellation"
+          className="mt-3 inline-block text-sm font-semibold uppercase tracking-wide text-[#c74f46] underline underline-offset-2"
+        >
+          Read Cancellation Policy
+        </Link>
+      </div>
+    </div>
+  )
 
   useEffect(() => {
     const defaultId = getAddressId(savedAddress)
@@ -2003,13 +2024,18 @@ export default function Cart() {
                         key={value}
                         type="button"
                         onClick={() => setTipAmount(value)}
-                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors ${
                           Number(tipAmount) === value
                             ? "bg-[#EB590E] text-white border-[#EB590E]"
                             : "bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
                         }`}
                       >
-                        {value === 0 ? "No tip" : `${RUPEE_SYMBOL}${value}`}
+                        {value === 0 ? "No tip" : (
+                          <>
+                            <span className="leading-none">{value === 10 ? "🤗" : value === 20 ? "☺️" : "😘"}</span>
+                            <span>{RUPEE_SYMBOL}{value}</span>
+                          </>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -2054,6 +2080,7 @@ export default function Cart() {
                       <span>To Pay</span>
                       <span>{RUPEE_SYMBOL}{total.toFixed(0)}</span>
                     </div>
+                    {cancellationPolicyNotice}
                   </div>
                 )}
               </div>
@@ -2104,6 +2131,7 @@ export default function Cart() {
                       <span>Total</span>
                       <span className="text-green-600 dark:text-green-400">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
                     </div>
+                    {cancellationPolicyNotice}
                   </div>
                 </div>
               </div>
