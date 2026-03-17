@@ -484,6 +484,7 @@ export default function DeliveryHome() {
   const lastRouteRecalculationRef = useRef(null) // Track last route recalculation time (API cost optimization)
   const lastBikePositionRef = useRef(null) // Track last bike position for deviation detection
   const acceptedOrderIdsRef = useRef(new Set()) // Track accepted order IDs to prevent duplicate notifications
+  const dismissedOrderIdsRef = useRef(new Set()) // Track manually dismissed order IDs to avoid re-showing on reopen
   // Live tracking polyline refs
   const liveTrackingPolylineRef = useRef(null) // Google Maps Polyline instance for live tracking
   const liveTrackingPolylineShadowRef = useRef(null) // Shadow/outline polyline for better visibility (Zomato/Rapido style)
@@ -501,6 +502,21 @@ export default function DeliveryHome() {
   const [mapLoading, setMapLoading] = useState(false)
   const [directionsMapLoading, setDirectionsMapLoading] = useState(false)
   const isInitializingMapRef = useRef(false)
+
+  const DISMISSED_ORDER_IDS_KEY = "delivery_dismissed_order_ids"
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DISMISSED_ORDER_IDS_KEY)
+      if (!saved) return
+      const parsed = JSON.parse(saved)
+      if (Array.isArray(parsed)) {
+        dismissedOrderIdsRef.current = new Set(parsed.map((id) => String(id)))
+      }
+    } catch {
+      // Ignore malformed localStorage state
+    }
+  }, [])
 
   // Safety timeout: hide "Loading map..." overlay after max 2 seconds
   useEffect(() => {
@@ -1645,7 +1661,28 @@ export default function DeliveryHome() {
     setShowRejectPopup(true)
   }
 
+  const persistDismissedOrderId = (orderId) => {
+    if (!orderId) return
+    const normalizedOrderId = String(orderId)
+    dismissedOrderIdsRef.current.add(normalizedOrderId)
+    try {
+      localStorage.setItem(
+        DISMISSED_ORDER_IDS_KEY,
+        JSON.stringify(Array.from(dismissedOrderIdsRef.current).slice(-200))
+      )
+    } catch {
+      // Ignore localStorage failures
+    }
+  }
+
   const handleRejectConfirm = () => {    
+    const rejectedOrderId =
+      selectedRestaurant?.id ||
+      selectedRestaurant?.orderId ||
+      newOrder?.orderMongoId ||
+      newOrder?.orderId
+    persistDismissedOrderId(rejectedOrderId)
+
     if (alertAudioRef.current) {
       alertAudioRef.current.pause()
       alertAudioRef.current.currentTime = 0
@@ -1657,7 +1694,7 @@ export default function DeliveryHome() {
     setRejectReason("")
     setCountdownSeconds(300)
     // Here you would typically send the rejection to your backend
-    debugLog("Order rejected with reason:", rejectReason)
+    debugLog("Order rejected with reason:", rejectReason, "for order:", rejectedOrderId)
   }
 
   const handleRejectCancel = () => {
@@ -4832,6 +4869,12 @@ export default function DeliveryHome() {
         newOrder.id ||
         newOrder._id ||
         newOrder.orderId;
+
+      if (dismissedOrderIdsRef.current.has(String(orderId))) {
+        debugLog('⏭️ Ignoring dismissed order notification:', orderId);
+        clearNewOrder();
+        return;
+      }
       
       // Check if this order has already been accepted
       if (acceptedOrderIdsRef.current.has(orderId)) {
@@ -5262,9 +5305,15 @@ export default function DeliveryHome() {
           const orderStatus = order.status
           const deliveryPhase = order.deliveryState?.currentPhase
           const isUnassignedOrder = !order?.deliveryPartnerId
+          const currentOrderId = String(order.orderId || order._id?.toString() || "")
           
           // Skip if already delivered or completed
           if (orderStatus === 'delivered' || deliveryPhase === 'completed') {
+            return false
+          }
+
+          // Skip if user already dismissed this incoming order.
+          if (dismissedOrderIdsRef.current.has(currentOrderId)) {
             return false
           }
 
@@ -5297,6 +5346,10 @@ export default function DeliveryHome() {
           // Check if this order is already being shown or accepted
           if (acceptedOrderIdsRef.current.has(orderId)) {
             debugLog('⚠️ Order already accepted, skipping:', orderId)
+            return
+          }
+          if (dismissedOrderIdsRef.current.has(String(orderId))) {
+            debugLog('⏭️ Order already dismissed, skipping:', orderId)
             return
           }
 

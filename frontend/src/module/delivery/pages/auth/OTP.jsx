@@ -26,6 +26,14 @@ export default function DeliveryOTP() {
   const inputRefs = useRef([])
 
   useEffect(() => {
+    const getPendingSignupPath = () => {
+      if (localStorage.getItem("delivery_signup_required") !== "true") {
+        return null
+      }
+      const hasSavedDetails = Boolean(sessionStorage.getItem("deliverySignupDetails"))
+      return hasSavedDetails ? "/delivery/signup/documents" : "/delivery/signup/details"
+    }
+
     // Get auth data from sessionStorage (delivery module key)
     const stored = sessionStorage.getItem("deliveryAuthData")
     if (stored) {
@@ -42,6 +50,11 @@ export default function DeliveryOTP() {
             const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
             const now = Math.floor(Date.now() / 1000)
             if (payload.exp && payload.exp > now) {
+              const pendingSignupPath = getPendingSignupPath()
+              if (pendingSignupPath) {
+                navigate(pendingSignupPath, { replace: true })
+                return
+              }
               navigate("/delivery", { replace: true })
               return
             }
@@ -193,6 +206,8 @@ export default function DeliveryOTP() {
 
       // Check if user needs to complete signup
       if (data.needsSignup) {
+        localStorage.setItem("delivery_signup_required", "true")
+
         // Store tokens for authenticated signup flow
         const accessToken = data.accessToken
         const refreshToken = data.refreshToken || null
@@ -226,6 +241,8 @@ export default function DeliveryOTP() {
       }
 
       // Otherwise, OTP verified and user logged in (existing user with complete profile)
+      localStorage.removeItem("delivery_signup_required")
+
       const accessToken = data.accessToken
       const refreshToken = data.refreshToken || null
       const user = data.user

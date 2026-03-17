@@ -81,6 +81,7 @@ const Wallet = lazy(() => import("../pages/Wallet"))
 
 // Complaints
 const SubmitComplaint = lazy(() => import("../pages/complaints/SubmitComplaint"))
+const DiningBookings = lazy(() => import("../pages/dining/Bookings"))
 
 export default function UserRouter() {
   return (
@@ -326,6 +327,16 @@ export default function UserRouter() {
             element={
               <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
                 <Wallet />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Dining - Protected */}
+          <Route
+            path="/dining/bookings"
+            element={
+              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
+                <DiningBookings />
               </ProtectedRoute>
             }
           />

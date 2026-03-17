@@ -287,6 +287,18 @@ const orderSchema = new mongoose.Schema({
       max: 5,
       sparse: true
     },
+    restaurantRating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      sparse: true
+    },
+    deliveryRating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      sparse: true
+    },
     comment: {
       type: String,
       trim: true,

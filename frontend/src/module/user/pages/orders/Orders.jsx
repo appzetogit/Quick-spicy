@@ -1,7 +1,7 @@
 ﻿import { useState, useEffect } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, Search, MoreVertical, ChevronRight, Star, RotateCcw, AlertCircle, Loader2, Clock } from "lucide-react"
-import { orderAPI, api, API_ENDPOINTS } from "@/lib/api"
+import { orderAPI } from "@/lib/api"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 const debugLog = (...args) => {}
@@ -16,7 +16,8 @@ export default function Orders() {
   const [searchQuery, setSearchQuery] = useState("")
   const [ratingModal, setRatingModal] = useState({ open: false, order: null })
   const [activeMenuOrderId, setActiveMenuOrderId] = useState(null)
-  const [selectedRating, setSelectedRating] = useState(null)
+  const [restaurantRating, setRestaurantRating] = useState(null)
+  const [deliveryRating, setDeliveryRating] = useState(null)
   const [feedbackText, setFeedbackText] = useState("")
   const [submittingRating, setSubmittingRating] = useState(false)
   const [countdowns, setCountdowns] = useState({})
@@ -118,7 +119,8 @@ export default function Orders() {
       const hasRating =
         (order.rating !== null && order.rating !== undefined && order.rating !== '') ||
         (order.review?.rating !== null && order.review?.rating !== undefined) ||
-        (order.review !== null && order.review !== undefined)
+        (order.review?.restaurantRating !== null && order.review?.restaurantRating !== undefined) ||
+        (order.review?.deliveryRating !== null && order.review?.deliveryRating !== undefined)
 
       const orderId = order.id || order._id || order.mongoId
       const hasShownPopup = shownRatingForOrders.has(orderId)
@@ -168,7 +170,8 @@ export default function Orders() {
           originalStatus: orderToRate.originalStatus
         })
         setRatingModal({ open: true, order: orderToRate })
-        setSelectedRating(null)
+        setRestaurantRating(null)
+        setDeliveryRating(null)
         setFeedbackText("")
       }, 800) // Show after 0.8 seconds
     }
@@ -434,20 +437,22 @@ Order again from this restaurant in the ${companyName} app.`
   // Open rating modal for an order
   const handleOpenRating = (order) => {
     setRatingModal({ open: true, order })
-    setSelectedRating(order.rating || null)
+    setRestaurantRating(order.review?.restaurantRating || order.rating || null)
+    setDeliveryRating(order.review?.deliveryRating || null)
     setFeedbackText("")
   }
 
   const handleCloseRating = () => {
     setRatingModal({ open: false, order: null })
-    setSelectedRating(null)
+    setRestaurantRating(null)
+    setDeliveryRating(null)
     setFeedbackText("")
   }
 
   // Submit rating & feedback to backend
   const handleSubmitRating = async () => {
-    if (!ratingModal.order || selectedRating === null) {
-      toast.error("Please select a rating first")
+    if (!ratingModal.order || (restaurantRating === null && deliveryRating === null)) {
+      toast.error("Please add at least one rating")
       return
     }
 
@@ -456,26 +461,23 @@ Order again from this restaurant in the ${companyName} app.`
 
       const order = ratingModal.order
 
-      await api.post(API_ENDPOINTS.ADMIN.FEEDBACK_EXPERIENCE_CREATE, {
-        rating: selectedRating,
-        module: "user",
-        restaurantId: order.restaurantId || null,
-        metadata: {
-          orderId: order.id,
-          orderMongoId: order.mongoId,
-          orderTotal: order.total,
-          restaurantName: order.restaurant,
-          comment: feedbackText || undefined,
-        },
+      const response = await orderAPI.submitReview(order.id, {
+        restaurantRating: restaurantRating || undefined,
+        deliveryRating: deliveryRating || undefined,
+        comment: feedbackText || undefined,
       })
+      const nextReview = response?.data?.data?.review || {}
 
       // Update local state so UI shows "You rated"
       setOrders(prev =>
         prev.map(o =>
           o.id === order.id ? {
             ...o,
-            rating: selectedRating,
-            review: { rating: selectedRating, comment: feedbackText || undefined }
+            rating: nextReview.rating || o.rating || null,
+            review: {
+              ...o.review,
+              ...nextReview,
+            }
           } : o
         )
       )
@@ -837,17 +839,33 @@ Order again from this restaurant in the ${companyName} app.`
                           {order.rating}<Star className="w-2 h-2 fill-current" />
                         </div>
                       </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/user/complaints/submit/${order.id}`)}
+                        className="text-xs text-red-500 font-medium mt-1 flex items-center"
+                      >
+                        Complain about food <span className="ml-0.5">▸</span>
+                      </button>
                     </div>
                   ) : isDelivered ? (
                     <div>
                       <p className="text-xs text-gray-500">Order delivered</p>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenRating(order)}
-                        className="text-xs text-[#EB590E] font-medium mt-0.5 flex items-center"
-                      >
-                        Rate order <span className="ml-0.5">▸</span>
-                      </button>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRating(order)}
+                          className="text-xs text-[#EB590E] font-medium mt-0.5 flex items-center"
+                        >
+                          Rate order <span className="ml-0.5">▸</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/user/complaints/submit/${order.id}`)}
+                          className="text-xs text-red-500 font-medium mt-0.5 flex items-center"
+                        >
+                          Complain <span className="ml-0.5">▸</span>
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div>
@@ -907,19 +925,19 @@ Order again from this restaurant in the ${companyName} app.`
             </div>
 
             <div className="px-6 py-6">
-              {/* Star rating (1–5) */}
+              {/* Restaurant rating (1–5) */}
               <div className="mb-6">
                 <p className="text-sm font-semibold text-gray-900 mb-4 text-center">
-                  How was your overall experience?
+                  How was the restaurant and food?
                 </p>
                 <div className="flex items-center justify-center gap-2 mb-3">
                   {Array.from({ length: 5 }, (_, i) => i + 1).map((num) => {
-                    const isActive = (selectedRating || 0) >= num
+                    const isActive = (restaurantRating || 0) >= num
                     return (
                       <button
                         key={num}
                         type="button"
-                        onClick={() => setSelectedRating(num)}
+                        onClick={() => setRestaurantRating(num)}
                         className="p-2 transition-transform hover:scale-125 active:scale-95"
                       >
                         <Star
@@ -937,13 +955,41 @@ Order again from this restaurant in the ${companyName} app.`
                   <span className="text-xs text-gray-400">Average</span>
                   <span className="text-xs text-green-600 font-medium">Excellent</span>
                 </div>
-                {selectedRating && (
+              </div>
+
+              {/* Delivery rating (1–5) */}
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-gray-900 mb-4 text-center">
+                  How was the delivery experience?
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  {Array.from({ length: 5 }, (_, i) => i + 1).map((num) => {
+                    const isActive = (deliveryRating || 0) >= num
+                    return (
+                      <button
+                        key={`delivery-${num}`}
+                        type="button"
+                        onClick={() => setDeliveryRating(num)}
+                        className="p-2 transition-transform hover:scale-125 active:scale-95"
+                      >
+                        <Star
+                          className={`w-10 h-10 transition-all ${isActive
+                              ? "text-yellow-400 fill-yellow-400 drop-shadow-lg"
+                              : "text-gray-300 hover:text-yellow-200"
+                            }`}
+                        />
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="flex items-center justify-between mt-2 px-2">
+                  <span className="text-xs text-red-500 font-medium">Poor</span>
+                  <span className="text-xs text-gray-400">Average</span>
+                  <span className="text-xs text-green-600 font-medium">Excellent</span>
+                </div>
+                {(restaurantRating || deliveryRating) && (
                   <p className="text-center mt-3 text-sm font-medium text-gray-700">
-                    {selectedRating === 5 && "⭐⭐⭐⭐⭐ Excellent!"}
-                    {selectedRating === 4 && "⭐⭐⭐⭐ Great!"}
-                    {selectedRating === 3 && "⭐⭐⭐ Good"}
-                    {selectedRating === 2 && "⭐⭐ Fair"}
-                    {selectedRating === 1 && "⭐ Poor"}
+                    {restaurantRating ? `Food: ${restaurantRating}★` : "Food: Not rated"} | {deliveryRating ? `Delivery: ${deliveryRating}★` : "Delivery: Not rated"}
                   </p>
                 )}
               </div>
@@ -966,7 +1012,7 @@ Order again from this restaurant in the ${companyName} app.`
               {/* Submit Button */}
               <button
                 type="button"
-                disabled={submittingRating || selectedRating === null}
+                disabled={submittingRating || (restaurantRating === null && deliveryRating === null)}
                 onClick={handleSubmitRating}
                 className="w-full rounded-xl bg-gradient-to-r from-[#EB590E] to-[#D94F0C] text-white text-base font-bold py-3.5 hover:from-[#D94F0C] hover:to-[#C44409] disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2"
               >
@@ -983,8 +1029,8 @@ Order again from this restaurant in the ${companyName} app.`
                 )}
               </button>
 
-              {selectedRating === null && (
-                <p className="text-xs text-center text-red-500 mt-2">Please select a rating to continue</p>
+              {restaurantRating === null && deliveryRating === null && (
+                <p className="text-xs text-center text-red-500 mt-2">Please select at least one rating to continue</p>
               )}
             </div>
           </div>

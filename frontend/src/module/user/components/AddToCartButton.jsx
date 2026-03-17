@@ -7,8 +7,9 @@ import { toast } from "sonner"
 
 export default function AddToCartButton({ item, className = "" }) {
   const { addToCart, isInCart, getCartItem, updateQuantity } = useCart()
-  const inCart = isInCart(item.id)
-  const cartItem = getCartItem(item.id)
+  const restaurantId = item?.restaurantId || item?.restaurant?._id || item?.restaurant?.restaurantId || null
+  const inCart = isInCart(item.id, restaurantId)
+  const cartItem = getCartItem(item.id, restaurantId)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -28,13 +29,13 @@ export default function AddToCartButton({ item, className = "" }) {
   const handleIncrease = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(item.id, (cartItem?.quantity || 0) + 1)
+    updateQuantity(item.id, (cartItem?.quantity || 0) + 1, null, null, restaurantId)
   }
 
   const handleDecrease = (e) => {
     e.preventDefault()
     e.stopPropagation()
-    updateQuantity(item.id, (cartItem?.quantity || 0) - 1)
+    updateQuantity(item.id, (cartItem?.quantity || 0) - 1, null, null, restaurantId)
   }
 
   if (inCart) {

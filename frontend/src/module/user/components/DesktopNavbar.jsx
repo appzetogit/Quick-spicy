@@ -16,6 +16,7 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
 
 export default function DesktopNavbar() {
     const location = useLocation()
@@ -48,6 +49,29 @@ export default function DesktopNavbar() {
     const handleLocationClick = () => {
         // Open location selector overlay
         openLocationSelector()
+    }
+
+    const handleVegModeChange = (nextValue) => {
+        if (nextValue) {
+            const currentOption = localStorage.getItem(USER_VEG_MODE_OPTION_KEY)
+            if (currentOption !== "pure-veg") {
+                localStorage.setItem(USER_VEG_MODE_OPTION_KEY, "pure-veg")
+            }
+        }
+        setVegMode(nextValue)
+    }
+
+    const handleSearchFocus = () => {
+        const trimmedQuery = heroSearch.trim()
+        const searchPath = trimmedQuery
+            ? `/user/search?q=${encodeURIComponent(trimmedQuery)}`
+            : "/user/search"
+        navigate(searchPath, {
+            state: {
+                fromHome: true,
+                autoFocusSearch: true,
+            },
+        })
     }
 
     // Check active routes - support both /user/* and /* paths
@@ -223,9 +247,11 @@ export default function DesktopNavbar() {
                                                 setHeroSearch(nextValue)
                                                 setSearchValue(nextValue)
                                             }}
+                                            onFocus={handleSearchFocus}
+                                            onClick={handleSearchFocus}
                                             onKeyDown={(e) => {
                                                 if (e.key === "Enter" && heroSearch.trim()) {
-                                                    navigate(`/search?q=${encodeURIComponent(heroSearch.trim())}`)
+                                                    navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
                                                 }
                                             }}
                                             className="h-6 p-0 border-0 bg-transparent text-sm font-medium placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -254,7 +280,7 @@ export default function DesktopNavbar() {
                                 </div>
                                 <Switch
                                     checked={vegMode}
-                                    onCheckedChange={setVegMode}
+                                    onCheckedChange={handleVegModeChange}
                                     className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 h-5 w-9"
                                 />
                             </div>

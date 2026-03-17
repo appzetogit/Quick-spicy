@@ -1535,6 +1535,109 @@ export const getOrderDetails = async (req, res) => {
 };
 
 /**
+ * Submit user review for an order
+ * PATCH /api/order/:id/review
+ */
+export const submitOrderReview = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+    const { id } = req.params;
+    const { restaurantRating, deliveryRating, comment } = req.body || {};
+
+    const parseRating = (value) => {
+      if (value === undefined || value === null || value === '') return null;
+      const parsed = Number(value);
+      if (!Number.isFinite(parsed) || parsed < 1 || parsed > 5) return null;
+      return Math.round(parsed);
+    };
+
+    const parsedRestaurantRating = parseRating(restaurantRating);
+    const parsedDeliveryRating = parseRating(deliveryRating);
+    const normalizedComment = comment ? String(comment).trim() : '';
+
+    if (!parsedRestaurantRating && !parsedDeliveryRating) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide at least one valid rating between 1 and 5'
+      });
+    }
+
+    // Find order by MongoDB _id or custom orderId and ensure ownership
+    let order = null;
+    if (mongoose.Types.ObjectId.isValid(id) && id.length === 24) {
+      order = await Order.findOne({ _id: id, userId });
+    }
+    if (!order) {
+      order = await Order.findOne({ orderId: id, userId });
+    }
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: 'Order not found'
+      });
+    }
+
+    const normalizedStatus = String(order.status || '').toLowerCase();
+    if (normalizedStatus !== 'delivered' && normalizedStatus !== 'completed') {
+      return res.status(400).json({
+        success: false,
+        message: 'You can submit a review only after delivery'
+      });
+    }
+
+    // Keep existing behavior (single rating) while extending with delivery/restaurant ratings.
+    const effectiveRestaurantRating =
+      parsedRestaurantRating ||
+      order.review?.restaurantRating ||
+      order.review?.rating ||
+      null;
+    const effectiveDeliveryRating =
+      parsedDeliveryRating ||
+      order.review?.deliveryRating ||
+      null;
+
+    const reviewRatings = [effectiveRestaurantRating, effectiveDeliveryRating]
+      .filter((value) => Number.isFinite(value));
+    const overallRating = reviewRatings.length > 0
+      ? Math.round(reviewRatings.reduce((sum, value) => sum + value, 0) / reviewRatings.length)
+      : null;
+
+    order.review = {
+      ...order.review,
+      rating: overallRating,
+      restaurantRating: effectiveRestaurantRating,
+      deliveryRating: effectiveDeliveryRating,
+      comment: normalizedComment || order.review?.comment || '',
+      submittedAt: new Date(),
+      reviewedBy: userId
+    };
+
+    await order.save();
+
+    return res.json({
+      success: true,
+      message: 'Review submitted successfully',
+      data: {
+        review: {
+          rating: order.review?.rating || null,
+          restaurantRating: order.review?.restaurantRating || null,
+          deliveryRating: order.review?.deliveryRating || null,
+          comment: order.review?.comment || '',
+          submittedAt: order.review?.submittedAt || null
+        }
+      }
+    });
+  } catch (error) {
+    logger.error(`Error submitting order review: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to submit review'
+    });
+  }
+};
+
+/**
  * Cancel order by user
  * PATCH /api/order/:id/cancel
  */

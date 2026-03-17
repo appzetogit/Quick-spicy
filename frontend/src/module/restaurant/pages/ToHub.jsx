@@ -334,7 +334,7 @@ export default function ToHub() {
     { id: "order-history", label: "Order history", icon: FaHistory, route: "/restaurant/orders/all" },
     { id: "complaints", label: "Complaints", icon: FaExclamationTriangle, route: "/restaurant/feedback?tab=complaints" },
     { id: "reviews", label: "Reviews", icon: FaStar, route: "/restaurant/feedback" },
-    { id: "help-center", label: "Help Center", icon: HelpCircle, route: "/restaurant/help-centre" },
+    { id: "help-center", label: "Help Center", icon: HelpCircle, route: "/restaurant/help-center" },
     { id: "feedback", label: "Share your feedback", icon: FaCommentDots, route: "/restaurant/Share-Feedback" },
     { id: "zone-setup", label: "Zone Setup", icon: MapPin, route: "/restaurant/zone-setup" },
     { id: "settings", label: "Settings", icon: FaCog, route: "/restaurant/delivery-settings" },
@@ -1922,7 +1922,7 @@ export default function ToHub() {
             </button>
             <button
               className="p-2 ml-1 hover:bg-gray-100 rounded-full transition-colors"
-              onClick={() => navigate("/restaurant/help-centre")}
+              onClick={() => navigate("/restaurant/help-center")}
             >
               <HelpCircle className="w-5 h-5 text-gray-700" />
             </button>

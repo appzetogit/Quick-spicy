@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect } from "react"
-import { Search, PiggyBank, Loader2, Package } from "lucide-react"
+import { Search, PiggyBank, Loader2, Package, WalletCards } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -19,6 +20,12 @@ export default function DeliveryBoyWallet() {
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
   const [pages, setPages] = useState(1)
+  const [adjustmentDialogOpen, setAdjustmentDialogOpen] = useState(false)
+  const [selectedWallet, setSelectedWallet] = useState(null)
+  const [adjustmentType, setAdjustmentType] = useState("deduction")
+  const [adjustmentAmount, setAdjustmentAmount] = useState("")
+  const [adjustmentDescription, setAdjustmentDescription] = useState("")
+  const [savingAdjustment, setSavingAdjustment] = useState(false)
   const limit = 20
 
   const fetchWallets = async (overrides = {}) => {
@@ -59,6 +66,51 @@ export default function DeliveryBoyWallet() {
     }, 500)
     return () => clearTimeout(t)
   }, [searchQuery])
+
+  const openAdjustmentDialog = (wallet, type = "deduction") => {
+    setSelectedWallet(wallet)
+    setAdjustmentType(type)
+    setAdjustmentAmount("")
+    setAdjustmentDescription("")
+    setAdjustmentDialogOpen(true)
+  }
+
+  const handleSaveAdjustment = async () => {
+    const amount = Number(adjustmentAmount)
+    if (!selectedWallet?.walletId && !selectedWallet?.deliveryId) {
+      toast.error("Wallet not found")
+      return
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a valid amount")
+      return
+    }
+
+    try {
+      setSavingAdjustment(true)
+      const response = await adminAPI.addDeliveryBoyWalletAdjustment({
+        walletId: selectedWallet.walletId,
+        deliveryId: selectedWallet.deliveryId,
+        amount,
+        type: adjustmentType,
+        description: adjustmentDescription.trim() || undefined,
+      })
+
+      if (!response?.data?.success) {
+        toast.error(response?.data?.message || "Failed to save adjustment")
+        return
+      }
+
+      toast.success(`${adjustmentType === "deduction" ? "Deduction" : "Bonus"} saved`)
+      setAdjustmentDialogOpen(false)
+      fetchWallets()
+    } catch (err) {
+      debugError("Error saving delivery wallet adjustment:", err)
+      toast.error(err?.response?.data?.message || "Failed to save adjustment")
+    } finally {
+      setSavingAdjustment(false)
+    }
+  }
 
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
@@ -113,12 +165,13 @@ export default function DeliveryBoyWallet() {
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Bonus</th>
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Total withdrawal</th>
                     <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Cash in hand</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Adjustments</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {wallets.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="px-6 py-20 text-center">
+                      <td colSpan={11} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <Package className="w-16 h-16 text-slate-400 mb-4" />
                           <p className="text-lg font-semibold text-slate-700">No wallets</p>
@@ -139,6 +192,22 @@ export default function DeliveryBoyWallet() {
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.bonus)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.totalWithdrawn)}</td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{formatCurrency(w.cashCollected)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-700">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => openAdjustmentDialog(w, "deduction")}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-red-50 text-red-700 hover:bg-red-100"
+                            >
+                              Add deduction
+                            </button>
+                            <button
+                              onClick={() => openAdjustmentDialog(w, "bonus")}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                            >
+                              Add bonus
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))
                   )}
@@ -172,6 +241,60 @@ export default function DeliveryBoyWallet() {
           )}
         </div>
       </div>
+
+      <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <WalletCards className="w-5 h-5 text-slate-600" />
+              {adjustmentType === "deduction" ? "Add deduction" : "Add bonus"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
+              {selectedWallet?.name || "Delivery partner"} · {selectedWallet?.deliveryIdString || "N/A"}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Amount</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={adjustmentAmount}
+                onChange={(e) => setAdjustmentAmount(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-400"
+                placeholder="Enter amount"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+              <textarea
+                value={adjustmentDescription}
+                onChange={(e) => setAdjustmentDescription(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm min-h-24 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                placeholder={`Reason for ${adjustmentType}`}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setAdjustmentDialogOpen(false)}
+              className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAdjustment}
+              disabled={savingAdjustment}
+              className="px-4 py-2 text-sm rounded-lg bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {savingAdjustment ? "Saving..." : "Save"}
+            </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

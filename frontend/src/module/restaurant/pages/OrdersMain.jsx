@@ -29,6 +29,17 @@ const filterTabs = [
   { id: "cancelled", label: "Cancelled" },
 ]
 
+function isCodPaymentMethod(value) {
+  const normalized = String(value || "").toLowerCase().replace(/[_-]/g, " ").trim()
+  return (
+    normalized === "cash" ||
+    normalized === "cod" ||
+    normalized === "cash on delivery" ||
+    normalized === "cashondelivery" ||
+    normalized === "pay on delivery"
+  )
+}
+
 // Completed Orders List Component
 function CompletedOrders({ onSelectOrder }) {
   const [orders, setOrders] = useState([])
@@ -1652,8 +1663,7 @@ export default function OrdersMain() {
                   {/* Payment method: treat cash/cod (any case) as COD */}
                   {(() => {
                     const raw = (popupOrder || newOrder)?.paymentMethod || (popupOrder || newOrder)?.payment?.method;
-                    const m = raw != null ? String(raw).toLowerCase().trim() : '';
-                    const isCod = m === 'cash' || m === 'cod';
+                    const isCod = isCodPaymentMethod(raw);
                     return (
                       <div className="mb-4 flex items-center justify-between py-2">
                         <span className="text-sm font-medium text-gray-700">Payment</span>
@@ -1997,8 +2007,7 @@ export default function OrdersMain() {
                 )}
                 {(() => {
                   const raw = selectedOrder.paymentMethod
-                  const normalized = raw != null ? String(raw).toLowerCase().trim() : ""
-                  const isCod = normalized === "cash" || normalized === "cod"
+                  const isCod = isCodPaymentMethod(raw)
                   return (
                     <span>
                       Payment:{" "}

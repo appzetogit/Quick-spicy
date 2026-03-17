@@ -1980,11 +1980,11 @@ export default function Cart() {
 
               {/* Contact */}
               <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
-                <Link to="/user/profile" className="flex items-center justify-between">
+                <Link to="/user/profile/edit" className="flex items-center justify-between">
                   <div className="flex items-center gap-3 md:gap-4">
                     <Phone className="h-4 w-4 md:h-5 md:w-5 text-gray-500 dark:text-gray-400" />
                     <p className="text-sm md:text-base text-gray-800 dark:text-gray-200">
-                      {userProfile?.name || "Your Name"}, <span className="font-medium">{userProfile?.phone || "+91-XXXXXXXXXX"}</span>
+                      {defaultAddress?.recipientName || userProfile?.name || "Your Name"}, <span className="font-medium">{defaultAddress?.phone || userProfile?.phone || "+91-XXXXXXXXXX"}</span>
                     </p>
                   </div>
                   <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
@@ -2043,6 +2043,20 @@ export default function Cart() {
 
                 {showBillDetails && (
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700 space-y-2 md:space-y-3">
+                    {cart.length > 0 && (
+                      <div className="space-y-1 pb-2 border-b border-dashed dark:border-gray-700">
+                        {cart.map((item) => (
+                          <div key={`${item.restaurantId || "r"}-${item.id}`} className="flex justify-between text-xs md:text-sm">
+                            <span className="text-gray-600 dark:text-gray-400 truncate pr-2">
+                              {item.quantity} x {item.name}
+                            </span>
+                            <span className="text-gray-800 dark:text-gray-200">
+                              {RUPEE_SYMBOL}{((item.price || 0) * (item.quantity || 1)).toFixed(0)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-between text-sm md:text-base">
                       <span className="text-gray-600 dark:text-gray-400">Item Total</span>
                       <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(0)}</span>

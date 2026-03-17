@@ -51,6 +51,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [mapPosition, setMapPosition] = useState([22.7196, 75.8577]) // Default Indore coordinates [lat, lng]
   const [addressFormData, setAddressFormData] = useState({
+    recipientName: "",
     street: "",
     city: "",
     state: "",
@@ -893,6 +894,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         state: locationData.state || prev.state,
         zipCode: locationData.postalCode || prev.zipCode,
         additionalDetails: locationData.formattedAddress || prev.additionalDetails,
+        recipientName: prev.recipientName || userProfile?.name || "",
         phone: prev.phone || userProfile?.phone || "",
       }))
 
@@ -938,6 +940,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         city: location.city || "",
         state: location.state || "",
         street: location.address || location.area || "",
+        recipientName: userProfile?.name || "",
         phone: userProfile?.phone || "",
       }))
     }
@@ -2005,6 +2008,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       addressToSave = {
         label: normalizedLabel,
+        recipientName: (addressFormData.recipientName || "").trim(),
+        phone: (addressFormData.phone || "").trim(),
         street: trimmedStreet,
         additionalDetails: (addressFormData.additionalDetails || "").trim(),
         city: trimmedCity,
@@ -2038,6 +2043,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       // Reset form
       setAddressFormData({
+        recipientName: "",
         street: "",
         city: "",
         state: "",
@@ -2078,6 +2084,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const handleCancelAddressForm = () => {
     setShowAddressForm(false)
     setAddressFormData({
+      recipientName: "",
       street: "",
       city: "",
       state: "",
@@ -2127,13 +2134,14 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       // Update address form data with selected address
       setAddressFormData({
+        recipientName: address.recipientName || userProfile?.name || "",
         street: address.street || "",
         city: address.city || "",
         state: address.state || "",
         zipCode: address.zipCode || "",
         additionalDetails: address.additionalDetails || "",
         label: address.label || "Home",
-        phone: address.phone || "",
+        phone: address.phone || userProfile?.phone || "",
       })
 
       // Update Google Maps to show selected address
@@ -2326,14 +2334,31 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
                 Receiver details for this address
               </Label>
-              <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-lg p-3 flex items-center gap-3">
-                <Phone className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {userProfile?.name || "User"}, {addressFormData.phone || userProfile?.phone || "Add phone"}
-                  </p>
+              <div className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-5 w-5 text-gray-600 dark:text-gray-400 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      {addressFormData.recipientName || userProfile?.name || "User"}, {addressFormData.phone || userProfile?.phone || "Add phone"}
+                    </p>
+                  </div>
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <Input
+                    name="recipientName"
+                    placeholder="Receiver name"
+                    value={addressFormData.recipientName || ""}
+                    onChange={handleAddressFormChange}
+                    className="bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-700"
+                  />
+                  <Input
+                    name="phone"
+                    placeholder="Phone number"
+                    value={addressFormData.phone || ""}
+                    onChange={handleAddressFormChange}
+                    className="bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-700"
+                  />
+                </div>
               </div>
             </div>
 
@@ -2556,7 +2581,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                                 ].filter(Boolean).join(", ")}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Phone number: {address.phone || userProfile?.phone || "Not provided"}
+                                {address.recipientName || userProfile?.name || "User"} · {address.phone || userProfile?.phone || "Not provided"}
                               </p>
                             </div>
                           </button>
@@ -2658,6 +2683,3 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     </div>
   )
 }
-
-
-

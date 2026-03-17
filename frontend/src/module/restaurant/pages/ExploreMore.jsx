@@ -722,7 +722,7 @@ export default function ExploreMore() {
   ]
 
   const helpItems = [
-    { id: 1, label: "Help Center", icon: HelpCircle, route: "/restaurant/help-centre" },
+    { id: 1, label: "Help Center", icon: HelpCircle, route: "/restaurant/help-center" },
     { id: 3, label: "Share your feedback", icon: Edit, route: "/restaurant/Share-Feedback" },
   ]
 
