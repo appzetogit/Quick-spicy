@@ -18,6 +18,7 @@ import { initRazorpayPayment } from "@/lib/utils/razorpay"
 import { toast } from "sonner"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
+import appLogo from "@/assets/logo.png"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -219,18 +220,18 @@ export default function Cart() {
   const defaultPayment = getDefaultPaymentMethod()
 
   const cancellationPolicyNotice = (
-    <div className="mt-3 md:mt-4 rounded-xl border border-gray-200 bg-white px-3 md:px-4 py-3 shadow-sm dark:border-gray-700 dark:bg-[#1a1a1a]">
-      <p className="text-sm md:text-base font-semibold leading-snug text-slate-700 dark:text-gray-200">
+    <div className="mt-3 md:mt-4 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-gray-700 dark:bg-[#1a1a1a]">
+      <p className="text-sm md:text-base font-semibold leading-snug text-[#23415a] dark:text-gray-200">
         Review your order and address details to avoid cancellations
       </p>
-      <div className="mt-3 rounded-xl border border-gray-200 bg-[#fcfcfc] px-3 md:px-4 py-3 dark:border-gray-700 dark:bg-[#111111]">
-        <p className="text-sm md:text-base leading-relaxed text-gray-700 dark:text-gray-300">
-          <span className="font-semibold text-[#d36b5f]">Note:</span>{" "}
+      <div className="mt-3 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] dark:border-gray-700 dark:bg-[#111111]">
+        <p className="text-sm md:text-base leading-relaxed text-[#30343a] dark:text-gray-300">
+          <span className="font-semibold text-[#d9534f]">Note:</span>{" "}
           {CANCELLATION_NOTE_TEXT}
         </p>
         <Link
           to="/profile/cancellation"
-          className="mt-3 inline-block text-sm font-semibold uppercase tracking-wide text-[#c74f46] underline underline-offset-2"
+          className="mt-3 inline-block text-sm font-bold uppercase tracking-wide text-[#d33b36]"
         >
           Read Cancellation Policy
         </Link>
@@ -1992,45 +1993,63 @@ export default function Cart() {
               </div>
 
               {/* Bill Details */}
-              <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl">
+              <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-2xl border border-gray-200 shadow-[0_2px_12px_rgba(15,23,42,0.05)] dark:border-gray-700">
                 <button
                   onClick={() => setShowBillDetails(!showBillDetails)}
                   className="flex items-center justify-between w-full"
                 >
-                  <div className="flex items-center gap-3 md:gap-4">
-                    <FileText className="h-4 w-4 md:h-5 md:w-5 text-gray-500 dark:text-gray-400" />
-                    <div className="text-left">
-                      <div className="flex items-center gap-2 md:gap-3 flex-wrap">
-                        <span className="text-sm md:text-base text-gray-800 dark:text-gray-200">Total Bill</span>
-                        <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">{RUPEE_SYMBOL}{totalBeforeDiscount.toFixed(0)}</span>
-                        <span className="text-sm md:text-base font-semibold text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
-                        {savings > 0 && (
-                          <span className="text-xs md:text-sm bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-1.5 md:px-2 py-0.5 rounded font-medium">
-                            Saved {RUPEE_SYMBOL}{savings}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Incl. taxes and charges</p>
+                  <div className="text-left">
+                    <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                      <span className="text-base md:text-lg font-semibold text-[#23415a] dark:text-gray-200">Bill Details</span>
+                      <span className="text-sm md:text-base text-gray-400 dark:text-gray-500 line-through">{RUPEE_SYMBOL}{totalBeforeDiscount.toFixed(0)}</span>
+                      <span className="text-sm md:text-base font-semibold text-[#d9534f] dark:text-red-400">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
+                      {savings > 0 && (
+                        <span className="text-xs md:text-sm bg-red-50 text-[#d9534f] px-1.5 md:px-2 py-0.5 rounded font-medium dark:bg-red-900/20 dark:text-red-300">
+                          Saved {RUPEE_SYMBOL}{savings}
+                        </span>
+                      )}
                     </div>
+                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">Incl. taxes and charges</p>
                   </div>
                   <ChevronRight className="h-4 w-4 md:h-5 md:w-5 text-gray-400" />
                 </button>
 
-                <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700">
-                  <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200 mb-2">Tip your delivery partner</p>
+                <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed border-gray-200 dark:border-gray-700">
+                  <div className="rounded-2xl border border-gray-200 bg-white px-3 py-3 shadow-[0_2px_10px_rgba(15,23,42,0.04)] dark:border-gray-700 dark:bg-[#151515]">
+                    <div className="flex items-start justify-between gap-3 mb-3">
+                      <div className="min-w-0">
+                        <p className="text-[15px] md:text-base font-semibold leading-tight text-[#1f2937] dark:text-gray-100">
+                          Delivering happiness at your doorstep!
+                        </p>
+                        <p className="mt-2 text-xs md:text-sm text-[#4b5563] dark:text-gray-400">
+                          Thank them by leaving a tip
+                        </p>
+                      </div>
+                      <img
+                        src={appLogo}
+                        alt="App Logo"
+                        className="h-20 md:h-24 w-auto object-contain flex-shrink-0"
+                        loading="lazy"
+                      />
+                    </div>
                   <div className="flex flex-wrap gap-2">
                     {[0, 10, 20, 50].map((value) => (
                       <button
                         key={value}
                         type="button"
                         onClick={() => setTipAmount(value)}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-colors ${
+                        className={`inline-flex items-center gap-1.5 min-w-[82px] justify-center px-3 py-1.5 rounded-full text-sm border transition-colors ${
                           Number(tipAmount) === value
-                            ? "bg-[#EB590E] text-white border-[#EB590E]"
+                            ? "bg-[#fff4ea] text-[#EB590E] border-[#f3c7a5]"
                             : "bg-white dark:bg-transparent text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600"
                         }`}
                       >
-                        {value === 0 ? "No tip" : (
+                        {value === 0 ? (
+                          <>
+                            <span className="leading-none">👏</span>
+                            <span>other</span>
+                          </>
+                        ) : (
                           <>
                             <span className="leading-none">{value === 10 ? "🤗" : value === 20 ? "☺️" : "😘"}</span>
                             <span>{RUPEE_SYMBOL}{value}</span>
@@ -2039,12 +2058,13 @@ export default function Cart() {
                       </button>
                     ))}
                   </div>
+                  </div>
                 </div>
 
                 {showBillDetails && (
-                  <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-dashed dark:border-gray-700 space-y-2 md:space-y-3">
+                  <div className="mt-3 md:mt-4 rounded-2xl border border-[#dfe7f1] bg-white px-4 md:px-5 py-4 shadow-[0_2px_10px_rgba(15,23,42,0.04)] dark:border-gray-700 dark:bg-[#151515] space-y-2.5 md:space-y-3">
                     {cart.length > 0 && (
-                      <div className="space-y-1 pb-2 border-b border-dashed dark:border-gray-700">
+                      <div className="space-y-1 pb-2 border-b border-dashed border-gray-200 dark:border-gray-700">
                         {cart.map((item) => (
                           <div key={`${item.restaurantId || "r"}-${item.id}`} className="flex justify-between text-xs md:text-sm">
                             <span className="text-gray-600 dark:text-gray-400 truncate pr-2">
@@ -2057,14 +2077,14 @@ export default function Cart() {
                         ))}
                       </div>
                     )}
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(0)}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Sub Total</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
-                      <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${deliveryFee}`}
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery partner fee</span>
+                      <span className={deliveryFee === 0 ? "font-semibold text-[#EB590E] dark:text-[#EB590E]" : "font-semibold text-[#d9534f] dark:text-red-400"}>
+                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${Number(deliveryFee).toFixed(2)}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -2072,17 +2092,17 @@ export default function Cart() {
                         {deliveryFeeBreakdownText}
                       </div>
                     )}
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{platformFee}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Platform Fee</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">GST and Restaurant Charges</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">SGST</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Tip</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(0)}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Tip</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(2)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
@@ -2090,9 +2110,9 @@ export default function Cart() {
                         <span>-{RUPEE_SYMBOL}{discount}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-sm md:text-base font-semibold pt-2 md:pt-3 border-t dark:border-gray-700">
-                      <span>To Pay</span>
-                      <span>{RUPEE_SYMBOL}{total.toFixed(0)}</span>
+                    <div className="flex items-center justify-between text-base md:text-[1.65rem] font-bold pt-4 md:pt-5 mt-1 border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <span className="text-[#23415a] dark:text-gray-100">Total</span>
+                      <span className="text-[#e35b52] dark:text-red-400">{RUPEE_SYMBOL}{total.toFixed(2)}</span>
                     </div>
                     {cancellationPolicyNotice}
                   </div>
@@ -2105,17 +2125,17 @@ export default function Cart() {
             <div className="lg:col-span-1">
               <div className="lg:sticky lg:top-24 space-y-4 md:space-y-6">
                 {/* Bill Summary Card */}
-                <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-4 md:py-5 rounded-lg md:rounded-xl border border-gray-200 dark:border-gray-700">
-                  <h3 className="text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 md:mb-4">Order Summary</h3>
-                  <div className="space-y-2 md:space-y-3">
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Item Total</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(0)}</span>
+                <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-4 md:py-5 rounded-2xl border border-[#dfe7f1] shadow-[0_2px_12px_rgba(15,23,42,0.05)] dark:border-gray-700">
+                  <h3 className="text-base md:text-lg font-semibold text-[#23415a] dark:text-gray-200 mb-3 md:mb-4">Bill Details</h3>
+                  <div className="space-y-2.5 md:space-y-3">
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Sub Total</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
-                      <span className={deliveryFee === 0 ? "text-[#EB590E] dark:text-[#EB590E]" : "text-gray-800 dark:text-gray-200"}>
-                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${deliveryFee}`}
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery partner fee</span>
+                      <span className={deliveryFee === 0 ? "font-semibold text-[#EB590E] dark:text-[#EB590E]" : "font-semibold text-[#d9534f] dark:text-red-400"}>
+                        {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${Number(deliveryFee).toFixed(2)}`}
                       </span>
                     </div>
                     {deliveryFeeBreakdownText && (
@@ -2123,17 +2143,17 @@ export default function Cart() {
                         {deliveryFeeBreakdownText}
                       </div>
                     )}
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{platformFee}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Platform Fee</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">GST</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{gstCharges}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">SGST</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
-                    <div className="flex justify-between text-sm md:text-base">
-                      <span className="text-gray-600 dark:text-gray-400">Tip</span>
-                      <span className="text-gray-800 dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(0)}</span>
+                    <div className="flex items-center justify-between text-sm md:text-base">
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Tip</span>
+                      <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(2)}</span>
                     </div>
                     {discount > 0 && (
                       <div className="flex justify-between text-sm md:text-base text-red-600 dark:text-red-400">
@@ -2141,9 +2161,9 @@ export default function Cart() {
                         <span>-{RUPEE_SYMBOL}{discount}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-base md:text-lg font-bold pt-3 md:pt-4 pb-6 border-t dark:border-gray-700">
-                      <span>Total</span>
-                      <span className="text-green-600 dark:text-green-400">{RUPEE_SYMBOL}{total.toFixed(0)}</span>
+                    <div className="flex items-center justify-between text-base md:text-[1.65rem] font-bold pt-4 md:pt-5 pb-6 mt-1 border-t border-dashed border-gray-200 dark:border-gray-700">
+                      <span className="text-[#23415a] dark:text-gray-100">Total</span>
+                      <span className="text-[#e35b52] dark:text-red-400">{RUPEE_SYMBOL}{total.toFixed(2)}</span>
                     </div>
                     {cancellationPolicyNotice}
                   </div>
