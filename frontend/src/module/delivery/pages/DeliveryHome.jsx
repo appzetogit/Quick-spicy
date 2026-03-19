@@ -676,6 +676,7 @@ export default function DeliveryHome() {
   const newOrderAcceptButtonSwipeStartX = useRef(0)
   const newOrderAcceptButtonSwipeStartY = useRef(0)
   const newOrderAcceptButtonIsSwiping = useRef(false)
+  const newOrderAcceptLastProgressRef = useRef(0)
   const [newOrderAcceptButtonProgress, setNewOrderAcceptButtonProgress] = useState(0)
   const [newOrderIsAnimatingToComplete, setNewOrderIsAnimatingToComplete] = useState(false)
   const [isAcceptingNewOrder, setIsAcceptingNewOrder] = useState(false)
@@ -706,6 +707,7 @@ export default function DeliveryHome() {
   const reachedPickupSwipeStartX = useRef(0)
   const reachedPickupSwipeStartY = useRef(0)
   const reachedPickupIsSwiping = useRef(false)
+  const reachedPickupLastProgressRef = useRef(0)
   const [isDraggingReachedPickup, setIsDraggingReachedPickup] = useState(false)
   const [reachedDropButtonProgress, setReachedDropButtonProgress] = useState(0)
   const [reachedDropIsAnimatingToComplete, setReachedDropIsAnimatingToComplete] = useState(false)
@@ -722,6 +724,7 @@ export default function DeliveryHome() {
   const orderIdConfirmSwipeStartX = useRef(0)
   const orderIdConfirmSwipeStartY = useRef(0)
   const orderIdConfirmIsSwiping = useRef(false)
+  const orderIdConfirmLastProgressRef = useRef(0)
   // Bill image upload state
   const [billImageUrl, setBillImageUrl] = useState(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
@@ -2434,6 +2437,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = touch.x
     newOrderAcceptButtonSwipeStartY.current = touch.y
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
     setNewOrderIsAnimatingToComplete(false)
     setNewOrderAcceptButtonProgress(0)
   }
@@ -2458,6 +2462,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      newOrderAcceptLastProgressRef.current = progress
       setNewOrderAcceptButtonProgress(progress)
     }
   }
@@ -2480,9 +2485,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.55 // smoother acceptance
+    const threshold = maxSwipe * 0.5 // keep slider forgiving across devices
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = newOrderAcceptLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       isAcceptingNewOrderRef.current = true
       setIsAcceptingNewOrder(true)
       // Stop audio immediately when user accepts
@@ -3201,6 +3209,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = 0
     newOrderAcceptButtonSwipeStartY.current = 0
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
   }
 
   const handleNewOrderAcceptTouchCancel = () => {
@@ -3208,6 +3217,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = 0
     newOrderAcceptButtonSwipeStartY.current = 0
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
     setNewOrderAcceptButtonProgress(0)
     setNewOrderIsAnimatingToComplete(false)
   }
@@ -3327,6 +3337,7 @@ export default function DeliveryHome() {
     reachedPickupSwipeStartX.current = touch.x
     reachedPickupSwipeStartY.current = touch.y
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
     setreachedPickupIsAnimatingToComplete(false)
     setreachedPickupButtonProgress(0)
   }
@@ -3350,6 +3361,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      reachedPickupLastProgressRef.current = progress
       setreachedPickupButtonProgress(progress)
     }
   }
@@ -3366,9 +3378,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // smoother and consistent with other flow sliders
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = reachedPickupLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       // Animate to completion
       setreachedPickupIsAnimatingToComplete(true)
       setreachedPickupButtonProgress(1)
@@ -3528,12 +3543,14 @@ export default function DeliveryHome() {
     reachedPickupSwipeStartX.current = 0
     reachedPickupSwipeStartY.current = 0
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
   }
 
   const handlereachedPickupTouchCancel = () => {
     reachedPickupSwipeStartX.current = 0
     reachedPickupSwipeStartY.current = 0
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
     setreachedPickupButtonProgress(0)
     setreachedPickupIsAnimatingToComplete(false)
   }
@@ -3562,6 +3579,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      reachedPickupLastProgressRef.current = progress
       setreachedPickupButtonProgress(progress)
     }
   }
@@ -3801,6 +3819,7 @@ export default function DeliveryHome() {
     orderIdConfirmSwipeStartX.current = touch.x
     orderIdConfirmSwipeStartY.current = touch.y
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
     setOrderIdConfirmIsAnimatingToComplete(false)
     setOrderIdConfirmButtonProgress(0)
   }
@@ -3824,6 +3843,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      orderIdConfirmLastProgressRef.current = progress
       setOrderIdConfirmButtonProgress(progress)
     }
   }
@@ -4040,9 +4060,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // smoother and consistent with downstream sliders
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = orderIdConfirmLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       // Animate to completion
       setOrderIdConfirmIsAnimatingToComplete(true)
       setOrderIdConfirmButtonProgress(1)
@@ -4344,12 +4367,14 @@ export default function DeliveryHome() {
     orderIdConfirmSwipeStartX.current = 0
     orderIdConfirmSwipeStartY.current = 0
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
   }
 
   const handleOrderIdConfirmTouchCancel = () => {
     orderIdConfirmSwipeStartX.current = 0
     orderIdConfirmSwipeStartY.current = 0
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
     setOrderIdConfirmButtonProgress(0)
     setOrderIdConfirmIsAnimatingToComplete(false)
   }
