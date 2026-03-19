@@ -41,6 +41,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [isLoading, setIsLoading] = useState(true)
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
+  const [markingReadyOrderId, setMarkingReadyOrderId] = useState(null)
   const [deletingOrderId, setDeletingOrderId] = useState(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null)
@@ -281,6 +282,9 @@ export default function OrdersPage({ statusKey = "all" }) {
     window.addEventListener("touchstart", unlockAudio, { passive: true })
     document.addEventListener("click", unlockAudio, { passive: true })
     document.addEventListener("touchstart", unlockAudio, { passive: true })
+    if (typeof navigator !== "undefined" && navigator.userActivation?.hasBeenActive) {
+      unlockAudio()
+    }
 
     return () => {
       window.removeEventListener("pointerdown", unlockAudio)
@@ -599,6 +603,37 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }
 
+  const handleMarkReadyOrder = async (order) => {
+    const orderIdToUse = order.id || order._id || order.orderId
+    const orderLabel = order.orderId || orderIdToUse
+    if (!orderIdToUse) {
+      toast.error("Order ID not found")
+      return
+    }
+
+    try {
+      setMarkingReadyOrderId(order.id || order.orderId)
+      const response = await adminAPI.markOrderReady(orderIdToUse)
+      if (response.data?.success) {
+        toast.success(response.data?.message || `Order ${orderLabel} marked ready`)
+        await fetchOrders({ silent: true, withRingCheck: false })
+      } else {
+        toast.error(response.data?.message || "Failed to mark order as ready")
+      }
+    } catch (error) {
+      const status = error?.response?.status
+      const message = error?.response?.data?.message || "Failed to mark order as ready"
+      if (status === 400 && String(message).toLowerCase().includes("current status")) {
+        toast.success(`Order ${orderLabel} is already ready`)
+        await fetchOrders({ silent: true, withRingCheck: false })
+      } else {
+        toast.error(message)
+      }
+    } finally {
+      setMarkingReadyOrderId(null)
+    }
+  }
+
   const handleDeleteOrder = async (order) => {
     const orderIdToUse = order.id || order._id || order.orderId
     if (!orderIdToUse) {
@@ -886,7 +921,9 @@ export default function OrdersPage({ statusKey = "all" }) {
         onDeleteOrder={statusKey === "all" ? handleDeleteOrder : undefined}
         onAcceptOrder={statusKey === "all" || statusKey === "pending" ? handleAcceptOrder : undefined}
         onRejectOrder={statusKey === "all" || statusKey === "pending" ? handleRejectOrder : undefined}
+        onMarkReady={statusKey === "all" || statusKey === "processing" ? handleMarkReadyOrder : undefined}
         actionLoadingOrderId={processingActionOrderId}
+        readyLoadingOrderId={markingReadyOrderId}
         deletingOrderId={deletingOrderId}
       />
     </div>

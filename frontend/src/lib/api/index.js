@@ -1485,6 +1485,11 @@ export const adminAPI = {
     });
   },
 
+  // Mark order as ready (admin)
+  markOrderReady: (id) => {
+    return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/ready`);
+  },
+
   // Delete order (admin)
   deleteOrder: (id) => {
     return apiClient.delete(`/admin/orders/${encodeURIComponent(id)}`);

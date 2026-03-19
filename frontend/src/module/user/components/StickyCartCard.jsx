@@ -9,6 +9,11 @@ export default function StickyCartCard() {
   const [isVisible, setIsVisible] = useState(true)
   const [bottomPosition, setBottomPosition] = useState("bottom-[70px]") // Fixed above bottom navigation
   const cartCount = getCartCount()
+  const slugifyRestaurantName = (value) =>
+    String(value || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
 
   // Set fixed position above bottom navigation (no scroll-based movement)
   useEffect(() => {
@@ -42,8 +47,11 @@ export default function StickyCartCard() {
   const restaurantName = cart[0]?.restaurant || "Restaurant"
   const restaurantImage = cart[0]?.image || "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=200&h=200&fit=crop"
 
-  // Create restaurant slug from restaurant name
-  const restaurantSlug = restaurantName.toLowerCase().replace(/\s+/g, "-")
+  // Prefer canonical slug/id stored on the cart item over rebuilding from the name.
+  const restaurantSlug =
+    cart[0]?.restaurantSlug ||
+    cart[0]?.restaurantId ||
+    slugifyRestaurantName(restaurantName)
 
   // Calculate total price
   const totalPrice = cart.reduce((sum, item) => sum + (item.price * item.quantity * 83), 0)

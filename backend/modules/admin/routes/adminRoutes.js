@@ -207,6 +207,7 @@ import {
   deleteOrder,
   acceptOrder,
   rejectOrder,
+  markOrderReady,
   getSearchingDeliverymanOrders,
   getRefundRequests,
   processRefund,
@@ -472,6 +473,7 @@ router.get("/orders", getOrders);
 router.delete("/orders/:id", deleteOrder);
 router.patch("/orders/:id/accept", acceptOrder);
 router.patch("/orders/:id/reject", rejectOrder);
+router.patch("/orders/:id/ready", markOrderReady);
 router.get("/orders/searching-deliveryman", getSearchingDeliverymanOrders);
 router.get("/orders/ongoing", getOngoingOrders);
 router.get("/orders/transaction-report", getTransactionReport);
