@@ -25,6 +25,41 @@ function isOrderEligibleForDeliveryDispatch(order) {
   return status === 'preparing' || status === 'ready';
 }
 
+async function getBusyDeliveryPartnerIds(deliveryPartnerIds = [], excludeOrderId = null) {
+  const normalizedIds = (deliveryPartnerIds || [])
+    .map((id) => String(id || '').trim())
+    .filter((id) => mongoose.Types.ObjectId.isValid(id))
+    .map((id) => new mongoose.Types.ObjectId(id));
+
+  if (normalizedIds.length === 0) {
+    return new Set();
+  }
+
+  const query = {
+    deliveryPartnerId: { $in: normalizedIds },
+    status: { $nin: ['delivered', 'cancelled'] }
+  };
+
+  if (excludeOrderId && mongoose.Types.ObjectId.isValid(String(excludeOrderId))) {
+    query._id = { $ne: new mongoose.Types.ObjectId(String(excludeOrderId)) };
+  }
+
+  const activeOrders = await Order.find(query)
+    .select('deliveryPartnerId')
+    .lean();
+
+  return new Set(
+    activeOrders
+      .map((order) => order?.deliveryPartnerId?.toString?.())
+      .filter(Boolean)
+  );
+}
+
+async function isDeliveryPartnerFree(deliveryPartnerId, excludeOrderId = null) {
+  const busyPartnerIds = await getBusyDeliveryPartnerIds([deliveryPartnerId], excludeOrderId);
+  return !busyPartnerIds.has(String(deliveryPartnerId || '').trim());
+}
+
 function normalizePaymentMethod(value) {
   const method = String(value || '').toLowerCase().trim();
   if (method === 'cash' || method === 'cod' || method === 'cash on delivery') return 'cash';
@@ -203,6 +238,11 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
   if (order.status === 'cancelled') {
     console.log(`⚠️ Order ${order.orderId} is cancelled. Cannot notify delivery partner.`);
     return { success: false, reason: 'Order is cancelled' };
+  }
+  const isFree = await isDeliveryPartnerFree(deliveryPartnerId, order?._id);
+  if (!isFree) {
+    console.log(`Skipping notification for delivery partner ${deliveryPartnerId}: rider already has an active order.`);
+    return { success: false, reason: 'Delivery partner is busy with another active order' };
   }
   try {
     const io = await getIOInstance();
@@ -507,6 +547,14 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
     if (!deliveryPartnerIds || deliveryPartnerIds.length === 0) {
       return { success: false, notified: 0 };
     }
+    const busyPartnerIds = await getBusyDeliveryPartnerIds(deliveryPartnerIds, order?._id);
+    const freeDeliveryPartnerIds = deliveryPartnerIds.filter((id) => !busyPartnerIds.has(String(id || '').trim()));
+    if (freeDeliveryPartnerIds.length !== deliveryPartnerIds.length) {
+      console.log(`Filtered ${deliveryPartnerIds.length - freeDeliveryPartnerIds.length} busy delivery partner(s) from ${phase} notification`);
+    }
+    if (freeDeliveryPartnerIds.length === 0) {
+      return { success: false, notified: 0 };
+    }
 
     const io = await getIOInstance();
     if (!io) {
@@ -689,7 +737,7 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
 
     const deliveryRecords = await Delivery.find({
       _id: {
-        $in: deliveryPartnerIds.filter((id) => mongoose.Types.ObjectId.isValid(id))
+        $in: freeDeliveryPartnerIds.filter((id) => mongoose.Types.ObjectId.isValid(id))
       }
     })
       .select('_id fcmtokenweb fcmtokenmobile')
@@ -703,7 +751,7 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
     const pushTokens = [];
 
     // Notify each delivery partner
-    for (const deliveryPartnerId of deliveryPartnerIds) {
+    for (const deliveryPartnerId of freeDeliveryPartnerIds) {
       try {
         const normalizedId = deliveryPartnerId?.toString() || deliveryPartnerId;
         const deliveryRecord = deliveryById.get(normalizedId);

@@ -1525,9 +1525,18 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found or not assigned to you');
     }
 
-    // Verify order ID matches
-    if (confirmedOrderId && confirmedOrderId !== order.orderId) {
-      return errorResponse(res, 400, 'Order ID does not match');
+    // Verify order ID matches (accept either public orderId or Mongo _id for compatibility)
+    const normalizedConfirmedOrderId =
+      typeof confirmedOrderId === 'string' ? confirmedOrderId.trim() : confirmedOrderId;
+    if (normalizedConfirmedOrderId) {
+      const canonicalOrderId = String(order.orderId || '').trim();
+      const canonicalMongoId = String(order._id || '').trim();
+      if (
+        normalizedConfirmedOrderId !== canonicalOrderId &&
+        normalizedConfirmedOrderId !== canonicalMongoId
+      ) {
+        return errorResponse(res, 400, 'Order ID does not match');
+      }
     }
 
     // Check if order is in valid state
@@ -1669,10 +1678,39 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
       }
     }
 
-    // Calculate route from restaurant to customer using Dijkstra algorithm
-    const routeData = await calculateRoute(deliveryLat, deliveryLng, customerLat, customerLng, {
-      useDijkstra: true
-    });
+    // Calculate route from restaurant to customer using Dijkstra algorithm.
+    // If routing service fails, continue confirmation with a straight-line fallback
+    // so delivery flow is not blocked for riders.
+    let routeData;
+    try {
+      routeData = await calculateRoute(deliveryLat, deliveryLng, customerLat, customerLng, {
+        useDijkstra: true
+      });
+    } catch (routeError) {
+      console.error('Route calculation failed during confirmOrderId, using fallback route:', routeError?.message || routeError);
+      const toRadians = (deg) => (Number(deg) * Math.PI) / 180;
+      const earthRadiusKm = 6371;
+      const dLat = toRadians(customerLat - deliveryLat);
+      const dLng = toRadians(customerLng - deliveryLng);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(deliveryLat)) *
+          Math.cos(toRadians(customerLat)) *
+          Math.sin(dLng / 2) *
+          Math.sin(dLng / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      const distanceKm = Math.max(0.05, earthRadiusKm * c);
+      const durationMins = Math.max(1, distanceKm * 3); // ~20 km/h fallback estimate
+      routeData = {
+        coordinates: [
+          [Number(deliveryLat), Number(deliveryLng)],
+          [Number(customerLat), Number(customerLng)]
+        ],
+        distance: distanceKm,
+        duration: durationMins,
+        method: 'fallback_straight_line'
+      };
+    }
 
     // Update order state - use order._id (MongoDB _id) not orderId string
     // Since we found the order, order._id should exist (from .lean() it's a plain object with _id)

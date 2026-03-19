@@ -4051,9 +4051,18 @@ export default function DeliveryHome() {
         }
 
         try {
-          // Prefer string orderId (ORD-xxx) for URL; backend accepts both _id and orderId
-          const orderIdForApi = selectedRestaurant?.orderId || selectedRestaurant?.id
-          const confirmedOrderIdForApi = selectedRestaurant?.orderId || (orderIdForApi && String(orderIdForApi).startsWith('ORD-') ? orderIdForApi : undefined)
+          // Prefer stable order identifiers and ignore invalid placeholder values.
+          const orderIdCandidates = [
+            selectedRestaurant?.orderId,
+            selectedRestaurant?.id,
+            newOrder?.orderId,
+            newOrder?.orderMongoId
+          ]
+            .map((value) => (value == null ? '' : String(value).trim()))
+            .filter((value) => value && value !== 'undefined' && value !== 'null')
+
+          const orderIdForApi = orderIdCandidates[0]
+          const confirmedOrderIdForApi = orderIdCandidates.find((value) => value.startsWith('ORD-'))
 
           // Call backend API to confirm order ID with bill image
           debugLog('📦 Confirming order ID:', { 
@@ -4870,6 +4879,23 @@ export default function DeliveryHome() {
         newOrder._id ||
         newOrder.orderId;
 
+      const activeOrderId = String(selectedRestaurant?.id || selectedRestaurant?.orderId || '').trim()
+      const activeOrderStatus = String(selectedRestaurant?.orderStatus || selectedRestaurant?.status || '').toLowerCase().trim()
+      const activeDeliveryPhase = String(selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '').toLowerCase().trim()
+      const hasInProgressActiveOrder =
+        Boolean(activeOrderId) &&
+        !['delivered', 'cancelled'].includes(activeOrderStatus) &&
+        !['completed', 'delivered'].includes(activeDeliveryPhase)
+
+      if (hasInProgressActiveOrder && String(orderId || '').trim() && String(orderId).trim() !== activeOrderId) {
+        debugLog('⏭️ Ignoring new order notification because rider already has an active order:', {
+          incomingOrderId: orderId,
+          activeOrderId
+        })
+        clearNewOrder()
+        return
+      }
+
       if (dismissedOrderIdsRef.current.has(String(orderId))) {
         debugLog('⏭️ Ignoring dismissed order notification:', orderId);
         clearNewOrder();
@@ -4889,9 +4915,20 @@ export default function DeliveryHome() {
         if (activeOrderData) {
           const activeOrder = JSON.parse(activeOrderData);
           const activeOrderId = activeOrder.orderId || activeOrder.restaurantInfo?.id || activeOrder.restaurantInfo?.orderId;
+          const activeStage = String(activeOrder?.uiStage || '').toLowerCase().trim()
+          const isActiveStage = activeStage && !['completed', 'delivered', 'cancelled'].includes(activeStage)
           if (activeOrderId === orderId) {
             debugLog('⚠️ Order already accepted (found in localStorage), ignoring notification:', orderId);
             acceptedOrderIdsRef.current.add(orderId);
+            clearNewOrder();
+            return;
+          }
+          if (isActiveStage && activeOrderId && activeOrderId !== orderId) {
+            debugLog('⏭️ Ignoring new order because localStorage has active in-progress order:', {
+              incomingOrderId: orderId,
+              activeOrderId,
+              activeStage
+            })
             clearNewOrder();
             return;
           }
@@ -4998,7 +5035,7 @@ export default function DeliveryHome() {
       setShowNewOrderPopup(true)
       setCountdownSeconds(300) // Reset countdown to 5 minutes
     }
-  }, [newOrder, calculateTimeAway, riderLocation, clearNewOrder])
+  }, [newOrder, selectedRestaurant, calculateTimeAway, riderLocation, clearNewOrder])
 
   // Recalculate distance when rider location becomes available
   useEffect(() => {

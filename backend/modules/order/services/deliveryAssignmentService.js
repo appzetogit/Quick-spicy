@@ -169,6 +169,45 @@ async function filterPartnersByAvailableCashLimit(deliveryPartners = []) {
   return eligiblePartners;
 }
 
+async function filterOutBusyDeliveryPartners(deliveryPartners = []) {
+  if (!Array.isArray(deliveryPartners) || deliveryPartners.length === 0) {
+    return [];
+  }
+
+  const partnerIds = deliveryPartners
+    .map((partner) => partner?._id)
+    .filter((id) => mongoose.Types.ObjectId.isValid(String(id)))
+    .map((id) => new mongoose.Types.ObjectId(String(id)));
+
+  if (partnerIds.length === 0) {
+    return [];
+  }
+
+  const activeOrders = await Order.find({
+    deliveryPartnerId: { $in: partnerIds },
+    status: { $nin: ['delivered', 'cancelled'] }
+  })
+    .select('deliveryPartnerId')
+    .lean();
+
+  const busyPartnerIds = new Set(
+    activeOrders
+      .map((order) => order?.deliveryPartnerId?.toString?.())
+      .filter(Boolean)
+  );
+
+  const freePartners = deliveryPartners.filter((partner) => {
+    const partnerId = partner?._id?.toString?.();
+    return partnerId && !busyPartnerIds.has(partnerId);
+  });
+
+  if (freePartners.length !== deliveryPartners.length) {
+    console.log(`🚫 Filtered ${deliveryPartners.length - freePartners.length} busy delivery partner(s) already handling active orders`);
+  }
+
+  return freePartners;
+}
+
 /**
  * Find all nearest available delivery boys within priority distance (for priority notification)
  * @param {number} restaurantLat - Restaurant latitude
@@ -218,12 +257,15 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
     const cashEligibleDeliveryPartners = await filterPartnersByAvailableCashLimit(deliveryPartners);
     console.log(`💰 Cash-limit eligible delivery partners: ${cashEligibleDeliveryPartners.length}`);
 
-    if (!cashEligibleDeliveryPartners || cashEligibleDeliveryPartners.length === 0) {
+    const freeDeliveryPartners = await filterOutBusyDeliveryPartners(cashEligibleDeliveryPartners);
+    console.log(`Free delivery partners (no active order): ${freeDeliveryPartners.length}`);
+
+    if (!freeDeliveryPartners || freeDeliveryPartners.length === 0) {
       return [];
     }
 
     // Calculate distance and filter
-    const deliveryPartnersWithDistance = cashEligibleDeliveryPartners
+    const deliveryPartnersWithDistance = freeDeliveryPartners
       .map(partner => {
         const location = partner.availability?.currentLocation;
         if (!location || !location.coordinates || location.coordinates.length < 2) {
@@ -330,7 +372,9 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
     const cashEligibleDeliveryPartners = await filterPartnersByAvailableCashLimit(deliveryPartners);
     console.log(`💰 Cash-limit eligible delivery partners: ${cashEligibleDeliveryPartners.length}`);
 
-    if (!cashEligibleDeliveryPartners || cashEligibleDeliveryPartners.length === 0) {
+    const freeDeliveryPartners = await filterOutBusyDeliveryPartners(cashEligibleDeliveryPartners);
+    console.log(`Free delivery partners (no active order): ${freeDeliveryPartners.length}`);
+    if (!freeDeliveryPartners || freeDeliveryPartners.length === 0) {
       console.log('⚠️ No online delivery partners found');
       console.log('⚠️ Checking all delivery partners to see why...');
       
@@ -348,7 +392,7 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
     }
 
     // Calculate distance for each delivery partner and filter by zone if applicable
-    const deliveryPartnersWithDistance = cashEligibleDeliveryPartners
+    const deliveryPartnersWithDistance = freeDeliveryPartners
       .map(partner => {
         const location = partner.availability?.currentLocation;
         if (!location || !location.coordinates || location.coordinates.length < 2) {
