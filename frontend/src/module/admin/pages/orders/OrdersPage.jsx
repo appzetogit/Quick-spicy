@@ -518,11 +518,21 @@ export default function OrdersPage({ statusKey = "all" }) {
       socket.emit("join-admin-orders")
     })
     socket.on("admin_new_order", handleIncomingRealtimeOrder)
+    socket.on("new_order", handleIncomingRealtimeOrder)
     socket.on("play_notification_sound", handleIncomingRealtimeOrder)
+    socket.on("connect_error", (error) => {
+      console.warn("Admin orders socket connect_error", error)
+    })
+    socket.on("disconnect", (reason) => {
+      console.warn("Admin orders socket disconnected", reason)
+    })
 
     return () => {
       socket.off("admin_new_order", handleIncomingRealtimeOrder)
+      socket.off("new_order", handleIncomingRealtimeOrder)
       socket.off("play_notification_sound", handleIncomingRealtimeOrder)
+      socket.off("connect_error")
+      socket.off("disconnect")
       socket.disconnect()
       socketRef.current = null
     }
