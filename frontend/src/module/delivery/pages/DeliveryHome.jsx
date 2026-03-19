@@ -485,6 +485,7 @@ export default function DeliveryHome() {
   const lastBikePositionRef = useRef(null) // Track last bike position for deviation detection
   const acceptedOrderIdsRef = useRef(new Set()) // Track accepted order IDs to prevent duplicate notifications
   const dismissedOrderIdsRef = useRef(new Set()) // Track manually dismissed order IDs to avoid re-showing on reopen
+  const lastIncomingPopupRef = useRef({ orderId: "", shownAt: 0 }) // Deduplicate popup rendering across socket + polling
   // Live tracking polyline refs
   const liveTrackingPolylineRef = useRef(null) // Google Maps Polyline instance for live tracking
   const liveTrackingPolylineShadowRef = useRef(null) // Shadow/outline polyline for better visibility (Zomato/Rapido style)
@@ -504,6 +505,7 @@ export default function DeliveryHome() {
   const isInitializingMapRef = useRef(false)
 
   const DISMISSED_ORDER_IDS_KEY = "delivery_dismissed_order_ids"
+  const INCOMING_ORDER_POPUP_DEDUPE_MS = 12000
 
   useEffect(() => {
     try {
@@ -787,6 +789,89 @@ export default function DeliveryHome() {
   const acceptButtonIsSwiping = useRef(false)
   const autoShowTimerRef = useRef(null)
   const lastPersistedActiveOrderRef = useRef("")
+
+  const hasInProgressOrder = useCallback((excludeOrderId = "") => {
+    const normalizedExclude = String(excludeOrderId || "").trim()
+    const isTerminalStatus = (value) => ["delivered", "cancelled", "completed"].includes(String(value || "").toLowerCase().trim())
+
+    const selectedOrderId = String(selectedRestaurant?.id || selectedRestaurant?.orderId || "").trim()
+    const selectedOrderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status
+    const selectedDeliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase
+    const selectedIsActive =
+      Boolean(selectedOrderId) &&
+      !isTerminalStatus(selectedOrderStatus) &&
+      !isTerminalStatus(selectedDeliveryPhase)
+
+    if (selectedIsActive && (!normalizedExclude || normalizedExclude !== selectedOrderId)) {
+      return true
+    }
+
+    const activeStateOrderId = String(activeOrder?.id || activeOrder?.orderId || activeOrder?._id || "").trim()
+    const activeStateOrderStatus = activeOrder?.orderStatus || activeOrder?.status
+    const activeStateOrderPhase = activeOrder?.deliveryPhase || activeOrder?.deliveryState?.currentPhase
+    const activeStateIsActive =
+      Boolean(activeStateOrderId) &&
+      !isTerminalStatus(activeStateOrderStatus) &&
+      !isTerminalStatus(activeStateOrderPhase)
+
+    if (activeStateIsActive && (!normalizedExclude || normalizedExclude !== activeStateOrderId)) {
+      return true
+    }
+
+    try {
+      const raw = localStorage.getItem(DELIVERY_ACTIVE_ORDER_KEY)
+      if (!raw) return false
+      const parsed = JSON.parse(raw)
+      const persistedId = String(parsed?.orderId || parsed?.restaurantInfo?.id || parsed?.restaurantInfo?.orderId || "").trim()
+      const persistedStage = String(parsed?.uiStage || "").toLowerCase().trim()
+      const persistedIsActive = Boolean(persistedId) && !isTerminalStatus(persistedStage)
+
+      if (persistedIsActive && (!normalizedExclude || normalizedExclude !== persistedId)) {
+        return true
+      }
+    } catch {
+      // Ignore malformed active-order storage
+    }
+
+    return false
+  }, [selectedRestaurant, activeOrder, DELIVERY_ACTIVE_ORDER_KEY])
+
+  const shouldSkipIncomingPopup = useCallback((orderId, source = "unknown") => {
+    const normalizedOrderId = String(orderId || "").trim()
+    const now = Date.now()
+    const last = lastIncomingPopupRef.current || { orderId: "", shownAt: 0 }
+
+    if (
+      normalizedOrderId &&
+      last.orderId === normalizedOrderId &&
+      now - Number(last.shownAt || 0) < INCOMING_ORDER_POPUP_DEDUPE_MS
+    ) {
+      debugLog("⏭️ Skipping duplicate incoming order popup:", {
+        source,
+        orderId: normalizedOrderId
+      })
+      return true
+    }
+
+    if (hasInProgressOrder(normalizedOrderId)) {
+      debugLog("⏭️ Ignoring incoming order because rider already has active order in progress:", {
+        source,
+        incomingOrderId: normalizedOrderId
+      })
+      return true
+    }
+
+    return false
+  }, [INCOMING_ORDER_POPUP_DEDUPE_MS, hasInProgressOrder])
+
+  const markIncomingPopupShown = useCallback((orderId) => {
+    const normalizedOrderId = String(orderId || "").trim()
+    if (!normalizedOrderId) return
+    lastIncomingPopupRef.current = {
+      orderId: normalizedOrderId,
+      shownAt: Date.now()
+    }
+  }, [])
 
   useEffect(() => {
     if (!showDeliveryOtpModal) return
@@ -4878,6 +4963,12 @@ export default function DeliveryHome() {
         newOrder.id ||
         newOrder._id ||
         newOrder.orderId;
+      const normalizedOrderId = String(orderId || "").trim()
+
+      if (shouldSkipIncomingPopup(normalizedOrderId, "socket")) {
+        clearNewOrder()
+        return
+      }
 
       const activeOrderId = String(selectedRestaurant?.id || selectedRestaurant?.orderId || '').trim()
       const activeOrderStatus = String(selectedRestaurant?.orderStatus || selectedRestaurant?.status || '').toLowerCase().trim()
@@ -5032,10 +5123,11 @@ export default function DeliveryHome() {
       }
       
       setSelectedRestaurant(restaurantData)
+      markIncomingPopupShown(normalizedOrderId || restaurantData.orderId || restaurantData.id)
       setShowNewOrderPopup(true)
       setCountdownSeconds(300) // Reset countdown to 5 minutes
     }
-  }, [newOrder, selectedRestaurant, calculateTimeAway, riderLocation, clearNewOrder])
+  }, [newOrder, selectedRestaurant, calculateTimeAway, riderLocation, clearNewOrder, shouldSkipIncomingPopup, markIncomingPopupShown])
 
   // Recalculate distance when rider location becomes available
   useEffect(() => {
@@ -5315,6 +5407,11 @@ export default function DeliveryHome() {
       return
     }
 
+    if (showNewOrderPopup || hasInProgressOrder()) {
+      debugLog('⏭️ Skipping order fetch because rider already has an active/pending popup order')
+      return
+    }
+
     try {
       debugLog('📦 Fetching assigned orders from API...')
       const response = await deliveryAPI.getOrders({
@@ -5387,6 +5484,9 @@ export default function DeliveryHome() {
           }
           if (dismissedOrderIdsRef.current.has(String(orderId))) {
             debugLog('⏭️ Order already dismissed, skipping:', orderId)
+            return
+          }
+          if (shouldSkipIncomingPopup(orderId, "poll")) {
             return
           }
 
@@ -5472,6 +5572,7 @@ export default function DeliveryHome() {
           }
           
           setSelectedRestaurant(restaurantData)
+          markIncomingPopupShown(orderId || restaurantData.orderId || restaurantData.id)
           setShowNewOrderPopup(true)
           setCountdownSeconds(300) // Reset countdown to 5 minutes
           debugLog('✅ Showing pending order notification:', orderId)
@@ -5485,7 +5586,7 @@ export default function DeliveryHome() {
       debugError('❌ Error fetching assigned orders:', error)
       // Don't show error to user, just log it
     }
-  }, [isOnline, calculateTimeAway])
+  }, [isOnline, showNewOrderPopup, hasInProgressOrder, calculateTimeAway, shouldSkipIncomingPopup, markIncomingPopupShown])
 
   // Fetch assigned orders when delivery person goes online
   useEffect(() => {

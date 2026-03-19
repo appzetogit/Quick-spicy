@@ -411,6 +411,16 @@ export const getOrders = asyncHandler(async (req, res) => {
     const delivery = req.delivery;
     const { status, page = 1, limit = 20, includeDelivered, discover } = req.query;
     const cashLimitState = await getDeliveryCashLimitState(delivery._id);
+    const hasActiveAssignedOrder = Boolean(
+      await Order.exists({
+        deliveryPartnerId: delivery._id,
+        status: { $nin: ['delivered', 'cancelled'] },
+        $or: [
+          { 'deliveryState.currentPhase': { $exists: false } },
+          { 'deliveryState.currentPhase': { $nin: ['completed', 'delivered'] } }
+        ]
+      })
+    );
 
     // Build query
     const isDiscoverMode = discover === 'true' || discover === true;
@@ -457,6 +467,12 @@ export const getOrders = asyncHandler(async (req, res) => {
         const isAssignedToCurrent = order?.deliveryPartnerId?.toString?.() === delivery._id.toString();
         if (isAssignedToCurrent) {
           filteredOrders.push(order);
+          continue;
+        }
+
+        // Hard guard: when rider already has an active assigned order,
+        // do not surface discover/unassigned opportunities.
+        if (hasActiveAssignedOrder) {
           continue;
         }
 
@@ -519,6 +535,7 @@ export const getOrders = asyncHandler(async (req, res) => {
       orders: enrichedOrders,
       cashLimitWarning: cashLimitState.warning,
       canReceiveNewOrders: cashLimitState.canReceiveNewOrders,
+      hasActiveAssignedOrder,
       availableCashLimit: cashLimitState.availableCashLimit,
       pagination: {
         page: parseInt(page),
