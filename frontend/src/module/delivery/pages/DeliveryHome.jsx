@@ -4445,8 +4445,11 @@ export default function DeliveryHome() {
   }
 
   const verifyDropOtpForCurrentOrder = useCallback(async (orderIdForApi) => {
-    const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
-    const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+    // Treat drop OTP as required by default unless backend explicitly disables it.
+    // This keeps the rider flow safe and avoids silently skipping OTP when metadata is missing.
+    const dropOtpConfig = selectedRestaurant?.deliveryVerification?.dropOtp
+    const dropOtpRequired = dropOtpConfig?.required !== false
+    const dropOtpVerified = Boolean(dropOtpConfig?.verified)
 
     if (!dropOtpRequired || dropOtpVerified) {
       return true
