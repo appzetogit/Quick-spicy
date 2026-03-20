@@ -37,10 +37,10 @@ const ClosedStatusOverlay = () => {
           {/* Text Content */}
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">
-              We are <span className="text-red-600">Closed</span> Today
+              Closed for <span className="text-red-600">Eid al-Fitr</span>
             </h1>
             <p className="text-lg text-zinc-500 dark:text-zinc-400 max-w-[280px] mx-auto leading-relaxed">
-              We're taking a short break to recharge and serve you better tomorrow.
+              On the auspicious occasion of Eid al-Fitr, we are taking a break to celebrate. Eid Mubarak to you and your family!
             </p>
           </div>
 
