@@ -1,3 +1,4 @@
+import { rejectOrderAssignment } from '../../order/services/deliveryAssignmentService.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import Delivery from '../models/Delivery.js';
@@ -2678,3 +2679,29 @@ export const completeDelivery = asyncHandler(async (req, res) => {
   }
 });
 
+
+/**
+ * Reject Order (Delivery Boy rejects the assigned order)
+ * PATCH /api/delivery/orders/:orderId/reject
+ */
+export const rejectOrder = asyncHandler(async (req, res) => {
+  try {
+    const delivery = req.delivery;
+    const { orderId } = req.params;
+    const { reason } = req.body;
+
+    if (!orderId) {
+      return errorResponse(res, 400, 'Invalid order ID');
+    }
+
+    const deliveryId = delivery._id;
+    console.log(`🚲 Delivery partner ${deliveryId} is rejecting order ${orderId}. Reason: ${reason}`);
+
+    const result = await rejectOrderAssignment(orderId, deliveryId, reason);
+
+    return successResponse(res, 200, 'Order rejected successfully', result);
+  } catch (error) {
+    console.error('❌ Error in rejectOrder controller:', error);
+    return errorResponse(res, 500, error.message || 'Failed to reject order');
+  }
+});

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, useMemo, useCallback } from "react"
+import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -1749,40 +1749,71 @@ export default function DeliveryHome() {
     setShowRejectPopup(true)
   }
 
-  const persistDismissedOrderId = (orderId) => {
-    if (!orderId) return
-    const normalizedOrderId = String(orderId)
-    dismissedOrderIdsRef.current.add(normalizedOrderId)
+  const persistDismissedOrderIds = (orderIds) => {
+    if (!Array.isArray(orderIds)) return
+    const normalizedIds = orderIds
+      .map((id) => (id === null || id === undefined ? "" : String(id)).trim())
+      .filter(Boolean)
+
+    if (normalizedIds.length === 0) return
+
+    for (const id of normalizedIds) {
+      dismissedOrderIdsRef.current.add(id)
+    }
+
     try {
       localStorage.setItem(
         DISMISSED_ORDER_IDS_KEY,
-        JSON.stringify(Array.from(dismissedOrderIdsRef.current).slice(-200))
+        JSON.stringify(Array.from(dismissedOrderIdsRef.current).slice(-200)),
       )
     } catch {
       // Ignore localStorage failures
     }
   }
 
-  const handleRejectConfirm = () => {    
-    const rejectedOrderId =
-      selectedRestaurant?.id ||
-      selectedRestaurant?.orderId ||
-      newOrder?.orderMongoId ||
-      newOrder?.orderId
-    persistDismissedOrderId(rejectedOrderId)
+  const handleRejectConfirm = async () => {    
+    const resolvedOrderIds = Array.from(
+      new Set([
+        // Priority: the backend accepts both `_id` and `orderId`, so we try both variants.
+        selectedRestaurant?.orderId,
+        selectedRestaurant?.id,
+        newOrder?.orderMongoId,
+        newOrder?.mongoId,
+        newOrder?.id,
+        newOrder?._id,
+        newOrder?.orderId,
+      ].filter(Boolean).map((id) => String(id).trim()))
+    )
 
-    if (alertAudioRef.current) {
-      alertAudioRef.current.pause()
-      alertAudioRef.current.currentTime = 0
+    const rejectedOrderId = resolvedOrderIds[0]
+
+    if (!rejectedOrderId) return;
+
+    try {
+      // Send rejection to backend
+      await deliveryAPI.rejectOrder(rejectedOrderId, String(rejectReason || ""))
+
+      // Persist dismissal for *all* known ID variants to prevent re-showing the same order
+      // with a different identifier shape (id vs orderId vs _id).
+      persistDismissedOrderIds(resolvedOrderIds)
+
+      if (alertAudioRef.current) {
+        alertAudioRef.current.pause()
+        alertAudioRef.current.currentTime = 0
+      }
+      setShowRejectPopup(false)
+      setShowNewOrderPopup(false)
+      setIsNewOrderPopupMinimized(false) // Reset minimized state
+      setNewOrderDragY(0) // Reset drag position
+      setRejectReason("")
+      setCountdownSeconds(300)
+      
+      debugLog("Order rejected with reason:", rejectReason, "for order:", rejectedOrderId, "resolvedIds:", resolvedOrderIds)
+      toast.success("Order rejected successfully")
+    } catch (error) {
+      debugError("Failed to reject order:", error)
+      toast.error(error.response?.data?.message || "Failed to reject order")
     }
-    setShowRejectPopup(false)
-    setShowNewOrderPopup(false)
-    setIsNewOrderPopupMinimized(false) // Reset minimized state
-    setNewOrderDragY(0) // Reset drag position
-    setRejectReason("")
-    setCountdownSeconds(300)
-    // Here you would typically send the rejection to your backend
-    debugLog("Order rejected with reason:", rejectReason, "for order:", rejectedOrderId)
   }
 
   const handleRejectCancel = () => {

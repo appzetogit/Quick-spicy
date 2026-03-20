@@ -499,7 +499,7 @@ export async function assignOrderToDeliveryBoy(order, restaurantLat, restaurantL
       restaurantLng,
       orderRestaurantId,
       50,
-      [],
+      order.excludedDeliveryPartners || [],
       { requiredZoneId }
     );
 
@@ -551,3 +551,84 @@ export async function assignOrderToDeliveryBoy(order, restaurantLat, restaurantL
   }
 }
 
+/**
+ * Handle order rejection by a delivery partner
+ * @param {string} orderId - Order ID
+ * @param {string} deliveryPartnerId - Delivery partner ID who is rejecting
+ * @param {string} reason - Reason for rejection
+ * @returns {Promise<Object>} Rejection result
+ */
+export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason = '') {
+  try {
+    const Order = (await import('../models/Order.js')).default;
+    const order = await Order.findOne({ $or: [{ _id: orderId }, { orderId: orderId }] });
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    // Check if the order is actually assigned to this partner
+    if (!order.deliveryPartnerId || order.deliveryPartnerId.toString() !== deliveryPartnerId.toString()) {
+      throw new Error('Order is not assigned to this delivery partner');
+    }
+
+    console.log(`🚲 Delivery partner ${deliveryPartnerId} rejected order ${order.orderId}. Reason: ${reason}`);
+
+    // 1. Clear current assignment
+    order.deliveryPartnerId = null;
+    
+    // 2. Add to excluded list
+    if (!order.excludedDeliveryPartners) {
+      order.excludedDeliveryPartners = [];
+    }
+    const partnerIdStr = deliveryPartnerId.toString();
+    if (!order.excludedDeliveryPartners.some(id => id.toString() === partnerIdStr)) {
+      order.excludedDeliveryPartners.push(deliveryPartnerId);
+    }
+
+    // 3. Reset delivery state status to pending
+    if (order.deliveryState) {
+      order.deliveryState.status = 'pending';
+      order.deliveryState.currentPhase = 'assigned';
+    }
+
+    // 4. Update assignmentInfo
+    if (order.assignmentInfo) {
+      order.assignmentInfo.deliveryPartnerId = null;
+    }
+
+    await order.save();
+
+    // 5. Trigger reassignment
+    const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
+    const restaurant = await Restaurant.findOne({ restaurantId: order.restaurantId });
+    
+    if (restaurant && restaurant.location && restaurant.location.coordinates) {
+      const [lng, lat] = restaurant.location.coordinates;
+      // Reassign and notify the new delivery partner.
+      // This ensures the order actually appears in their app UI after "Deny".
+      const assignmentResult = await assignOrderToDeliveryBoy(order, lat, lng, order.restaurantId);
+      if (assignmentResult?.deliveryPartnerId) {
+        try {
+          const { notifyDeliveryBoyNewOrder } = await import('./deliveryNotificationService.js');
+          await notifyDeliveryBoyNewOrder(order, assignmentResult.deliveryPartnerId);
+          console.log(
+            `✅ Order ${order.orderId} reassigned to ${assignmentResult.deliveryPartnerName} and notification sent`
+          );
+        } catch (notifyErr) {
+          console.error(
+            `❌ Error notifying delivery partner ${assignmentResult.deliveryPartnerId} for reassigned order ${order.orderId}:`,
+            notifyErr
+          );
+        }
+      } else {
+        console.log(`⚠️ No other delivery partners found for order ${order.orderId} after rejection`);
+      }
+    }
+
+    return { success: true, message: 'Order rejection processed and reassignment triggered' };
+  } catch (error) {
+    console.error('❌ Error rejecting order assignment:', error);
+    throw error;
+  }
+}
