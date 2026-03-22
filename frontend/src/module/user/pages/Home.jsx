@@ -20,9 +20,6 @@ import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
 import PageNavbar from "../components/PageNavbar"
-import ClosedStatusOverlay from "../components/ClosedStatusOverlay"
-
-const APP_CLOSED_FOR_TODAY = true;
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -1785,9 +1782,6 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-16 md:pb-6">
-      <AnimatePresence>
-        {APP_CLOSED_FOR_TODAY && <ClosedStatusOverlay />}
-      </AnimatePresence>
       {shouldShowOutOfZoneHome && (
         <div className="fixed inset-0 z-[90] pointer-events-none">
           <div className="absolute inset-0 bg-slate-300/35 backdrop-blur-[1px]" />
