@@ -2097,7 +2097,7 @@ export default function Cart() {
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">SGST</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
@@ -2148,7 +2148,7 @@ export default function Cart() {
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">SGST</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
