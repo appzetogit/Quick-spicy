@@ -8,6 +8,7 @@ const getStatusColor = (orderStatus) => {
     "Scheduled": "bg-blue-100 text-blue-700",
     "Accepted": "bg-green-100 text-green-700",
     "Processing": "bg-orange-100 text-orange-700",
+    "Ready": "bg-green-100 text-green-700",
     "Food On The Way": "bg-yellow-100 text-yellow-700",
     "Canceled": "bg-rose-100 text-rose-700",
     "Cancelled by Restaurant": "bg-red-100 text-red-700",
@@ -35,7 +36,9 @@ export default function OrdersTable({
   onDeleteOrder,
   onAcceptOrder,
   onRejectOrder,
+  onMarkReady,
   actionLoadingOrderId,
+  readyLoadingOrderId,
   deletingOrderId,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
@@ -61,6 +64,17 @@ export default function OrdersTable({
       displayStatus === "accepted" ||
       backendStatus === "pending" ||
       backendStatus === "confirmed"
+    )
+  }
+
+  const isOrderReadyMarkable = (order) => {
+    const displayStatus = String(order?.orderStatus || "").toLowerCase()
+    const backendStatus = String(order?.status || "").toLowerCase()
+    return (
+      displayStatus === "processing" ||
+      displayStatus === "preparing" ||
+      backendStatus === "processing" ||
+      backendStatus === "preparing"
     )
   }
   
@@ -378,6 +392,21 @@ export default function OrdersTable({
                             <X className="w-3.5 h-3.5" />
                           )}
                           <span>Reject</span>
+                        </button>
+                      )}
+                      {isOrderReadyMarkable(order) && onMarkReady && (
+                        <button
+                          onClick={() => onMarkReady(order)}
+                          disabled={readyLoadingOrderId === (order.id || order.orderId)}
+                          className="px-2.5 py-1.5 rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                          title="Mark Ready"
+                        >
+                          {readyLoadingOrderId === (order.id || order.orderId) ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>Mark Ready</span>
                         </button>
                       )}
                       <button 

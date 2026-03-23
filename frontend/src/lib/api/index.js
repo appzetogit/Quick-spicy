@@ -987,6 +987,12 @@ export const deliveryAPI = {
       API_ENDPOINTS.DELIVERY.ORDER_BY_ID.replace(":orderId", orderId),
     );
   },
+    rejectOrder: (orderId, reason = "") => {
+    return apiClient.patch(
+      API_ENDPOINTS.DELIVERY.ORDER_REJECT.replace(":orderId", orderId),
+      { reason },
+    );
+  },
   acceptOrder: (orderId, currentLocation = {}) => {
     const payload = {};
     if (currentLocation.lat !== undefined && currentLocation.lat !== null) {
@@ -1483,6 +1489,11 @@ export const adminAPI = {
     return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/reject`, {
       reason,
     });
+  },
+
+  // Mark order as ready (admin)
+  markOrderReady: (id) => {
+    return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/ready`);
   },
 
   // Delete order (admin)

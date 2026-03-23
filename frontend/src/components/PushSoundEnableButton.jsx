@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { useLocation } from "react-router-dom";
 import { BellRing, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { enablePushNotificationSound, isPushSoundEnabled } from "@/lib/utils/firebaseMessaging";
@@ -19,20 +18,17 @@ function isMobileDevice() {
 }
 
 export default function PushSoundEnableButton() {
-  const location = useLocation();
   const [enabled, setEnabled] = useState(() => isPushSoundEnabled());
   const [permission, setPermission] = useState(() =>
     typeof Notification === "undefined" ? "unsupported" : Notification.permission,
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(() => isMobileDevice());
-  const isAdminRoute = location.pathname.startsWith("/admin");
   const shouldShowPrompt = useMemo(() => {
     if (isMobile) return false;
-    if (isAdminRoute) return false;
     if (permission === "denied") return false;
     return permission !== "granted" || !enabled;
-  }, [enabled, isAdminRoute, isMobile, permission]);
+  }, [enabled, isMobile, permission]);
 
   useEffect(() => {
     const syncState = () => {

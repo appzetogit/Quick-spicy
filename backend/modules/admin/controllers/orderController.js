@@ -721,6 +721,106 @@ export const rejectOrder = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Mark order as ready as admin
+ * PATCH /api/admin/orders/:id/ready
+ */
+export const markOrderReady = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await findOrderByIdOrOrderId(id);
+
+    if (!order) {
+      return errorResponse(res, 404, "Order not found");
+    }
+
+    if (order.status !== "preparing") {
+      return errorResponse(
+        res,
+        400,
+        `Order cannot be marked as ready. Current status: ${order.status}`,
+      );
+    }
+
+    const now = new Date();
+    order.status = "ready";
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+    order.tracking.ready = {
+      status: true,
+      timestamp: now,
+    };
+    await order.save();
+
+    const populatedOrder = await Order.findById(order._id)
+      .populate("userId", "name phone")
+      .populate("deliveryPartnerId", "name phone")
+      .lean();
+
+    let restaurantForNotification = null;
+    try {
+      const Restaurant = (await import("../../restaurant/models/Restaurant.js")).default;
+      if (mongoose.Types.ObjectId.isValid(order.restaurantId)) {
+        restaurantForNotification = await Restaurant.findById(order.restaurantId)
+          .select("name location address phone")
+          .lean();
+      }
+      if (!restaurantForNotification) {
+        restaurantForNotification = await Restaurant.findOne({
+          $or: [{ restaurantId: order.restaurantId }, { _id: order.restaurantId }],
+        })
+          .select("name location address phone")
+          .lean();
+      }
+    } catch (restaurantLookupError) {
+      console.error("Admin mark ready: restaurant lookup failed:", restaurantLookupError);
+    }
+
+    const notificationOrder = populatedOrder
+      ? {
+          ...populatedOrder,
+          restaurantId: restaurantForNotification || {
+            _id: order.restaurantId,
+            name: order.restaurantName,
+          },
+        }
+      : order;
+
+    try {
+      await notifyRestaurantOrderUpdate(order._id.toString(), "ready");
+    } catch (notifError) {
+      console.error("Admin mark ready: restaurant notification failed:", notifError);
+    }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), "ready");
+    } catch (notifError) {
+      console.error("Admin mark ready: user notification failed:", notifError);
+    }
+
+    if (notificationOrder?.deliveryPartnerId) {
+      try {
+        const { notifyDeliveryBoyOrderReady } = await import("../../order/services/deliveryNotificationService.js");
+        const deliveryPartnerId = notificationOrder.deliveryPartnerId._id || notificationOrder.deliveryPartnerId;
+        await notifyDeliveryBoyOrderReady(notificationOrder, deliveryPartnerId);
+      } catch (deliveryNotifError) {
+        console.error("Admin mark ready: delivery notification failed:", deliveryNotifError);
+      }
+    }
+
+    return successResponse(res, 200, "Order marked as ready", {
+      order: {
+        id: order._id.toString(),
+        orderId: order.orderId,
+        status: order.status,
+      },
+    });
+  } catch (error) {
+    console.error("Error marking order ready by admin:", error);
+    return errorResponse(res, 500, "Failed to mark order as ready");
+  }
+});
+
+/**
  * Get orders searching for deliveryman (ready orders without delivery partner)
  * GET /api/admin/orders/searching-deliveryman
  * Query params: page, limit, search

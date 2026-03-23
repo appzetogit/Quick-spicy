@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
+import { userAPI, restaurantAPI, deliveryAPI, adminAPI, authAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import fallbackNotificationSound from "@/assets/audio/alert.mp3";
 
@@ -253,7 +253,7 @@ async function triggerWebViewNativeNotification(payload = {}) {
 async function playPushSound(payload = {}) {
   try {
     pushDebugLog(PUSH_DEBUG_PREFIX, "playPushSound called", {
-      notificationKey: getNotificationKey(payload),
+      notificationKey: getNotificationKeys(payload)[0] || "",
       pushSoundUnlocked,
       notificationPermission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
       payload,
@@ -461,6 +461,10 @@ function setSavedToken(moduleName, token) {
 }
 
 async function saveTokenByModule(moduleName, token) {
+  if (moduleName === "admin") {
+    await authAPI.saveFcmToken(token, "web");
+    return;
+  }
   if (moduleName === "restaurant") {
     await restaurantAPI.saveFcmToken(token, "web");
     return;
@@ -615,10 +619,6 @@ export function initPushNotificationClient() {
     soundEnabled: isPushSoundEnabled(),
   });
 
-  if (moduleName === "admin") {
-    return;
-  }
-
   if (isPushSoundEnabled()) {
     pushSoundUnlocked = true;
   }
@@ -648,7 +648,6 @@ async function attachForegroundListener(firebaseAppInstance) {
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
   const moduleName = normalizeModuleFromPath(pathname);
-  if (moduleName === "admin") return;
 
   const isRestaurantSetupRoute =
     moduleName === "restaurant" &&

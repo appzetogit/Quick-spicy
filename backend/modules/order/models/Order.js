@@ -325,6 +325,10 @@ const orderSchema = new mongoose.Schema({
     deliveryPartnerId: String,
     assignedAt: Date
   },
+  excludedDeliveryPartners: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Delivery'
+  }],
   deliveryVerification: {
     dropOtp: {
       code: {

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, useRef, useMemo, useCallback } from "react"
+import { useEffect, useState, useRef, useMemo, useCallback } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import Lenis from "lenis"
@@ -485,6 +485,7 @@ export default function DeliveryHome() {
   const lastBikePositionRef = useRef(null) // Track last bike position for deviation detection
   const acceptedOrderIdsRef = useRef(new Set()) // Track accepted order IDs to prevent duplicate notifications
   const dismissedOrderIdsRef = useRef(new Set()) // Track manually dismissed order IDs to avoid re-showing on reopen
+  const lastIncomingPopupRef = useRef({ orderId: "", shownAt: 0 }) // Deduplicate popup rendering across socket + polling
   // Live tracking polyline refs
   const liveTrackingPolylineRef = useRef(null) // Google Maps Polyline instance for live tracking
   const liveTrackingPolylineShadowRef = useRef(null) // Shadow/outline polyline for better visibility (Zomato/Rapido style)
@@ -504,6 +505,7 @@ export default function DeliveryHome() {
   const isInitializingMapRef = useRef(false)
 
   const DISMISSED_ORDER_IDS_KEY = "delivery_dismissed_order_ids"
+  const INCOMING_ORDER_POPUP_DEDUPE_MS = 12000
 
   useEffect(() => {
     try {
@@ -674,6 +676,7 @@ export default function DeliveryHome() {
   const newOrderAcceptButtonSwipeStartX = useRef(0)
   const newOrderAcceptButtonSwipeStartY = useRef(0)
   const newOrderAcceptButtonIsSwiping = useRef(false)
+  const newOrderAcceptLastProgressRef = useRef(0)
   const [newOrderAcceptButtonProgress, setNewOrderAcceptButtonProgress] = useState(0)
   const [newOrderIsAnimatingToComplete, setNewOrderIsAnimatingToComplete] = useState(false)
   const [isAcceptingNewOrder, setIsAcceptingNewOrder] = useState(false)
@@ -704,6 +707,7 @@ export default function DeliveryHome() {
   const reachedPickupSwipeStartX = useRef(0)
   const reachedPickupSwipeStartY = useRef(0)
   const reachedPickupIsSwiping = useRef(false)
+  const reachedPickupLastProgressRef = useRef(0)
   const [isDraggingReachedPickup, setIsDraggingReachedPickup] = useState(false)
   const [reachedDropButtonProgress, setReachedDropButtonProgress] = useState(0)
   const [reachedDropIsAnimatingToComplete, setReachedDropIsAnimatingToComplete] = useState(false)
@@ -720,6 +724,7 @@ export default function DeliveryHome() {
   const orderIdConfirmSwipeStartX = useRef(0)
   const orderIdConfirmSwipeStartY = useRef(0)
   const orderIdConfirmIsSwiping = useRef(false)
+  const orderIdConfirmLastProgressRef = useRef(0)
   // Bill image upload state
   const [billImageUrl, setBillImageUrl] = useState(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
@@ -787,6 +792,89 @@ export default function DeliveryHome() {
   const acceptButtonIsSwiping = useRef(false)
   const autoShowTimerRef = useRef(null)
   const lastPersistedActiveOrderRef = useRef("")
+
+  const hasInProgressOrder = useCallback((excludeOrderId = "") => {
+    const normalizedExclude = String(excludeOrderId || "").trim()
+    const isTerminalStatus = (value) => ["delivered", "cancelled", "completed"].includes(String(value || "").toLowerCase().trim())
+
+    const selectedOrderId = String(selectedRestaurant?.id || selectedRestaurant?.orderId || "").trim()
+    const selectedOrderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status
+    const selectedDeliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase
+    const selectedIsActive =
+      Boolean(selectedOrderId) &&
+      !isTerminalStatus(selectedOrderStatus) &&
+      !isTerminalStatus(selectedDeliveryPhase)
+
+    if (selectedIsActive && (!normalizedExclude || normalizedExclude !== selectedOrderId)) {
+      return true
+    }
+
+    const activeStateOrderId = String(activeOrder?.id || activeOrder?.orderId || activeOrder?._id || "").trim()
+    const activeStateOrderStatus = activeOrder?.orderStatus || activeOrder?.status
+    const activeStateOrderPhase = activeOrder?.deliveryPhase || activeOrder?.deliveryState?.currentPhase
+    const activeStateIsActive =
+      Boolean(activeStateOrderId) &&
+      !isTerminalStatus(activeStateOrderStatus) &&
+      !isTerminalStatus(activeStateOrderPhase)
+
+    if (activeStateIsActive && (!normalizedExclude || normalizedExclude !== activeStateOrderId)) {
+      return true
+    }
+
+    try {
+      const raw = localStorage.getItem(DELIVERY_ACTIVE_ORDER_KEY)
+      if (!raw) return false
+      const parsed = JSON.parse(raw)
+      const persistedId = String(parsed?.orderId || parsed?.restaurantInfo?.id || parsed?.restaurantInfo?.orderId || "").trim()
+      const persistedStage = String(parsed?.uiStage || "").toLowerCase().trim()
+      const persistedIsActive = Boolean(persistedId) && !isTerminalStatus(persistedStage)
+
+      if (persistedIsActive && (!normalizedExclude || normalizedExclude !== persistedId)) {
+        return true
+      }
+    } catch {
+      // Ignore malformed active-order storage
+    }
+
+    return false
+  }, [selectedRestaurant, activeOrder, DELIVERY_ACTIVE_ORDER_KEY])
+
+  const shouldSkipIncomingPopup = useCallback((orderId, source = "unknown") => {
+    const normalizedOrderId = String(orderId || "").trim()
+    const now = Date.now()
+    const last = lastIncomingPopupRef.current || { orderId: "", shownAt: 0 }
+
+    if (
+      normalizedOrderId &&
+      last.orderId === normalizedOrderId &&
+      now - Number(last.shownAt || 0) < INCOMING_ORDER_POPUP_DEDUPE_MS
+    ) {
+      debugLog("⏭️ Skipping duplicate incoming order popup:", {
+        source,
+        orderId: normalizedOrderId
+      })
+      return true
+    }
+
+    if (hasInProgressOrder(normalizedOrderId)) {
+      debugLog("⏭️ Ignoring incoming order because rider already has active order in progress:", {
+        source,
+        incomingOrderId: normalizedOrderId
+      })
+      return true
+    }
+
+    return false
+  }, [INCOMING_ORDER_POPUP_DEDUPE_MS, hasInProgressOrder])
+
+  const markIncomingPopupShown = useCallback((orderId) => {
+    const normalizedOrderId = String(orderId || "").trim()
+    if (!normalizedOrderId) return
+    lastIncomingPopupRef.current = {
+      orderId: normalizedOrderId,
+      shownAt: Date.now()
+    }
+  }, [])
 
   useEffect(() => {
     if (!showDeliveryOtpModal) return
@@ -1661,40 +1749,71 @@ export default function DeliveryHome() {
     setShowRejectPopup(true)
   }
 
-  const persistDismissedOrderId = (orderId) => {
-    if (!orderId) return
-    const normalizedOrderId = String(orderId)
-    dismissedOrderIdsRef.current.add(normalizedOrderId)
+  const persistDismissedOrderIds = (orderIds) => {
+    if (!Array.isArray(orderIds)) return
+    const normalizedIds = orderIds
+      .map((id) => (id === null || id === undefined ? "" : String(id)).trim())
+      .filter(Boolean)
+
+    if (normalizedIds.length === 0) return
+
+    for (const id of normalizedIds) {
+      dismissedOrderIdsRef.current.add(id)
+    }
+
     try {
       localStorage.setItem(
         DISMISSED_ORDER_IDS_KEY,
-        JSON.stringify(Array.from(dismissedOrderIdsRef.current).slice(-200))
+        JSON.stringify(Array.from(dismissedOrderIdsRef.current).slice(-200)),
       )
     } catch {
       // Ignore localStorage failures
     }
   }
 
-  const handleRejectConfirm = () => {    
-    const rejectedOrderId =
-      selectedRestaurant?.id ||
-      selectedRestaurant?.orderId ||
-      newOrder?.orderMongoId ||
-      newOrder?.orderId
-    persistDismissedOrderId(rejectedOrderId)
+  const handleRejectConfirm = async () => {    
+    const resolvedOrderIds = Array.from(
+      new Set([
+        // Priority: the backend accepts both `_id` and `orderId`, so we try both variants.
+        selectedRestaurant?.orderId,
+        selectedRestaurant?.id,
+        newOrder?.orderMongoId,
+        newOrder?.mongoId,
+        newOrder?.id,
+        newOrder?._id,
+        newOrder?.orderId,
+      ].filter(Boolean).map((id) => String(id).trim()))
+    )
 
-    if (alertAudioRef.current) {
-      alertAudioRef.current.pause()
-      alertAudioRef.current.currentTime = 0
+    const rejectedOrderId = resolvedOrderIds[0]
+
+    if (!rejectedOrderId) return;
+
+    try {
+      // Send rejection to backend
+      await deliveryAPI.rejectOrder(rejectedOrderId, String(rejectReason || ""))
+
+      // Persist dismissal for *all* known ID variants to prevent re-showing the same order
+      // with a different identifier shape (id vs orderId vs _id).
+      persistDismissedOrderIds(resolvedOrderIds)
+
+      if (alertAudioRef.current) {
+        alertAudioRef.current.pause()
+        alertAudioRef.current.currentTime = 0
+      }
+      setShowRejectPopup(false)
+      setShowNewOrderPopup(false)
+      setIsNewOrderPopupMinimized(false) // Reset minimized state
+      setNewOrderDragY(0) // Reset drag position
+      setRejectReason("")
+      setCountdownSeconds(300)
+      
+      debugLog("Order rejected with reason:", rejectReason, "for order:", rejectedOrderId, "resolvedIds:", resolvedOrderIds)
+      toast.success("Order rejected successfully")
+    } catch (error) {
+      debugError("Failed to reject order:", error)
+      toast.error(error.response?.data?.message || "Failed to reject order")
     }
-    setShowRejectPopup(false)
-    setShowNewOrderPopup(false)
-    setIsNewOrderPopupMinimized(false) // Reset minimized state
-    setNewOrderDragY(0) // Reset drag position
-    setRejectReason("")
-    setCountdownSeconds(300)
-    // Here you would typically send the rejection to your backend
-    debugLog("Order rejected with reason:", rejectReason, "for order:", rejectedOrderId)
   }
 
   const handleRejectCancel = () => {
@@ -2349,6 +2468,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = touch.x
     newOrderAcceptButtonSwipeStartY.current = touch.y
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
     setNewOrderIsAnimatingToComplete(false)
     setNewOrderAcceptButtonProgress(0)
   }
@@ -2373,6 +2493,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      newOrderAcceptLastProgressRef.current = progress
       setNewOrderAcceptButtonProgress(progress)
     }
   }
@@ -2395,9 +2516,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.55 // smoother acceptance
+    const threshold = maxSwipe * 0.5 // keep slider forgiving across devices
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = newOrderAcceptLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       isAcceptingNewOrderRef.current = true
       setIsAcceptingNewOrder(true)
       // Stop audio immediately when user accepts
@@ -3116,6 +3240,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = 0
     newOrderAcceptButtonSwipeStartY.current = 0
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
   }
 
   const handleNewOrderAcceptTouchCancel = () => {
@@ -3123,6 +3248,7 @@ export default function DeliveryHome() {
     newOrderAcceptButtonSwipeStartX.current = 0
     newOrderAcceptButtonSwipeStartY.current = 0
     newOrderAcceptButtonIsSwiping.current = false
+    newOrderAcceptLastProgressRef.current = 0
     setNewOrderAcceptButtonProgress(0)
     setNewOrderIsAnimatingToComplete(false)
   }
@@ -3242,6 +3368,7 @@ export default function DeliveryHome() {
     reachedPickupSwipeStartX.current = touch.x
     reachedPickupSwipeStartY.current = touch.y
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
     setreachedPickupIsAnimatingToComplete(false)
     setreachedPickupButtonProgress(0)
   }
@@ -3265,6 +3392,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      reachedPickupLastProgressRef.current = progress
       setreachedPickupButtonProgress(progress)
     }
   }
@@ -3281,9 +3409,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // smoother and consistent with other flow sliders
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = reachedPickupLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       // Animate to completion
       setreachedPickupIsAnimatingToComplete(true)
       setreachedPickupButtonProgress(1)
@@ -3443,12 +3574,14 @@ export default function DeliveryHome() {
     reachedPickupSwipeStartX.current = 0
     reachedPickupSwipeStartY.current = 0
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
   }
 
   const handlereachedPickupTouchCancel = () => {
     reachedPickupSwipeStartX.current = 0
     reachedPickupSwipeStartY.current = 0
     reachedPickupIsSwiping.current = false
+    reachedPickupLastProgressRef.current = 0
     setreachedPickupButtonProgress(0)
     setreachedPickupIsAnimatingToComplete(false)
   }
@@ -3477,6 +3610,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      reachedPickupLastProgressRef.current = progress
       setreachedPickupButtonProgress(progress)
     }
   }
@@ -3716,6 +3850,7 @@ export default function DeliveryHome() {
     orderIdConfirmSwipeStartX.current = touch.x
     orderIdConfirmSwipeStartY.current = touch.y
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
     setOrderIdConfirmIsAnimatingToComplete(false)
     setOrderIdConfirmButtonProgress(0)
   }
@@ -3739,6 +3874,7 @@ export default function DeliveryHome() {
       const maxSwipe = buttonWidth - circleWidth - (padding * 2)
 
       const progress = Math.min(Math.max(deltaX / maxSwipe, 0), 1)
+      orderIdConfirmLastProgressRef.current = progress
       setOrderIdConfirmButtonProgress(progress)
     }
   }
@@ -3955,9 +4091,12 @@ export default function DeliveryHome() {
     const circleWidth = 56
     const padding = 16
     const maxSwipe = buttonWidth - circleWidth - (padding * 2)
-    const threshold = maxSwipe * 0.7 // 70% of max swipe
+    const threshold = maxSwipe * 0.5 // smoother and consistent with downstream sliders
+    const progressFromDelta = maxSwipe > 0 ? Math.min(Math.max(deltaX / maxSwipe, 0), 1) : 0
+    const lastProgress = orderIdConfirmLastProgressRef.current
+    const shouldConfirm = deltaX > threshold || progressFromDelta >= 0.5 || lastProgress >= 0.5
 
-    if (deltaX > threshold) {
+    if (shouldConfirm) {
       // Animate to completion
       setOrderIdConfirmIsAnimatingToComplete(true)
       setOrderIdConfirmButtonProgress(1)
@@ -4051,9 +4190,18 @@ export default function DeliveryHome() {
         }
 
         try {
-          // Prefer string orderId (ORD-xxx) for URL; backend accepts both _id and orderId
-          const orderIdForApi = selectedRestaurant?.orderId || selectedRestaurant?.id
-          const confirmedOrderIdForApi = selectedRestaurant?.orderId || (orderIdForApi && String(orderIdForApi).startsWith('ORD-') ? orderIdForApi : undefined)
+          // Prefer stable order identifiers and ignore invalid placeholder values.
+          const orderIdCandidates = [
+            selectedRestaurant?.orderId,
+            selectedRestaurant?.id,
+            newOrder?.orderId,
+            newOrder?.orderMongoId
+          ]
+            .map((value) => (value == null ? '' : String(value).trim()))
+            .filter((value) => value && value !== 'undefined' && value !== 'null')
+
+          const orderIdForApi = orderIdCandidates[0]
+          const confirmedOrderIdForApi = orderIdCandidates.find((value) => value.startsWith('ORD-'))
 
           // Call backend API to confirm order ID with bill image
           debugLog('📦 Confirming order ID:', { 
@@ -4250,12 +4398,14 @@ export default function DeliveryHome() {
     orderIdConfirmSwipeStartX.current = 0
     orderIdConfirmSwipeStartY.current = 0
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
   }
 
   const handleOrderIdConfirmTouchCancel = () => {
     orderIdConfirmSwipeStartX.current = 0
     orderIdConfirmSwipeStartY.current = 0
     orderIdConfirmIsSwiping.current = false
+    orderIdConfirmLastProgressRef.current = 0
     setOrderIdConfirmButtonProgress(0)
     setOrderIdConfirmIsAnimatingToComplete(false)
   }
@@ -4351,8 +4501,11 @@ export default function DeliveryHome() {
   }
 
   const verifyDropOtpForCurrentOrder = useCallback(async (orderIdForApi) => {
-    const dropOtpRequired = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.required)
-    const dropOtpVerified = Boolean(selectedRestaurant?.deliveryVerification?.dropOtp?.verified)
+    // Treat drop OTP as required by default unless backend explicitly disables it.
+    // This keeps the rider flow safe and avoids silently skipping OTP when metadata is missing.
+    const dropOtpConfig = selectedRestaurant?.deliveryVerification?.dropOtp
+    const dropOtpRequired = dropOtpConfig?.required !== false
+    const dropOtpVerified = Boolean(dropOtpConfig?.verified)
 
     if (!dropOtpRequired || dropOtpVerified) {
       return true
@@ -4869,6 +5022,29 @@ export default function DeliveryHome() {
         newOrder.id ||
         newOrder._id ||
         newOrder.orderId;
+      const normalizedOrderId = String(orderId || "").trim()
+
+      if (shouldSkipIncomingPopup(normalizedOrderId, "socket")) {
+        clearNewOrder()
+        return
+      }
+
+      const activeOrderId = String(selectedRestaurant?.id || selectedRestaurant?.orderId || '').trim()
+      const activeOrderStatus = String(selectedRestaurant?.orderStatus || selectedRestaurant?.status || '').toLowerCase().trim()
+      const activeDeliveryPhase = String(selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '').toLowerCase().trim()
+      const hasInProgressActiveOrder =
+        Boolean(activeOrderId) &&
+        !['delivered', 'cancelled'].includes(activeOrderStatus) &&
+        !['completed', 'delivered'].includes(activeDeliveryPhase)
+
+      if (hasInProgressActiveOrder && String(orderId || '').trim() && String(orderId).trim() !== activeOrderId) {
+        debugLog('⏭️ Ignoring new order notification because rider already has an active order:', {
+          incomingOrderId: orderId,
+          activeOrderId
+        })
+        clearNewOrder()
+        return
+      }
 
       if (dismissedOrderIdsRef.current.has(String(orderId))) {
         debugLog('⏭️ Ignoring dismissed order notification:', orderId);
@@ -4889,9 +5065,20 @@ export default function DeliveryHome() {
         if (activeOrderData) {
           const activeOrder = JSON.parse(activeOrderData);
           const activeOrderId = activeOrder.orderId || activeOrder.restaurantInfo?.id || activeOrder.restaurantInfo?.orderId;
+          const activeStage = String(activeOrder?.uiStage || '').toLowerCase().trim()
+          const isActiveStage = activeStage && !['completed', 'delivered', 'cancelled'].includes(activeStage)
           if (activeOrderId === orderId) {
             debugLog('⚠️ Order already accepted (found in localStorage), ignoring notification:', orderId);
             acceptedOrderIdsRef.current.add(orderId);
+            clearNewOrder();
+            return;
+          }
+          if (isActiveStage && activeOrderId && activeOrderId !== orderId) {
+            debugLog('⏭️ Ignoring new order because localStorage has active in-progress order:', {
+              incomingOrderId: orderId,
+              activeOrderId,
+              activeStage
+            })
             clearNewOrder();
             return;
           }
@@ -4995,10 +5182,11 @@ export default function DeliveryHome() {
       }
       
       setSelectedRestaurant(restaurantData)
+      markIncomingPopupShown(normalizedOrderId || restaurantData.orderId || restaurantData.id)
       setShowNewOrderPopup(true)
       setCountdownSeconds(300) // Reset countdown to 5 minutes
     }
-  }, [newOrder, calculateTimeAway, riderLocation, clearNewOrder])
+  }, [newOrder, selectedRestaurant, calculateTimeAway, riderLocation, clearNewOrder, shouldSkipIncomingPopup, markIncomingPopupShown])
 
   // Recalculate distance when rider location becomes available
   useEffect(() => {
@@ -5278,6 +5466,11 @@ export default function DeliveryHome() {
       return
     }
 
+    if (showNewOrderPopup || hasInProgressOrder()) {
+      debugLog('⏭️ Skipping order fetch because rider already has an active/pending popup order')
+      return
+    }
+
     try {
       debugLog('📦 Fetching assigned orders from API...')
       const response = await deliveryAPI.getOrders({
@@ -5350,6 +5543,9 @@ export default function DeliveryHome() {
           }
           if (dismissedOrderIdsRef.current.has(String(orderId))) {
             debugLog('⏭️ Order already dismissed, skipping:', orderId)
+            return
+          }
+          if (shouldSkipIncomingPopup(orderId, "poll")) {
             return
           }
 
@@ -5435,6 +5631,7 @@ export default function DeliveryHome() {
           }
           
           setSelectedRestaurant(restaurantData)
+          markIncomingPopupShown(orderId || restaurantData.orderId || restaurantData.id)
           setShowNewOrderPopup(true)
           setCountdownSeconds(300) // Reset countdown to 5 minutes
           debugLog('✅ Showing pending order notification:', orderId)
@@ -5448,7 +5645,7 @@ export default function DeliveryHome() {
       debugError('❌ Error fetching assigned orders:', error)
       // Don't show error to user, just log it
     }
-  }, [isOnline, calculateTimeAway])
+  }, [isOnline, showNewOrderPopup, hasInProgressOrder, calculateTimeAway, shouldSkipIncomingPopup, markIncomingPopupShown])
 
   // Fetch assigned orders when delivery person goes online
   useEffect(() => {
