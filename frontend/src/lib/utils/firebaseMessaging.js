@@ -462,7 +462,6 @@ function setSavedToken(moduleName, token) {
 
 async function saveTokenByModule(moduleName, token) {
   if (moduleName === "admin") {
-    await authAPI.saveFcmToken(token, "web");
     return;
   }
   if (moduleName === "restaurant") {
@@ -648,6 +647,12 @@ async function attachForegroundListener(firebaseAppInstance) {
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
   const moduleName = normalizeModuleFromPath(pathname);
+
+  // Admin web push registration is intentionally disabled until a dedicated
+  // admin FCM registration endpoint exists on the backend.
+  if (moduleName === "admin") {
+    return;
+  }
 
   const isRestaurantSetupRoute =
     moduleName === "restaurant" &&

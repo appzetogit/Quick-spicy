@@ -173,7 +173,7 @@ export default function AdminSignup() {
       // If registration successful, store tokens and redirect
       if (data.accessToken && data.admin) {
         // Store admin token and data
-        setAuthData("admin", data.accessToken, data.admin)
+        setAuthData("admin", data.accessToken, data.admin, data.refreshToken)
 
         // Navigate to admin dashboard
         navigate("/admin", { replace: true })

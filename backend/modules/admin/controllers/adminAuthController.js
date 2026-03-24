@@ -82,6 +82,7 @@ export const adminSignup = asyncHandler(async (req, res) => {
 
     return successResponse(res, 201, 'Admin registered successfully', {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       admin: adminResponse
     });
   } catch (error) {
@@ -151,6 +152,7 @@ export const adminLogin = asyncHandler(async (req, res) => {
 
   return successResponse(res, 200, 'Login successful', {
     accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
     admin: adminResponse
   });
 });
@@ -232,6 +234,7 @@ export const adminSignupWithOTP = asyncHandler(async (req, res) => {
 
     return successResponse(res, 201, 'Admin registered successfully', {
       accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       admin: adminResponse
     });
   } catch (error) {
@@ -242,6 +245,46 @@ export const adminSignupWithOTP = asyncHandler(async (req, res) => {
     }
     
     return errorResponse(res, 500, 'Failed to register admin');
+  }
+});
+
+/**
+ * Refresh Admin Access Token
+ * POST /api/admin/auth/refresh-token
+ */
+export const refreshAdminToken = asyncHandler(async (req, res) => {
+  // Prefer explicit module refresh token header to avoid cross-module cookie collisions.
+  const refreshToken = req.headers['x-refresh-token'] || req.cookies?.refreshToken;
+
+  if (!refreshToken) {
+    return errorResponse(res, 401, 'Refresh token not found');
+  }
+
+  try {
+    const decoded = jwtService.verifyRefreshToken(refreshToken);
+
+    if (decoded.role !== 'admin') {
+      return errorResponse(res, 401, 'Invalid token for admin');
+    }
+
+    const admin = await Admin.findById(decoded.userId).select('-password');
+
+    if (!admin || !admin.isActive) {
+      return errorResponse(res, 401, 'Admin not found or inactive');
+    }
+
+    const accessToken = jwtService.generateAccessToken({
+      userId: admin._id.toString(),
+      role: 'admin',
+      email: admin.email,
+      adminRole: admin.role
+    });
+
+    return successResponse(res, 200, 'Token refreshed successfully', {
+      accessToken
+    });
+  } catch (error) {
+    return errorResponse(res, 401, error.message || 'Invalid refresh token');
   }
 });
 

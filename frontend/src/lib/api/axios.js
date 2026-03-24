@@ -281,8 +281,18 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // If response contains new access token, store it for the current module
-      if (response.data?.accessToken) {
+    // Only process token updates for explicit auth endpoints.
+    const responseUrl = String(response.config?.url || "");
+    const isAuthTokenEndpoint =
+      responseUrl.includes("/auth/login") ||
+      responseUrl.includes("/auth/verify-otp") ||
+      responseUrl.includes("/auth/firebase-google-login") ||
+      responseUrl.includes("/auth/refresh-token") ||
+      responseUrl.includes("/auth/signup") ||
+      responseUrl.includes("/auth/register");
+
+    // If auth endpoint response contains new access token, store it for the current module
+      if (isAuthTokenEndpoint && response.data?.accessToken) {
         const currentPath = window.location.pathname;
         let tokenKey = "accessToken"; // fallback
         let refreshTokenKey = "refreshToken";
@@ -334,6 +344,20 @@ apiClient.interceptors.response.use(
   },
   async (error) => {
     const originalRequest = error.config;
+    const requestUrl = String(originalRequest?.url || "");
+    const isAuthRequest =
+      requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/signup") ||
+      requestUrl.includes("/auth/register") ||
+      requestUrl.includes("/auth/send-otp") ||
+      requestUrl.includes("/auth/verify-otp") ||
+      requestUrl.includes("/auth/reset-password") ||
+      requestUrl.includes("/auth/forgot-password");
+
+    // Never run refresh/logout flow for auth endpoints themselves.
+    if (isAuthRequest) {
+      return Promise.reject(error);
+    }
 
     // If error is 401 and we haven't tried to refresh yet
     if (error.response?.status === 401 && !originalRequest._retry) {
@@ -463,10 +487,14 @@ apiClient.interceptors.response.use(
         const isLandingPageManagement =
           currentPath.includes("/hero-banner-management") ||
           currentPath.includes("/landing-page");
+        const isAdminAuthPage =
+          currentPath === "/admin/login" ||
+          currentPath === "/admin/signup" ||
+          currentPath === "/admin/forgot-password";
 
         // For landing page management, don't auto-logout on 401 - let component handle it
         // Only auto-logout for other pages after token refresh fails
-        if (!isOnboardingPage && !isLandingPageManagement) {
+        if (!isOnboardingPage && !isLandingPageManagement && !isAdminAuthPage) {
           if (currentPath.startsWith("/admin")) {
             localStorage.removeItem("admin_accessToken");
             localStorage.removeItem("admin_authenticated");
