@@ -579,8 +579,12 @@ export async function assignOrderToDeliveryBoy(order, restaurantLat, restaurantL
 export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason = '') {
   try {
     const normalizedOrderId = String(orderId || '').trim();
+    const deliveryPartnerIdStr = String(deliveryPartnerId || '').trim();
     if (!normalizedOrderId) {
       throw new Error('Order ID is required');
+    }
+    if (!deliveryPartnerIdStr) {
+      throw new Error('Delivery partner ID is required');
     }
 
     const orderQuery = mongoose.Types.ObjectId.isValid(normalizedOrderId)
@@ -592,12 +596,35 @@ export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason =
       throw new Error('Order not found');
     }
 
-    // Check if the order is actually assigned to this partner
-    if (!order.deliveryPartnerId || order.deliveryPartnerId.toString() !== deliveryPartnerId.toString()) {
-      throw new Error('Order is not assigned to this delivery partner');
+    const currentlyAssignedPartnerId = order?.deliveryPartnerId?.toString?.() || '';
+
+    // New-order popups are often broadcast while order is still unassigned.
+    // "Deny" should skip this order for the current rider instead of failing.
+    if (!currentlyAssignedPartnerId || currentlyAssignedPartnerId !== deliveryPartnerIdStr) {
+      if (!order.excludedDeliveryPartners) {
+        order.excludedDeliveryPartners = [];
+      }
+      const alreadyExcluded = order.excludedDeliveryPartners.some(
+        (id) => id?.toString?.() === deliveryPartnerIdStr
+      );
+      if (!alreadyExcluded) {
+        order.excludedDeliveryPartners.push(deliveryPartnerId);
+        await order.save();
+      }
+
+      const state = currentlyAssignedPartnerId ? 'assigned_to_other_partner' : 'unassigned';
+      console.log(
+        `ℹ️ Delivery partner ${deliveryPartnerIdStr} denied order ${order.orderId} in ${state} state; excluded from future offers for this order.`
+      );
+      return {
+        success: true,
+        message: 'Order skipped for this delivery partner',
+        state,
+        excluded: true
+      };
     }
 
-    console.log(`🚲 Delivery partner ${deliveryPartnerId} rejected order ${order.orderId}. Reason: ${reason}`);
+    console.log(`🚲 Delivery partner ${deliveryPartnerIdStr} rejected order ${order.orderId}. Reason: ${reason}`);
 
     // 1. Clear current assignment
     order.deliveryPartnerId = null;
@@ -606,8 +633,7 @@ export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason =
     if (!order.excludedDeliveryPartners) {
       order.excludedDeliveryPartners = [];
     }
-    const partnerIdStr = deliveryPartnerId.toString();
-    if (!order.excludedDeliveryPartners.some(id => id.toString() === partnerIdStr)) {
+    if (!order.excludedDeliveryPartners.some(id => id.toString() === deliveryPartnerIdStr)) {
       order.excludedDeliveryPartners.push(deliveryPartnerId);
     }
 
@@ -682,7 +708,7 @@ export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason =
           );
           const candidateIds = nearbyPartners
             .map((partner) => partner?.deliveryPartnerId)
-            .filter((id) => id && String(id) !== String(deliveryPartnerId));
+            .filter((id) => id && String(id) !== deliveryPartnerIdStr);
 
           if (candidateIds.length > 0) {
             const { notifyMultipleDeliveryBoys } = await import('./deliveryNotificationService.js');

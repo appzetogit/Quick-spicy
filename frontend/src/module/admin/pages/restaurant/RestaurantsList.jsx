@@ -45,8 +45,11 @@ export default function RestaurantsList() {
     offer: "",
     openingTime: "",
     closingTime: "",
+    zoneId: "",
     isActive: true,
   })
+  const [availableZones, setAvailableZones] = useState([])
+  const [loadingZones, setLoadingZones] = useState(false)
   const [profileImageFile, setProfileImageFile] = useState(null)
   const [profileImagePreview, setProfileImagePreview] = useState("")
   const [isEditingLocation, setIsEditingLocation] = useState(false)
@@ -190,6 +193,24 @@ export default function RestaurantsList() {
     }, 60000)
 
     return () => window.clearInterval(intervalId)
+  }, [])
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        setLoadingZones(true)
+        const response = await adminAPI.getZones({ limit: 1000 })
+        const zones = response?.data?.data?.zones || response?.data?.zones || []
+        setAvailableZones(Array.isArray(zones) ? zones : [])
+      } catch (err) {
+        debugError("Error fetching zones:", err)
+        setAvailableZones([])
+      } finally {
+        setLoadingZones(false)
+      }
+    }
+
+    fetchZones()
   }, [])
   const [filters, setFilters] = useState({
     all: "All",
@@ -682,6 +703,37 @@ export default function RestaurantsList() {
     return restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant || null
   }
 
+  const getRestaurantZoneValue = (restaurant) => {
+    if (!restaurant) return ""
+
+    const explicitZoneId = restaurant.zoneId || restaurant.restaurantZoneId || restaurant.location?.zoneId
+    if (explicitZoneId) return String(explicitZoneId)
+
+    const candidateZoneName = String(
+      restaurant.zone ||
+      restaurant.location?.area ||
+      restaurant.location?.city ||
+      restaurant.originalData?.zone ||
+      ""
+    ).trim().toLowerCase()
+
+    if (!candidateZoneName) return ""
+
+    const matchedZone = availableZones.find((zone) => {
+      const zoneNames = [
+        zone?.name,
+        zone?.zoneName,
+        zone?.serviceLocation,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).trim().toLowerCase())
+
+      return zoneNames.includes(candidateZoneName)
+    })
+
+    return matchedZone?._id || ""
+  }
+
   const buildDetailsFormFromRestaurant = (restaurant) => {
     if (!restaurant) {
       return {
@@ -697,6 +749,7 @@ export default function RestaurantsList() {
         offer: "",
         openingTime: "",
         closingTime: "",
+        zoneId: "",
         isActive: true,
       }
     }
@@ -718,6 +771,7 @@ export default function RestaurantsList() {
       offer: restaurant.offer || "",
       openingTime: restaurant.deliveryTimings?.openingTime || "",
       closingTime: restaurant.deliveryTimings?.closingTime || "",
+      zoneId: getRestaurantZoneValue(restaurant),
       isActive: restaurant.isActive !== false,
     }
   }
@@ -730,6 +784,49 @@ export default function RestaurantsList() {
     setIsEditingLocation(false)
     setIsEditingDetails(true)
   }
+
+  useEffect(() => {
+    if (!isEditingDetails || availableZones.length === 0) return
+
+    setDetailsForm((prev) => {
+      if (prev.zoneId) return prev
+      const source = restaurantDetails || selectedRestaurant?.originalData || selectedRestaurant || null
+      const explicitZoneId = source?.zoneId || source?.restaurantZoneId || source?.location?.zoneId
+      let resolvedZoneId = explicitZoneId ? String(explicitZoneId) : ""
+
+      if (!resolvedZoneId) {
+        const candidateZoneName = String(
+          source?.zone ||
+          source?.location?.area ||
+          source?.location?.city ||
+          source?.originalData?.zone ||
+          ""
+        ).trim().toLowerCase()
+
+        if (candidateZoneName) {
+          const matchedZone = availableZones.find((zone) => {
+            const zoneNames = [
+              zone?.name,
+              zone?.zoneName,
+              zone?.serviceLocation,
+            ]
+              .filter(Boolean)
+              .map((value) => String(value).trim().toLowerCase())
+
+            return zoneNames.includes(candidateZoneName)
+          })
+
+          resolvedZoneId = matchedZone?._id || ""
+        }
+      }
+
+      if (!resolvedZoneId) return prev
+      return {
+        ...prev,
+        zoneId: resolvedZoneId,
+      }
+    })
+  }, [isEditingDetails, availableZones, restaurantDetails, selectedRestaurant])
 
   const handleCancelEditDetails = () => {
     setIsEditingDetails(false)
@@ -1384,6 +1481,26 @@ export default function RestaurantsList() {
                         <option value="both">Both</option>
                         <option value="pure-veg">Pure-Veg</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-1">Available Zones</label>
+                      <select
+                        value={detailsForm.zoneId}
+                        onChange={(e) => setDetailsForm((prev) => ({ ...prev, zoneId: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
+                      >
+                        <option value="">
+                          {loadingZones ? "Loading zones..." : "Select a zone"}
+                        </option>
+                        {availableZones.map((zone) => (
+                          <option key={zone._id} value={zone._id}>
+                            {zone.name || zone.zoneName || zone.serviceLocation || "Unnamed Zone"}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Available zones are shown here for reference while editing this restaurant.
+                      </p>
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">Opening Time</label>
