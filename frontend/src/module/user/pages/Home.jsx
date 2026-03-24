@@ -3449,7 +3449,7 @@ export default function Home() {
                 transition={{ delay: 0.4 }}
                 className="text-gray-800 font-normal text-base text-center relative z-10"
               >
-                Explore veg dishes from all restaurants
+                Explore veg dishes from pure veg restaurants only
               </motion.p>
             </div>
           </motion.div>
@@ -3535,7 +3535,7 @@ export default function Home() {
                 transition={{ delay: 0.4 }}
                 className="text-xl font-normal text-gray-800 dark:text-gray-200 text-center relative z-10 mt-56 w-full"
               >
-                Explore veg dishes from all restaurants
+                Explore veg dishes from pure veg restaurants only
               </motion.p>
             </div>
           </motion.div>

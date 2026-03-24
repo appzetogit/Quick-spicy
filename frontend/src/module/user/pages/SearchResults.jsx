@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react"
 import { useSearchParams, Link, useNavigate, useLocation as useRouterLocation } from "react-router-dom"
-import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Mic, Loader2, Grid2x2 } from "lucide-react"
+import { ArrowLeft, Star, Clock, Search, SlidersHorizontal, ChevronDown, Bookmark, BadgePercent, Loader2, Grid2x2 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -839,7 +839,6 @@ export default function SearchResults() {
                 className="pl-10 pr-10 h-11 rounded-lg border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-[#1a1a1a] focus:bg-white dark:focus:bg-[#2a2a2a] focus:border-gray-500 dark:focus:border-gray-600 text-sm dark:text-white placeholder:text-gray-600 dark:placeholder:text-gray-400"
               />
               <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2">
-                <Mic className="h-4 w-4 text-gray-500 dark:text-gray-400" />
               </button>
             </form>
           </div>

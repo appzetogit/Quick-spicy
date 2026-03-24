@@ -113,24 +113,28 @@ export default function Cart() {
   const [tipAmount, setTipAmount] = useState(0)
 
   const handleShare = async () => {
+    const sharePayload = {
+      title: `My Cart at ${restaurantName || 'Quick Spicy'}`,
+      text: `Check out what I'm ordering from ${restaurantName || 'Quick Spicy'}!`,
+      url: window.location.href,
+    }
+
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: `My Cart at ${restaurantName || 'Quick Spicy'}`,
-          text: `Check out what I'm ordering from ${restaurantName || 'Quick Spicy'}!`,
-          url: window.location.href,
-        });
-      } else {
-        await navigator.clipboard.writeText(window.location.href);
-        toast.success("Link copied to clipboard!");
+        if (!navigator.canShare || navigator.canShare(sharePayload)) {
+          await navigator.share(sharePayload)
+          return
+        }
       }
+
+      toast.error("Share is not supported on this device")
     } catch (error) {
       if (error.name !== 'AbortError') {
-        debugError('Error sharing:', error);
+        debugError('Error sharing:', error)
         toast.error("Failed to share link");
       }
     }
-  };
+  }
   const [sendCutlery, setSendCutlery] = useState(true)
   const [isPlacingOrder, setIsPlacingOrder] = useState(false)
   const [showBillDetails, setShowBillDetails] = useState(false)
