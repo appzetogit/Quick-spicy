@@ -2,13 +2,6 @@
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Area,
   AreaChart,
   Bar,
@@ -28,12 +21,82 @@ import { adminAPI } from "@/lib/api"
 const debugLog = () => {}
 const debugError = () => {}
 
+const dashboardRoutePreloaders = {
+  "/admin/transaction-report": () => import("../pages/reports/TransactionReport"),
+  "/admin/tax-report": () => import("../pages/reports/TaxReport"),
+  "/admin/restaurants": () => import("../pages/restaurant/RestaurantsList"),
+  "/admin/delivery-partners": () => import("../pages/delivery-partners/DeliverymanList"),
+  "/admin/orders/all": () => import("../pages/orders/OrdersPage"),
+  "/admin/orders/pending": () => import("../pages/orders/OrdersPage"),
+  "/admin/orders/delivered": () => import("../pages/orders/OrdersPage"),
+}
+
 const INR_SYMBOL = "\u20B9"
 
 function formatCurrency(amount, options = {}) {
   const numericAmount = Number(amount || 0)
   const formattedAmount = numericAmount.toLocaleString("en-IN", options)
   return `${INR_SYMBOL}${formattedAmount}`
+}
+
+function getRestaurantZoneLabel(restaurant) {
+  return String(
+    restaurant?.location?.area ||
+    restaurant?.location?.city ||
+    restaurant?.zone ||
+    restaurant?.nameOfZone ||
+    ""
+  ).trim()
+}
+
+function getOrderCreatedAt(order) {
+  return order?.createdAt || order?.updatedAt || order?.orderDate || order?.placedAt || null
+}
+
+function matchesSelectedPeriod(dateValue, selectedPeriod) {
+  if (!dateValue || selectedPeriod === "overall") return true
+
+  const date = new Date(dateValue)
+  if (Number.isNaN(date.getTime())) return false
+
+  const now = new Date()
+  if (selectedPeriod === "today") return date.toDateString() === now.toDateString()
+  if (selectedPeriod === "week") {
+    const startOfWeek = new Date(now)
+    startOfWeek.setDate(now.getDate() - now.getDay())
+    startOfWeek.setHours(0, 0, 0, 0)
+    return date >= startOfWeek && date <= now
+  }
+  if (selectedPeriod === "month") {
+    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear()
+  }
+  if (selectedPeriod === "year") {
+    return date.getFullYear() === now.getFullYear()
+  }
+  return true
+}
+
+function getOrderZoneLabel(order, restaurantZoneMap) {
+  const directZone = String(
+    order?.zone ||
+    order?.restaurantZone ||
+    order?.deliveryZone ||
+    order?.restaurantId?.location?.area ||
+    order?.restaurantId?.location?.city ||
+    ""
+  ).trim()
+
+  if (directZone) return directZone
+
+  const restaurantId = String(
+    order?.restaurantId?._id ||
+    order?.restaurantId?.id ||
+    order?.restaurantId ||
+    order?.restaurant ||
+    ""
+  ).trim()
+
+  return restaurantZoneMap.get(restaurantId) || ""
 }
 
 
@@ -47,16 +110,39 @@ export default function AdminHome() {
   const [configuredDeliveryFee, setConfiguredDeliveryFee] = useState(0)
   const [configuredGstRate, setConfiguredGstRate] = useState(0)
   const [pendingRestaurantRequestsCount, setPendingRestaurantRequestsCount] = useState(0)
+  const [deliveryPartnersCount, setDeliveryPartnersCount] = useState(0)
+  const [zoneOptions, setZoneOptions] = useState([])
+  const [allOrders, setAllOrders] = useState([])
+  const [allRestaurants, setAllRestaurants] = useState([])
+  const [addonsCountByRestaurant, setAddonsCountByRestaurant] = useState({})
+  const [addonsLoaded, setAddonsLoaded] = useState(false)
+  const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
 
   // Fetch dashboard stats on mount
   useEffect(() => {
     const fetchDashboardStats = async () => {
       try {
         setIsLoading(true)
-        const [dashboardResponse, feeSettingsResponse, joinRequestsResponse] = await Promise.all([
+        const [
+          dashboardResponse,
+          feeSettingsResponse,
+          joinRequestsResponse,
+          deliveryPartnersResponse,
+          zonesResponse,
+          ordersResponse,
+          pendingOrdersResponse,
+          activeRestaurantsResponse,
+          inactiveRestaurantsResponse,
+        ] = await Promise.all([
           adminAPI.getDashboardStats(),
           adminAPI.getFeeSettings(),
           adminAPI.getRestaurantJoinRequests({ status: "pending", page: 1, limit: 200 }),
+          adminAPI.getDeliveryPartners({ page: 1, limit: 1000 }),
+          adminAPI.getZones({ limit: 1000 }),
+          adminAPI.getOrders({ page: 1, limit: 1000 }),
+          adminAPI.getOrders({ page: 1, limit: 1000, status: "pending" }),
+          adminAPI.getRestaurants({ limit: 1000 }),
+          adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
         ])
 
         const response = dashboardResponse
@@ -87,6 +173,65 @@ export default function AdminHome() {
             []
           setPendingRestaurantRequestsCount(Array.isArray(requests) ? requests.length : 0)
         }
+
+        if (deliveryPartnersResponse.data?.success && deliveryPartnersResponse.data?.data) {
+          const deliveryPartners = deliveryPartnersResponse.data.data.deliveryPartners || []
+          setDeliveryPartnersCount(Array.isArray(deliveryPartners) ? deliveryPartners.length : 0)
+        }
+
+        if (zonesResponse.data?.success && zonesResponse.data?.data?.zones) {
+          setZoneOptions(zonesResponse.data.data.zones || [])
+        }
+
+        if (ordersResponse.data?.success && ordersResponse.data?.data?.orders) {
+          setAllOrders(ordersResponse.data.data.orders || [])
+        }
+
+        if (pendingOrdersResponse.data?.success && pendingOrdersResponse.data?.data?.orders) {
+          setPendingOrdersCount((pendingOrdersResponse.data.data.orders || []).length)
+        }
+
+        const activeRestaurants =
+          activeRestaurantsResponse?.data?.data?.restaurants ||
+          activeRestaurantsResponse?.data?.restaurants ||
+          []
+        const inactiveRestaurants =
+          inactiveRestaurantsResponse?.data?.data?.restaurants ||
+          inactiveRestaurantsResponse?.data?.restaurants ||
+          []
+
+        const restaurantMap = new Map()
+        ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
+          const restaurantId = String(restaurant?._id || restaurant?.id || "")
+          if (!restaurantId || restaurantMap.has(restaurantId)) return
+          restaurantMap.set(restaurantId, restaurant)
+        })
+
+        const mergedRestaurants = Array.from(restaurantMap.values())
+        setAllRestaurants(mergedRestaurants)
+
+        const addonEntries = await Promise.all(
+          activeRestaurants.map(async (restaurant) => {
+            const restaurantId = String(restaurant?._id || restaurant?.id || "")
+            if (!restaurantId) return [restaurantId, 0]
+
+            try {
+              const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
+              const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu || {}
+              const eligibleAddons = Array.isArray(menu.addons)
+                ? menu.addons.filter((addon) => {
+                  const status = String(addon?.approvalStatus || "").toLowerCase()
+                  return status === "approved" || status === "rejected"
+                })
+                : []
+              return [restaurantId, eligibleAddons.length]
+            } catch {
+              return [restaurantId, 0]
+            }
+          }),
+        )
+        setAddonsCountByRestaurant(Object.fromEntries(addonEntries))
+        setAddonsLoaded(true)
       } catch (error) {
         debugError('❌ Error fetching dashboard stats:', error)
       } finally {
@@ -106,8 +251,61 @@ export default function AdminHome() {
     }
   }, [dashboardData, selectedZone, selectedPeriod])
 
+  const restaurantZoneMap = new Map(
+    allRestaurants.map((restaurant) => [
+      String(restaurant?._id || restaurant?.id || ""),
+      getRestaurantZoneLabel(restaurant),
+    ]),
+  )
+
+  const filteredRestaurants = allRestaurants.filter((restaurant) => {
+    if (selectedZone === "all") return true
+    return getRestaurantZoneLabel(restaurant) === selectedZone
+  })
+
+  const filteredOrders = allOrders.filter((order) => {
+    const matchesZone =
+      selectedZone === "all" ||
+      getOrderZoneLabel(order, restaurantZoneMap) === selectedZone
+    const matchesPeriod = matchesSelectedPeriod(getOrderCreatedAt(order), selectedPeriod)
+    return matchesZone && matchesPeriod
+  })
+
+  const filteredPendingOrders = filteredOrders.filter(
+    (order) => String(order?.status || "").toLowerCase() === "pending",
+  ).length
+
+  const filteredCompletedOrders = filteredOrders.filter(
+    (order) => String(order?.status || "").toLowerCase() === "delivered",
+  ).length
+
+  const filteredAddonsCount = filteredRestaurants.reduce((total, restaurant) => {
+    const restaurantId = String(restaurant?._id || restaurant?.id || "")
+    return total + Number(addonsCountByRestaurant[restaurantId] || 0)
+  }, 0)
+
+  const hasActiveFilters = selectedZone !== "all" || selectedPeriod !== "overall"
+
   // Get order stats from real data
   const getOrderStats = () => {
+    if (hasActiveFilters) {
+      const counts = filteredOrders.reduce((acc, order) => {
+        const status = String(order?.status || "").toLowerCase()
+        if (status === "delivered") acc.delivered += 1
+        else if (status === "cancelled" || status === "canceled") acc.cancelled += 1
+        else if (status === "refunded") acc.refunded += 1
+        else if (status === "pending") acc.pending += 1
+        return acc
+      }, { delivered: 0, cancelled: 0, refunded: 0, pending: 0 })
+
+      return [
+        { label: "Delivered", value: counts.delivered, color: "#0ea5e9" },
+        { label: "Cancelled", value: counts.cancelled, color: "#ef4444" },
+        { label: "Refunded", value: counts.refunded, color: "#f59e0b" },
+        { label: "Pending", value: counts.pending, color: "#10b981" },
+      ]
+    }
+
     if (!dashboardData?.orders?.byStatus) {
       return [
         { label: "Delivered", value: 0, color: "#0ea5e9" },
@@ -149,7 +347,7 @@ export default function AdminHome() {
   // Calculate totals from real data
   const revenueTotal = dashboardData?.revenue?.total || 0
   const commissionTotal = dashboardData?.commission?.total || 0
-  const ordersTotal = dashboardData?.orders?.total || 0
+  const ordersTotal = hasActiveFilters ? filteredOrders.length : (dashboardData?.orders?.total || filteredOrders.length || 0)
   const platformFeeTotal = dashboardData?.platformFee?.total || 0
   const platformFeeCardValue = configuredPlatformFee > 0 ? configuredPlatformFee : platformFeeTotal
   const deliveryFeeTotal = dashboardData?.deliveryFee?.total || 0
@@ -163,22 +361,26 @@ export default function AdminHome() {
     (configuredGstRate > 0 ? 0 : gstCardValue)
 
   // Additional stats
-  const totalRestaurants = dashboardData?.restaurants?.total || 0
+  const totalRestaurants =
+    selectedZone === "all"
+      ? (dashboardData?.restaurants?.total || filteredRestaurants.length || 0)
+      : filteredRestaurants.length
   const pendingRestaurantRequests = pendingRestaurantRequestsCount || dashboardData?.restaurants?.pendingRequests || 0
-  const totalDeliveryBoys = dashboardData?.deliveryBoys?.total || 0
+  const totalDeliveryBoys = deliveryPartnersCount || dashboardData?.deliveryBoys?.total || 0
   const pendingDeliveryBoyRequests = dashboardData?.deliveryBoys?.pendingRequests || 0
   const totalFoods = dashboardData?.foods?.total || 0
-  const totalAddons = dashboardData?.addons?.total || 0
+  const totalAddons =
+    selectedZone === "all"
+      ? (addonsLoaded ? filteredAddonsCount : (dashboardData?.addons?.total || 0))
+      : filteredAddonsCount
   const totalCustomers = dashboardData?.customers?.total || 0
   const byStatus = dashboardData?.orders?.byStatus || {}
-  const pendingOrders = (
-    Number(byStatus.pending || 0) +
-    Number(byStatus.confirmed || 0) +
-    Number(byStatus.preparing || 0) +
-    Number(byStatus.ready || 0) +
-    Number(byStatus.out_for_delivery || 0)
-  ) || dashboardData?.orderStats?.pending || 0
-  const completedOrders = dashboardData?.orderStats?.completed || 0
+  const pendingOrders = hasActiveFilters
+    ? filteredPendingOrders
+    : (pendingOrdersCount || Number(byStatus.pending || 0) || dashboardData?.orderStats?.pending || 0)
+  const completedOrders = hasActiveFilters
+    ? filteredCompletedOrders
+    : (dashboardData?.orderStats?.completed || filteredCompletedOrders || 0)
 
   const pieData = orderStats.map((item) => ({
     name: item.label,
@@ -214,32 +416,6 @@ export default function AdminHome() {
               <h1 className="text-2xl font-semibold text-neutral-900">Operations Command</h1>
             </div>
 
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Select value={selectedZone} onValueChange={setSelectedZone}>
-              <SelectTrigger className="min-w-[160px] border-neutral-300 bg-white text-neutral-900">
-                <SelectValue placeholder="All zones" />
-              </SelectTrigger>
-              <SelectContent className="border-neutral-200 bg-white text-neutral-900">
-                <SelectItem value="all">All zones</SelectItem>
-                <SelectItem value="zone1">Zone 1</SelectItem>
-                <SelectItem value="zone2">Zone 2</SelectItem>
-                <SelectItem value="zone3">Zone 3</SelectItem>
-                <SelectItem value="zone4">Zone 4</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-              <SelectTrigger className="min-w-[140px] border-neutral-300 bg-white text-neutral-900">
-                <SelectValue placeholder="Overall" />
-              </SelectTrigger>
-              <SelectContent className="border-neutral-200 bg-white text-neutral-900">
-                <SelectItem value="overall">Overall</SelectItem>
-                <SelectItem value="today">Today</SelectItem>
-                <SelectItem value="week">This week</SelectItem>
-                <SelectItem value="month">This month</SelectItem>
-                <SelectItem value="year">This year</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -507,10 +683,17 @@ export default function AdminHome() {
 
 function MetricCard({ title, value, helper, icon, accent, path }) {
   const navigate = useNavigate()
+  const handlePrefetch = () => {
+    if (!path) return
+    dashboardRoutePreloaders[path]?.()
+  }
   return (
     <Card
       className="overflow-hidden border-neutral-200 bg-white p-0 cursor-pointer transition-all duration-300 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]"
       onClick={() => path && navigate(path)}
+      onMouseEnter={handlePrefetch}
+      onFocus={handlePrefetch}
+      onPointerDown={handlePrefetch}
     >
       <CardContent className="relative flex flex-col gap-2 px-4 pb-4 pt-4">
         <div className={`absolute inset-0 ${accent} `} />

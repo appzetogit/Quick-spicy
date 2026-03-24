@@ -7,6 +7,7 @@ const debugError = (...args) => {}
 
 
 export default function Coupons() {
+  const today = new Date().toISOString().split("T")[0]
   const [searchQuery, setSearchQuery] = useState("")
   const [offers, setOffers] = useState([])
   const [restaurants, setRestaurants] = useState([])
@@ -105,6 +106,11 @@ export default function Coupons() {
 
     if (formData.restaurantScope === "selected" && !formData.restaurantId) {
       setSubmitError("Please select a restaurant")
+      return
+    }
+
+    if (formData.endDate && formData.endDate < today) {
+      setSubmitError("Expiry date cannot be in the past")
       return
     }
 
@@ -259,6 +265,7 @@ export default function Coupons() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Expiry Date (Optional)</label>
                   <input
                     type="date"
+                    min={today}
                     value={formData.endDate}
                     onChange={(e) => handleFormChange("endDate", e.target.value)}
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

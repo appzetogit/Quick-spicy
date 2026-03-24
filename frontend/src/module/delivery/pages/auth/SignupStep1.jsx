@@ -38,8 +38,14 @@ export default function SignupStep1() {
   const sanitizeLocationValue = (value) =>
     value.replace(/[^A-Za-z\s.-]/g, "").replace(/\s{2,}/g, " ")
 
+  const sanitizeNameValue = (value) =>
+    value.replace(/[^A-Za-z\s'-]/g, "").replace(/\s{2,}/g, " ")
+
   const isValidLocationValue = (value) =>
     /^[A-Za-z][A-Za-z\s.-]*[A-Za-z.]$/.test(value.trim())
+
+  const isValidNameValue = (value) =>
+    /^[A-Za-z][A-Za-z\s'-]*[A-Za-z]$/.test(value.trim())
 
   const isValidEmailValue = (value) => {
     const normalizedValue = value.trim()
@@ -84,6 +90,10 @@ export default function SignupStep1() {
       updatedValue = sanitizeLocationValue(value)
     }
 
+    if (name === "name") {
+      updatedValue = sanitizeNameValue(value)
+    }
+
     if (name === "email") {
       updatedValue = sanitizeEmailValue(value)
     }
@@ -106,6 +116,8 @@ export default function SignupStep1() {
 
     if (!formData.name.trim()) {
       newErrors.name = "Name is required"
+    } else if (!isValidNameValue(formData.name)) {
+      newErrors.name = "Full name can contain letters only"
     }
 
     if (formData.email && !isValidEmailValue(formData.email)) {

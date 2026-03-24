@@ -243,14 +243,14 @@ export default function DeliveryBoyWallet() {
       </div>
 
       <Dialog open={adjustmentDialogOpen} onOpenChange={setAdjustmentDialogOpen}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
+        <DialogContent className="max-w-md bg-white p-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-3">
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <WalletCards className="w-5 h-5 text-slate-600" />
               {adjustmentType === "deduction" ? "Add deduction" : "Add bonus"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 px-6 pb-6">
             <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm text-slate-700">
               {selectedWallet?.name || "Delivery partner"} · {selectedWallet?.deliveryIdString || "N/A"}
             </div>
@@ -276,7 +276,7 @@ export default function DeliveryBoyWallet() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-6">
             <button
               type="button"
               onClick={() => setAdjustmentDialogOpen(false)}

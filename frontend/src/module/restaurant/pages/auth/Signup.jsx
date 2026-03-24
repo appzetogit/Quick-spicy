@@ -16,7 +16,7 @@ import {
 import loginBg from "@/assets/loginbanner.png"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 
-const RESTAURANT_NAME_REGEX = /^[A-Za-z0-9][A-Za-z0-9 '&.,-]{1,49}$/
+const RESTAURANT_NAME_REGEX = /^[A-Za-z][A-Za-z '&.,-]{1,49}$/
 
 // Common country codes
 const countryCodes = [
@@ -86,7 +86,12 @@ export default function RestaurantSignup() {
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    const nextValue = name === "phone" ? value.replace(/\D/g, "").slice(0, 15) : value
+    const nextValue =
+      name === "phone"
+        ? value.replace(/\D/g, "").slice(0, 15)
+        : name === "name"
+          ? value.replace(/[^A-Za-z '&.,-]/g, "").replace(/\s{2,}/g, " ")
+          : value
     setFormData({
       ...formData,
       [name]: nextValue,

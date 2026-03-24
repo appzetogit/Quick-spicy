@@ -7,6 +7,8 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { exportReportsToExcel } from "../../components/reports/reportsExportUtils"
 const debugLog = () => {}
 const debugWarn = () => {}
 const debugError = () => {}
@@ -356,7 +358,11 @@ export default function Category() {
 
   const handleExportPDF = () => {
     try {
-      const doc = new jsPDF()
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "mm",
+        format: "a4",
+      })
       
       // Add title
       doc.setFontSize(18)
@@ -396,25 +402,30 @@ export default function Category() {
           fontSize: 10
         },
         bodyStyles: {
-          fontSize: 9,
+          fontSize: 8,
           textColor: [30, 30, 30]
         },
         alternateRowStyles: {
           fillColor: [245, 247, 250]
         },
         styles: {
-          cellPadding: 5,
+          cellPadding: 3,
           lineColor: [200, 200, 200],
-          lineWidth: 0.5
+          lineWidth: 0.5,
+          overflow: "linebreak",
+          cellWidth: "wrap",
+          fontSize: 8,
         },
         columnStyles: {
-          0: { cellWidth: 20 }, // SL
-          1: { cellWidth: 70 }, // Category Name
-          2: { cellWidth: 40 }, // Source
-          3: { cellWidth: 25 }, // Restaurants
-          4: { cellWidth: 25 }, // Show On Home
-          5: { cellWidth: 70 }  // Restaurant Names
-        }
+          0: { cellWidth: 14 }, // SL
+          1: { cellWidth: 58 }, // Category Name
+          2: { cellWidth: 34 }, // Source
+          3: { cellWidth: 22 }, // Restaurants
+          4: { cellWidth: 24 }, // Show On Home
+          5: { cellWidth: 122 }  // Restaurant Names
+        },
+        margin: { top: 35, right: 10, bottom: 18, left: 10 },
+        tableWidth: "auto",
       })
       
       // Add footer
@@ -439,6 +450,34 @@ export default function Category() {
     } catch (error) {
       debugError('Error exporting PDF:', error)
       toast.error('Failed to export PDF')
+    }
+  }
+
+  const handleExportExcel = () => {
+    try {
+      const headers = [
+        { key: "sl", label: "SL" },
+        { key: "name", label: "Category Name" },
+        { key: "type", label: "Source" },
+        { key: "restaurantCount", label: "Restaurants" },
+        { key: "showOnHome", label: "Show On Home" },
+        { key: "restaurantsLabel", label: "Restaurant Names" },
+      ]
+
+      const rows = filteredCategories.map((category, index) => ({
+        sl: category.sl || index + 1,
+        name: category.name || "N/A",
+        type: category.type || "N/A",
+        restaurantCount: category.restaurantCount || 0,
+        showOnHome: category.showOnHome !== false ? "Yes" : "No",
+        restaurantsLabel: category.restaurantsLabel || "N/A",
+      }))
+
+      exportReportsToExcel(rows, headers, "categories")
+      toast.success("Excel exported successfully!")
+    } catch (error) {
+      debugError("Error exporting Excel:", error)
+      toast.error("Failed to export Excel")
     }
   }
 
@@ -613,15 +652,30 @@ export default function Category() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             </div>
 
-            <button 
-              onClick={handleExportPDF}
-              disabled={filteredCategories.length === 0}
-              className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Download className="w-4 h-4" />
-              <span>Export</span>
-              <ChevronDown className="w-3 h-3" />
-            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  disabled={filteredCategories.length === 0}
+                  className="px-4 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 bg-white border border-slate-200 rounded-lg shadow-lg">
+                <DropdownMenuLabel>Export Format</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export as PDF
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleExportExcel} className="cursor-pointer">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export as Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <div className="px-4 py-2.5 text-sm font-medium rounded-lg bg-slate-100 text-slate-600">
               Showing categories from all restaurant menus

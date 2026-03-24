@@ -119,20 +119,32 @@ export default function RestaurantsList() {
         setLoading(true)
         setError(null)
 
-        let response
+        let activeResponse
+        let inactiveResponse
         try {
-          // Try admin API first
-          response = await adminAPI.getRestaurants()
+          ;[activeResponse, inactiveResponse] = await Promise.all([
+            adminAPI.getRestaurants({ limit: 1000 }),
+            adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
+          ])
         } catch {
-          // Fallback to regular restaurant API if admin endpoint doesn't exist
           debugLog("Admin restaurants endpoint not available, using fallback")
-          response = await restaurantAPI.getRestaurants()
+          activeResponse = await restaurantAPI.getRestaurants()
+          inactiveResponse = { data: { success: true, data: { restaurants: [] } } }
         }
 
-        if (response.data && response.data.success && response.data.data) {
-          // Map backend data to frontend format
-          const restaurantsData = response.data.data.restaurants || response.data.data || []
+        const activeRestaurantsData = activeResponse?.data?.data?.restaurants || activeResponse?.data?.data || activeResponse?.data?.restaurants || []
+        const inactiveRestaurantsData = inactiveResponse?.data?.data?.restaurants || inactiveResponse?.data?.data || inactiveResponse?.data?.restaurants || []
 
+        const restaurantMap = new Map()
+        ;[...activeRestaurantsData, ...inactiveRestaurantsData].forEach((restaurant) => {
+          const restaurantId = String(restaurant?._id || restaurant?.id || "")
+          if (!restaurantId || restaurantMap.has(restaurantId)) return
+          restaurantMap.set(restaurantId, restaurant)
+        })
+
+        const restaurantsData = Array.from(restaurantMap.values())
+
+        if (Array.isArray(restaurantsData)) {
           const mappedRestaurants = restaurantsData.map((restaurant, index) => ({
             id: restaurant._id || restaurant.id || index + 1,
             _id: restaurant._id, // Preserve original _id for API calls
@@ -144,7 +156,12 @@ export default function RestaurantsList() {
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),
             foodPreference: restaurant.foodPreference || restaurant.onboarding?.step2?.foodPreference || "both",
-            status: restaurant.isActive !== false, // Default to true if not set
+            status:
+              restaurant.isActive === false ||
+              String(restaurant.status || "").trim().toLowerCase() === "inactive" ||
+              String(restaurant.status || "").trim().toLowerCase() === "disabled"
+                ? false
+                : true,
             rating: restaurant.ratings?.average || restaurant.rating || 0,
             logo: restaurant.profileImage?.url || restaurant.logo || "https://via.placeholder.com/40",
             // Preserve original restaurant data for details modal
@@ -1008,6 +1025,15 @@ export default function RestaurantsList() {
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               </div>
+              <select
+                value={filters.all}
+                onChange={(e) => setFilters((prev) => ({ ...prev, all: e.target.value }))}
+                className="px-4 py-2.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="All">All Status</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </select>
               <select
                 value={filters.foodPreference}
                 onChange={(e) => setFilters((prev) => ({ ...prev, foodPreference: e.target.value }))}

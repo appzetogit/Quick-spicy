@@ -502,12 +502,12 @@ Order again from this restaurant in the ${companyName} app.`
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-10">
-        <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-10 transition-colors">
+        <div className="bg-white dark:bg-[#111111] p-4 flex items-center shadow-sm sticky top-0 z-10 border-b border-transparent dark:border-gray-800">
           <Link to="/user">
-            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+            <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
           </Link>
-          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
         </div>
         <div className="flex items-center justify-center py-20">
           <Loader2 className="w-8 h-8 text-[#EB590E] animate-spin" />
@@ -518,15 +518,15 @@ Order again from this restaurant in the ${companyName} app.`
 
   if (orders.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 pb-10">
-        <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-10 transition-colors">
+        <div className="bg-white dark:bg-[#111111] p-4 flex items-center shadow-sm sticky top-0 z-10 border-b border-transparent dark:border-gray-800">
           <Link to="/user">
-            <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+            <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
           </Link>
-          <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
         </div>
         <div className="px-4 py-8 text-center">
-          <p className="text-gray-600">You haven't placed any orders yet</p>
+          <p className="text-gray-600 dark:text-gray-300">You haven't placed any orders yet</p>
           <Link to="/user">
             <button className="mt-4 text-[#EB590E] font-medium">Start Ordering</button>
           </Link>
@@ -536,25 +536,25 @@ Order again from this restaurant in the ${companyName} app.`
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-10 font-sans">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-10 font-sans transition-colors">
       {/* Header */}
-      <div className="bg-white p-4 flex items-center shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-[#111111] p-4 flex items-center shadow-sm sticky top-0 z-10 border-b border-transparent dark:border-gray-800">
         <Link to="/user">
-          <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
+          <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
         </Link>
-        <h1 className="ml-4 text-xl font-semibold text-gray-800">Your Orders</h1>
+        <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Your Orders</h1>
       </div>
 
       {/* Search Bar */}
-      <div className="p-4 bg-white mt-1">
-        <div className="flex items-center bg-white border border-gray-200 rounded-lg px-3 py-2 shadow-sm">
+      <div className="p-4 bg-white dark:bg-[#111111] mt-1">
+        <div className="flex items-center bg-white dark:bg-[#171717] border border-gray-200 dark:border-gray-800 rounded-lg px-3 py-2 shadow-sm">
           <Search className="w-5 h-5 text-[#EB590E]" />
           <input
             type="text"
             placeholder="Search by restaurant or dish"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 ml-3 outline-none text-gray-600 placeholder-gray-400"
+            className="flex-1 ml-3 outline-none bg-transparent text-gray-600 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500"
           />
         </div>
       </div>
@@ -562,8 +562,8 @@ Order again from this restaurant in the ${companyName} app.`
       {/* Orders List */}
       <div className="px-4 py-2 space-y-4">
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <p className="text-gray-600">No orders found matching your search</p>
+          <div className="bg-white dark:bg-[#141414] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 text-center">
+            <p className="text-gray-600 dark:text-gray-300">No orders found matching your search</p>
           </div>
         ) : (
           filteredOrders.map((order) => {
@@ -593,12 +593,12 @@ Order again from this restaurant in the ${companyName} app.`
             const location = order.restaurantLocation || `${order.address?.city || ''}, ${order.address?.state || ''}`.trim() || 'Location not available'
 
             return (
-              <div key={order.id} className="relative bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div key={order.id} className="relative bg-white dark:bg-[#141414] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
                 {/* Card Header: Restaurant Info */}
                 <div className="flex items-start justify-between p-4 pb-2">
                   <div className="flex gap-3">
                     {/* Restaurant Image */}
-                    <div className="w-14 h-14 rounded-lg bg-gray-200 overflow-hidden flex-shrink-0">
+                    <div className="w-14 h-14 rounded-lg bg-gray-200 dark:bg-gray-800 overflow-hidden flex-shrink-0">
                       <img
                         src={restaurantImage}
                         alt={order.restaurant}
@@ -610,10 +610,10 @@ Order again from this restaurant in the ${companyName} app.`
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-gray-800 text-lg leading-tight">{order.restaurant}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{location}</p>
+                      <h3 className="font-semibold text-gray-800 dark:text-white text-lg leading-tight">{order.restaurant}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{location}</p>
                       {order.deliveryPartnerName && (
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                           <span className="font-medium">Delivery:</span> {order.deliveryPartnerName}
                           {order.deliveryPartnerPhone && ` • ${order.deliveryPartnerPhone}`}
                         </p>
@@ -631,26 +631,26 @@ Order again from this restaurant in the ${companyName} app.`
                   <button
                     type="button"
                     onClick={() => toggleMenuForOrder(order.id)}
-                    className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
-                    <MoreVertical className="w-5 h-5 text-gray-400" />
+                    <MoreVertical className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                   </button>
                 </div>
 
                 {/* Three-dots dropdown menu */}
                 {activeMenuOrderId === order.id && (
-                  <div className="absolute right-3 top-10 z-20 w-40 rounded-xl bg-white shadow-lg border border-gray-100 py-1 text-xs">
+                  <div className="absolute right-3 top-10 z-20 w-40 rounded-xl bg-white dark:bg-[#1a1a1a] shadow-lg border border-gray-100 dark:border-gray-800 py-1 text-xs">
                     <button
                       type="button"
                       onClick={() => handleShareRestaurant(order)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-800"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-100"
                     >
                       Share restaurant
                     </button>
                     <button
                       type="button"
                       onClick={() => handleViewOrderDetails(order)}
-                      className="w-full text-left px-3 py-2 hover:bg-gray-50 text-gray-800"
+                      className="w-full text-left px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-100"
                     >
                       Order details
                     </button>
@@ -658,7 +658,7 @@ Order again from this restaurant in the ${companyName} app.`
                 )}
 
                 {/* Separator */}
-                <div className="border-t border-dashed border-gray-200 mx-4 my-1"></div>
+                <div className="border-t border-dashed border-gray-200 dark:border-gray-800 mx-4 my-1"></div>
 
                 {/* Items List */}
                 <div className="px-4 py-2 space-y-2">
@@ -675,7 +675,7 @@ Order again from this restaurant in the ${companyName} app.`
                         <div key={item._id || item.id || item.itemId || idx} className="flex items-start gap-3">
                           {/* Item Image */}
                           {itemImage && (
-                            <div className="w-12 h-12 rounded-lg bg-gray-100 overflow-hidden flex-shrink-0">
+                            <div className="w-12 h-12 rounded-lg bg-gray-100 dark:bg-gray-800 overflow-hidden flex-shrink-0">
                               <img
                                 src={itemImage}
                                 alt={itemName}
@@ -694,17 +694,17 @@ Order again from this restaurant in the ${companyName} app.`
                                 <div className={`w-full h-full rounded-full ${isVeg ? 'bg-green-600' : 'bg-red-600'}`}></div>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <span className="text-sm text-gray-800 font-medium block">
+                                <span className="text-sm text-gray-800 dark:text-gray-100 font-medium block">
                                   {itemQuantity} x {itemName}
                                 </span>
                                 {item.description && (
-                                  <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{item.description}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">{item.description}</p>
                                 )}
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <span className="text-sm font-semibold text-gray-800">₹{itemTotal.toFixed(2)}</span>
+                                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">₹{itemTotal.toFixed(2)}</span>
                                 {itemQuantity > 1 && (
-                                  <p className="text-xs text-gray-500">₹{itemPrice.toFixed(2)} each</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">₹{itemPrice.toFixed(2)} each</p>
                                 )}
                               </div>
                             </div>
@@ -713,29 +713,29 @@ Order again from this restaurant in the ${companyName} app.`
                       )
                     })
                   ) : (
-                    <p className="text-sm text-gray-500">No items found</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No items found</p>
                   )}
                 </div>
 
                 {/* Order Summary */}
-                <div className="px-4 py-3 bg-gray-50 rounded-lg mx-4 mb-2">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-[#101010] rounded-lg mx-4 mb-2">
                   <div className="space-y-1.5">
                     {order.subtotal > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Subtotal</span>
-                        <span className="text-gray-800 font-medium">₹{order.subtotal.toFixed(2)}</span>
+                        <span className="text-gray-600 dark:text-gray-400">Subtotal</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.subtotal.toFixed(2)}</span>
                       </div>
                     )}
                     {order.deliveryFee > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Delivery Fee</span>
-                        <span className="text-gray-800 font-medium">₹{order.deliveryFee.toFixed(2)}</span>
+                        <span className="text-gray-600 dark:text-gray-400">Delivery Fee</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.deliveryFee.toFixed(2)}</span>
                       </div>
                     )}
                     {order.tax > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Tax</span>
-                        <span className="text-gray-800 font-medium">₹{order.tax.toFixed(2)}</span>
+                        <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.tax.toFixed(2)}</span>
                       </div>
                     )}
                     {order.pricing?.discount > 0 && (
@@ -746,14 +746,14 @@ Order again from this restaurant in the ${companyName} app.`
                     )}
                     {order.pricing?.couponCode && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600">Coupon Applied</span>
-                        <span className="text-gray-800 font-medium">{order.pricing.couponCode}</span>
+                        <span className="text-gray-600 dark:text-gray-400">Coupon Applied</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">{order.pricing.couponCode}</span>
                       </div>
                     )}
-                    <div className="border-t border-gray-200 pt-1.5 mt-1.5">
+                    <div className="border-t border-gray-200 dark:border-gray-800 pt-1.5 mt-1.5">
                       <div className="flex justify-between">
-                        <span className="text-sm font-semibold text-gray-800">Total</span>
-                        <span className="text-base font-bold text-gray-900">₹{order.total.toFixed(2)}</span>
+                        <span className="text-sm font-semibold text-gray-800 dark:text-white">Total</span>
+                        <span className="text-base font-bold text-gray-900 dark:text-white">₹{order.total.toFixed(2)}</span>
                       </div>
                     </div>
                   </div>
@@ -762,12 +762,12 @@ Order again from this restaurant in the ${companyName} app.`
                 {/* Date and Payment Info */}
                 <div className="px-4 py-2 flex items-center justify-between">
                   <div className="flex-1">
-                    <p className="text-xs text-gray-400">Order placed on {formatDate(order.createdAt)}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">Order placed on {formatDate(order.createdAt)}</p>
                     {order.deliveredAt && (
-                      <p className="text-xs text-gray-400 mt-0.5">Delivered on {formatDate(order.deliveredAt)}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Delivered on {formatDate(order.deliveredAt)}</p>
                     )}
                     {order.payment && (
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                         Payment: <span className="font-medium capitalize">
                           {order.payment.method === 'cash' || order.payment.method === 'cod' ? 'Cash on Delivery' :
                             order.payment.method === 'wallet' ? 'Wallet' :
@@ -809,7 +809,7 @@ Order again from this restaurant in the ${companyName} app.`
                 </div>
 
                 {/* Separator */}
-                <div className="border-t border-gray-100 mx-4"></div>
+                <div className="border-t border-gray-100 dark:border-gray-800 mx-4"></div>
 
                 {/* Card Footer: Actions */}
                 <div className="px-4 py-3 flex items-center justify-between">
@@ -822,7 +822,7 @@ Order again from this restaurant in the ${companyName} app.`
                         </div>
                         <span className="text-xs font-semibold text-red-500">Restaurant Cancelled</span>
                       </div>
-                      <p className="text-xs text-gray-600 ml-7">Refund will be processed in 24-48 hours</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 ml-7">Refund will be processed in 24-48 hours</p>
                     </div>
                   ) : paymentFailed ? (
                     <div className="flex items-center gap-2">
@@ -834,7 +834,7 @@ Order again from this restaurant in the ${companyName} app.`
                   ) : isDelivered && order.rating ? (
                     <div>
                       <div className="flex items-center gap-1">
-                        <span className="text-sm text-gray-800">You rated</span>
+                        <span className="text-sm text-gray-800 dark:text-gray-100">You rated</span>
                         <div className="flex bg-yellow-400 text-white px-1 rounded text-[10px] items-center gap-0.5 h-4">
                           {order.rating}<Star className="w-2 h-2 fill-current" />
                         </div>
@@ -849,7 +849,7 @@ Order again from this restaurant in the ${companyName} app.`
                     </div>
                   ) : isDelivered ? (
                     <div>
-                      <p className="text-xs text-gray-500">Order delivered</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Order delivered</p>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
@@ -869,7 +869,7 @@ Order again from this restaurant in the ${companyName} app.`
                     </div>
                   ) : (
                     <div>
-                      <p className="text-xs text-gray-500">{order.status === 'preparing' ? 'Preparing' : order.status === 'outForDelivery' ? 'Out for delivery' : order.status === 'confirmed' ? 'Order confirmed' : ''}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{order.status === 'preparing' ? 'Preparing' : order.status === 'outForDelivery' ? 'Out for delivery' : order.status === 'confirmed' ? 'Order confirmed' : ''}</p>
                       {/* Countdown Timer */}
                       {countdowns[order.id] && countdowns[order.id] > 0 && (
                         <div className="flex items-center gap-1 mt-1 text-xs text-[#EB590E] font-medium">
@@ -899,13 +899,13 @@ Order again from this restaurant in the ${companyName} app.`
 
       {/* Footer Branding */}
       <div className="flex justify-center mt-8 mb-4">
-        <h1 className="text-4xl font-black text-gray-200 tracking-tighter italic">appzeto</h1>
+        <h1 className="text-4xl font-black text-gray-200 dark:text-gray-800 tracking-tighter italic">appzeto</h1>
       </div>
 
       {/* Rating & Feedback Modal */}
       {ratingModal.open && ratingModal.order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-3xl bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          <div className="w-full max-w-md rounded-3xl bg-white dark:bg-[#141414] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 border border-transparent dark:border-gray-800">
             {/* Header with gradient */}
             <div className="bg-gradient-to-r from-[#EB590E] to-[#D94F0C] px-6 py-5">
               <div className="flex items-center justify-between mb-2">
@@ -927,7 +927,7 @@ Order again from this restaurant in the ${companyName} app.`
             <div className="px-6 py-6">
               {/* Restaurant rating (1–5) */}
               <div className="mb-6">
-                <p className="text-sm font-semibold text-gray-900 mb-4 text-center">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4 text-center">
                   How was the restaurant and food?
                 </p>
                 <div className="flex items-center justify-center gap-2 mb-3">
@@ -952,14 +952,14 @@ Order again from this restaurant in the ${companyName} app.`
                 </div>
                 <div className="flex items-center justify-between mt-2 px-2">
                   <span className="text-xs text-red-500 font-medium">Poor</span>
-                  <span className="text-xs text-gray-400">Average</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Average</span>
                   <span className="text-xs text-green-600 font-medium">Excellent</span>
                 </div>
               </div>
 
               {/* Delivery rating (1–5) */}
               <div className="mb-6">
-                <p className="text-sm font-semibold text-gray-900 mb-4 text-center">
+                <p className="text-sm font-semibold text-gray-900 dark:text-white mb-4 text-center">
                   How was the delivery experience?
                 </p>
                 <div className="flex items-center justify-center gap-2 mb-3">
@@ -984,11 +984,11 @@ Order again from this restaurant in the ${companyName} app.`
                 </div>
                 <div className="flex items-center justify-between mt-2 px-2">
                   <span className="text-xs text-red-500 font-medium">Poor</span>
-                  <span className="text-xs text-gray-400">Average</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Average</span>
                   <span className="text-xs text-green-600 font-medium">Excellent</span>
                 </div>
                 {(restaurantRating || deliveryRating) && (
-                  <p className="text-center mt-3 text-sm font-medium text-gray-700">
+                  <p className="text-center mt-3 text-sm font-medium text-gray-700 dark:text-gray-300">
                     {restaurantRating ? `Food: ${restaurantRating}★` : "Food: Not rated"} | {deliveryRating ? `Delivery: ${deliveryRating}★` : "Delivery: Not rated"}
                   </p>
                 )}
@@ -996,17 +996,17 @@ Order again from this restaurant in the ${companyName} app.`
 
               {/* Feedback textarea */}
               <div className="mb-6">
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
+                <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
                   Share your feedback <span className="text-gray-400 font-normal">(Optional)</span>
                 </label>
                 <textarea
                   rows={4}
                   value={feedbackText}
                   onChange={(e) => setFeedbackText(e.target.value)}
-                  className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#EB590E] focus:border-[#EB590E] resize-none transition-all"
+                  className="w-full rounded-xl border-2 border-gray-200 dark:border-gray-800 bg-white dark:bg-[#101010] px-4 py-3 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-[#EB590E] focus:border-[#EB590E] resize-none transition-all"
                   placeholder="What did you like or dislike about this order? Share your experience..."
                 />
-                <p className="text-xs text-gray-400 mt-1">Your feedback helps us improve our service</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Your feedback helps us improve our service</p>
               </div>
 
               {/* Submit Button */}

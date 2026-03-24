@@ -44,6 +44,9 @@ const GST_NUMBER_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const FSSAI_NUMBER_REGEX = /^\d{14}$/
 const BANK_ACCOUNT_NUMBER_REGEX = /^\d{9,18}$/
 const IFSC_CODE_REGEX = /^[A-Z0-9]{11}$/
+const RESTAURANT_NAME_REGEX = /^[A-Za-z][A-Za-z &'.,-]*[A-Za-z.]$/
+const OWNER_FULL_NAME_REGEX = /^[A-Za-z][A-Za-z\s'-]*[A-Za-z]$/
+const PRIMARY_CONTACT_NUMBER_REGEX = /^\d{10}$/
 const ACCOUNT_HOLDER_NAME_REGEX = /^[A-Za-z ]+$/
 const GST_LEGAL_NAME_REGEX = /^[A-Za-z ]+$/
 const FEATURED_DISH_NAME_REGEX = /^[A-Za-z ]+$/
@@ -204,6 +207,15 @@ const clearOnboardingFileCache = () => {
     },
   }
 }
+
+const sanitizeRestaurantName = (value) =>
+  value.replace(/[^A-Za-z &'.,-]/g, "").replace(/\s{2,}/g, " ")
+
+const sanitizeOwnerFullName = (value) =>
+  value.replace(/[^A-Za-z\s'-]/g, "").replace(/\s{2,}/g, " ")
+
+const sanitizePrimaryPhoneNumber = (value) =>
+  value.replace(/\D/g, "").slice(0, 10)
 
 // Helper function to convert "HH:mm" string to Date object
 const stringToTime = (timeString) => {
@@ -809,9 +821,13 @@ export default function RestaurantOnboarding() {
 
     if (!step1.restaurantName?.trim()) {
       errors.push("Restaurant name is required")
+    } else if (!RESTAURANT_NAME_REGEX.test(step1.restaurantName.trim())) {
+      errors.push("Restaurant name format is invalid")
     }
     if (!step1.ownerName?.trim()) {
       errors.push("Owner name is required")
+    } else if (!OWNER_FULL_NAME_REGEX.test(step1.ownerName.trim())) {
+      errors.push("Owner full name format is invalid")
     }
     if (!step1.ownerEmail?.trim()) {
       errors.push("Owner email is required")
@@ -823,6 +839,8 @@ export default function RestaurantOnboarding() {
     }
     if (!step1.primaryContactNumber?.trim()) {
       errors.push("Primary contact number is required")
+    } else if (!PRIMARY_CONTACT_NUMBER_REGEX.test(step1.primaryContactNumber.trim())) {
+      errors.push("Primary contact number must be 10 digits")
     }
     if (!step1.location?.area?.trim()) {
       errors.push("Area/Sector/Locality is required")
@@ -1422,7 +1440,7 @@ export default function RestaurantOnboarding() {
             <Label className="text-xs text-gray-700">Restaurant name*</Label>
             <Input
               value={step1.restaurantName || ""}
-              onChange={(e) => setStep1({ ...step1, restaurantName: e.target.value })}
+              onChange={(e) => setStep1({ ...step1, restaurantName: sanitizeRestaurantName(e.target.value) })}
               className="mt-1 bg-white text-sm text-black placeholder-black"
               placeholder="Customers will see this name"
             />
@@ -1440,7 +1458,7 @@ export default function RestaurantOnboarding() {
             <Label className="text-xs text-gray-700">Full name*</Label>
             <Input
               value={step1.ownerName || ""}
-              onChange={(e) => setStep1({ ...step1, ownerName: e.target.value })}
+              onChange={(e) => setStep1({ ...step1, ownerName: sanitizeOwnerFullName(e.target.value) })}
               className="mt-1 bg-white text-sm text-black placeholder-black"
               placeholder="Owner full name"
             />
@@ -1475,8 +1493,10 @@ export default function RestaurantOnboarding() {
           <Input
             value={step1.primaryContactNumber || ""}
             onChange={(e) =>
-              setStep1({ ...step1, primaryContactNumber: e.target.value })
+              setStep1({ ...step1, primaryContactNumber: sanitizePrimaryPhoneNumber(e.target.value) })
             }
+            inputMode="numeric"
+            maxLength={10}
             className="mt-1 bg-white text-sm text-black placeholder-black"
             placeholder="Restaurant's primary contact number"
           />

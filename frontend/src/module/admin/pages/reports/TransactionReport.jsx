@@ -39,6 +39,24 @@ export default function TransactionReport() {
   const [zones, setZones] = useState([])
   const [restaurants, setRestaurants] = useState([])
 
+  const derivedSummary = useMemo(() => {
+    const transactionRows = Array.isArray(transactions) ? transactions : []
+
+    return {
+      completedTransaction: transactionRows.length,
+      deliverymanEarning: transactionRows.reduce(
+        (total, transaction) =>
+          total + Number(
+            transaction.deliverymanEarning ??
+            transaction.deliveryPartnerEarning ??
+            transaction.deliveryCharge ??
+            0,
+          ),
+        0,
+      ),
+    }
+  }, [transactions])
+
   // Fetch zones and restaurants for filters
   useEffect(() => {
     const fetchFilterData = async () => {
@@ -259,7 +277,7 @@ export default function TransactionReport() {
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-green-600 mb-1">{formatCurrency(summary.completedTransaction)}</p>
+                <p className="text-xl font-bold text-green-600 mb-1">{derivedSummary.completedTransaction.toLocaleString("en-IN")}</p>
                 <p className="text-sm text-slate-600 leading-tight">Completed Transaction</p>
               </div>
             </div>
@@ -333,7 +351,7 @@ export default function TransactionReport() {
                     </div>
                   </div>
                 </div>
-                <p className="text-base font-bold text-orange-600">{formatCurrency(summary.deliverymanEarning)}</p>
+                <p className="text-base font-bold text-orange-600">{formatCurrency(derivedSummary.deliverymanEarning || summary.deliverymanEarning || 0)}</p>
               </div>
             </div>
           </div>

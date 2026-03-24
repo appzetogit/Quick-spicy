@@ -33,6 +33,7 @@ const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/
 const NAME_REGEX = /^[A-Za-z][A-Za-z\s.'-]*$/
 const FEATURED_DISH_NAME_REGEX = /^[A-Za-z ]+$/
 const sanitizeDigits = (value = "") => value.replace(/\D/g, "")
+const sanitizeLettersOnly = (value = "") => value.replace(/[^A-Za-z\s.'-]/g, "").replace(/\s+/g, " ").trimStart()
 const sanitizePan = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10)
 const sanitizeFssai = (value = "") => value.replace(/\D/g, "").slice(0, 14)
 const sanitizeIfsc = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 11)
@@ -155,6 +156,9 @@ export default function AddRestaurant() {
   const validateStep1 = () => {
     const errors = []
     if (!step1.restaurantName?.trim()) errors.push("Restaurant name is required")
+    if (step1.restaurantName?.trim() && (!NAME_REGEX.test(step1.restaurantName.trim()) || !hasLetters(step1.restaurantName))) {
+      errors.push("Restaurant name must contain alphabets only")
+    }
     if (!step1.ownerName?.trim()) errors.push("Owner name is required")
     if (step1.ownerName?.trim() && (!NAME_REGEX.test(step1.ownerName.trim()) || !hasLetters(step1.ownerName))) {
       errors.push("Owner name must contain valid characters")
@@ -167,6 +171,12 @@ export default function AddRestaurant() {
     if (step1.primaryContactNumber?.trim() && !PHONE_REGEX.test(step1.primaryContactNumber.trim())) errors.push("Primary contact number must be 10 digits")
     if (!step1.location?.area?.trim()) errors.push("Area/Sector/Locality is required")
     if (!step1.location?.city?.trim()) errors.push("City is required")
+    if (step1.location?.city?.trim() && (!NAME_REGEX.test(step1.location.city.trim()) || !hasLetters(step1.location.city))) {
+      errors.push("City name must contain alphabets only")
+    }
+    if (step1.location?.state?.trim() && (!NAME_REGEX.test(step1.location.state.trim()) || !hasLetters(step1.location.state))) {
+      errors.push("State name must contain alphabets only")
+    }
     return errors
   }
 
@@ -395,7 +405,7 @@ export default function AddRestaurant() {
             <Label className="text-xs text-gray-700">Restaurant name*</Label>
             <Input
               value={step1.restaurantName || ""}
-              onChange={(e) => setStep1({ ...step1, restaurantName: e.target.value })}
+              onChange={(e) => setStep1({ ...step1, restaurantName: sanitizeLettersOnly(e.target.value) })}
               className="mt-1 bg-white text-sm text-black placeholder-black"
               placeholder="Customers will see this name"
             />
@@ -410,7 +420,7 @@ export default function AddRestaurant() {
             <Label className="text-xs text-gray-700">Full name*</Label>
             <Input
               value={step1.ownerName || ""}
-              onChange={(e) => setStep1({ ...step1, ownerName: normalizeName(e.target.value) })}
+              onChange={(e) => setStep1({ ...step1, ownerName: sanitizeLettersOnly(e.target.value) })}
               className="mt-1 bg-white text-sm text-black placeholder-black"
               placeholder="Owner full name"
             />
@@ -461,7 +471,7 @@ export default function AddRestaurant() {
           />
           <Input
             value={step1.location?.city || ""}
-            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, city: e.target.value } })}
+            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, city: sanitizeLettersOnly(e.target.value) } })}
             className="bg-white text-sm"
             placeholder="City*"
           />
@@ -479,7 +489,7 @@ export default function AddRestaurant() {
           />
           <Input
             value={step1.location?.state || ""}
-            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, state: e.target.value } })}
+            onChange={(e) => setStep1({ ...step1, location: { ...step1.location, state: sanitizeLettersOnly(e.target.value) } })}
             className="bg-white text-sm"
             placeholder="State (optional)"
           />
