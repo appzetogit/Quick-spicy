@@ -204,7 +204,7 @@ export default function AboutUs() {
                 onChange={(e) => setAboutData(prev => ({ ...prev, description: e.target.value }))}
                 placeholder="Your trusted food delivery partner..."
                 rows={4}
-                className="mt-1 w-full"
+                className="mt-1 w-full px-4 py-3"
               />
             </div>
             <div>

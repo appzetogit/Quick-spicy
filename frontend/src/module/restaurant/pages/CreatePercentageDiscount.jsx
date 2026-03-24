@@ -1075,17 +1075,17 @@ export default function CreatePercentageDiscount() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[9999] max-h-[90vh] flex flex-col"
+              className="fixed bottom-0 left-0 right-0 bg-white rounded-t-2xl shadow-2xl z-[9999] max-h-[90vh] flex flex-col overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
               <div className="px-4 py-4 border-b border-gray-200 flex items-center justify-between">
-                <h2 className="text-lg font-bold text-gray-900">
+                <h2 className="text-base sm:text-lg font-bold text-gray-900 flex-1 min-w-0 pr-3 break-words leading-snug">
                   {makeOfferModal.editingOffer ? "Edit Offer" : "Make Offer"} - {makeOfferModal.item.name || makeOfferModal.item.itemName}
                 </h2>
                 <button
                   onClick={closeMakeOfferModal}
-                  className="p-1 rounded-full hover:bg-gray-100"
+                  className="p-1 rounded-full hover:bg-gray-100 shrink-0"
                 >
                   <X className="w-5 h-5 text-gray-600" />
                 </button>

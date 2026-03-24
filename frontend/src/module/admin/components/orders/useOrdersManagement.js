@@ -89,15 +89,16 @@ export function useOrdersManagement(orders, statusKey, title) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [isViewOrderOpen, setIsViewOrderOpen] = useState(false)
   const [selectedOrder, setSelectedOrder] = useState(null)
-  const [filters, setFilters] = useState({
+  const defaultFilters = {
     paymentStatus: "",
-    deliveryType: "",
     minAmount: "",
     maxAmount: "",
     fromDate: "",
     toDate: "",
     restaurant: "",
-  })
+  }
+  const [filters, setFilters] = useState(defaultFilters)
+  const [draftFilters, setDraftFilters] = useState(defaultFilters)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
     orderId: true,
@@ -142,12 +143,6 @@ export function useOrdersManagement(orders, statusKey, title) {
         const collectionStatus = String(order.paymentCollectionStatus || "").toLowerCase()
         return paymentStatus === wanted || collectionStatus === wanted
       })
-    }
-
-    if (filters.deliveryType) {
-      result = result.filter(
-        (order) => String(order.deliveryType || "").toLowerCase() === filters.deliveryType.toLowerCase(),
-      )
     }
 
     if (filters.minAmount) {
@@ -206,19 +201,13 @@ export function useOrdersManagement(orders, statusKey, title) {
   }, [filters])
 
   const handleApplyFilters = () => {
+    setFilters(draftFilters)
     setIsFilterOpen(false)
   }
 
   const handleResetFilters = () => {
-    setFilters({
-      paymentStatus: "",
-      deliveryType: "",
-      minAmount: "",
-      maxAmount: "",
-      fromDate: "",
-      toDate: "",
-      restaurant: "",
-    })
+    setFilters(defaultFilters)
+    setDraftFilters(defaultFilters)
   }
 
   const handleExport = (format) => {
@@ -549,8 +538,8 @@ export function useOrdersManagement(orders, statusKey, title) {
     isViewOrderOpen,
     setIsViewOrderOpen,
     selectedOrder,
-    filters,
-    setFilters,
+    filters: draftFilters,
+    setFilters: setDraftFilters,
     visibleColumns,
     filteredOrders,
     count,

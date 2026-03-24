@@ -11,6 +11,10 @@ const debugError = (...args) => {}
 export default function BusinessSetup() {
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   const ALLOWED_EMAIL_TLDS = [".com", ".in", ".org", ".net", ".co.in"];
+  const PHONE_LENGTH_BY_COUNTRY = {
+    "+1": 10,
+    "+91": 10,
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState(null);
@@ -73,7 +77,12 @@ export default function BusinessSetup() {
   const handleInputChange = (field, value) => {
     let nextValue = value;
 
-    if (field === "phoneNumber" || field === "pincode") {
+    if (field === "phoneNumber") {
+      const maxPhoneDigits = PHONE_LENGTH_BY_COUNTRY[formData.phoneCountryCode] || 15;
+      nextValue = value.replace(/\D/g, "").slice(0, maxPhoneDigits);
+    }
+
+    if (field === "pincode") {
       nextValue = value.replace(/\D/g, "");
     }
 
@@ -85,6 +94,26 @@ export default function BusinessSetup() {
       ...prev,
       [field]: nextValue,
     }));
+  };
+
+  const formatPhoneNumber = (phoneNumber, countryCode) => {
+    const digits = String(phoneNumber || "").replace(/\D/g, "");
+
+    if (!digits) return "";
+
+    if ((countryCode === "+91" || countryCode === "+1") && digits.length > 5) {
+      return `${digits.slice(0, 5)} ${digits.slice(5)}`;
+    }
+
+    if (digits.length > 3 && digits.length <= 6) {
+      return `${digits.slice(0, 3)} ${digits.slice(3)}`;
+    }
+
+    if (digits.length > 6) {
+      return `${digits.slice(0, 3)} ${digits.slice(3, 6)} ${digits.slice(6)}`;
+    }
+
+    return digits;
   };
 
   const handleSave = async () => {
@@ -112,6 +141,16 @@ export default function BusinessSetup() {
         toast.error("Phone number is required");
         return;
       }
+      const normalizedPhoneNumber = formData.phoneNumber.trim();
+      const requiredPhoneLength = PHONE_LENGTH_BY_COUNTRY[formData.phoneCountryCode];
+      if (requiredPhoneLength && normalizedPhoneNumber.length !== requiredPhoneLength) {
+        toast.error(`Phone number must be ${requiredPhoneLength} digits`);
+        return;
+      }
+      if (!requiredPhoneLength && (normalizedPhoneNumber.length < 6 || normalizedPhoneNumber.length > 15)) {
+        toast.error("Phone number must be between 6 and 15 digits");
+        return;
+      }
 
       setSaving(true);
 
@@ -120,7 +159,7 @@ export default function BusinessSetup() {
         companyName: formData.companyName.trim(),
         email: formData.email.trim(),
         phoneCountryCode: formData.phoneCountryCode,
-        phoneNumber: formData.phoneNumber.trim(),
+        phoneNumber: normalizedPhoneNumber,
         address: formData.address.trim(),
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
@@ -491,14 +530,18 @@ export default function BusinessSetup() {
                   <input
                     type="tel"
                     inputMode="numeric"
-                    maxLength={15}
-                    placeholder="Enter 10 digit phone number"
-                    value={formData.phoneNumber}
+                    maxLength={17}
+                    placeholder={formData.phoneCountryCode === "+91" ? "98765 43210" : "Enter phone number"}
+                    value={formatPhoneNumber(formData.phoneNumber, formData.phoneCountryCode)}
                     onChange={(e) => handleInputChange("phoneNumber", e.target.value)}
                     className="flex-1 px-3 py-2 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-slate-500">Enter digits only with no spaces or special characters.</p>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {formData.phoneCountryCode === "+91"
+                    ? "Format: 98765 43210"
+                    : "Enter digits only in a valid phone number format."}
+                </p>
               </div>
 
               <div className="md:col-span-2">

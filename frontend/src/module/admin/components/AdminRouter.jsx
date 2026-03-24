@@ -146,18 +146,18 @@ export default function AdminRouter() {
 
           {/* ORDER MANAGEMENT */}
           {/* Orders */}
-          <Route path="orders/all" element={<OrdersPage statusKey="all" />} />
-          <Route path="orders/scheduled" element={<OrdersPage statusKey="scheduled" />} />
-          <Route path="orders/pending" element={<OrdersPage statusKey="pending" />} />
-          <Route path="orders/accepted" element={<OrdersPage statusKey="accepted" />} />
-          <Route path="orders/processing" element={<OrdersPage statusKey="processing" />} />
-          <Route path="orders/food-on-the-way" element={<OrdersPage statusKey="food-on-the-way" />} />
-          <Route path="orders/delivered" element={<OrdersPage statusKey="delivered" />} />
-          <Route path="orders/canceled" element={<OrdersPage statusKey="canceled" />} />
-          <Route path="orders/restaurant-cancelled" element={<OrdersPage statusKey="restaurant-cancelled" />} />
-          <Route path="orders/payment-failed" element={<OrdersPage statusKey="payment-failed" />} />
-          <Route path="orders/refunded" element={<OrdersPage statusKey="refunded" />} />
-          <Route path="orders/offline-payments" element={<OrdersPage statusKey="offline-payments" />} />
+          <Route path="orders/all" element={<OrdersPage key="orders-all" statusKey="all" />} />
+          <Route path="orders/scheduled" element={<OrdersPage key="orders-scheduled" statusKey="scheduled" />} />
+          <Route path="orders/pending" element={<OrdersPage key="orders-pending" statusKey="pending" />} />
+          <Route path="orders/accepted" element={<OrdersPage key="orders-accepted" statusKey="accepted" />} />
+          <Route path="orders/processing" element={<OrdersPage key="orders-processing" statusKey="processing" />} />
+          <Route path="orders/food-on-the-way" element={<OrdersPage key="orders-food-on-the-way" statusKey="food-on-the-way" />} />
+          <Route path="orders/delivered" element={<OrdersPage key="orders-delivered" statusKey="delivered" />} />
+          <Route path="orders/canceled" element={<OrdersPage key="orders-canceled" statusKey="canceled" />} />
+          <Route path="orders/restaurant-cancelled" element={<OrdersPage key="orders-restaurant-cancelled" statusKey="restaurant-cancelled" />} />
+          <Route path="orders/payment-failed" element={<OrdersPage key="orders-payment-failed" statusKey="payment-failed" />} />
+          <Route path="orders/refunded" element={<OrdersPage key="orders-refunded" statusKey="refunded" />} />
+          <Route path="orders/offline-payments" element={<OrdersPage key="orders-offline-payments" statusKey="offline-payments" />} />
           <Route path="order-detect-delivery" element={<OrderDetectDelivery />} />
           {/* Order Refunds */}
           <Route path="order-refunds/new" element={<NewRefundRequests />} />
