@@ -551,6 +551,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const order = await findOrderByIdOrOrderId(id);
+    let notifiedDeliveryPartners = 0;
 
     if (!order) {
       return errorResponse(res, 404, "Order not found");
@@ -573,52 +574,70 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     order.tracking.preparing = { status: true, timestamp: new Date() };
     await order.save();
 
-    // Keep notification order strict: restaurant first, then delivery.
-    try {
-      await notifyRestaurantOrderUpdate(order._id.toString(), 'preparing');
-    } catch (notifError) {
-      console.error('Admin accept: restaurant notification failed:', notifError);
-    }
-    try {
-      await notifyUserOrderUpdate(order._id.toString(), 'preparing');
-    } catch (notifError) {
-      console.error('Admin accept: user notification failed:', notifError);
-    }
+    // Do not block delivery dispatch on user/restaurant notification latency.
+    Promise.allSettled([
+      notifyRestaurantOrderUpdate(order._id.toString(), 'preparing'),
+      notifyUserOrderUpdate(order._id.toString(), 'preparing'),
+    ]).catch((notifError) => {
+      console.error('Admin accept: background status notifications failed:', notifError);
+    });
 
-    // Trigger delivery notifications so order appears in delivery app.
-    // This mirrors the restaurant-side notify flow for unassigned preparing orders.
+    // Immediately broadcast accepted order to all available delivery partners in zone.
     if (!order.deliveryPartnerId) {
       try {
         const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
 
+        const restaurantRef = order?.restaurantId;
+        const restaurantIdValue = restaurantRef?._id || restaurantRef;
         let restaurantDoc = null;
-        if (mongoose.Types.ObjectId.isValid(order.restaurantId)) {
-          restaurantDoc = await Restaurant.findById(order.restaurantId).lean();
+
+        if (restaurantRef && typeof restaurantRef === 'object' && restaurantRef.location?.coordinates?.length >= 2) {
+          restaurantDoc = restaurantRef;
+        } else if (restaurantIdValue && mongoose.Types.ObjectId.isValid(String(restaurantIdValue))) {
+          restaurantDoc = await Restaurant.findById(String(restaurantIdValue)).lean();
         }
+
         if (!restaurantDoc) {
-          restaurantDoc = await Restaurant.findOne({
-            $or: [{ restaurantId: order.restaurantId }, { _id: order.restaurantId }],
-          }).lean();
+          const restaurantLookupConditions = [];
+          if (restaurantIdValue) {
+            restaurantLookupConditions.push({ restaurantId: String(restaurantIdValue) });
+          }
+          if (restaurantIdValue && mongoose.Types.ObjectId.isValid(String(restaurantIdValue))) {
+            restaurantLookupConditions.push({ _id: String(restaurantIdValue) });
+          }
+          if (restaurantLookupConditions.length > 0) {
+            restaurantDoc = await Restaurant.findOne({
+              $or: restaurantLookupConditions,
+            }).lean();
+          }
         }
 
         const coords = restaurantDoc?.location?.coordinates;
         if (coords && coords.length >= 2) {
           const [restaurantLng, restaurantLat] = coords;
-          const priorityDeliveryBoys = await findNearestDeliveryBoys(
+          const zoneDeliveryBoys = await findNearestDeliveryBoys(
             restaurantLat,
             restaurantLng,
             order.restaurantId,
-            5,
+            50,
             { requiredZoneId: order?.assignmentInfo?.zoneId || null },
           );
 
-          if (priorityDeliveryBoys.length > 0) {
-            const priorityIds = priorityDeliveryBoys.map((d) => d.deliveryPartnerId);
+          const zoneDeliveryPartnerIds = Array.from(
+            new Set(
+              (zoneDeliveryBoys || [])
+                .map((d) => d?.deliveryPartnerId)
+                .filter(Boolean)
+                .map((id) => String(id))
+            )
+          );
+
+          if (zoneDeliveryPartnerIds.length > 0) {
             order.assignmentInfo = {
               ...(order.assignmentInfo || {}),
-              priorityNotifiedAt: new Date(),
-              priorityDeliveryPartnerIds: priorityIds,
-              notificationPhase: 'priority',
+              zoneBroadcastNotifiedAt: new Date(),
+              zoneBroadcastDeliveryPartnerIds: zoneDeliveryPartnerIds,
+              notificationPhase: 'zone_broadcast',
             };
             await order.save();
 
@@ -627,35 +646,20 @@ export const acceptOrder = asyncHandler(async (req, res) => {
               .populate('restaurantId', 'name address location phone ownerPhone')
               .lean();
             if (populatedOrder) {
-              await notifyMultipleDeliveryBoys(populatedOrder, priorityIds, 'priority');
+              const notifyResult = await notifyMultipleDeliveryBoys(
+                populatedOrder,
+                zoneDeliveryPartnerIds,
+                'zone_broadcast'
+              );
+              notifiedDeliveryPartners += Number(
+                notifyResult?.notified || zoneDeliveryPartnerIds.length || 0
+              );
             }
           } else {
-            const expandedDeliveryBoys = await findNearestDeliveryBoys(
-              restaurantLat,
-              restaurantLng,
-              order.restaurantId,
-              50,
-              { requiredZoneId: order?.assignmentInfo?.zoneId || null },
-            );
-            const expandedIds = expandedDeliveryBoys.map((d) => d.deliveryPartnerId);
-            if (expandedIds.length > 0) {
-              order.assignmentInfo = {
-                ...(order.assignmentInfo || {}),
-                expandedNotifiedAt: new Date(),
-                expandedDeliveryPartnerIds: expandedIds,
-                notificationPhase: 'expanded',
-              };
-              await order.save();
-
-              const populatedOrder = await Order.findById(order._id)
-                .populate('userId', 'name phone')
-                .populate('restaurantId', 'name address location phone ownerPhone')
-                .lean();
-              if (populatedOrder) {
-                await notifyMultipleDeliveryBoys(populatedOrder, expandedIds, 'expanded');
-              }
-            }
+            console.warn(`Admin accept: no available delivery partners found in zone for order ${order.orderId}`);
           }
+        } else {
+          console.warn(`Admin accept: missing restaurant coordinates for order ${order.orderId}`);
         }
       } catch (notifyErr) {
         console.error('Admin accept notification flow failed:', notifyErr);
@@ -667,6 +671,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
         id: order._id.toString(),
         orderId: order.orderId,
         status: order.status,
+      },
+      dispatch: {
+        requested: true,
+        notifiedDeliveryPartners,
       },
     });
   } catch (error) {

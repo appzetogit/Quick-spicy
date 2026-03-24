@@ -560,8 +560,15 @@ export async function assignOrderToDeliveryBoy(order, restaurantLat, restaurantL
  */
 export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason = '') {
   try {
-    const Order = (await import('../models/Order.js')).default;
-    const order = await Order.findOne({ $or: [{ _id: orderId }, { orderId: orderId }] });
+    const normalizedOrderId = String(orderId || '').trim();
+    if (!normalizedOrderId) {
+      throw new Error('Order ID is required');
+    }
+
+    const orderQuery = mongoose.Types.ObjectId.isValid(normalizedOrderId)
+      ? { $or: [{ _id: normalizedOrderId }, { orderId: normalizedOrderId }] }
+      : { orderId: normalizedOrderId };
+    const order = await Order.findOne(orderQuery);
 
     if (!order) {
       throw new Error('Order not found');
@@ -600,14 +607,38 @@ export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason =
     await order.save();
 
     // 5. Trigger reassignment
-    const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
-    const restaurant = await Restaurant.findOne({ restaurantId: order.restaurantId });
-    
-    if (restaurant && restaurant.location && restaurant.location.coordinates) {
-      const [lng, lat] = restaurant.location.coordinates;
+    const RestaurantModel = (await import('../../restaurant/models/Restaurant.js')).default;
+    const restaurantRef = order?.restaurantId;
+    const restaurantIdValue = restaurantRef?._id || restaurantRef;
+    let restaurant = null;
+
+    if (restaurantRef && typeof restaurantRef === 'object' && restaurantRef.location?.coordinates?.length >= 2) {
+      restaurant = restaurantRef;
+    } else if (restaurantIdValue && mongoose.Types.ObjectId.isValid(String(restaurantIdValue))) {
+      restaurant = await RestaurantModel.findById(restaurantIdValue).select('restaurantId location').lean();
+    }
+
+    if (!restaurant && restaurantIdValue) {
+      const restaurantLookupConditions = [{ restaurantId: String(restaurantIdValue) }];
+      if (mongoose.Types.ObjectId.isValid(String(restaurantIdValue))) {
+        restaurantLookupConditions.push({ _id: String(restaurantIdValue) });
+      }
+      restaurant = await RestaurantModel.findOne({
+        $or: restaurantLookupConditions
+      }).select('restaurantId location').lean();
+    }
+
+    const coordinates = restaurant?.location?.coordinates;
+    if (Array.isArray(coordinates) && coordinates.length >= 2) {
+      const [lng, lat] = coordinates;
       // Reassign and notify the new delivery partner.
       // This ensures the order actually appears in their app UI after "Deny".
-      const assignmentResult = await assignOrderToDeliveryBoy(order, lat, lng, order.restaurantId);
+      const assignmentResult = await assignOrderToDeliveryBoy(
+        order,
+        lat,
+        lng,
+        restaurant?.restaurantId || order.restaurantId
+      );
       if (assignmentResult?.deliveryPartnerId) {
         try {
           const { notifyDeliveryBoyNewOrder } = await import('./deliveryNotificationService.js');
@@ -622,8 +653,37 @@ export async function rejectOrderAssignment(orderId, deliveryPartnerId, reason =
           );
         }
       } else {
-        console.log(`⚠️ No other delivery partners found for order ${order.orderId} after rejection`);
+        // Fallback: notify nearby available riders so someone else can pick it up.
+        try {
+          const nearbyPartners = await findNearestDeliveryBoys(
+            lat,
+            lng,
+            restaurant?.restaurantId || order.restaurantId,
+            8,
+            { requiredZoneId: order?.assignmentInfo?.zoneId || null }
+          );
+          const candidateIds = nearbyPartners
+            .map((partner) => partner?.deliveryPartnerId)
+            .filter((id) => id && String(id) !== String(deliveryPartnerId));
+
+          if (candidateIds.length > 0) {
+            const { notifyMultipleDeliveryBoys } = await import('./deliveryNotificationService.js');
+            await notifyMultipleDeliveryBoys(order, candidateIds, 'expanded');
+            console.log(
+              `✅ Reassignment fallback: notified ${candidateIds.length} nearby delivery partner(s) for order ${order.orderId}`
+            );
+          } else {
+            console.log(`⚠️ No other delivery partners found for order ${order.orderId} after rejection`);
+          }
+        } catch (fallbackNotifyError) {
+          console.error(
+            `❌ Fallback notify failed for rejected order ${order.orderId}:`,
+            fallbackNotifyError
+          );
+        }
       }
+    } else {
+      console.warn(`⚠️ Could not resolve restaurant coordinates to reassign rejected order ${order.orderId}`);
     }
 
     return { success: true, message: 'Order rejection processed and reassignment triggered' };

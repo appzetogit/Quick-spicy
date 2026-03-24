@@ -1732,9 +1732,9 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
 
     // Update order state - use order._id (MongoDB _id) not orderId string
     // Since we found the order, order._id should exist (from .lean() it's a plain object with _id)
-    const orderMongoId = order._id;
+    const orderMongoId = order?._id || null;
     if (!orderMongoId) {
-      return errorResponse(res, 500, 'Order ID not found in order object');
+      return errorResponse(res, 400, 'Order identifier is missing for this request');
     }
     const now = new Date();
     const readyTimestamp = order?.tracking?.ready?.timestamp
@@ -2242,9 +2242,9 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     }
 
     // Ensure we have order._id - from .lean() it's a plain object with _id
-    const orderMongoId = order._id;
+    const orderMongoId = order?._id || null;
     if (!orderMongoId) {
-      return errorResponse(res, 500, 'Order ID not found in order object');
+      return errorResponse(res, 400, 'Order identifier is missing for this request');
     }
 
     // Prepare update object
@@ -2702,6 +2702,17 @@ export const rejectOrder = asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Order rejected successfully', result);
   } catch (error) {
     console.error('❌ Error in rejectOrder controller:', error);
+    const normalizedMessage = String(error?.message || '').toLowerCase();
+    if (normalizedMessage.includes('not found')) {
+      return errorResponse(res, 404, error.message || 'Order not found');
+    }
+    if (
+      normalizedMessage.includes('not assigned') ||
+      normalizedMessage.includes('invalid') ||
+      normalizedMessage.includes('required')
+    ) {
+      return errorResponse(res, 400, error.message || 'Unable to reject this order');
+    }
     return errorResponse(res, 500, error.message || 'Failed to reject order');
   }
 });

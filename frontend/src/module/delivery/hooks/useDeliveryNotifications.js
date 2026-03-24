@@ -615,7 +615,14 @@ export const useDeliveryNotifications = () => {
         orderMongoId: data?.orderMongoId || data?.order_mongo_id,
         ...data
       };
-      handleIncomingOrderAlert(normalizedData);
+      // Force-play sound for explicit backend sound events.
+      // Some servers emit `play_notification_sound` separately from `new_order`.
+      activeOrderRef.current = normalizedData;
+      playNotificationSound(normalizedData);
+      startAlertLoop(playNotificationSound);
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') {
+        showBackgroundOrderNotification(normalizedData);
+      }
     });
 
     socketRef.current.on('order_ready', (orderData) => {

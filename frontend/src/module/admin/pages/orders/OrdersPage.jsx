@@ -569,7 +569,13 @@ export default function OrdersPage({ statusKey = "all" }) {
       setProcessingActionOrderId(order.id || order.orderId)
       const response = await adminAPI.acceptOrder(orderIdToUse)
       if (response.data?.success) {
-        toast.success(response.data?.message || `Order ${order.orderId} accepted`)
+        const notifiedCount = Number(response?.data?.data?.dispatch?.notifiedDeliveryPartners || 0)
+        const baseMessage = response.data?.message || `Order ${order.orderId} accepted`
+        if (notifiedCount > 0) {
+          toast.success(`${baseMessage} - sent to ${notifiedCount} delivery partner(s)`)
+        } else {
+          toast.success(`${baseMessage} - delivery dispatch requested`)
+        }
         await fetchOrders({ silent: true, withRingCheck: false })
       } else {
         toast.error(response.data?.message || "Failed to accept order")
@@ -939,4 +945,3 @@ export default function OrdersPage({ statusKey = "all" }) {
     </div>
   )
 }
-
