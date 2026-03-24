@@ -56,17 +56,25 @@ function isPointInsideZone(lat, lng, coordinates = []) {
 }
 
 async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng) {
-  // First try direct restaurantId mapping
+  // Prefer an explicit zone linked to the restaurant when available.
   if (restaurantId) {
-    const restaurantIdObj = restaurantId.toString ? restaurantId.toString() : restaurantId;
-    const mappedZone = await Zone.findOne({
-      restaurantId: restaurantIdObj,
-      isActive: true
-    }).lean();
+    const restaurantIdStr = restaurantId.toString ? restaurantId.toString() : String(restaurantId);
+    const restaurantZoneQuery = {
+      isActive: true,
+      $or: [{ restaurantId: restaurantIdStr }]
+    };
+
+    if (mongoose.Types.ObjectId.isValid(restaurantIdStr)) {
+      restaurantZoneQuery.$or.push({
+        restaurantId: new mongoose.Types.ObjectId(restaurantIdStr)
+      });
+    }
+
+    const mappedZone = await Zone.findOne(restaurantZoneQuery).lean();
     if (mappedZone) return mappedZone;
   }
 
-  // Fallback to location-based zone lookup
+  // Otherwise, resolve the active polygon containing the restaurant pin.
   const activeZones = await Zone.find({ isActive: true }).lean();
   for (const zone of activeZones) {
     if (isPointInsideZone(restaurantLat, restaurantLng, zone?.coordinates)) {
@@ -93,6 +101,7 @@ async function resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, 
 function isPartnerInsideRequiredZone(partner, zone, lat, lng) {
   if (!zone) return false;
   const requiredZoneId = zone?._id?.toString();
+  if (!requiredZoneId) return false;
 
   if (partner?.zoneId && String(partner.zoneId) === requiredZoneId) {
     return true;
@@ -101,8 +110,8 @@ function isPartnerInsideRequiredZone(partner, zone, lat, lng) {
   const assignedZones = Array.isArray(partner?.availability?.zones)
     ? partner.availability.zones.map((z) => z?.toString?.() || String(z))
     : [];
-  if (assignedZones.length > 0) {
-    return assignedZones.includes(requiredZoneId);
+  if (assignedZones.includes(requiredZoneId)) {
+    return true;
   }
 
   if (zone.coordinates && zone.coordinates.length >= 3) {
@@ -218,7 +227,12 @@ async function filterOutBusyDeliveryPartners(deliveryPartners = []) {
  */
 export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, restaurantId = null, priorityDistance = 5, options = {}) {
   try {
-    console.log(`🔍 Searching for priority delivery partners within ${priorityDistance}km of restaurant: ${restaurantLat}, ${restaurantLng}`);
+    const optionsObj = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
+    const requiredZoneId = optionsObj.requiredZoneId || null;
+    const ignoreDistanceLimit = optionsObj.ignoreDistanceLimit === true;
+    const distanceLabel = ignoreDistanceLimit ? 'without distance limit' : `within ${priorityDistance}km`;
+
+    console.log(`🔍 Searching for delivery partners ${distanceLabel} of restaurant: ${restaurantLat}, ${restaurantLng}`);
     
     // Use the same logic as findNearestDeliveryBoy but return all within priority distance
     let zone = null;
@@ -232,20 +246,20 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
       }
     };
 
-    const optionsObj = (options && typeof options === 'object' && !Array.isArray(options)) ? options : {};
-    const requiredZoneId = optionsObj.requiredZoneId || null;
-
     try {
       zone = await resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, restaurantLng);
       if (zone) {
         console.log(`✅ Found zone: ${zone.name || zone.zoneName} for restaurant ${restaurantId || 'location'}`);
       } else {
-        console.warn(`⚠️ No active zone found for restaurant location; skipping delivery notification`);
-        return [];
+        console.warn(`⚠️ No active zone found for restaurant location; falling back to distance-only filtering`);
+        // Don't return [] here - fall through with zone=null so distance-based filtering still works.
+        // isPartnerInsideRequiredZone already returns false when zone is null,
+        // but we'll skip that check below when zone is null.
       }
     } catch (zoneError) {
       console.warn(`⚠️ Error finding zone:`, zoneError.message);
-      return [];
+      // Continue without zone filtering
+      zone = null;
     }
 
     const deliveryPartners = await Delivery.find(deliveryQuery)
@@ -290,10 +304,13 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
           zoneId: partner.zoneId || null
         };
       })
-      .filter(partner => partner !== null && partner.distance <= priorityDistance)
+      .filter(partner => (
+        partner !== null &&
+        (ignoreDistanceLimit || partner.distance <= priorityDistance)
+      ))
       .sort((a, b) => a.distance - b.distance);
 
-    console.log(`✅ Found ${deliveryPartnersWithDistance.length} priority delivery partners within ${priorityDistance}km`);
+    console.log(`✅ Found ${deliveryPartnersWithDistance.length} delivery partners ${distanceLabel}`);
     return deliveryPartnersWithDistance.map(partner => ({
       deliveryPartnerId: partner._id.toString(),
       name: partner.name,
@@ -343,12 +360,13 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
       if (zone) {
         console.log(`✅ Found zone: ${zone.name || zone.zoneName} for restaurant ${restaurantId || 'location'}`);
       } else {
-        console.warn(`⚠️ No active zone found for restaurant location; skipping delivery assignment`);
-        return null;
+        console.warn(`⚠️ No active zone found for restaurant location; falling back to distance-only assignment`);
+        // Continue with zone=null so distance-based filtering still works.
       }
     } catch (zoneError) {
       console.warn(`⚠️ Error finding zone for restaurant ${restaurantId}:`, zoneError.message);
-      return null;
+      // Continue without zone filtering
+      zone = null;
     }
 
     // Exclude already notified delivery partners

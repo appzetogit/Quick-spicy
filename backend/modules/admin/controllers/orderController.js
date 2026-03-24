@@ -620,7 +620,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
             restaurantLng,
             order.restaurantId,
             50,
-            { requiredZoneId: order?.assignmentInfo?.zoneId || null },
+            {
+              requiredZoneId: order?.assignmentInfo?.zoneId || null,
+              ignoreDistanceLimit: true,
+            },
           );
 
           const zoneDeliveryPartnerIds = Array.from(

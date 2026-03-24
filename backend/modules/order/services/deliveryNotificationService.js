@@ -705,6 +705,11 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         longitude: orderWithUser.address.location.coordinates?.[0],
         address: orderWithUser.address.formattedAddress || orderWithUser.address.address
       } : null,
+      items: (orderWithUser.items || []).map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: item.price
+      })),
       totalAmount: orderWithUser.pricing?.total || 0,
       total: orderWithUser.pricing?.total || 0,
       deliveryFee: deliveryFeeFromOrder,
