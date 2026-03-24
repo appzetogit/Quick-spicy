@@ -7,6 +7,30 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+function ThumbnailCircle({ product, className = '', roundedClassName = '' }) {
+  const [hasError, setHasError] = useState(false);
+  const foodImage = typeof product?.imageUrl === 'string' ? product.imageUrl.trim() : '';
+  const restaurantImage = typeof product?.restaurantImageUrl === 'string' ? product.restaurantImageUrl.trim() : '';
+  const safeFoodImage = !hasError && foodImage && (!restaurantImage || foodImage !== restaurantImage) ? foodImage : '';
+
+  if (safeFoodImage) {
+    return (
+      <img
+        src={safeFoodImage}
+        alt={product?.name || 'Item'}
+        className={className}
+        onError={() => setHasError(true)}
+      />
+    );
+  }
+
+  return (
+    <div className={`w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold ${roundedClassName}`}>
+      {product?.name?.charAt(0)?.toUpperCase() || '?'}
+    </div>
+  );
+}
+
 
 
 /**
@@ -439,17 +463,11 @@ export default function AddToCartAnimation({
             objectFit: 'cover',
           }}
         >
-          {removedProduct.product?.imageUrl ? (
-            <img
-              src={removedProduct.product.imageUrl}
-              alt={removedProduct.product.name}
-              className="w-full h-full object-cover rounded-full"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold rounded-full">
-              {removedProduct.product?.name?.charAt(0).toUpperCase() || '?'}
-            </div>
-          )}
+          <ThumbnailCircle
+            product={removedProduct.product}
+            className="w-full h-full object-cover rounded-full"
+            roundedClassName="rounded-full"
+          />
         </div>
       )}
 
@@ -463,17 +481,11 @@ export default function AddToCartAnimation({
             objectFit: 'cover',
           }}
         >
-          {flyingProduct?.product?.imageUrl ? (
-            <img
-              src={flyingProduct.product.imageUrl}
-              alt={flyingProduct?.product?.name || 'Item'}
-              className="w-full h-full object-cover rounded-full"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold rounded-full">
-              {flyingProduct?.product?.name?.charAt(0)?.toUpperCase() || '?'}
-            </div>
-          )}
+          <ThumbnailCircle
+            product={flyingProduct?.product}
+            className="w-full h-full object-cover rounded-full"
+            roundedClassName="rounded-full"
+          />
         </div>
       )}
 
@@ -525,17 +537,11 @@ export default function AddToCartAnimation({
                     }}
                     className="w-7 h-7 rounded-full border-2 border-white/90 overflow-hidden bg-white flex-shrink-0 shadow-md"
                   >
-                    {item?.product?.imageUrl ? (
-                      <img
-                        src={item.product.imageUrl}
-                        alt={item?.product?.name || 'Item'}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-neutral-200 text-neutral-400 text-xs font-semibold">
-                        {item?.product?.name?.charAt(0)?.toUpperCase() || '?'}
-                      </div>
-                    )}
+                    <ThumbnailCircle
+                      product={item?.product}
+                      className="w-full h-full object-cover"
+                      roundedClassName=""
+                    />
                   </motion.div>
                 ))}
               </div>

@@ -9,11 +9,44 @@ export default function StickyCartCard() {
   const [isVisible, setIsVisible] = useState(true)
   const [bottomPosition, setBottomPosition] = useState("bottom-[70px]") // Fixed above bottom navigation
   const cartCount = getCartCount()
+  const backendOrigin = typeof window !== "undefined" ? window.location.origin : ""
   const slugifyRestaurantName = (value) =>
     String(value || "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "")
+
+  const normalizeCartImage = (value) => {
+    const candidate =
+      typeof value === "string"
+        ? value
+        : value?.url || value?.secure_url || value?.imageUrl || value?.image || value?.src || ""
+
+    if (typeof candidate !== "string") return ""
+
+    const trimmed = candidate.trim()
+    if (!trimmed) return ""
+    if (/^(data:|blob:)/i.test(trimmed)) return trimmed
+
+    let normalizedInput = trimmed
+      .replace(/\\/g, "/")
+      .replace(/^(https?):\/(?!\/)/i, "$1://")
+      .replace(/^(https?:\/\/)(https?:\/\/)/i, "$1")
+
+    if (/^\/\//.test(normalizedInput)) {
+      normalizedInput = `${window.location.protocol}${normalizedInput}`
+    }
+
+    if (/^https?:\/\//i.test(normalizedInput)) {
+      return encodeURI(normalizedInput)
+    }
+
+    const absolutePath = normalizedInput.startsWith("/")
+      ? `${backendOrigin}${normalizedInput}`
+      : `${backendOrigin}/${normalizedInput.replace(/^\.?\/*/, "")}`
+
+    return encodeURI(absolutePath)
+  }
 
   // Set fixed position above bottom navigation (no scroll-based movement)
   useEffect(() => {
@@ -43,9 +76,18 @@ export default function StickyCartCard() {
     }
   }, [])
 
-  // Get restaurant info from first cart item or use default
+  // Show the same food image source that cart page uses for the first item.
   const restaurantName = cart[0]?.restaurant || "Restaurant"
-  const restaurantImage = cart[0]?.image || "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=200&h=200&fit=crop"
+  const cartPreviewItems = cart
+    .slice(0, 3)
+    .map((item, index) => ({
+      id: item?.id || `cart-preview-${index}`,
+      image:
+        normalizeCartImage(item?.image) ||
+        normalizeCartImage(item?.imageUrl) ||
+        "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=200&h=200&fit=crop",
+      name: item?.name || "Item",
+    }))
 
   // Prefer canonical slug/id stored on the cart item over rebuilding from the name.
   const restaurantSlug =
@@ -104,13 +146,27 @@ export default function StickyCartCard() {
           <div className="max-w-7xl md:max-w-none mx-auto md:mx-0 pointer-events-auto">
             <div className="bg-white dark:bg-[#0a0a0a] dark:text-white rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden md:max-w-md md:w-[400px]">
               <div className="flex items-center gap-3 p-3 md:p-4">
-                {/* Restaurant Image */}
+                {/* Cart Item Thumbnails */}
                 <div className="flex-shrink-0">
-                  <img
-                    src={restaurantImage}
-                    alt={restaurantName}
-                    className="w-14 h-14 md:w-16 md:h-16 rounded-lg object-cover"
-                  />
+                  <div className="flex items-center -space-x-4 md:-space-x-5 pr-1">
+                    {cartPreviewItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="relative"
+                        style={{ zIndex: cartPreviewItems.length - index }}
+                      >
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-10 h-10 md:w-11 md:h-11 rounded-full object-cover border-2 border-white shadow-sm bg-white"
+                          onError={(event) => {
+                            event.currentTarget.onerror = null
+                            event.currentTarget.src = "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=200&h=200&fit=crop"
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Restaurant Info */}

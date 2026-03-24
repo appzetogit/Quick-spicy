@@ -36,6 +36,29 @@ const defaultCartContext = {
 
 const CartContext = createContext(defaultCartContext)
 
+const normalizeCartImageValue = (value) => {
+  if (!value) return ""
+
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "object") {
+    const candidate =
+      value.url ||
+      value.secure_url ||
+      value.imageUrl ||
+      value.image ||
+      value.src ||
+      value.path ||
+      ""
+
+    return typeof candidate === "string" ? candidate.trim() : ""
+  }
+
+  return ""
+}
+
 const normalizeCartData = (rawCart) => {
   if (!Array.isArray(rawCart)) return []
 
@@ -59,10 +82,10 @@ const normalizeCartData = (rawCart) => {
         null
 
       const normalizedImage =
-        item.image ||
-        item.imageUrl ||
-        item.product?.imageUrl ||
-        item.product?.image ||
+        normalizeCartImageValue(item.image) ||
+        normalizeCartImageValue(item.imageUrl) ||
+        normalizeCartImageValue(item.product?.imageUrl) ||
+        normalizeCartImageValue(item.product?.image) ||
         ""
 
       return {
@@ -217,7 +240,7 @@ export function CartProvider({ children }) {
             product: {
               id: item.id,
               name: item.name,
-              imageUrl: item.image || item.imageUrl,
+              imageUrl: normalizeCartImageValue(item.image) || normalizeCartImageValue(item.imageUrl),
             },
             sourcePosition,
           })
@@ -245,7 +268,7 @@ export function CartProvider({ children }) {
           product: {
             id: item.id,
             name: item.name,
-            imageUrl: item.image || item.imageUrl,
+            imageUrl: normalizeCartImageValue(item.image) || normalizeCartImageValue(item.imageUrl),
           },
           sourcePosition,
         })
@@ -269,7 +292,11 @@ export function CartProvider({ children }) {
           product: {
             id: productInfo.id || itemToRemove.id,
             name: productInfo.name || itemToRemove.name,
-            imageUrl: productInfo.imageUrl || productInfo.image || itemToRemove.image || itemToRemove.imageUrl,
+            imageUrl:
+              normalizeCartImageValue(productInfo.imageUrl) ||
+              normalizeCartImageValue(productInfo.image) ||
+              normalizeCartImageValue(itemToRemove.image) ||
+              normalizeCartImageValue(itemToRemove.imageUrl),
           },
           sourcePosition,
         })
@@ -291,7 +318,11 @@ export function CartProvider({ children }) {
             product: {
               id: productInfo.id || itemToRemove.id,
               name: productInfo.name || itemToRemove.name,
-              imageUrl: productInfo.imageUrl || productInfo.image || itemToRemove.image || itemToRemove.imageUrl,
+              imageUrl:
+                normalizeCartImageValue(productInfo.imageUrl) ||
+                normalizeCartImageValue(productInfo.image) ||
+                normalizeCartImageValue(itemToRemove.image) ||
+                normalizeCartImageValue(itemToRemove.imageUrl),
             },
             sourcePosition,
           })
@@ -313,7 +344,11 @@ export function CartProvider({ children }) {
           product: {
             id: productInfo.id || existingItem.id,
             name: productInfo.name || existingItem.name,
-            imageUrl: productInfo.imageUrl || productInfo.image || existingItem.image || existingItem.imageUrl,
+            imageUrl:
+              normalizeCartImageValue(productInfo.imageUrl) ||
+              normalizeCartImageValue(productInfo.image) ||
+              normalizeCartImageValue(existingItem.image) ||
+              normalizeCartImageValue(existingItem.imageUrl),
           },
           sourcePosition,
         })
@@ -447,6 +482,7 @@ export function CartProvider({ children }) {
         id: item.id,
         name: item.name,
         imageUrl: item.image || item.imageUrl,
+        restaurantImageUrl: normalizeCartImageValue(item.restaurantImage),
       },
       quantity: item.quantity || 1,
     }))
