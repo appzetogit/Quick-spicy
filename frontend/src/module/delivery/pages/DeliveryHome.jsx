@@ -71,6 +71,7 @@ const DROP_REACHED_THRESHOLD_METERS = 90
 const ROUTE_OFF_TRACK_THRESHOLD_METERS = 40
 const DELIVERY_LOCATION_SEND_INTERVAL_MS = 3000
 const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
+const POLYLINE_WIPE_INTERVAL_MS = 4000
 const BILL_UPLOAD_TIMEOUT_MS = 45000
 
 
@@ -498,6 +499,9 @@ export default function DeliveryHome() {
   }) // Keep route progress monotonic so polyline never jumps/cuts
   const lastRiderPositionRef = useRef(null) // Last rider position for smooth animation
   const markerAnimationCancelRef = useRef(null) // Cancel function for marker animation
+  const lastMarkerHeadingRef = useRef(0) // Smooth heading across GPS noise
+  const latestRiderLocationRef = useRef(null) // Keep latest rider location for interval tasks
+  const routeSyncStateRef = useRef({ inFlight: false, key: "", at: 0 }) // Prevent duplicate route sync calls
   const directionsResponseRef = useRef(null) // Store directions response for use in callbacks
   const fetchedOrderDetailsForDropRef = useRef(null) // Prevent re-fetching order details for Reached Drop customer coords
   const [zones, setZones] = useState([]) // Store nearby zones
@@ -983,6 +987,25 @@ export default function DeliveryHome() {
     showReachedDropPopup,
     showreachedPickupPopup
   ])
+
+  const isDeliveryLegOrder = useCallback((orderInfo) => {
+    const orderStatus = String(orderInfo?.orderStatus || orderInfo?.status || "").toLowerCase()
+    const phase = String(orderInfo?.deliveryPhase || orderInfo?.deliveryState?.currentPhase || "").toLowerCase()
+    return (
+      orderStatus === "out_for_delivery" ||
+      orderStatus === "picked_up" ||
+      phase === "en_route_to_delivery" ||
+      phase === "picked_up" ||
+      phase === "en_route_to_drop" ||
+      phase === "at_delivery"
+    )
+  }, [])
+
+  useEffect(() => {
+    if (Array.isArray(riderLocation) && riderLocation.length === 2) {
+      latestRiderLocationRef.current = riderLocation
+    }
+  }, [riderLocation?.[0], riderLocation?.[1]])
 
   const getRestaurantMarkerIcon = useCallback(() => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="52" height="60" viewBox="0 0 52 60"><path fill="#FF6B35" d="M26 2c-9.94 0-18 8.06-18 18 0 13.5 18 38 18 38s18-24.5 18-38c0-9.94-8.06-18-18-18z"/><circle cx="26" cy="20" r="12" fill="#FFF7ED"/><path fill="#FF6B35" d="M20 14h2v12h-2zm10 0h2v12h-2zm-5 0h2v5h2v2h-2v5h-2v-5h-2v-2h2z"/> </svg>'
@@ -2350,6 +2373,9 @@ export default function DeliveryHome() {
             if (bikeMarkerRef.current) {
               // Marker exists - animate smoothly to new position
               animateMarkerSmoothly(bikeMarkerRef.current, newSmoothedLocation, 1500, markerAnimationRef)
+              if (heading !== null && heading !== undefined) {
+                createOrUpdateBikeMarker(smoothedLat, smoothedLng, heading, false, { updatePosition: false })
+              }
             } else {
               // Marker doesn't exist yet, create it immediately with correct location
               debugLog('📍 Creating bike marker with smoothed location:', { lat: smoothedLat, lng: smoothedLng })
@@ -8691,106 +8717,103 @@ selectedRestaurant?.lng || null,
     clearNewOrder
   ])
 
-  // Monitor order status and switch route from restaurant to customer when order is picked up
+  // Keep route phase in sync:
+  // before pickup => rider to restaurant, after pickup => rider to customer.
   useEffect(() => {
-    const orderStatus = selectedRestaurant?.orderStatus || selectedRestaurant?.status || '';
-    const deliveryPhase = selectedRestaurant?.deliveryPhase || selectedRestaurant?.deliveryState?.currentPhase || '';
-    const customerDestination = getCustomerDestination(selectedRestaurant)
-    
-    // Check if order is picked up or out for delivery
-    const isPickedUp = orderStatus === 'out_for_delivery' || 
-                       orderStatus === 'picked_up' ||
-                       deliveryPhase === 'en_route_to_delivery' ||
-                       deliveryPhase === 'picked_up';
-    
-    // Check if we have customer location
-    const hasCustomerLocation = !!customerDestination;
-    
-    // Only switch route if order is picked up and we have customer location
-    if (isPickedUp && hasCustomerLocation && riderLocation && riderLocation.length === 2) {
-      // Ensure customer route layer is visible in delivery phase.
-      setShowRoutePath(true);
-
-      // Check if current route is already heading to customer.
-      const currentDirections = directionsResponseRef.current;
-      const isCurrentRouteToCustomer = isDirectionsResultNearDestination(currentDirections, customerDestination);
-      const needsCustomerRoute = !isCurrentRouteToCustomer;
-      
-      if (needsCustomerRoute) {
-        debugLog('🔄 Order picked up - switching route to customer location');
-        
-        // Calculate route from current location to customer
-        calculateRouteWithDirectionsAPI(
-          riderLocation,
-          customerDestination
-        ).then(directionsResult => {
-          if (directionsResult) {
-            debugLog('✅ Route to customer calculated after pickup');
-            setDirectionsResponse(directionsResult);
-            directionsResponseRef.current = directionsResult;
-            
-            // Show polyline for customer route - update live tracking polyline with new route
-            if (riderLocation && window.deliveryMapInstance) {
-              // Update live tracking polyline with route to customer (Restaurant → Customer)
-              updateLiveTrackingPolyline(directionsResult, riderLocation);
-              debugLog('✅ Live tracking polyline updated for delivery route (Restaurant → Customer)');
-            } else {
-              // Wait for map to be ready
-              setTimeout(() => {
-                if (riderLocation && window.deliveryMapInstance) {
-                  updateLiveTrackingPolyline(directionsResult, riderLocation);
-                  debugLog('✅ Live tracking polyline updated for delivery route (delayed)');
-                }
-              }, 500);
-            }
-            
-            // Clean up old fallback polyline if exists
-            if (window.deliveryMapInstance) {
-              try {
-                if (routePolylineRef.current) {
-                  routePolylineRef.current.setMap(null);
-                  routePolylineRef.current = null;
-                }
-                
-                // Remove DirectionsRenderer from map (we use custom polyline instead)
-                if (directionsRendererRef.current) {
-                  directionsRendererRef.current.setMap(null);
-                }
-              } catch (e) {
-                debugWarn('⚠️ Error cleaning up old polyline:', e);
-              }
-              
-              // Fit map bounds to show entire route
-              const bounds = directionsResult.routes[0].bounds;
-              if (bounds) {
-                const currentZoomBeforeFit = window.deliveryMapInstance.getZoom();
-                window.deliveryMapInstance.fitBounds(bounds, { padding: 100 });
-                // Preserve zoom if user had zoomed in
-                setTimeout(() => {
-                  const newZoom = window.deliveryMapInstance.getZoom();
-                  if (currentZoomBeforeFit > newZoom && currentZoomBeforeFit >= 18) {
-                    window.deliveryMapInstance.setZoom(currentZoomBeforeFit);
-                  }
-                }, 100);
-              }
-            }
-          }
-        }).catch(error => {
-          debugWarn('⚠️ Error calculating route to customer after pickup:', error);
-        });
-      }
-    }
+    if (!selectedRestaurant) return
+    const toCustomer = isDeliveryLegOrder(selectedRestaurant)
+    const desiredMode = toCustomer ? 'customer' : 'restaurant'
+    setNavigationMode((prev) => (prev === desiredMode ? prev : desiredMode))
   }, [
     selectedRestaurant?.orderStatus,
     selectedRestaurant?.status,
     selectedRestaurant?.deliveryPhase,
     selectedRestaurant?.deliveryState?.currentPhase,
+    isDeliveryLegOrder
+  ])
+
+  useEffect(() => {
+    if (!selectedRestaurant) return
+
+    const riderPos = latestRiderLocationRef.current || riderLocation || lastLocationRef.current
+    if (!Array.isArray(riderPos) || riderPos.length !== 2) return
+
+    const isDeliveryLeg = isDeliveryLegOrder(selectedRestaurant)
+    const customerDestination = getCustomerDestination(selectedRestaurant)
+    const restaurantDestination = {
+      lat: toFiniteCoordinate(selectedRestaurant?.lat),
+      lng: toFiniteCoordinate(selectedRestaurant?.lng)
+    }
+    const destination = isDeliveryLeg ? customerDestination : restaurantDestination
+    if (!destination || !Number.isFinite(destination.lat) || !Number.isFinite(destination.lng)) return
+
+    const currentDirections = directionsResponseRef.current
+    const destinationAlreadySynced = isDirectionsResultNearDestination(currentDirections, destination, 140)
+    if (destinationAlreadySynced) return
+
+    const now = Date.now()
+    const orderKey = selectedRestaurant?.orderId || selectedRestaurant?.id || 'active'
+    const routeKey = `${orderKey}:${isDeliveryLeg ? 'customer' : 'restaurant'}:${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`
+    const syncState = routeSyncStateRef.current
+    if (syncState.inFlight && syncState.key === routeKey) return
+    if (syncState.key === routeKey && now - syncState.at < 7000) return
+
+    syncState.inFlight = true
+    syncState.key = routeKey
+    syncState.at = now
+
+    calculateRouteWithDirectionsAPI(riderPos, destination)
+      .then((directionsResult) => {
+        if (!directionsResult) return
+        setDirectionsResponse(directionsResult)
+        directionsResponseRef.current = directionsResult
+        fullRoutePolylineRef.current = []
+        liveRouteProgressRef.current = { routeKey: null, distanceAlongRoute: 0, updatedAt: 0 }
+        updateLiveTrackingPolyline(directionsResult, riderPos)
+        setShowRoutePath(true)
+      })
+      .catch((error) => {
+        debugWarn('Route sync failed for delivery phase:', error?.message || error)
+      })
+      .finally(() => {
+        routeSyncStateRef.current.inFlight = false
+        routeSyncStateRef.current.at = Date.now()
+      })
+  }, [
+    selectedRestaurant?.id,
+    selectedRestaurant?.orderId,
+    selectedRestaurant?.lat,
+    selectedRestaurant?.lng,
     selectedRestaurant?.customerLat,
     selectedRestaurant?.customerLng,
+    selectedRestaurant?.orderStatus,
+    selectedRestaurant?.status,
+    selectedRestaurant?.deliveryPhase,
+    selectedRestaurant?.deliveryState?.currentPhase,
     riderLocation,
+    isDeliveryLegOrder,
     calculateRouteWithDirectionsAPI,
     updateLiveTrackingPolyline
-  ]);
+  ])
+
+  // Force polyline wipe/update every 4 seconds so stale segments don't stick.
+  useEffect(() => {
+    if (!selectedRestaurant) return
+
+    const interval = setInterval(() => {
+      const currentDirections = directionsResponseRef.current
+      const currentRiderPos = latestRiderLocationRef.current || riderLocation || lastLocationRef.current
+      if (
+        currentDirections?.routes?.length > 0 &&
+        Array.isArray(currentRiderPos) &&
+        currentRiderPos.length === 2
+      ) {
+        updateLiveTrackingPolyline(currentDirections, currentRiderPos)
+      }
+    }, POLYLINE_WIPE_INTERVAL_MS)
+
+    return () => clearInterval(interval)
+  }, [selectedRestaurant?.id, riderLocation, updateLiveTrackingPolyline])
 
   // When out_for_delivery but customerLat/customerLng missing, fetch order details and set them
   useEffect(() => {
@@ -8992,6 +9015,25 @@ selectedRestaurant?.lng || null,
     return heading
   }
 
+  const normalizeHeading = (heading) => {
+    const parsed = Number(heading)
+    if (!Number.isFinite(parsed)) return null
+    return ((parsed % 360) + 360) % 360
+  }
+
+  const smoothHeadingTurn = (previousHeading, nextHeading, maxStep = 35) => {
+    const prev = normalizeHeading(previousHeading)
+    const next = normalizeHeading(nextHeading)
+    if (next === null) return prev ?? 0
+    if (prev === null) return next
+
+    let delta = next - prev
+    if (delta > 180) delta -= 360
+    if (delta < -180) delta += 360
+    const boundedDelta = Math.max(-maxStep, Math.min(maxStep, delta))
+    return normalizeHeading(prev + boundedDelta) ?? next
+  }
+
   // Cache for rotated icons to avoid recreating them
   const rotatedIconCache = useRef(new Map());
 
@@ -9053,114 +9095,96 @@ selectedRestaurant?.lng || null,
   };
 
   // Google Maps marker functions - Zomato style exact location tracking
-  const createOrUpdateBikeMarker = async (latitude, longitude, heading = null, shouldCenterMap = true) => {
+  const createOrUpdateBikeMarker = async (
+    latitude,
+    longitude,
+    heading = null,
+    shouldCenterMap = true,
+    options = {}
+  ) => {
     if (!window.google || !window.google.maps || !window.deliveryMapInstance) {
-      debugWarn("⚠️ Google Maps not available");
+      debugWarn("Google Maps not available");
       return;
     }
 
+    const updatePosition = options?.updatePosition !== false;
     const position = new window.google.maps.LatLng(latitude, longitude);
     const map = window.deliveryMapInstance;
+    const markerCurrentPosition = bikeMarkerRef.current?.getPosition?.();
+    const previousHeading = lastMarkerHeadingRef.current;
+    let computedHeading = normalizeHeading(heading);
 
-    // Get rotated icon URL
-    const rotatedIconUrl = await getRotatedBikeIcon(heading || 0);
+    if (computedHeading === null && markerCurrentPosition) {
+      const prevLat = markerCurrentPosition.lat();
+      const prevLng = markerCurrentPosition.lng();
+      const movedMeters = calculateDistance(prevLat, prevLng, latitude, longitude);
+      if (movedMeters >= 1.5) {
+        computedHeading = calculateBearing(prevLat, prevLng, latitude, longitude);
+      }
+    }
+
+    const resolvedHeading = smoothHeadingTurn(previousHeading, computedHeading, 32);
+    lastMarkerHeadingRef.current = resolvedHeading;
+    const rotatedIconUrl = await getRotatedBikeIcon(resolvedHeading);
 
     if (!bikeMarkerRef.current) {
-      debugLog('📍 Creating new bike marker at:', { lat: latitude, lng: longitude });
-      // Create bike marker with rotated icon - exact position
       const bikeIcon = {
         url: rotatedIconUrl,
-        scaledSize: new window.google.maps.Size(60, 60), // Larger size for better visibility
-        anchor: new window.google.maps.Point(30, 30) // Center point
+        scaledSize: new window.google.maps.Size(60, 60),
+        anchor: new window.google.maps.Point(30, 30)
       };
 
       bikeMarkerRef.current = new window.google.maps.Marker({
         position: position,
         map: map,
         icon: bikeIcon,
-        optimized: false, // Disable optimization for exact positioning
-        animation: window.google.maps.Animation.DROP, // Drop animation on first appearance
-        zIndex: 1000 // High z-index to ensure it's above other markers
+        optimized: false,
+        animation: window.google.maps.Animation.DROP,
+        zIndex: 1000
       });
-      
-      debugLog('✅ Bike marker created:', {
-        position: { lat: latitude, lng: longitude },
-        map: map,
-        iconUrl: rotatedIconUrl,
-        marker: bikeMarkerRef.current
-      });
-      
-      // Center map on bike location initially - preserve current zoom if user has zoomed in
+
       if (shouldCenterMap) {
         const currentZoom = map.getZoom();
         map.setCenter(position);
-        // Only set zoom to 18 if current zoom is less than 18 (don't reduce user's zoom)
         if (currentZoom < 18) {
-          map.setZoom(18); // Full zoom in for better visibility
+          map.setZoom(18);
         }
       }
-      
-      // Remove animation after drop completes
+
       setTimeout(() => {
         if (bikeMarkerRef.current) {
           bikeMarkerRef.current.setAnimation(null);
         }
       }, 2000);
     } else {
-      // ALWAYS ensure marker is on the map (prevent it from disappearing)
       const currentMap = bikeMarkerRef.current.getMap();
       if (currentMap === null || currentMap !== map) {
-        debugWarn('⚠️ Bike marker not on correct map, re-adding...', {
-          currentMap: currentMap,
-          expectedMap: map
-        });
         bikeMarkerRef.current.setMap(map);
       }
-      
-      // Update position EXACTLY - use setPosition for precise location
-      // Verify coordinates are correct before setting
-      debugLog('📍 Updating bike marker position:', { 
-        lat: latitude, 
-        lng: longitude,
-        heading: heading || 0,
-        currentMarkerPos: bikeMarkerRef.current.getPosition() 
-          ? { lat: bikeMarkerRef.current.getPosition().lat(), lng: bikeMarkerRef.current.getPosition().lng() }
-          : 'null'
-      });
-      
-      // Validate coordinates before setting
-      if (typeof latitude === 'number' && typeof longitude === 'number' &&
-          !isNaN(latitude) && !isNaN(longitude) &&
-          latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
-        bikeMarkerRef.current.setPosition(position);
-        debugLog('✅ Bike marker position updated successfully');
-      } else {
-        debugError('❌ Invalid coordinates for bike marker:', { latitude, longitude });
-        return; // Don't update if coordinates are invalid
+
+      if (updatePosition) {
+        if (typeof latitude === 'number' && typeof longitude === 'number' &&
+            !isNaN(latitude) && !isNaN(longitude) &&
+            latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180) {
+          bikeMarkerRef.current.setPosition(position);
+        } else {
+          debugError('Invalid coordinates for bike marker:', { latitude, longitude });
+          return;
+        }
       }
-      
-      // Update icon with rotation for smooth movement
-      const currentHeading = heading !== null && heading !== undefined ? heading : 0;
-      const rotatedIconUrl = await getRotatedBikeIcon(currentHeading);
-      const bikeIcon = {
+
+      bikeMarkerRef.current.setIcon({
         url: rotatedIconUrl,
         scaledSize: new window.google.maps.Size(60, 60),
         anchor: new window.google.maps.Point(30, 30)
-      };
-      bikeMarkerRef.current.setIcon(bikeIcon);
-      
-      // Ensure z-index is high
+      });
       bikeMarkerRef.current.setZIndex(1000);
-      
-      // Auto-center map on bike location (like Zomato) - only if user hasn't manually panned
-      if (shouldCenterMap && !isUserPanningRef.current) {
-        // Smooth pan to bike location
+
+      if (updatePosition && shouldCenterMap && !isUserPanningRef.current) {
         map.panTo(position);
       }
-      
-      // Double-check marker is still on map after update
+
       if (bikeMarkerRef.current.getMap() === null) {
-        debugWarn('⚠️ Bike marker lost map reference after update, re-adding...');
         bikeMarkerRef.current.setMap(map);
       }
     }
