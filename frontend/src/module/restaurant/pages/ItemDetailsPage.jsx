@@ -1272,6 +1272,7 @@ export default function ItemDetailsPage() {
                   <input
                     type="text"
                     required
+                    inputMode="decimal"
                     value={basePrice}
                     onChange={(e) => {
                       // Remove rupee symbol and any non-numeric characters except decimal point
@@ -1287,6 +1288,14 @@ export default function ItemDetailsPage() {
                       // Remove rupee symbol when focused for easier editing
                       if (e.target.value.startsWith('₹')) {
                         e.target.value = e.target.value.replace(/₹\s*/g, '')
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const normalizedValue = e.target.value.trim()
+                      if (!normalizedValue) return
+                      const parsedValue = Number(normalizedValue)
+                      if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+                        setBasePrice("")
                       }
                     }}
                     placeholder="Enter base price"

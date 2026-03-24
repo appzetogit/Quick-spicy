@@ -558,13 +558,18 @@ export const addSection = asyncHandler(async (req, res) => {
 export const addItemToSection = asyncHandler(async (req, res) => {
   const restaurantId = req.restaurant._id;
   const { sectionId, item } = req.body;
+  const parsedPrice = Number(item?.price);
 
   if (!sectionId) {
     return errorResponse(res, 400, 'Section ID is required');
   }
 
-  if (!item || !item.name || item.price === undefined) {
+  if (!item || !item.name || item.price === undefined || item.price === null || item.price === '') {
     return errorResponse(res, 400, 'Item name and price are required');
+  }
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+    return errorResponse(res, 400, 'Base price is required and must be greater than 0');
   }
 
   // Find menu
@@ -590,7 +595,7 @@ export const addItemToSection = asyncHandler(async (req, res) => {
     category: item.category || section.name,
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
-    price: Number(item.price) || 0,
+    price: parsedPrice,
     stock: item.stock || "Unlimited",
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
@@ -697,13 +702,18 @@ export const addSubsectionToSection = asyncHandler(async (req, res) => {
 export const addItemToSubsection = asyncHandler(async (req, res) => {
   const restaurantId = req.restaurant._id;
   const { sectionId, subsectionId, item } = req.body;
+  const parsedPrice = Number(item?.price);
 
   if (!sectionId || !subsectionId) {
     return errorResponse(res, 400, 'Section ID and Subsection ID are required');
   }
 
-  if (!item || !item.name || item.price === undefined) {
+  if (!item || !item.name || item.price === undefined || item.price === null || item.price === '') {
     return errorResponse(res, 400, 'Item name and price are required');
+  }
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+    return errorResponse(res, 400, 'Base price is required and must be greater than 0');
   }
 
   // Find menu
@@ -735,7 +745,7 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
     category: item.category || section.name,
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
-    price: Number(item.price) || 0,
+    price: parsedPrice,
     stock: item.stock || "Unlimited",
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
