@@ -10,15 +10,22 @@ import {
   Menu,
   ChefHat,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Star,
+  X
 } from "lucide-react"
-import { userAPI } from "@/lib/api"
+import { orderAPI, userAPI } from "@/lib/api"
 import { toast } from "sonner"
 
 export default function OrdersPage() {
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [ratingModal, setRatingModal] = useState({ open: false, order: null })
+  const [restaurantRating, setRestaurantRating] = useState(null)
+  const [deliveryRating, setDeliveryRating] = useState(null)
+  const [feedbackText, setFeedbackText] = useState("")
+  const [submittingRating, setSubmittingRating] = useState(false)
 
   // Fetch orders from API
   useEffect(() => {
@@ -104,6 +111,8 @@ export default function OrdersPage() {
               tax: order.pricing?.tax || 0,
               address: order.address,
               payment: order.payment,
+              rating: order.rating || order.review?.rating || null,
+              review: order.review || null,
               deliveredAt: deliveredAt,
               createdAt: createdAt
             }
@@ -171,6 +180,63 @@ export default function OrdersPage() {
     }
   }
 
+  const handleOpenRating = (order) => {
+    setRatingModal({ open: true, order })
+    setRestaurantRating(order.review?.restaurantRating || order.rating || null)
+    setDeliveryRating(order.review?.deliveryRating || null)
+    setFeedbackText(order.review?.comment || "")
+  }
+
+  const handleCloseRating = () => {
+    setRatingModal({ open: false, order: null })
+    setRestaurantRating(null)
+    setDeliveryRating(null)
+    setFeedbackText("")
+  }
+
+  const handleSubmitRating = async () => {
+    const activeOrder = ratingModal.order
+
+    if (!activeOrder || (restaurantRating === null && deliveryRating === null)) {
+      toast.error("Please add at least one rating")
+      return
+    }
+
+    try {
+      setSubmittingRating(true)
+
+      const response = await orderAPI.submitReview(activeOrder.mongoId || activeOrder.id, {
+        restaurantRating: restaurantRating || undefined,
+        deliveryRating: deliveryRating || undefined,
+        comment: feedbackText || undefined,
+      })
+
+      const nextReview = response?.data?.data?.review || {}
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === activeOrder.id
+            ? {
+                ...order,
+                rating: nextReview.rating || order.rating || null,
+                review: {
+                  ...order.review,
+                  ...nextReview,
+                },
+              }
+            : order
+        )
+      )
+
+      toast.success("Review submitted successfully")
+      handleCloseRating()
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Failed to submit review")
+    } finally {
+      setSubmittingRating(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#f6e9dc] pb-20 md:pb-24">
       {/* Header */}
@@ -213,6 +279,7 @@ export default function OrdersPage() {
           {orders.map((order) => {
             // Check if payment failed
             const paymentFailed = order.payment?.status === 'failed' || order.payment?.status === 'pending'
+            const isDelivered = order.status === "Delivered"
             
             return (
               <div
@@ -281,6 +348,26 @@ export default function OrdersPage() {
                     <p className="text-sm md:text-base font-bold text-gray-900">
                       ₹{order.total.toFixed(2)}
                     </p>
+                    {isDelivered && !paymentFailed && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenRating(order)}
+                          className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-2.5 py-1 text-[10px] md:text-xs font-semibold text-[#ff8100]"
+                        >
+                          <Star className="w-3 h-3" />
+                          {order.review?.restaurantRating || order.review?.deliveryRating || order.rating ? "Edit Review" : "Give Review"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/user/complaints/submit/${order.mongoId || order.id}`)}
+                          className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2.5 py-1 text-[10px] md:text-xs font-semibold text-red-600"
+                        >
+                          <AlertCircle className="w-3 h-3" />
+                          Complain
+                        </button>
+                      </div>
+                    )}
                   </div>
                   <button 
                     onClick={() => navigate(`/usermain/orders/${order.id || order.mongoId}`)}
@@ -330,6 +417,87 @@ export default function OrdersPage() {
           </button>
         </div>
       </div>
+
+      {ratingModal.open && ratingModal.order && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <div className="mb-5 flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900">Review Your Order</h2>
+                <p className="text-sm text-gray-600">{ratingModal.order.restaurant}</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseRating}
+                className="rounded-full p-1 text-gray-500 hover:bg-gray-100"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-5">
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-900">Rate the restaurant and food</p>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: 5 }, (_, i) => i + 1).map((value) => (
+                    <button
+                      key={`restaurant-${value}`}
+                      type="button"
+                      onClick={() => setRestaurantRating(value)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`h-8 w-8 ${value <= (restaurantRating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="mb-2 text-sm font-semibold text-gray-900">Rate the delivery experience</p>
+                <div className="flex items-center gap-2">
+                  {Array.from({ length: 5 }, (_, i) => i + 1).map((value) => (
+                    <button
+                      key={`delivery-${value}`}
+                      type="button"
+                      onClick={() => setDeliveryRating(value)}
+                      className="transition-transform hover:scale-110"
+                    >
+                      <Star
+                        className={`h-8 w-8 ${value <= (deliveryRating || 0) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-gray-900">
+                  Feedback <span className="font-normal text-gray-400">(optional)</span>
+                </label>
+                <textarea
+                  rows={4}
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  placeholder="Share a few words about your order"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-800 outline-none focus:border-[#ff8100]"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={submittingRating || (restaurantRating === null && deliveryRating === null)}
+                onClick={handleSubmitRating}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#ff8100] px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {submittingRating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Star className="h-4 w-4" />}
+                {submittingRating ? "Submitting..." : "Submit Review"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

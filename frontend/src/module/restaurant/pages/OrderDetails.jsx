@@ -629,6 +629,8 @@ export default function OrderDetails() {
               )}
             </button>
             <button
+              onClick={handlePrintReceipt}
+              disabled={isGeneratingPDF}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
               aria-label="Receipt"
             >

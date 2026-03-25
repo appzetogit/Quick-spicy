@@ -235,6 +235,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     const restaurant = req.restaurant;
     const { id } = req.params;
     const { preparationTime } = req.body;
+    const ACCEPT_TIME_LIMIT_MS = 240 * 1000;
 
     const restaurantId = restaurant._id?.toString() ||
       restaurant.restaurantId ||
@@ -267,6 +268,38 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     // 'confirmed' status means payment is verified, restaurant can still accept
     if (!['pending', 'confirmed'].includes(order.status)) {
       return errorResponse(res, 400, `Order cannot be accepted. Current status: ${order.status}`);
+    }
+
+    const elapsedMs = Date.now() - new Date(order.createdAt).getTime();
+    if (elapsedMs >= ACCEPT_TIME_LIMIT_MS) {
+      order.status = 'cancelled';
+      order.cancellationReason = 'Order not accepted within time limit. Restaurant did not respond in time.';
+      order.cancelledBy = 'restaurant';
+      order.cancelledAt = new Date();
+      await order.save();
+
+      try {
+        const { calculateCancellationRefund } = await import('../../order/services/cancellationRefundService.js');
+        await calculateCancellationRefund(
+          order._id,
+          'Order not accepted within time limit. Restaurant did not respond in time.'
+        );
+      } catch (refundError) {
+        console.error(`Error calculating timeout refund for order ${order.orderId}:`, refundError);
+      }
+
+      try {
+        await notifyRestaurantOrderUpdate(order._id.toString(), 'cancelled');
+      } catch (notifError) {
+        console.error('Error sending restaurant cancellation notification:', notifError);
+      }
+      try {
+        await notifyUserOrderUpdate(order._id.toString(), 'cancelled');
+      } catch (notifError) {
+        console.error('Error sending user cancellation notification:', notifError);
+      }
+
+      return errorResponse(res, 400, 'Order accept time is over');
     }
 
     // When restaurant accepts order, it means they're starting to prepare it

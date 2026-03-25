@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
-import { Download, ChevronDown, FileText, DollarSign, Settings, FileSpreadsheet, Code } from "lucide-react"
-import { emptyTaxReports, emptyTaxStats } from "../../utils/adminFallbackData"
+import { Download, ChevronDown, FileText, DollarSign, Settings, FileSpreadsheet, Code, Loader2 } from "lucide-react"
+import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { exportReportsToCSV, exportReportsToExcel, exportReportsToPDF, exportReportsToJSON } from "../../components/reports/reportsExportUtils"
@@ -10,6 +10,58 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const formatCurrency = (value) => {
+  const number = Number(value || 0)
+  return `INR ${number.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+}
+
+const getDateRangeParams = (dateRangeType) => {
+  const now = new Date()
+  const start = new Date(now)
+  const end = new Date(now)
+
+  if (dateRangeType === "Today") {
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+  } else if (dateRangeType === "This Week") {
+    const day = now.getDay()
+    start.setDate(now.getDate() - day)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+  } else if (dateRangeType === "This Month") {
+    start.setDate(1)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+  } else if (dateRangeType === "This Year") {
+    start.setMonth(0, 1)
+    start.setHours(0, 0, 0, 0)
+    end.setHours(23, 59, 59, 999)
+  } else {
+    return {}
+  }
+
+  return {
+    fromDate: start.toISOString().split("T")[0],
+    toDate: end.toISOString().split("T")[0],
+  }
+}
+
+const computeTax = (transaction, calculateTax, taxRateNumber) => {
+  const taxableAmount = Number(transaction.discountedAmount || transaction.orderAmount || 0)
+
+  if (calculateTax === "Fixed Amount") {
+    return taxRateNumber
+  }
+
+  if (calculateTax === "Tiered") {
+    if (taxableAmount <= 1000) return taxableAmount * 0.05
+    if (taxableAmount <= 5000) return taxableAmount * 0.12
+    return taxableAmount * 0.18
+  }
+
+  return taxableAmount * (taxRateNumber / 100)
+}
+
 export default function TaxReport() {
   const [filters, setFilters] = useState({
     dateRangeType: "Select Date Range",
@@ -18,9 +70,14 @@ export default function TaxReport() {
   })
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   const [appliedFilters, setAppliedFilters] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [taxReports, setTaxReports] = useState([])
+  const [taxStats, setTaxStats] = useState({
+    totalIncome: "INR 0.00",
+    totalTax: "INR 0.00",
+  })
 
   const hasGeneratedReport = appliedFilters !== null
-  const taxReports = useMemo(() => (hasGeneratedReport ? emptyTaxReports : []), [hasGeneratedReport])
 
   const handleReset = () => {
     setFilters({
@@ -29,9 +86,14 @@ export default function TaxReport() {
       taxRate: "Select Tax Rate",
     })
     setAppliedFilters(null)
+    setTaxReports([])
+    setTaxStats({
+      totalIncome: "INR 0.00",
+      totalTax: "INR 0.00",
+    })
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (filters.dateRangeType === "Select Date Range") {
@@ -46,15 +108,75 @@ export default function TaxReport() {
       toast.error("Please select a tax rate")
       return
     }
+    if (filters.dateRangeType === "Custom Range") {
+      toast.error("Custom range is not available yet. Please choose another date range.")
+      return
+    }
 
-    setAppliedFilters({ ...filters })
-    debugLog("Submitting tax report filters:", filters)
-    toast.success("Tax report generated")
+    try {
+      setIsSubmitting(true)
+      const dateRangeParams = getDateRangeParams(filters.dateRangeType)
+      const response = await adminAPI.getTransactionReport({
+        page: 1,
+        limit: 1000,
+        ...dateRangeParams,
+      })
+
+      const transactions = response?.data?.data?.transactions || []
+      const taxRateNumber = Number(String(filters.taxRate).replace("%", "")) || 0
+      const aggregateByRestaurant = new Map()
+
+      for (const tx of transactions) {
+        const incomeSource = tx.restaurant || "Unknown Restaurant"
+        const current = aggregateByRestaurant.get(incomeSource) || { income: 0, tax: 0 }
+        const orderAmount = Number(tx.orderAmount || 0)
+        const calculatedTax = computeTax(tx, filters.calculateTax, taxRateNumber)
+
+        current.income += orderAmount
+        current.tax += calculatedTax
+        aggregateByRestaurant.set(incomeSource, current)
+      }
+
+      const nextRows = Array.from(aggregateByRestaurant.entries()).map(([incomeSource, values], index) => ({
+        sl: index + 1,
+        incomeSource,
+        totalIncome: formatCurrency(values.income),
+        totalTax: formatCurrency(values.tax),
+      }))
+
+      const totalIncome = nextRows.reduce((sum, row) => {
+        const value = Number(String(row.totalIncome).replace(/[^\d.-]/g, "")) || 0
+        return sum + value
+      }, 0)
+      const totalTax = nextRows.reduce((sum, row) => {
+        const value = Number(String(row.totalTax).replace(/[^\d.-]/g, "")) || 0
+        return sum + value
+      }, 0)
+
+      setTaxReports(nextRows)
+      setTaxStats({
+        totalIncome: formatCurrency(totalIncome),
+        totalTax: formatCurrency(totalTax),
+      })
+      setAppliedFilters({ ...filters })
+      debugLog("Submitting tax report filters:", filters)
+      toast.success("Tax report generated")
+    } catch (error) {
+      debugError("Error generating tax report:", error)
+      toast.error(error?.response?.data?.message || "Failed to generate tax report")
+      setTaxReports([])
+      setTaxStats({
+        totalIncome: "INR 0.00",
+        totalTax: "INR 0.00",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleExport = (format) => {
     if (taxReports.length === 0) {
-      alert("No data to export")
+      toast.error("No data to export")
       return
     }
 
@@ -70,8 +192,16 @@ export default function TaxReport() {
       case "excel": exportReportsToExcel(taxReports, headers, "tax_report"); break
       case "pdf": exportReportsToPDF(taxReports, headers, "tax_report", "Tax Report"); break
       case "json": exportReportsToJSON(taxReports, "tax_report"); break
+      default: debugWarn("Unsupported export format:", format)
     }
   }
+
+  const emptyMessage = useMemo(() => {
+    if (!hasGeneratedReport) {
+      return "To generate your tax report please select & input above field and submit for the result"
+    }
+    return "No tax report data found for the selected filters"
+  }, [hasGeneratedReport])
 
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen overflow-x-hidden">
@@ -83,7 +213,7 @@ export default function TaxReport() {
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
           <h2 className="text-lg font-semibold text-slate-900 mb-2">Admin Tax Report</h2>
           <p className="text-sm text-slate-600 mb-6">
-            To generate you tax report please select & input following field and submit for the result.
+            To generate your tax report please select & input following field and submit for the result.
           </p>
 
           <form onSubmit={handleSubmit}>
@@ -147,15 +277,18 @@ export default function TaxReport() {
               <button
                 type="button"
                 onClick={handleReset}
-                className="px-6 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-all"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition-all disabled:opacity-60"
               >
                 Reset
               </button>
               <button
                 type="submit"
-                className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all"
+                disabled={isSubmitting}
+                className="px-6 py-2.5 text-sm font-medium rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-all disabled:opacity-60 flex items-center gap-2"
               >
-                Submit
+                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {isSubmitting ? "Generating..." : "Submit"}
               </button>
             </div>
           </form>
@@ -166,7 +299,7 @@ export default function TaxReport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Total Income</p>
-                <p className="text-2xl font-bold text-blue-600">{emptyTaxStats.totalIncome}</p>
+                <p className="text-2xl font-bold text-blue-600">{taxStats.totalIncome}</p>
               </div>
               <div className="w-14 h-14 rounded-lg bg-yellow-100 flex items-center justify-center">
                 <DollarSign className="w-8 h-8 text-yellow-600" />
@@ -178,7 +311,7 @@ export default function TaxReport() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-slate-600 mb-1">Total Tax</p>
-                <p className="text-2xl font-bold text-red-600">{emptyTaxStats.totalTax}</p>
+                <p className="text-2xl font-bold text-red-600">{taxStats.totalTax}</p>
               </div>
               <div className="w-14 h-14 rounded-lg bg-pink-100 flex items-center justify-center">
                 <FileText className="w-8 h-8 text-purple-600" />
@@ -237,11 +370,7 @@ export default function TaxReport() {
                   <FileText className="w-12 h-12 text-purple-600" />
                 </div>
                 <p className="text-lg font-semibold text-slate-700 mb-2">No Tax Report Generated</p>
-                <p className="text-sm text-slate-500 max-w-md">
-                  {hasGeneratedReport
-                    ? "No tax report data found for the selected filters"
-                    : "To generate your tax report please select & input above field and submit for the result"}
-                </p>
+                <p className="text-sm text-slate-500 max-w-md">{emptyMessage}</p>
               </div>
             </div>
           ) : (

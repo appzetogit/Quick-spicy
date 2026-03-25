@@ -793,6 +793,25 @@ export default function OrdersMain() {
   }, [showNewOrderPopup, countdown])
 
   useEffect(() => {
+    if (!showNewOrderPopup || countdown > 0) return
+
+    if (audioRef.current) {
+      audioRef.current.pause()
+      audioRef.current.currentTime = 0
+    }
+
+    toast.error("Order accept time is over")
+    setShowNewOrderPopup(false)
+    setPopupOrder(null)
+    clearNewOrder()
+    setRejectReason("")
+    setCountdown(240)
+    setPrepTime(11)
+    setAcceptSwipeProgress(0)
+    setIsAcceptingOrder(false)
+  }, [showNewOrderPopup, countdown, clearNewOrder])
+
+  useEffect(() => {
     if (!showNewOrderPopup) {
       setAcceptSwipeProgress(0)
       setIsAcceptingOrder(false)
@@ -1026,8 +1045,11 @@ export default function OrdersMain() {
 
   // Handle PDF download
   const handlePrint = async () => {
-    if (!newOrder) {
+    const orderToPrint = popupOrder || newOrder
+
+    if (!orderToPrint) {
       debugWarn('No order data available for PDF generation')
+      toast.error('No order selected for printing')
       return
     }
 
@@ -1162,9 +1184,10 @@ export default function OrdersMain() {
       doc.save(fileName)
 
       debugLog('✅ PDF generated successfully:', fileName)
+      toast.success('Receipt downloaded successfully')
     } catch (error) {
       debugError('❌ Error generating PDF:', error)
-      alert('Failed to generate PDF. Please try again.')
+      toast.error('Failed to generate PDF. Please try again.')
     }
   }
 
@@ -2120,21 +2143,7 @@ function OrderCard({
     .replace(/\b\w/g, (c) => c.toUpperCase())
 
   return (
-    <div className="w-full bg-white rounded-2xl p-4 mb-3 border border-gray-200 hover:border-gray-400 transition-colors relative">
-      {/* Cancel button - only show for preparing orders */}
-      {isPreparing && onCancel && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onCancel({ orderId, mongoId, customerName });
-          }}
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors z-10"
-          title="Cancel Order"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      )}
+    <div className="w-full bg-white rounded-2xl p-4 mb-3 border border-gray-200 hover:border-gray-400 transition-colors">
       <div
         onClick={() =>
           onSelect?.({
@@ -2182,18 +2191,34 @@ function OrderCard({
             </div>
 
             <div className="flex flex-col items-end gap-1">
-              <span
-                className={`inline-flex items-start gap-1 px-2 py-1 rounded-full text-[11px] font-medium border text-right whitespace-normal break-words max-w-[140px] leading-tight ${isReady
-                  ? "border-green-500 text-green-600"
-                  : "border-gray-800 text-gray-900"
-                  }`}
-              >
+              <div className="flex items-start justify-end gap-2">
                 <span
-                  className={`h-1.5 w-1.5 rounded-full ${isReady ? "bg-green-500" : "bg-gray-800"
+                  className={`inline-flex items-start gap-1 px-2 py-1 rounded-full text-[11px] font-medium border text-right whitespace-normal break-words max-w-[140px] leading-tight ${isReady
+                    ? "border-green-500 text-green-600"
+                    : "border-gray-800 text-gray-900"
                     }`}
-                />
-                {statusLabel}
-              </span>
+                >
+                  <span
+                    className={`mt-1 h-1.5 w-1.5 rounded-full flex-shrink-0 ${isReady ? "bg-green-500" : "bg-gray-800"
+                      }`}
+                  />
+                  {statusLabel}
+                </span>
+                {isPreparing && onCancel && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCancel({ orderId, mongoId, customerName })
+                    }}
+                    className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 hover:bg-red-200 transition-colors"
+                    title="Cancel Order"
+                    aria-label={`Cancel order ${orderId}`}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
               <span className="text-[11px] text-gray-500 text-right whitespace-normal break-words max-w-[120px] leading-tight">
                 {timePlaced}
               </span>
