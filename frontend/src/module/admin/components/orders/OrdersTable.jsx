@@ -37,8 +37,10 @@ export default function OrdersTable({
   onAcceptOrder,
   onRejectOrder,
   onMarkReady,
+  onMarkDelivered,
   actionLoadingOrderId,
   readyLoadingOrderId,
+  deliveredLoadingOrderId,
   deletingOrderId,
 }) {
   const [currentPage, setCurrentPage] = useState(1)
@@ -75,6 +77,17 @@ export default function OrdersTable({
       displayStatus === "preparing" ||
       backendStatus === "processing" ||
       backendStatus === "preparing"
+    )
+  }
+
+  const isOrderDeliveredMarkable = (order) => {
+    const displayStatus = String(order?.orderStatus || "").toLowerCase()
+    const backendStatus = String(order?.status || "").toLowerCase()
+    return (
+      displayStatus === "ready" ||
+      displayStatus === "food on the way" ||
+      backendStatus === "ready" ||
+      backendStatus === "out_for_delivery"
     )
   }
   
@@ -407,6 +420,21 @@ export default function OrdersTable({
                             <Check className="w-3.5 h-3.5" />
                           )}
                           <span>Mark Ready</span>
+                        </button>
+                      )}
+                      {isOrderDeliveredMarkable(order) && onMarkDelivered && (
+                        <button
+                          onClick={() => onMarkDelivered(order)}
+                          disabled={deliveredLoadingOrderId === (order.id || order.orderId)}
+                          className="px-2.5 py-1.5 rounded text-xs font-medium text-white bg-emerald-700 hover:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
+                          title="Mark Delivered"
+                        >
+                          {deliveredLoadingOrderId === (order.id || order.orderId) ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
+                          <span>Delivered</span>
                         </button>
                       )}
                       <button 

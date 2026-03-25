@@ -42,6 +42,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
   const [markingReadyOrderId, setMarkingReadyOrderId] = useState(null)
+  const [markingDeliveredOrderId, setMarkingDeliveredOrderId] = useState(null)
   const [deletingOrderId, setDeletingOrderId] = useState(null)
   const [refundModalOpen, setRefundModalOpen] = useState(false)
   const [selectedOrderForRefund, setSelectedOrderForRefund] = useState(null)
@@ -666,6 +667,37 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }
 
+  const handleMarkDeliveredOrder = async (order) => {
+    const orderIdToUse = order.id || order._id || order.orderId
+    const orderLabel = order.orderId || orderIdToUse
+    if (!orderIdToUse) {
+      toast.error("Order ID not found")
+      return
+    }
+
+    try {
+      setMarkingDeliveredOrderId(order.id || order.orderId)
+      const response = await adminAPI.markOrderDelivered(orderIdToUse)
+      if (response.data?.success) {
+        toast.success(response.data?.message || `Order ${orderLabel} marked delivered`)
+        await fetchOrders({ silent: true, withRingCheck: false })
+      } else {
+        toast.error(response.data?.message || "Failed to mark order as delivered")
+      }
+    } catch (error) {
+      const status = error?.response?.status
+      const message = error?.response?.data?.message || "Failed to mark order as delivered"
+      if (status === 400 && String(message).toLowerCase().includes("current status")) {
+        toast.success(`Order ${orderLabel} is already delivered`)
+        await fetchOrders({ silent: true, withRingCheck: false })
+      } else {
+        toast.error(message)
+      }
+    } finally {
+      setMarkingDeliveredOrderId(null)
+    }
+  }
+
   const handleDeleteOrder = async (order) => {
     const orderIdToUse = order.id || order._id || order.orderId
     if (!orderIdToUse) {
@@ -954,8 +986,10 @@ export default function OrdersPage({ statusKey = "all" }) {
         onAcceptOrder={statusKey === "all" || statusKey === "pending" ? handleAcceptOrder : undefined}
         onRejectOrder={statusKey === "all" || statusKey === "pending" ? handleRejectOrder : undefined}
         onMarkReady={statusKey === "all" || statusKey === "processing" ? handleMarkReadyOrder : undefined}
+        onMarkDelivered={statusKey === "all" ? handleMarkDeliveredOrder : undefined}
         actionLoadingOrderId={processingActionOrderId}
         readyLoadingOrderId={markingReadyOrderId}
+        deliveredLoadingOrderId={markingDeliveredOrderId}
         deletingOrderId={deletingOrderId}
       />
     </div>

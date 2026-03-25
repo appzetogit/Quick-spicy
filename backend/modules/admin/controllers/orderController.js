@@ -7,7 +7,7 @@ import { notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotific
 import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNotificationService.js';
 import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
 import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotificationService.js';
-import { removeActiveOrderTracking } from '../../delivery/services/firebaseRealtimeTrackingService.js';
+import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
 
@@ -828,6 +828,107 @@ export const markOrderReady = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error("Error marking order ready by admin:", error);
     return errorResponse(res, 500, "Failed to mark order as ready");
+  }
+});
+
+/**
+ * Mark order as delivered as admin
+ * PATCH /api/admin/orders/:id/delivered
+ */
+export const markOrderDelivered = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const order = await findOrderByIdOrOrderId(id);
+
+    if (!order) {
+      return errorResponse(res, 404, "Order not found");
+    }
+
+    if (!["ready", "out_for_delivery"].includes(String(order.status || "").toLowerCase())) {
+      return errorResponse(
+        res,
+        400,
+        `Order cannot be marked as delivered. Current status: ${order.status}`,
+      );
+    }
+
+    const now = new Date();
+    order.status = "delivered";
+    order.deliveredAt = now;
+
+    if (!order.tracking) {
+      order.tracking = {};
+    }
+    if (!order.tracking.outForDelivery) {
+      order.tracking.outForDelivery = { status: false };
+    }
+    if (!order.tracking.outForDelivery.status) {
+      order.tracking.outForDelivery = { status: true, timestamp: now };
+    }
+    order.tracking.delivered = {
+      status: true,
+      timestamp: now,
+    };
+
+    if (!order.deliveryState) {
+      order.deliveryState = {};
+    }
+    order.deliveryState.status = "delivered";
+    order.deliveryState.currentPhase = "completed";
+
+    const deliveryPartnerId = order.deliveryPartnerId ? String(order.deliveryPartnerId) : null;
+    const orderTrackingId = order.orderId || order._id?.toString();
+
+    await order.save();
+
+    // Best-effort cleanup so rider becomes immediately available in realtime channels.
+    try {
+      await removeActiveOrderTracking(orderTrackingId);
+    } catch (cleanupError) {
+      console.error("Admin mark delivered: active tracking cleanup failed:", cleanupError);
+    }
+
+    if (deliveryPartnerId) {
+      try {
+        const Delivery = (await import("../../delivery/models/Delivery.js")).default;
+        const deliveryDoc = await Delivery.findById(deliveryPartnerId).select("availability").lean();
+        const coords = deliveryDoc?.availability?.currentLocation?.coordinates || [];
+        const lat = coords.length >= 2 ? coords[1] : null;
+        const lng = coords.length >= 2 ? coords[0] : null;
+        await syncDeliveryPartnerPresence({
+          deliveryId: deliveryPartnerId,
+          lat,
+          lng,
+          isOnline: deliveryDoc?.availability?.isOnline || false,
+          activeOrderId: null,
+        });
+      } catch (presenceError) {
+        console.error("Admin mark delivered: delivery presence sync failed:", presenceError);
+      }
+    }
+
+    try {
+      await notifyRestaurantOrderUpdate(order._id.toString(), "delivered");
+    } catch (notifError) {
+      console.error("Admin mark delivered: restaurant notification failed:", notifError);
+    }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), "delivered");
+    } catch (notifError) {
+      console.error("Admin mark delivered: user notification failed:", notifError);
+    }
+
+    return successResponse(res, 200, "Order marked as delivered", {
+      order: {
+        id: order._id.toString(),
+        orderId: order.orderId,
+        status: order.status,
+        deliveredAt: order.deliveredAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error marking order delivered by admin:", error);
+    return errorResponse(res, 500, "Failed to mark order as delivered");
   }
 });
 

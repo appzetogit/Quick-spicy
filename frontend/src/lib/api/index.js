@@ -1496,6 +1496,11 @@ export const adminAPI = {
     return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/ready`);
   },
 
+  // Mark order as delivered (admin)
+  markOrderDelivered: (id) => {
+    return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/delivered`);
+  },
+
   // Delete order (admin)
   deleteOrder: (id) => {
     return apiClient.delete(`/admin/orders/${encodeURIComponent(id)}`);
