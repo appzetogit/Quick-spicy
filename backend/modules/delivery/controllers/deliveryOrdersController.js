@@ -2056,9 +2056,12 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
   }
 
   const isValidState = order.status === 'out_for_delivery' ||
+    order.status === 'delivered' ||
     order.deliveryState?.currentPhase === 'at_delivery' ||
     order.deliveryState?.currentPhase === 'en_route_to_delivery' ||
-    order.deliveryState?.status === 'order_confirmed';
+    order.deliveryState?.currentPhase === 'completed' ||
+    order.deliveryState?.status === 'order_confirmed' ||
+    order.deliveryState?.status === 'delivered';
   if (!isValidState) {
     return errorResponse(
       res,
