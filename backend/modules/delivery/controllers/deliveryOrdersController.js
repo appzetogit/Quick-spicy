@@ -2057,9 +2057,14 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
 
   const isValidState = order.status === 'out_for_delivery' ||
     order.deliveryState?.currentPhase === 'at_delivery' ||
-    order.deliveryState?.currentPhase === 'en_route_to_delivery';
+    order.deliveryState?.currentPhase === 'en_route_to_delivery' ||
+    order.deliveryState?.status === 'order_confirmed';
   if (!isValidState) {
-    return errorResponse(res, 400, 'OTP can be verified only when order is out for delivery');
+    return errorResponse(
+      res,
+      400,
+      `OTP can be verified only after pickup while heading to customer. Current status: ${order.status}, phase: ${order.deliveryState?.currentPhase || 'unknown'}`
+    );
   }
 
   const dropOtp = order?.deliveryVerification?.dropOtp || {};

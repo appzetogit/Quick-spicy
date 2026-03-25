@@ -176,6 +176,21 @@ export default function OrdersPage({ statusKey = "all" }) {
     alertLoopStartedAtRef.current = 0
   }, [])
 
+  const stopOrderAlertSoundNow = useCallback(() => {
+    activeOrderAlertRef.current = null
+    stopAlertLoop()
+
+    if (notificationAudioRef.current) {
+      notificationAudioRef.current.pause()
+      notificationAudioRef.current.currentTime = 0
+    }
+
+    if (fallbackAudioRef.current) {
+      fallbackAudioRef.current.pause()
+      fallbackAudioRef.current.currentTime = 0
+    }
+  }, [stopAlertLoop])
+
   const startAlertLoop = useCallback(() => {
     stopAlertLoop()
     alertLoopStartedAtRef.current = Date.now()
@@ -569,6 +584,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       setProcessingActionOrderId(order.id || order.orderId)
       const response = await adminAPI.acceptOrder(orderIdToUse)
       if (response.data?.success) {
+        stopOrderAlertSoundNow()
         const notifiedCount = Number(response?.data?.data?.dispatch?.notifiedDeliveryPartners || 0)
         const baseMessage = response.data?.message || `Order ${order.orderId} accepted`
         if (notifiedCount > 0) {

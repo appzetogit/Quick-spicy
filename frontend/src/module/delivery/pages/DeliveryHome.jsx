@@ -74,6 +74,32 @@ const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
 const POLYLINE_WIPE_INTERVAL_MS = 4000
 const BILL_UPLOAD_TIMEOUT_MS = 45000
 
+const buildDeliveryAudioCandidates = (source, fileName, cacheKey = "delivery-alert") => {
+  if (!source) return []
+
+  const normalizedSource = String(source).trim()
+  const sourceWithoutQuery = normalizedSource.split("?")[0]
+  const candidates = [normalizedSource]
+
+  if (import.meta.env.DEV) {
+    const separator = normalizedSource.includes("?") ? "&" : "?"
+    candidates.push(`${normalizedSource}${separator}devcache=${cacheKey}`)
+  }
+
+  if (sourceWithoutQuery && sourceWithoutQuery !== normalizedSource) {
+    candidates.push(sourceWithoutQuery)
+  }
+
+  if (fileName) {
+    candidates.push(`/assets/audio/${fileName}`)
+    if (import.meta.env.DEV) {
+      candidates.push(`/src/assets/audio/${fileName}`)
+    }
+  }
+
+  return [...new Set(candidates.filter(Boolean))]
+}
+
 
 // Ola Maps API Key removed
 
@@ -1496,117 +1522,77 @@ export default function DeliveryHome() {
   const playAlertSound = async () => {
     // Only play if user has interacted with the page (browser autoplay policy)
     if (!userInteractedRef.current) {
-      debugLog('🔇 Audio playback skipped - user has not interacted with page yet')
+      debugLog('Audio playback skipped - user has not interacted with page yet')
       return null
     }
-    
+
     try {
       // Get selected alert sound preference from localStorage
       const selectedSound = localStorage.getItem('delivery_alert_sound') || 'zomato_tone'
-      const soundFile = selectedSound === 'original' ? originalSound : alertSound
-      
-      debugLog('🔊 Playing alert sound:', {
-        selectedSound,
-        soundType: selectedSound === 'original' ? 'Original' : 'Zomato Tone',
-        soundFile,
-        originalSoundPath: originalSound,
-        alertSoundPath: alertSound
-      })
-      
-      // Verify sound file exists
-      if (!soundFile) {
-        debugError('❌ Sound file is undefined!', { selectedSound, soundFile })
+      const preferredSound = selectedSound === 'original' ? originalSound : alertSound
+      const soundFileName = selectedSound === 'original' ? 'original.mp3' : 'alert.mp3'
+      const soundCandidates = buildDeliveryAudioCandidates(
+        preferredSound,
+        soundFileName,
+        selectedSound === 'original' ? 'delivery-original' : 'delivery-alert'
+      )
+
+      if (!soundCandidates.length) {
+        debugError('Sound file is undefined!', { selectedSound, preferredSound })
         return null
       }
-      
-      // Use selected sound file from assets
-      const audio = new Audio(soundFile)
-      
-      // Add load event listener to verify file loads
-      audio.addEventListener('loadeddata', () => {
-        debugLog('✅ Audio file loaded successfully:', soundFile)
-      })
-      
-      audio.addEventListener('canplay', () => {
-        debugLog('✅ Audio can play:', soundFile)
-      })
-      
-      audio.volume = 1
-      audio.loop = true // Loop the sound
-      
-      // Set up error handler
-      audio.addEventListener('error', (e) => {
-        debugError('Audio error:', e)
-        debugError('Audio error details:', {
-          code: audio.error?.code,
-          message: audio.error?.message
-        })
-      })
-      
-      // Preload audio before playing
-      audio.preload = 'auto'
-      
-      // Play the sound and wait for it to start
-      try {
-        // Wait for audio to be ready
-        await new Promise((resolve, reject) => {
-          audio.addEventListener('canplaythrough', resolve, { once: true })
-          audio.addEventListener('error', reject, { once: true })
-          audio.load()
-          // Timeout after 3 seconds
-          setTimeout(() => reject(new Error('Audio load timeout')), 3000)
-        })
-        
-        const playPromise = audio.play()
-        if (playPromise !== undefined) {
-          await playPromise
-        }
-        debugLog('✅ Alert sound started playing successfully', {
-          src: audio.src,
-          volume: audio.volume,
-          loop: audio.loop,
-          readyState: audio.readyState
-        })
-        return audio
-      } catch (playError) {
-        debugError('❌ Audio play error:', {
-          error: playError,
-          message: playError.message,
-          name: playError.name,
-          soundFile,
-          selectedSound,
-          audioReadyState: audio.readyState,
-          audioSrc: audio.src
-        })
-        
-        // Don't log autoplay policy errors as they're expected before user interaction
-        if (!playError.message?.includes('user didn\'t interact') && 
-            !playError.name?.includes('NotAllowedError') &&
-            !playError.message?.includes('timeout')) {
-          debugError('❌ Could not play alert sound:', playError)
-        }
-        
-        // Try to load and play again
+
+      for (const source of soundCandidates) {
+        const audio = new Audio(source)
+        audio.preload = 'auto'
+        audio.volume = 1
+        audio.loop = true
+
         try {
-          audio.load()
-          await new Promise((resolve) => setTimeout(resolve, 100)) // Small delay
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Audio load timeout')), 2500)
+            audio.addEventListener('canplaythrough', () => {
+              clearTimeout(timeout)
+              resolve()
+            }, { once: true })
+            audio.addEventListener('error', () => {
+              clearTimeout(timeout)
+              reject(new Error('Audio source load failed'))
+            }, { once: true })
+            audio.load()
+          })
+
           const playPromise = audio.play()
           if (playPromise !== undefined) {
             await playPromise
           }
-          debugLog('✅ Alert sound started playing after retry')
+
+          debugLog('[NewOrder] Audio started', {
+            source,
+            src: audio.src,
+            readyState: audio.readyState,
+            loop: audio.loop,
+          })
+
           return audio
-        } catch (retryError) {
-          // Don't log autoplay policy errors
-          if (!retryError.message?.includes('user didn\'t interact') && 
-              !retryError.name?.includes('NotAllowedError')) {
-            debugError('❌ Could not play alert sound after retry:', retryError)
+        } catch (playError) {
+          const isAutoplayIssue =
+            playError?.message?.includes("user didn't interact") ||
+            playError?.name?.includes('NotAllowedError')
+
+          if (!isAutoplayIssue) {
+            debugWarn('[NewOrder] Failed audio source, trying next', {
+              source,
+              message: playError?.message,
+              name: playError?.name,
+            })
           }
-          return null
         }
       }
+
+      return null
     } catch (error) {
-      debugError('❌ Could not create audio:', error)
+      debugError('Could not create audio:', error)
       return null
     }
   }
@@ -12358,3 +12344,4 @@ selectedRestaurant?.lng || null,
     </div>
   )
 }
+
