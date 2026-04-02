@@ -1,0 +1,198 @@
+{
+  "restaurant": {
+    "id": "69a2a22e70ba942316a38045",
+    "slug": "k-star-spicy-food-court",
+    "name": "K Star Spicy Food Court"
+  },
+  "exportedAt": "2026-04-02T13:48:05.786Z",
+  "totalItems": 14,
+  "items": [
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274450290-0.5240028998967723",
+      "itemName": "Kaju Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274448/appzeto/restaurant/menu-items/klhqxtlih1z8rp3audkt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274448/appzeto/restaurant/menu-items/klhqxtlih1z8rp3audkt.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/001-kaju-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274384352-0.6115426222157591",
+      "itemName": "Jeera Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274382/appzeto/restaurant/menu-items/sojonbmkewyjkp1hc2uq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274382/appzeto/restaurant/menu-items/sojonbmkewyjkp1hc2uq.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/002-jeera-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274308016-0.42981805774632",
+      "itemName": "Veg Manchuria Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274305/appzeto/restaurant/menu-items/kblghxb2egxkgki7hirx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274305/appzeto/restaurant/menu-items/kblghxb2egxkgki7hirx.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/003-veg-manchuria-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274227379-0.46154211526596145",
+      "itemName": "Veg Manchuria Noodles",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274225/appzeto/restaurant/menu-items/kze46nhasob50hd8ncy3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274225/appzeto/restaurant/menu-items/kze46nhasob50hd8ncy3.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/004-veg-manchuria-noodles.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274120678-0.3710916458057245",
+      "itemName": "Veg Manchuria",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274119/appzeto/restaurant/menu-items/u7kuaza0j37sdwbckna2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274119/appzeto/restaurant/menu-items/u7kuaza0j37sdwbckna2.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/005-veg-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772274005749-0.7199361881740151",
+      "itemName": "Veg Noodles",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274004/appzeto/restaurant/menu-items/ov8ozbjmztegknjsi0gf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274004/appzeto/restaurant/menu-items/ov8ozbjmztegknjsi0gf.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/006-veg-noodles.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772273939913-0.09508323782749828",
+      "itemName": "Veg Fried Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481013/foods/m7k5skhqr9nccaemgz15.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481013/foods/m7k5skhqr9nccaemgz15.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/007-veg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772275631601-0.20468384232072057",
+      "itemName": "Chicken Pakodi (250 gms)",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275629/appzeto/restaurant/menu-items/c9g7oxfnpk5lpururfiz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275629/appzeto/restaurant/menu-items/c9g7oxfnpk5lpururfiz.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/008-chicken-pakodi-250-gms.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772275389240-0.1753061792963282",
+      "itemName": "Chicken Noodles",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275387/appzeto/restaurant/menu-items/yojwsqetmtuolgpaxu3v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275387/appzeto/restaurant/menu-items/yojwsqetmtuolgpaxu3v.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/009-chicken-noodles.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772275241783-0.672371520641076",
+      "itemName": "Chicken Rice",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275239/appzeto/restaurant/menu-items/yacz0zhbu0kzfvtqqbzf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275239/appzeto/restaurant/menu-items/yacz0zhbu0kzfvtqqbzf.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/010-chicken-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772275072374-0.5917958143868223",
+      "itemName": "Double Egg Gobi Manchuriya",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275070/appzeto/restaurant/menu-items/aaltus6ggkyxwzoqnhyi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772275070/appzeto/restaurant/menu-items/aaltus6ggkyxwzoqnhyi.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/011-double-egg-gobi-manchuriya.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772274658346-0.08939105914196988",
+      "itemName": "Egg Gobi Manchuriya",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274656/appzeto/restaurant/menu-items/lufg5jwdjbxpycyvqc0h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274656/appzeto/restaurant/menu-items/lufg5jwdjbxpycyvqc0h.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/012-egg-gobi-manchuriya.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772274579492-0.6433126078065012",
+      "itemName": "Egg Noodles",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274577/appzeto/restaurant/menu-items/od8wedvnkzjbs5jykvup.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274577/appzeto/restaurant/menu-items/od8wedvnkzjbs5jykvup.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/013-egg-noodles.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON VEG ITEM'S",
+      "subsection": "",
+      "itemId": "item-1772274516573-0.11153425035933917",
+      "itemName": "Egg Fried Rice",
+      "category": "NON VEG ITEM'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274515/appzeto/restaurant/menu-items/ju9orrzw0unnqr2x5yzv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772274515/appzeto/restaurant/menu-items/ju9orrzw0unnqr2x5yzv.jpg"
+      ],
+      "localImage": "exports/k-star-spicy-food-court-images/014-egg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:48:06.452Z",
+  "downloadFolder": "exports/k-star-spicy-food-court-images",
+  "uniqueRemoteImages": 14,
+  "downloadedCount": 14,
+  "failedCount": 0
+}

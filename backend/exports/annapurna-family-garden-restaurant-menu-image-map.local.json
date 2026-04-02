@@ -1,0 +1,2044 @@
+{
+  "restaurant": {
+    "id": "69a318da8d5836be4068d040",
+    "slug": "annapurna-family-garden-restaurant",
+    "name": "Annapurna Family Garden Restaurant"
+  },
+  "exportedAt": "2026-04-02T13:45:30.071Z",
+  "totalItems": 156,
+  "items": [
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-7",
+      "itemName": "Rambo Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532864/foods/jamgujyon5m9j1srnsti.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532864/foods/jamgujyon5m9j1srnsti.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/001-rambo-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-9",
+      "itemName": "Chicken Gongura Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533029/foods/eliapuzxnghuggpx0z4g.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533029/foods/eliapuzxnghuggpx0z4g.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/002-chicken-gongura-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-10",
+      "itemName": "Natukodi Fry Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533106/foods/orth14cocrxnjyssj6s0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533106/foods/orth14cocrxnjyssj6s0.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/003-natukodi-fry-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-11",
+      "itemName": "Mutton Fry Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533189/foods/i2n8jdp2b3v8kgopqt6m.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533189/foods/i2n8jdp2b3v8kgopqt6m.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/004-mutton-fry-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-1",
+      "itemName": "Annapurna SP Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456715/appzeto/restaurant/menu-items/a48dpzguysbmuq6aa8mc.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456715/appzeto/restaurant/menu-items/a48dpzguysbmuq6aa8mc.png"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/005-annapurna-sp-biryani.png",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-2",
+      "itemName": "Chicken Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772618961/foods/csiaaw8skf29yxfrw1l7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772618961/foods/csiaaw8skf29yxfrw1l7.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/006-chicken-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-4",
+      "itemName": "Moghalai Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619199/foods/e0wnh6us19icep1jlwxc.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619199/foods/e0wnh6us19icep1jlwxc.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/007-moghalai-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-3",
+      "itemName": "Chicken Biryani (Boneless)",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619292/foods/edmrfppsll0u4sh7j5mw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619292/foods/edmrfppsll0u4sh7j5mw.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/008-chicken-biryani-boneless.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-5",
+      "itemName": "Lolipop Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619391/foods/znwiqj1ochrn8dx799p4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619391/foods/znwiqj1ochrn8dx799p4.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/009-lolipop-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-6",
+      "itemName": "Drums Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619891/foods/zvq40eejrvd0omqltxdj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772619891/foods/zvq40eejrvd0omqltxdj.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/010-drums-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-12",
+      "itemName": "Prawns Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620082/foods/la8srsoxcyrpi8next5n.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620082/foods/la8srsoxcyrpi8next5n.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/011-prawns-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-13",
+      "itemName": "Fish Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620237/foods/mxi1c7oom05vsyog7hzg.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620237/foods/mxi1c7oom05vsyog7hzg.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/012-fish-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-14",
+      "itemName": "Gongura Mutton Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620412/foods/xsokwlbojldktfi24ca3.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620412/foods/xsokwlbojldktfi24ca3.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/013-gongura-mutton-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-15",
+      "itemName": "Kamju Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533662/foods/wvjzmiawiri6ane6ks0w.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533662/foods/wvjzmiawiri6ane6ks0w.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/014-kamju-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-16",
+      "itemName": "Chicken Dum Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620737/foods/qdmpwbcvyxxvrzzfgzis.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620737/foods/qdmpwbcvyxxvrzzfgzis.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/015-chicken-dum-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534202-8",
+      "itemName": "Wings Biryani",
+      "category": "BIRYANI (NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620859/foods/vmesfqy7twvkd3tbfxux.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772620859/foods/vmesfqy7twvkd3tbfxux.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/016-wings-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FAMILY PACKS",
+      "subsection": "",
+      "itemId": "item-1772451534203-17",
+      "itemName": "Chicken Dum",
+      "category": "FAMILY PACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772621251/foods/vgtoj9czk0lxj9lnx0s2.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772621251/foods/vgtoj9czk0lxj9lnx0s2.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/017-chicken-dum.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FAMILY PACKS",
+      "subsection": "",
+      "itemId": "item-1772451534203-18",
+      "itemName": "Mutton Dum",
+      "category": "FAMILY PACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729363/foods/pazxcx5zwzbssmggrfeg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729363/foods/pazxcx5zwzbssmggrfeg.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/018-mutton-dum.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-23",
+      "itemName": "Hong Kong Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534070/foods/djbhzrrvgro5rbeklbzr.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534070/foods/djbhzrrvgro5rbeklbzr.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/019-hong-kong-chicken.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-24",
+      "itemName": "Kaju Chicken (Dry)",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534290/foods/lquexwti8yd91xydiecb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534290/foods/lquexwti8yd91xydiecb.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/020-kaju-chicken-dry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-25",
+      "itemName": "Pepper Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534473/foods/zngpsfienykyve0fs2sm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534473/foods/zngpsfienykyve0fs2sm.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/021-pepper-chicken.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-26",
+      "itemName": "Chicken 65",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456709/appzeto/restaurant/menu-items/dbxm4pijdi3mbzkxsa1h.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456709/appzeto/restaurant/menu-items/dbxm4pijdi3mbzkxsa1h.png"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/022-chicken-65.png",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-27",
+      "itemName": "Chicken 85",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534569/foods/yvsf9zjg1agmjomn6jox.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534569/foods/yvsf9zjg1agmjomn6jox.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/023-chicken-85.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-28",
+      "itemName": "Chicken 555",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534647/foods/vyhrucvhyagjoey5rjgx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534647/foods/vyhrucvhyagjoey5rjgx.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/024-chicken-555.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-22",
+      "itemName": "Chicken Wings Fried",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534739/foods/a6kxey5ibnbfwlavjrsd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534739/foods/a6kxey5ibnbfwlavjrsd.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/025-chicken-wings-fried.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-29",
+      "itemName": "Chicken Manchuria",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534793/foods/sesauiq6en64bitryi5x.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534793/foods/sesauiq6en64bitryi5x.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/026-chicken-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-30",
+      "itemName": "Chicken Majestic",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211629/appzeto/restaurant/menu-items/bh36nuaexqnptl6hfmnm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211629/appzeto/restaurant/menu-items/bh36nuaexqnptl6hfmnm.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/027-chicken-majestic.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-31",
+      "itemName": "Chicken Dragon",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534906/foods/ig9mlzm7fifgztvtqvem.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534906/foods/ig9mlzm7fifgztvtqvem.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/028-chicken-dragon.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-32",
+      "itemName": "Golden Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211881/appzeto/restaurant/menu-items/mepwxmc3wodl4z5hdusy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211881/appzeto/restaurant/menu-items/mepwxmc3wodl4z5hdusy.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/029-golden-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-33",
+      "itemName": "Lemon Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772212008/appzeto/restaurant/menu-items/w2uss0onw9qzz7e7wjc4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772212008/appzeto/restaurant/menu-items/w2uss0onw9qzz7e7wjc4.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/030-lemon-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-34",
+      "itemName": "Kamju Fry",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/031-kamju-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-35",
+      "itemName": "Kamju Roast",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535096/foods/jty9o99jg6d0usp7rzxw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535096/foods/jty9o99jg6d0usp7rzxw.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/032-kamju-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-19",
+      "itemName": "Annapurna SP Starter",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729666/foods/obhsoa5g60bezoawaak6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729666/foods/obhsoa5g60bezoawaak6.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/033-annapurna-sp-starter.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-20",
+      "itemName": "Chilly Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729819/foods/rr1hszsophnxmzvgbhse.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729819/foods/rr1hszsophnxmzvgbhse.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/034-chilly-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-36",
+      "itemName": "Mutton Fry",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729893/foods/eqgelmhaadcjyiwhuw7i.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729893/foods/eqgelmhaadcjyiwhuw7i.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/035-mutton-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-37",
+      "itemName": "Mutton Ghee Roast",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729970/foods/trhjd2pgeo2j0gwdthtg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772729970/foods/trhjd2pgeo2j0gwdthtg.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/036-mutton-ghee-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-38",
+      "itemName": "Pepper Mutton",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730055/foods/elsmqlymxscu0difkzne.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730055/foods/elsmqlymxscu0difkzne.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/037-pepper-mutton.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-39",
+      "itemName": "Chicken Patel",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730150/foods/z1xicycgihei6rjlwzxb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730150/foods/z1xicycgihei6rjlwzxb.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/038-chicken-patel.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-40",
+      "itemName": "Lilly Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/039-lilly-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-41",
+      "itemName": "R.R. Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730750/foods/n3kqg2bydspw8s9ixdrf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730750/foods/n3kqg2bydspw8s9ixdrf.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/040-r-r-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-42",
+      "itemName": "Ginger Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730852/foods/rqdt8bfo4dmp9cgsxupr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730852/foods/rqdt8bfo4dmp9cgsxupr.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/041-ginger-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-43",
+      "itemName": "Alpha Chicken",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730994/foods/flwzxuywx4qi5mosvkob.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772730994/foods/flwzxuywx4qi5mosvkob.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/042-alpha-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-21",
+      "itemName": "Chicken Lollipop (Special)",
+      "category": "NON-VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533958/foods/bqdcx0suymnp88gspilo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772533958/foods/bqdcx0suymnp88gspilo.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/043-chicken-lollipop-special.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-44",
+      "itemName": "Fish Roast",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/031-kamju-fry.jpg",
+      "downloadStatus": "reused"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-45",
+      "itemName": "Apollo Fish",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731603/foods/tionnhsmhgq2otqakgv5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731603/foods/tionnhsmhgq2otqakgv5.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/045-apollo-fish.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-46",
+      "itemName": "Garlic Fish",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731708/foods/zb5qqhc9v8scgyqtvenq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731708/foods/zb5qqhc9v8scgyqtvenq.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/046-garlic-fish.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-47",
+      "itemName": "Loose Prawns",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731782/foods/xvg4kfac2m9crpbrdqhd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731782/foods/xvg4kfac2m9crpbrdqhd.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/047-loose-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-48",
+      "itemName": "Chilli Prawns",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731886/foods/xc1ujjn587oxyvme7he6.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772731886/foods/xc1ujjn587oxyvme7he6.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/048-chilli-prawns.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-49",
+      "itemName": "Pepper Prawns",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732000/foods/kxrcmfltevtb3qubza0f.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732000/foods/kxrcmfltevtb3qubza0f.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/049-pepper-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SEA FOOD STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-50",
+      "itemName": "Prawns Fry",
+      "category": "SEA FOOD STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732061/foods/u6xlpwqu5ktb9finxlgs.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732061/foods/u6xlpwqu5ktb9finxlgs.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/050-prawns-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-52",
+      "itemName": "Gobi Manchuria",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286470/appzeto/restaurant/menu-items/ybgfl3ojwe08avkurqxn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286470/appzeto/restaurant/menu-items/ybgfl3ojwe08avkurqxn.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/051-gobi-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-53",
+      "itemName": "Chilli Paneer",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732273/foods/zlzjunkvjbl80b4cfmvn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732273/foods/zlzjunkvjbl80b4cfmvn.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/052-chilli-paneer.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-54",
+      "itemName": "Paneer 65",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280847/appzeto/restaurant/menu-items/lhqjq0avw4bkt2rrnofb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280847/appzeto/restaurant/menu-items/lhqjq0avw4bkt2rrnofb.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/053-paneer-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-55",
+      "itemName": "Paneer Manchuria",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732418/foods/tbbakl6wwmaakrbnxrpr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732418/foods/tbbakl6wwmaakrbnxrpr.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/054-paneer-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-57",
+      "itemName": "Mushroom 65",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732474/foods/wbsdhaewcv67ydkjvqpa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732474/foods/wbsdhaewcv67ydkjvqpa.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/055-mushroom-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-56",
+      "itemName": "Pepper Paneer",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732569/foods/nk7ebisvgcafcohiaiir.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732569/foods/nk7ebisvgcafcohiaiir.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/056-pepper-paneer.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-58",
+      "itemName": "Mushroom Pepper",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732716/foods/hyj7yptxwakmzmfjhvyp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732716/foods/hyj7yptxwakmzmfjhvyp.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/057-mushroom-pepper.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-59",
+      "itemName": "Mushroom Roast",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732811/foods/wytkdbfqlizmdgcbvglu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732811/foods/wytkdbfqlizmdgcbvglu.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/058-mushroom-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-60",
+      "itemName": "Baby Corn 65",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732914/foods/wrx1weykn7wzsdmhsynk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772732914/foods/wrx1weykn7wzsdmhsynk.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/059-baby-corn-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-61",
+      "itemName": "Baby Corn Manchuria",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733003/foods/qguue2ngakwfjydxnkum.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733003/foods/qguue2ngakwfjydxnkum.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/060-baby-corn-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-62",
+      "itemName": "Chilli Baby Corn",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733124/foods/et2hklstgak9innydqee.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733124/foods/et2hklstgak9innydqee.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/061-chilli-baby-corn.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-63",
+      "itemName": "Golden Fried Baby Corn",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733289/foods/vkesdn94xebrggcq1ri5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733289/foods/vkesdn94xebrggcq1ri5.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/062-golden-fried-baby-corn.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-64",
+      "itemName": "Kaju Roast",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733350/foods/lodbfidg1sc7ttig3grk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733350/foods/lodbfidg1sc7ttig3grk.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/063-kaju-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-65",
+      "itemName": "Egg Burji",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201367/appzeto/restaurant/menu-items/v0d46gkmuvcendno4vog.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201367/appzeto/restaurant/menu-items/v0d46gkmuvcendno4vog.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/064-egg-burji.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-66",
+      "itemName": "Egg Roast",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733433/foods/a4iaxwholzqmpqx3hgwv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733433/foods/a4iaxwholzqmpqx3hgwv.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/065-egg-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-67",
+      "itemName": "Egg 65",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772464630/foods/cuchxbcb1ijwpjr8upi4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772464630/foods/cuchxbcb1ijwpjr8upi4.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/066-egg-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-68",
+      "itemName": "Egg Manchuria",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733566/foods/yu9lcudqfd7hkzgodhjv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733566/foods/yu9lcudqfd7hkzgodhjv.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/067-egg-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-69",
+      "itemName": "Chilli Egg",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733635/foods/hczdu34firznlaapuqj8.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772733635/foods/hczdu34firznlaapuqj8.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/068-chilli-egg.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-51",
+      "itemName": "Veg Manchurian",
+      "category": "VEG STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/069-veg-manchurian.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-70",
+      "itemName": "Mixed Veg Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/070-mixed-veg-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-71",
+      "itemName": "Paneer Butter Masala",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258215/appzeto/restaurant/menu-items/f0fj4cumh66zamjqybxm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258215/appzeto/restaurant/menu-items/f0fj4cumh66zamjqybxm.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/071-paneer-butter-masala.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-72",
+      "itemName": "Palak Paneer",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258437/appzeto/restaurant/menu-items/hobeakjykdc1tbmsipqi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258437/appzeto/restaurant/menu-items/hobeakjykdc1tbmsipqi.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/072-palak-paneer.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-73",
+      "itemName": "Kaju Paneer Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734030/foods/tqu7o7gepv3uokmibi17.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734030/foods/tqu7o7gepv3uokmibi17.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/073-kaju-paneer-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-74",
+      "itemName": "Shahi Paneer Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734090/foods/y625ldhionipdaaasv8k.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734090/foods/y625ldhionipdaaasv8k.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/074-shahi-paneer-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-75",
+      "itemName": "Methi Chamanthi",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734200/foods/yammgeuiwxqdrhkvxjug.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734200/foods/yammgeuiwxqdrhkvxjug.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/075-methi-chamanthi.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-76",
+      "itemName": "Kaju Masala",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734309/foods/xsdlva33gclnu5rdpvfi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734309/foods/xsdlva33gclnu5rdpvfi.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/076-kaju-masala.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-77",
+      "itemName": "Kaju Tomato",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734451/foods/ucu5q9zugczswgcvdc8o.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734451/foods/ucu5q9zugczswgcvdc8o.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/077-kaju-tomato.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-78",
+      "itemName": "Mushroom Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/078-mushroom-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-79",
+      "itemName": "Kaju Mushroom",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734582/foods/be9xcjdplnemuqupg0y7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734582/foods/be9xcjdplnemuqupg0y7.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/079-kaju-mushroom.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-80",
+      "itemName": "Dal Tadka",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226540/appzeto/restaurant/menu-items/pm6fpkrehih7pwhgpt88.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226540/appzeto/restaurant/menu-items/pm6fpkrehih7pwhgpt88.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/080-dal-tadka.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-81",
+      "itemName": "Dal Fry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734692/foods/uf7tp42nwjaekhh6cy9i.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734692/foods/uf7tp42nwjaekhh6cy9i.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/081-dal-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-82",
+      "itemName": "Kadai Mushroom",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734754/foods/hbwdrrvvjuo1foy1lsaz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734754/foods/hbwdrrvvjuo1foy1lsaz.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/082-kadai-mushroom.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-83",
+      "itemName": "Kadai Paneer",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734837/foods/gvhzyqaokba5vygypgpt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734837/foods/gvhzyqaokba5vygypgpt.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/083-kadai-paneer.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-84",
+      "itemName": "Veg Kola Puri",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734896/foods/clvx4sqkqx3jqwpietci.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772734896/foods/clvx4sqkqx3jqwpietci.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/084-veg-kola-puri.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-85",
+      "itemName": "Veg Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735081/foods/vbyxmkyfbpdhbgzehici.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735081/foods/vbyxmkyfbpdhbgzehici.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/085-veg-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-87",
+      "itemName": "Paneer Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735226/foods/sighy1dtd87wwiqcprjf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735226/foods/sighy1dtd87wwiqcprjf.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/086-paneer-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-88",
+      "itemName": "Mushroom Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735350/foods/tnv14wjmeikxfyhe9cai.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735350/foods/tnv14wjmeikxfyhe9cai.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/087-mushroom-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-89",
+      "itemName": "Kaju Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735420/foods/ebgzqptwkbmzj5jsl3j3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735420/foods/ebgzqptwkbmzj5jsl3j3.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/088-kaju-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-90",
+      "itemName": "Kaju Paneer Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735475/foods/bg68uchuo6guecya2st7.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735475/foods/bg68uchuo6guecya2st7.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/089-kaju-paneer-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BIRYANI (VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-86",
+      "itemName": "Egg Biryani",
+      "category": "BIRYANI (VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268820/appzeto/restaurant/menu-items/bmbv0laonnw5lqekrynt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268820/appzeto/restaurant/menu-items/bmbv0laonnw5lqekrynt.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/090-egg-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-91",
+      "itemName": "Veg Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735611/foods/njygkfszg6uev5ysyjjw.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735611/foods/njygkfszg6uev5ysyjjw.png"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/091-veg-fried-rice.png",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-92",
+      "itemName": "Jeera Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735688/foods/fncqmjxaeowfxrev6etb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735688/foods/fncqmjxaeowfxrev6etb.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/092-jeera-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-93",
+      "itemName": "Tomato Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735794/foods/wi2epuv56yioama6xgn6.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735794/foods/wi2epuv56yioama6xgn6.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/093-tomato-fried-rice.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-94",
+      "itemName": "Gobi Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735901/foods/ye1ma4esgybe1byddl8e.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772735901/foods/ye1ma4esgybe1byddl8e.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/094-gobi-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-95",
+      "itemName": "Mushroom Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736015/foods/xsipzl5oczzeo9nufn5k.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736015/foods/xsipzl5oczzeo9nufn5k.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/095-mushroom-fried-rice.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-96",
+      "itemName": "Paneer Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202002/appzeto/restaurant/menu-items/gt7kbrk3i3pbsays4dgb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202002/appzeto/restaurant/menu-items/gt7kbrk3i3pbsays4dgb.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/096-paneer-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-97",
+      "itemName": "Kaju Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736162/foods/zhvjguhirm6ucv3i23cw.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736162/foods/zhvjguhirm6ucv3i23cw.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/097-kaju-fried-rice.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-98",
+      "itemName": "Mixed Veg Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736224/foods/fnjc6lnu8xauzptjncsi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736224/foods/fnjc6lnu8xauzptjncsi.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/098-mixed-veg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-99",
+      "itemName": "Chicken Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736336/foods/sodmdflbdf5hzhjnqwxt.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736336/foods/sodmdflbdf5hzhjnqwxt.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/099-chicken-fried-rice.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-100",
+      "itemName": "SP Chicken Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736394/foods/lgmvo09clhlqywsvddvs.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736394/foods/lgmvo09clhlqywsvddvs.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/100-sp-chicken-fried-rice.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-101",
+      "itemName": "Prawns Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736462/foods/qz3qbywzlimuclir2x2s.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736462/foods/qz3qbywzlimuclir2x2s.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/101-prawns-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FRIED RICE (VEG/NON-VEG)",
+      "subsection": "",
+      "itemId": "item-1772451534203-102",
+      "itemName": "Egg Fried Rice",
+      "category": "FRIED RICE (VEG/NON-VEG)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736620/foods/nsfwcsvsn0ir2opxf5fi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772736620/foods/nsfwcsvsn0ir2opxf5fi.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/102-egg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG MEALS",
+      "subsection": "",
+      "itemId": "item-1772451534203-104",
+      "itemName": "Meals (Full)",
+      "category": "VEG MEALS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/7/72/Indian_veg_thali.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/7/72/Indian_veg_thali.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/7/72/Indian_veg_thali.jpg"
+    },
+    {
+      "section": "VEG MEALS",
+      "subsection": "",
+      "itemId": "item-1772451534203-105",
+      "itemName": "Any Veg Curry",
+      "category": "VEG MEALS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/070-mixed-veg-curry.jpg",
+      "downloadStatus": "reused"
+    },
+    {
+      "section": "VEG MEALS",
+      "subsection": "",
+      "itemId": "item-1772451534203-103",
+      "itemName": "White Rice",
+      "category": "VEG MEALS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/105-white-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CURD RICE",
+      "subsection": "",
+      "itemId": "item-1772451534203-107",
+      "itemName": "SP Curd Rice",
+      "category": "CURD RICE",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/4/49/Curd_Rice_%28Thayir_Sadam%29.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/4/49/Curd_Rice_%28Thayir_Sadam%29.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/4/49/Curd_Rice_%28Thayir_Sadam%29.jpg"
+    },
+    {
+      "section": "CURD RICE",
+      "subsection": "",
+      "itemId": "item-1772451534203-106",
+      "itemName": "Curd Rice",
+      "category": "CURD RICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772774825/foods/fjlwfgd1xdt2xvkvi0yz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772774825/foods/fjlwfgd1xdt2xvkvi0yz.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/107-curd-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-110",
+      "itemName": "Soda (1/2L)",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Portello_soft_drink_bottle.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/3/3e/Portello_soft_drink_bottle.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/3/3e/Portello_soft_drink_bottle.jpg"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-111",
+      "itemName": "Kinley Soda",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/8/8f/Urge_%28soft_drink%29.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/8f/Urge_%28soft_drink%29.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/8/8f/Urge_%28soft_drink%29.jpg"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-112",
+      "itemName": "Cool Drinks (1/2L)",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/5/5c/Cold_drinks.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/5/5c/Cold_drinks.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/5/5c/Cold_drinks.jpg"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-113",
+      "itemName": "Cool Drinks (2L)",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/2/2a/Soft_drink_shelf.JPG",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/2/2a/Soft_drink_shelf.JPG"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/2/2a/Soft_drink_shelf.JPG"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-108",
+      "itemName": "Water Bottle (1L)",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bottled_water.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/b/b1/Bottled_water.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/b/b1/Bottled_water.jpg"
+    },
+    {
+      "section": "BEVERAGES",
+      "subsection": "",
+      "itemId": "item-1772451534203-109",
+      "itemName": "Pet Bottle",
+      "category": "BEVERAGES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/0/0d/PET_Bottle_Water.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/0/0d/PET_Bottle_Water.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/0/0d/PET_Bottle_Water.jpg"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-114",
+      "itemName": "Tandoori Roti",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/114-tandoori-roti.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-115",
+      "itemName": "Butter Naan",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772218921/appzeto/restaurant/menu-items/rsvuirdh3cpcuz13fhmu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772218921/appzeto/restaurant/menu-items/rsvuirdh3cpcuz13fhmu.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/115-butter-naan.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-116",
+      "itemName": "Garlic Naan",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219041/appzeto/restaurant/menu-items/p8htff3qz2q8knnfxhru.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219041/appzeto/restaurant/menu-items/p8htff3qz2q8knnfxhru.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/116-garlic-naan.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-117",
+      "itemName": "Masala Kulcha",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772775985/foods/d4pipjgtvrr2fhn4o8qm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772775985/foods/d4pipjgtvrr2fhn4o8qm.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/117-masala-kulcha.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-118",
+      "itemName": "Stuffed Kulcha",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776128/foods/cmcnivpnejl1htecsx6u.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776128/foods/cmcnivpnejl1htecsx6u.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/118-stuffed-kulcha.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "BREADS",
+      "subsection": "",
+      "itemId": "item-1772451534203-119",
+      "itemName": "Paneer Kulcha",
+      "category": "BREADS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776229/foods/zmlpygjbjru6ly20ketz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776229/foods/zmlpygjbjru6ly20ketz.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/119-paneer-kulcha.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-120",
+      "itemName": "Tandoori Chicken (Half)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776321/foods/ibuxfhhzvucydu8jqx0t.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776321/foods/ibuxfhhzvucydu8jqx0t.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/120-tandoori-chicken-half.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-121",
+      "itemName": "Tandoori Chicken (Full)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776540/foods/uwpvr6acnfhoscfpdyp3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776540/foods/uwpvr6acnfhoscfpdyp3.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/121-tandoori-chicken-full.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-122",
+      "itemName": "Chicken Tikka (Half)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776613/foods/jm3ambwcriy4whqbsyil.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776613/foods/jm3ambwcriy4whqbsyil.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/122-chicken-tikka-half.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-123",
+      "itemName": "Chicken Tikka (Full)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/c/c6/Assorted_Indian_Barbecue.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/c/c6/Assorted_Indian_Barbecue.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/c/c6/Assorted_Indian_Barbecue.jpg"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-124",
+      "itemName": "Tangdi Kebab (Half)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776818/foods/xnnflyvwtc9nbhbersrl.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776818/foods/xnnflyvwtc9nbhbersrl.webp"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/124-tangdi-kebab-half.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-125",
+      "itemName": "Tangdi Kebab (Full)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776904/foods/cqog3bbxreou0ovuhtf8.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772776904/foods/cqog3bbxreou0ovuhtf8.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/125-tangdi-kebab-full.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-126",
+      "itemName": "Kalmi Kebab (Half)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777002/foods/ai4ijcktxomgmvfgkoe6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777002/foods/ai4ijcktxomgmvfgkoe6.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/126-kalmi-kebab-half.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-127",
+      "itemName": "Kalmi Kebab (Full)",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777174/foods/pigputvqlula3yj8typs.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777174/foods/pigputvqlula3yj8typs.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/127-kalmi-kebab-full.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-128",
+      "itemName": "Murgh Malai Kebab",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777367/foods/nnxijjgl7vqrdiw1heqa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777367/foods/nnxijjgl7vqrdiw1heqa.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/128-murgh-malai-kebab.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-129",
+      "itemName": "Reshmi Kebab",
+      "category": "TANDOORI STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777476/foods/evn8j1pnhy0vboneazma.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772777476/foods/evn8j1pnhy0vboneazma.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/129-reshmi-kebab.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-130",
+      "itemName": "Chicken Curry (Bones)",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/130-chicken-curry-bones.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-131",
+      "itemName": "Chicken Curry (Boneless)",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189178/appzeto/restaurant/menu-items/lvu12utzmhbl4frashwj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189178/appzeto/restaurant/menu-items/lvu12utzmhbl4frashwj.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/131-chicken-curry-boneless.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-132",
+      "itemName": "Kadai Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772262168/appzeto/restaurant/menu-items/kapy7pkukfizwc1xacnt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772262168/appzeto/restaurant/menu-items/kapy7pkukfizwc1xacnt.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/132-kadai-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-133",
+      "itemName": "Butter Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772288256/appzeto/restaurant/menu-items/i853eygvlk6q0nrchfc2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772288256/appzeto/restaurant/menu-items/i853eygvlk6q0nrchfc2.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/133-butter-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-134",
+      "itemName": "Mughlai Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192268/appzeto/restaurant/menu-items/ntoitn523ntoghfc4lsf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192268/appzeto/restaurant/menu-items/ntoitn523ntoghfc4lsf.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/134-mughlai-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-135",
+      "itemName": "Chicken Kolhapuri",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190390/appzeto/restaurant/menu-items/yaascmaxtspbegbelfs7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190390/appzeto/restaurant/menu-items/yaascmaxtspbegbelfs7.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/135-chicken-kolhapuri.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-136",
+      "itemName": "Andhra Chicken (Bones)",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189791/appzeto/restaurant/menu-items/yrpf4kzl6pgnb37uo0iv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189791/appzeto/restaurant/menu-items/yrpf4kzl6pgnb37uo0iv.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/136-andhra-chicken-bones.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-137",
+      "itemName": "Methi Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/137-methi-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-138",
+      "itemName": "Punjabi Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772262795/appzeto/restaurant/menu-items/qaztpb2mywm0hpsjpter.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772262795/appzeto/restaurant/menu-items/qaztpb2mywm0hpsjpter.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/138-punjabi-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-139",
+      "itemName": "Kaju Chicken",
+      "category": "NON-VEG CURRIES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/6d/Chicken_Pulav.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/6/6d/Chicken_Pulav.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/6/6d/Chicken_Pulav.jpg"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-140",
+      "itemName": "Mutton Curry",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194088/appzeto/restaurant/menu-items/bn8vjhj8kigjt3dhlcso.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194088/appzeto/restaurant/menu-items/bn8vjhj8kigjt3dhlcso.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/140-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-141",
+      "itemName": "Prawns Curry",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/070-mixed-veg-curry.jpg",
+      "downloadStatus": "reused"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-142",
+      "itemName": "Fish (Bone)",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/031-kamju-fry.jpg",
+      "downloadStatus": "reused"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-143",
+      "itemName": "Fish (Boneless)",
+      "category": "NON-VEG CURRIES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/8/89/EgyptianFishBelKhalta_PhotoByWaelNawara.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/89/EgyptianFishBelKhalta_PhotoByWaelNawara.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/8/89/EgyptianFishBelKhalta_PhotoByWaelNawara.jpg"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-144",
+      "itemName": "Egg Curry",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263572/appzeto/restaurant/menu-items/tme1nrkdhi9uhltiaham.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263572/appzeto/restaurant/menu-items/tme1nrkdhi9uhltiaham.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/144-egg-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-145",
+      "itemName": "Egg Tomato Curry",
+      "category": "NON-VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263760/appzeto/restaurant/menu-items/biwtub2xrremlqjxqmco.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263760/appzeto/restaurant/menu-items/biwtub2xrremlqjxqmco.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/145-egg-tomato-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772451534203-146",
+      "itemName": "Egg Kheema Curry",
+      "category": "NON-VEG CURRIES",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/e/e7/Nutrela_Soya_Chunks_Curry.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/e/e7/Nutrela_Soya_Chunks_Curry.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/e/e7/Nutrela_Soya_Chunks_Curry.jpg"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-147",
+      "itemName": "Konaseema Kodi Vepudu",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/039-lilly-chicken.jpg",
+      "downloadStatus": "reused"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-148",
+      "itemName": "Velluli Karam Chicken Fry",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175602/appzeto/restaurant/menu-items/hcsntiu5ah2jt4wb3za0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175602/appzeto/restaurant/menu-items/hcsntiu5ah2jt4wb3za0.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/148-velluli-karam-chicken-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-149",
+      "itemName": "Andhra Chicken Fry",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/9/96/Andhra_Fried_Chicken.JPG",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/9/96/Andhra_Fried_Chicken.JPG"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/9/96/Andhra_Fried_Chicken.JPG"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-150",
+      "itemName": "Mutton Fry (Bone)",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772267166/appzeto/restaurant/menu-items/c7qmnhgpjleq3xck1bfa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772267166/appzeto/restaurant/menu-items/c7qmnhgpjleq3xck1bfa.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/150-mutton-fry-bone.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-151",
+      "itemName": "Gongura Chicken Fry",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/4/47/BrownRice_ChickenMeal-Home-AndhraPradesh-002.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/4/47/BrownRice_ChickenMeal-Home-AndhraPradesh-002.jpg"
+      ],
+      "localImage": "",
+      "downloadStatus": "failed: HTTP 403 for https://upload.wikimedia.org/wikipedia/commons/4/47/BrownRice_ChickenMeal-Home-AndhraPradesh-002.jpg"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-152",
+      "itemName": "Kottimeera Chicken",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/152-kottimeera-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-153",
+      "itemName": "Amalapuram Chicken Roast",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176824/appzeto/restaurant/menu-items/ocmn3juncxp1ypezvnij.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176824/appzeto/restaurant/menu-items/ocmn3juncxp1ypezvnij.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/153-amalapuram-chicken-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-154",
+      "itemName": "Chettinadu Chicken Fry",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173597/appzeto/restaurant/menu-items/i6qazc4sw8rnnrob8j9r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173597/appzeto/restaurant/menu-items/i6qazc4sw8rnnrob8j9r.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/154-chettinadu-chicken-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-155",
+      "itemName": "Palnati Kodi Vepudu",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174017/appzeto/restaurant/menu-items/yz0qp6c53maejyob6dqx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174017/appzeto/restaurant/menu-items/yz0qp6c53maejyob6dqx.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/155-palnati-kodi-vepudu.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "NON-VEG SPECIAL STARTERS",
+      "subsection": "",
+      "itemId": "item-1772451534203-156",
+      "itemName": "Malabar Pepper Chicken",
+      "category": "NON-VEG SPECIAL STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg"
+      ],
+      "localImage": "exports/annapurna-family-garden-restaurant-images/156-malabar-pepper-chicken.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:46:25.061Z",
+  "downloadFolder": "exports/annapurna-family-garden-restaurant-images",
+  "uniqueRemoteImages": 137,
+  "downloadedCount": 137,
+  "failedCount": 14
+}

@@ -9,6 +9,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import cron from 'node-cron';
 import mongoose from 'mongoose';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import {
   pruneStaleActiveOrders,
   markOfflineStaleDeliveryBoys,
@@ -20,6 +22,9 @@ import {
 
 // Load environment variables
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import configurations
 import { connectDB } from './config/database.js';
@@ -102,6 +107,8 @@ if (missingEnvVars.length > 0) {
 // Initialize Express app
 const app = express();
 const httpServer = createServer(app);
+
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Initialize Socket.IO with proper CORS configuration
 const envSocketOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];

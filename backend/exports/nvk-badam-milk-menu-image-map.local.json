@@ -1,0 +1,68 @@
+{
+  "restaurant": {
+    "id": "69a92f7f5b04a6102a4da69c",
+    "slug": "nvk-badam-milk",
+    "name": "NVK BADAM MILK"
+  },
+  "exportedAt": "2026-04-02T13:48:59.874Z",
+  "totalItems": 4,
+  "items": [
+    {
+      "section": "Badam Milk",
+      "subsection": "",
+      "itemId": "item-1772696089622-0.06975624760601873",
+      "itemName": "Badam Milk",
+      "category": "Badam Milk",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772696087/appzeto/restaurant/menu-items/geffe3ivsvx8xnoyqzso.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772696087/appzeto/restaurant/menu-items/geffe3ivsvx8xnoyqzso.jpg"
+      ],
+      "localImage": "exports/nvk-badam-milk-images/001-badam-milk.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Pista Milk",
+      "subsection": "",
+      "itemId": "item-1772779594743-0.23506739671087928",
+      "itemName": "Pista Milk Shake",
+      "category": "Pista Milk",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773303309/foods/a0itcxgk70xpcwqbsobm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773303309/foods/a0itcxgk70xpcwqbsobm.jpg"
+      ],
+      "localImage": "exports/nvk-badam-milk-images/002-pista-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Vannila Milk",
+      "subsection": "",
+      "itemId": "item-1772780061838-0.5262658867310623",
+      "itemName": "Vannila Milk Shake",
+      "category": "Vannila Milk",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772780060/appzeto/restaurant/menu-items/ru7evdexxqwafyp9wqwl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772780060/appzeto/restaurant/menu-items/ru7evdexxqwafyp9wqwl.jpg"
+      ],
+      "localImage": "exports/nvk-badam-milk-images/003-vannila-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "COMBO'S",
+      "subsection": "",
+      "itemId": "item-1773302850508-9du1awb",
+      "itemName": "Badam Milk [3P]",
+      "category": "COMBO'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773302850/foods/i5p1wobmj1sc3va5lwom.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773302850/foods/i5p1wobmj1sc3va5lwom.jpg"
+      ],
+      "localImage": "exports/nvk-badam-milk-images/004-badam-milk-3p.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:49:01.751Z",
+  "downloadFolder": "exports/nvk-badam-milk-images",
+  "uniqueRemoteImages": 4,
+  "downloadedCount": 4,
+  "failedCount": 0
+}

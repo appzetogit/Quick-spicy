@@ -1,0 +1,1927 @@
+{
+  "restaurant": {
+    "id": "69a12996f42dc2f3f477080c",
+    "slug": "abhinaya-family-restaurant",
+    "name": "Abhinaya Family Restaurant"
+  },
+  "exportedAt": "2026-04-02T13:44:15.893Z",
+  "totalItems": 147,
+  "items": [
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772171687168-0.8376003426092001",
+      "itemName": "Chicken Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772171685/appzeto/restaurant/menu-items/cpizdjdg9yegr2sxya6t.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772171685/appzeto/restaurant/menu-items/cpizdjdg9yegr2sxya6t.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/001-chicken-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772171906995-0.7327432101872856",
+      "itemName": "SP  Chicken Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772171906/appzeto/restaurant/menu-items/oyqcawaiky32o3d7xwnj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772171906/appzeto/restaurant/menu-items/oyqcawaiky32o3d7xwnj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/002-sp-chicken-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772172118582-0.49449080163397074",
+      "itemName": "Wings Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172116/appzeto/restaurant/menu-items/hrwtqt9wgbuv1kjfugbo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172116/appzeto/restaurant/menu-items/hrwtqt9wgbuv1kjfugbo.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/003-wings-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772172448878-0.4809959321739897",
+      "itemName": "Rambo Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172447/appzeto/restaurant/menu-items/atwiii4mcixx5c5fjhim.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172447/appzeto/restaurant/menu-items/atwiii4mcixx5c5fjhim.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/004-rambo-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772172802221-0.9455577008137787",
+      "itemName": "Natu Kodi Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172801/appzeto/restaurant/menu-items/sszd9pztwiv6tcclvjc4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772172801/appzeto/restaurant/menu-items/sszd9pztwiv6tcclvjc4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/005-natu-kodi-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772173694190-0.8133351195821389",
+      "itemName": "Kamju Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173693/appzeto/restaurant/menu-items/smupuckh5qe3pppmgr3z.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173693/appzeto/restaurant/menu-items/smupuckh5qe3pppmgr3z.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/006-kamju-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773399919925-pajejle",
+      "itemName": "Boneless Kashmir Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399918/foods/qovofmnrepk67l8ezjdq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399918/foods/qovofmnrepk67l8ezjdq.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/007-boneless-kashmir-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773403813039-6ssaukn",
+      "itemName": "Family Pack Biryani (Boneless)",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403812/foods/h3bdgqrt2uxedzje3rhn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403812/foods/h3bdgqrt2uxedzje3rhn.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/008-family-pack-biryani-boneless.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773403434641-xjuposu",
+      "itemName": "Boneless Kharjur Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403433/foods/xgqenwl4jwhf5lbfifkj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403433/foods/xgqenwl4jwhf5lbfifkj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/009-boneless-kharjur-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773403346092-frrlprx",
+      "itemName": "Boneless 555 Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403344/foods/st7awlzmwsjs79f3c98e.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773403344/foods/st7awlzmwsjs79f3c98e.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/010-boneless-555-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773399801316-980z1zb",
+      "itemName": "Special Moghlai Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399800/foods/zeuxg87oc0h43tnhw8fh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399800/foods/zeuxg87oc0h43tnhw8fh.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/011-special-moghlai-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773399601988-mnd1dm8",
+      "itemName": "Special Boneless Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399600/foods/kli7hl3q1az0ku5ezm6g.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399600/foods/kli7hl3q1az0ku5ezm6g.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/012-special-boneless-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773399475013-iitgrho",
+      "itemName": "Family Pack Biryani (Bones)",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399474/foods/vpnlkj1jievstuckdtk4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399474/foods/vpnlkj1jievstuckdtk4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/013-family-pack-biryani-bones.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773399312333-7wctkqd",
+      "itemName": "Liver Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399311/foods/mrfq39elmviuwxuys7pl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773399311/foods/mrfq39elmviuwxuys7pl.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/014-liver-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773395499254-itfyl2n",
+      "itemName": "Bones Fry Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773395496/foods/h4c8nn4ccwmhgxsrcslb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773395496/foods/h4c8nn4ccwmhgxsrcslb.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/015-bones-fry-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773394253485-c18q6b4",
+      "itemName": "SP Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773394253/foods/ovadsfbrdrvbzqcg59sb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773394253/foods/ovadsfbrdrvbzqcg59sb.webp"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/016-sp-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773398831359-zlo0vxq",
+      "itemName": "Chicken Bones Roast Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773398830/foods/zp5b3pe1rmrnhjp16tac.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773398830/foods/zp5b3pe1rmrnhjp16tac.webp"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/017-chicken-bones-roast-biryani.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1773393431365-34v9ys6",
+      "itemName": "C.B Biryani",
+      "category": "CHICKEN BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773393788/foods/tnx6xofxoqm5d3dxtitz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773393788/foods/tnx6xofxoqm5d3dxtitz.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/018-c-b-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772173172832-0.9173497219700694",
+      "itemName": "Chicken 65",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173597/appzeto/restaurant/menu-items/i6qazc4sw8rnnrob8j9r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173597/appzeto/restaurant/menu-items/i6qazc4sw8rnnrob8j9r.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/019-chicken-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772173861527-0.2955876703430276",
+      "itemName": "Ginger Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/020-ginger-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174018839-0.4040075882439512",
+      "itemName": "Chicken 555",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174017/appzeto/restaurant/menu-items/yz0qp6c53maejyob6dqx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174017/appzeto/restaurant/menu-items/yz0qp6c53maejyob6dqx.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/021-chicken-555.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174228708-0.5376300098638512",
+      "itemName": "Chicken 85",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174227/appzeto/restaurant/menu-items/c4y6zcn78a6eoafnsoey.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174227/appzeto/restaurant/menu-items/c4y6zcn78a6eoafnsoey.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/022-chicken-85.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174416786-0.4692340762825421",
+      "itemName": "Lemon Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174415/appzeto/restaurant/menu-items/w2vzcvpxkfso6jdbl8rp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174415/appzeto/restaurant/menu-items/w2vzcvpxkfso6jdbl8rp.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/023-lemon-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174528640-0.36815267803146234",
+      "itemName": "RR Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174527/appzeto/restaurant/menu-items/q26riiig7twqt6fixndi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174527/appzeto/restaurant/menu-items/q26riiig7twqt6fixndi.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/024-rr-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174641626-0.5945506878576252",
+      "itemName": "Chicken Majestic",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174640/appzeto/restaurant/menu-items/zgvfzp1fidm13x09ibxt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174640/appzeto/restaurant/menu-items/zgvfzp1fidm13x09ibxt.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/025-chicken-majestic.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174872660-0.6086184288770592",
+      "itemName": "Chicken Lollipop 5P",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174871/appzeto/restaurant/menu-items/yvdid9eelrdwivpdytiy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174871/appzeto/restaurant/menu-items/yvdid9eelrdwivpdytiy.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/026-chicken-lollipop-5p.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772175008903-0.8300810381132459",
+      "itemName": "Chicken Manchuria",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175007/appzeto/restaurant/menu-items/qgfqwq8q1bnlemwpyno7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175007/appzeto/restaurant/menu-items/qgfqwq8q1bnlemwpyno7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/027-chicken-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772175274060-0.4311317006884905",
+      "itemName": "Butani Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175272/appzeto/restaurant/menu-items/ka86xedlnkocsb2j68no.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175272/appzeto/restaurant/menu-items/ka86xedlnkocsb2j68no.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/028-butani-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772175604070-0.49555466962834394",
+      "itemName": "Garlic Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175602/appzeto/restaurant/menu-items/hcsntiu5ah2jt4wb3za0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175602/appzeto/restaurant/menu-items/hcsntiu5ah2jt4wb3za0.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/029-garlic-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772175950855-0.861829208920954",
+      "itemName": "Pepper Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/030-pepper-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772176139167-0.7785124252664354",
+      "itemName": "Kamuju Fry",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176137/appzeto/restaurant/menu-items/wzyutigkoayl3v59kxak.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176137/appzeto/restaurant/menu-items/wzyutigkoayl3v59kxak.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/031-kamuju-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772176420139-0.8468399599628682",
+      "itemName": "Kamuju Roast",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176418/appzeto/restaurant/menu-items/ijxsb3tgkj5n4fg5phoc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176418/appzeto/restaurant/menu-items/ijxsb3tgkj5n4fg5phoc.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/032-kamuju-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772176528749-0.07301707848481676",
+      "itemName": "Chicken Fry",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176526/appzeto/restaurant/menu-items/pq9fjqdmaflx2jz4elm0.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/033-chicken-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772176826419-0.6264210415528959",
+      "itemName": "Chicken Roast",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176824/appzeto/restaurant/menu-items/ocmn3juncxp1ypezvnij.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176824/appzeto/restaurant/menu-items/ocmn3juncxp1ypezvnij.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/034-chicken-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772178400216-0.8224197111946973",
+      "itemName": "Kaju Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772178397/appzeto/restaurant/menu-items/jhlbezj0aasbmemflnq3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772178397/appzeto/restaurant/menu-items/jhlbezj0aasbmemflnq3.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/035-kaju-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181539300-0.07294338657566135",
+      "itemName": "Hongkong Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181537/appzeto/restaurant/menu-items/od72ykkfcztovmlp6n3w.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181537/appzeto/restaurant/menu-items/od72ykkfcztovmlp6n3w.webp"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/036-hongkong-chicken.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181964909-0.4722076343957943",
+      "itemName": "Vega Chicken",
+      "category": "CHICKEN SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181963/appzeto/restaurant/menu-items/riusmdf0zbuzowusyuqp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181963/appzeto/restaurant/menu-items/riusmdf0zbuzowusyuqp.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/037-vega-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Varieties",
+      "subsection": "",
+      "itemId": "item-1772173749814-0.8651925405256151",
+      "itemName": "Chilly Chicken",
+      "category": "Varieties",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173748/appzeto/restaurant/menu-items/lrwscbtdx2rnyqtlwees.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173748/appzeto/restaurant/menu-items/lrwscbtdx2rnyqtlwees.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/038-chilly-chicken.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772173877394-0.43326760806551934",
+      "itemName": "SP Mutton Biryani",
+      "category": "MUTTON BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173876/appzeto/restaurant/menu-items/skdj55h6mgzstt80lemp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173876/appzeto/restaurant/menu-items/skdj55h6mgzstt80lemp.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/039-sp-mutton-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772174038138-0.27423796358217967",
+      "itemName": "Abhinaya Mutton Biryani",
+      "category": "MUTTON BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174037/appzeto/restaurant/menu-items/iuuvbnf8wayvjydpfdcg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174037/appzeto/restaurant/menu-items/iuuvbnf8wayvjydpfdcg.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/040-abhinaya-mutton-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772173782263-0.7716335950095813",
+      "itemName": "Mutton Biryani",
+      "category": "MUTTON BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173781/appzeto/restaurant/menu-items/ilwuofdthlyrfxx4byoo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173781/appzeto/restaurant/menu-items/ilwuofdthlyrfxx4byoo.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/041-mutton-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772174217204-0.7245436917583609",
+      "itemName": "Fish Biryani",
+      "category": "FISH BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174215/appzeto/restaurant/menu-items/gavdbvfshapntfntbuw2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174215/appzeto/restaurant/menu-items/gavdbvfshapntfntbuw2.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/042-fish-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772174298202-0.21698661172473344",
+      "itemName": "Prawns Biryani",
+      "category": "FISH BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174297/appzeto/restaurant/menu-items/utkvoqu2c5wwdyqdnkdj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174297/appzeto/restaurant/menu-items/utkvoqu2c5wwdyqdnkdj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/043-prawns-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772174574032-0.9045697279357915",
+      "itemName": "Abhinaya  SP Prawns Biryani",
+      "category": "FISH BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174573/appzeto/restaurant/menu-items/fqzxdmwgcb8lsmayg7s2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174573/appzeto/restaurant/menu-items/fqzxdmwgcb8lsmayg7s2.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/044-abhinaya-sp-prawns-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "EGG BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772174654919-0.8515336626225335",
+      "itemName": "Egg Biryani",
+      "category": "EGG BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174653/appzeto/restaurant/menu-items/kfodjhhjvum9cpqwpluw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174653/appzeto/restaurant/menu-items/kfodjhhjvum9cpqwpluw.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/045-egg-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON SNACKS",
+      "subsection": "",
+      "itemId": "item-1772174791670-0.6804780564975977",
+      "itemName": "Mutton Fry",
+      "category": "MUTTON SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174790/appzeto/restaurant/menu-items/un4rg4zvd3crrctjfmqq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772174790/appzeto/restaurant/menu-items/un4rg4zvd3crrctjfmqq.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/046-mutton-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON SNACKS",
+      "subsection": "",
+      "itemId": "item-1772176424663-0.03326382842894504",
+      "itemName": "Chilly Mutton",
+      "category": "MUTTON SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176423/appzeto/restaurant/menu-items/lfjqjwvjk93gdhcginlq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772176423/appzeto/restaurant/menu-items/lfjqjwvjk93gdhcginlq.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/047-chilly-mutton.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177284138-0.0442148933534231",
+      "itemName": "Ginger Mutton",
+      "category": "MUTTON SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177282/appzeto/restaurant/menu-items/kaxgbjrgf5n14odebbmh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177282/appzeto/restaurant/menu-items/kaxgbjrgf5n14odebbmh.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/048-ginger-mutton.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177424301-0.690632123760717",
+      "itemName": "Pepper Mutton",
+      "category": "MUTTON SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177422/appzeto/restaurant/menu-items/tzl1ablefzylp1thfonu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177422/appzeto/restaurant/menu-items/tzl1ablefzylp1thfonu.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/049-pepper-mutton.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177647938-0.3580433262163206",
+      "itemName": "Fish Fry",
+      "category": "FISH SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/050-fish-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177768280-0.29678507304314783",
+      "itemName": "Chilly Fish",
+      "category": "FISH SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177767/appzeto/restaurant/menu-items/v7qz3dqvw5wvhssyvqkj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177767/appzeto/restaurant/menu-items/v7qz3dqvw5wvhssyvqkj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/051-chilly-fish.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177888773-0.8314383498483462",
+      "itemName": "Fish Roast",
+      "category": "FISH SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177887/appzeto/restaurant/menu-items/iz98pdipqmkvgtxkbbsl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177887/appzeto/restaurant/menu-items/iz98pdipqmkvgtxkbbsl.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/052-fish-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH SNACKS",
+      "subsection": "",
+      "itemId": "item-1772177992116-0.6344491260011187",
+      "itemName": "Apollo Fish",
+      "category": "FISH SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177990/appzeto/restaurant/menu-items/j3uzdsojesmbuv7uyqhm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177990/appzeto/restaurant/menu-items/j3uzdsojesmbuv7uyqhm.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/053-apollo-fish.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH SNACKS",
+      "subsection": "",
+      "itemId": "item-1772178347419-0.1614735702726946",
+      "itemName": "Friday Fish",
+      "category": "FISH SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772178346/appzeto/restaurant/menu-items/nxe4mixlwpqzedkjxnpl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772178346/appzeto/restaurant/menu-items/nxe4mixlwpqzedkjxnpl.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/054-friday-fish.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181351679-0.6975651120768979",
+      "itemName": "Prawns  Fry",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181350/appzeto/restaurant/menu-items/a42x7ms64gaqfddlo2hd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181350/appzeto/restaurant/menu-items/a42x7ms64gaqfddlo2hd.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/055-prawns-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181435315-0.7722178007601854",
+      "itemName": "Loose Prawns",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181434/appzeto/restaurant/menu-items/zh0viyryqtmp18sadiy4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181434/appzeto/restaurant/menu-items/zh0viyryqtmp18sadiy4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/056-loose-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181524345-0.9436666240382129",
+      "itemName": "Chilly Prawns",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181523/appzeto/restaurant/menu-items/ugipajbsfssjk4rbxae7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181523/appzeto/restaurant/menu-items/ugipajbsfssjk4rbxae7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/057-chilly-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181630593-0.362188559228905",
+      "itemName": "Paper Prawns",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181630/appzeto/restaurant/menu-items/zgzlrvnvjomo5ombprgw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181630/appzeto/restaurant/menu-items/zgzlrvnvjomo5ombprgw.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/058-paper-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181841559-0.8682519844064499",
+      "itemName": "Ginger Prawns",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181840/appzeto/restaurant/menu-items/yrmkoksxfts9lb0jejug.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181840/appzeto/restaurant/menu-items/yrmkoksxfts9lb0jejug.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/059-ginger-prawns.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS SNACKS",
+      "subsection": "",
+      "itemId": "item-1772181932767-0.62302119621559",
+      "itemName": "Prawns Roast",
+      "category": "PRAWNS SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181932/appzeto/restaurant/menu-items/reqytjr8y157x1cxafxx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181932/appzeto/restaurant/menu-items/reqytjr8y157x1cxafxx.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/060-prawns-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182126151-0.6418551038214821",
+      "itemName": "Veg Biryani",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182125/appzeto/restaurant/menu-items/pcvofp5lxc1fgywwzbf3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182125/appzeto/restaurant/menu-items/pcvofp5lxc1fgywwzbf3.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/061-veg-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182223663-0.8442868814915038",
+      "itemName": "Mushroom Biryani",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182223/appzeto/restaurant/menu-items/y2roney8ducezxbozxir.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182223/appzeto/restaurant/menu-items/y2roney8ducezxbozxir.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/062-mushroom-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182470604-0.7564996981103981",
+      "itemName": "Kaju Biryani",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182470/appzeto/restaurant/menu-items/qrldudohfrlf9330wegi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182470/appzeto/restaurant/menu-items/qrldudohfrlf9330wegi.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/063-kaju-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182567992-0.9581673127372846",
+      "itemName": "Panner Biryani",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182566/appzeto/restaurant/menu-items/je4kxecrkbhq4ttvxb4x.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182566/appzeto/restaurant/menu-items/je4kxecrkbhq4ttvxb4x.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/064-panner-biryani.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182603903-0.5998891347779453",
+      "itemName": "Ghee Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182689/appzeto/restaurant/menu-items/vwqhusdfqb7criqio4bz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182689/appzeto/restaurant/menu-items/vwqhusdfqb7criqio4bz.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/065-ghee-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182799253-0.7246659882970394",
+      "itemName": "Veg Fried Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182798/appzeto/restaurant/menu-items/kixot5fhfytvdr8owyh4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182798/appzeto/restaurant/menu-items/kixot5fhfytvdr8owyh4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/066-veg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772182891131-0.52504340894811",
+      "itemName": "Egg Fried Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182890/appzeto/restaurant/menu-items/cvv0uz43qvyig5evdwfh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772182890/appzeto/restaurant/menu-items/cvv0uz43qvyig5evdwfh.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/067-egg-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772183003394-0.900031470920437",
+      "itemName": "Zeera Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183003/appzeto/restaurant/menu-items/h82glawwgq87hvmctavv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183003/appzeto/restaurant/menu-items/h82glawwgq87hvmctavv.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/068-zeera-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772183129760-0.6852584115009471",
+      "itemName": "Chicken Fried Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183129/appzeto/restaurant/menu-items/ku9zqt4jnmwassnaccyl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183129/appzeto/restaurant/menu-items/ku9zqt4jnmwassnaccyl.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/069-chicken-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE BIRYANIS",
+      "subsection": "",
+      "itemId": "item-1772183215584-0.8984187220924859",
+      "itemName": "Panner Fried Rice",
+      "category": "VEGETABLE BIRYANIS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183215/appzeto/restaurant/menu-items/zcz9vu4ojhrwdfn2f44y.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183215/appzeto/restaurant/menu-items/zcz9vu4ojhrwdfn2f44y.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/070-panner-fried-rice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183322883-0.27868810872168026",
+      "itemName": "Veg Manchuria",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183321/appzeto/restaurant/menu-items/kcedwfex6ztlbyun9ead.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183321/appzeto/restaurant/menu-items/kcedwfex6ztlbyun9ead.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/071-veg-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183405347-0.44199727784639753",
+      "itemName": "Veg Bullet",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183405/appzeto/restaurant/menu-items/lpkvfs8mfn80f5vqldoe.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183405/appzeto/restaurant/menu-items/lpkvfs8mfn80f5vqldoe.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/072-veg-bullet.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183554727-0.31356501288177874",
+      "itemName": "Gobi Manchuria",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183553/appzeto/restaurant/menu-items/ahpjzlvk8ozsn7ttr7ig.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183553/appzeto/restaurant/menu-items/ahpjzlvk8ozsn7ttr7ig.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/073-gobi-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183658759-0.7351756198773155",
+      "itemName": "Gobi 65",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183658/appzeto/restaurant/menu-items/h2omjkrzndbw8tiq3d5v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183658/appzeto/restaurant/menu-items/h2omjkrzndbw8tiq3d5v.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/074-gobi-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183840714-0.4001220494143357",
+      "itemName": "Panner  65",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183840/appzeto/restaurant/menu-items/q9ubfforqmwfstf0t460.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183840/appzeto/restaurant/menu-items/q9ubfforqmwfstf0t460.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/075-panner-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772183981641-0.9070040164650168",
+      "itemName": "Panner Manchuria",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183980/appzeto/restaurant/menu-items/oalogymq8indktl4y8m5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772183980/appzeto/restaurant/menu-items/oalogymq8indktl4y8m5.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/076-panner-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772184099109-0.655565165029929",
+      "itemName": "Chilly Panner",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184098/appzeto/restaurant/menu-items/la4msrkwnrjgtowqsyim.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184098/appzeto/restaurant/menu-items/la4msrkwnrjgtowqsyim.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/077-chilly-panner.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772184628562-0.4384067877157749",
+      "itemName": "Panner Majestic",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184627/appzeto/restaurant/menu-items/vlj3f7dd7udald4ngulk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184627/appzeto/restaurant/menu-items/vlj3f7dd7udald4ngulk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/078-panner-majestic.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772184733893-0.9800783718706384",
+      "itemName": "Kaju Fry",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184733/appzeto/restaurant/menu-items/yk9x1nttiphotgxiyzf9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184733/appzeto/restaurant/menu-items/yk9x1nttiphotgxiyzf9.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/079-kaju-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEGETABLE SNACKS",
+      "subsection": "",
+      "itemId": "item-1772184982603-0.8669513033976541",
+      "itemName": "Veg Salad",
+      "category": "VEGETABLE SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184982/appzeto/restaurant/menu-items/arssvxdc8tpqq2nn36p8.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772184982/appzeto/restaurant/menu-items/arssvxdc8tpqq2nn36p8.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/080-veg-salad.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772186892940-0.570870965389056",
+      "itemName": "Chilly Mushroom",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772186892/appzeto/restaurant/menu-items/dhur0jwddmig0dikiwjk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772186892/appzeto/restaurant/menu-items/dhur0jwddmig0dikiwjk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/081-chilly-mushroom.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772186995875-0.8077874047225837",
+      "itemName": "Mushroom 65",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772186995/appzeto/restaurant/menu-items/kpxyxo6atpdzmqkqnifd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772186995/appzeto/restaurant/menu-items/kpxyxo6atpdzmqkqnifd.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/082-mushroom-65.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772187096290-0.7196046763507492",
+      "itemName": "Mushroom Manchuria",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772187095/appzeto/restaurant/menu-items/utewnydqbckpzujlmhmh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772187095/appzeto/restaurant/menu-items/utewnydqbckpzujlmhmh.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/083-mushroom-manchuria.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772187649156-0.47909654311324956",
+      "itemName": "Ginger Mushroom",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772187647/appzeto/restaurant/menu-items/qjshmmcx7yb1zfdvcn2f.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772187647/appzeto/restaurant/menu-items/qjshmmcx7yb1zfdvcn2f.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/084-ginger-mushroom.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772188141899-0.08048200757058088",
+      "itemName": "Mushroom Roast",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188141/appzeto/restaurant/menu-items/kdhaacqzvnkoxufiuynd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188141/appzeto/restaurant/menu-items/kdhaacqzvnkoxufiuynd.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/085-mushroom-roast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772188311022-0.07745528591140893",
+      "itemName": "Pepper Mushroom Dry",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188310/appzeto/restaurant/menu-items/td0yyil9knqukkfcwgvb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188310/appzeto/restaurant/menu-items/td0yyil9knqukkfcwgvb.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/086-pepper-mushroom-dry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUSHROOM SNACKS",
+      "subsection": "",
+      "itemId": "item-1772188494585-0.20542351819977578",
+      "itemName": "Mushroom Fry",
+      "category": "MUSHROOM SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188494/appzeto/restaurant/menu-items/flgvl6hkycp9xv6fzyth.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772188494/appzeto/restaurant/menu-items/flgvl6hkycp9xv6fzyth.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/087-mushroom-fry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189052303-0.45766955404864873",
+      "itemName": "Chicken Curry (Bones)",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/088-chicken-curry-bones.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189179236-0.8086279412396811",
+      "itemName": "Chicken Curry (Boneless)",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189178/appzeto/restaurant/menu-items/lvu12utzmhbl4frashwj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189178/appzeto/restaurant/menu-items/lvu12utzmhbl4frashwj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/089-chicken-curry-boneless.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189322807-0.9903366012967322",
+      "itemName": "Chicken Masala (Bones)",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189322/appzeto/restaurant/menu-items/yyuvgl2t6qypofmlzx6r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189322/appzeto/restaurant/menu-items/yyuvgl2t6qypofmlzx6r.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/090-chicken-masala-bones.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189463823-0.8678302397700304",
+      "itemName": "Chicken Masala (Boneless)",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189462/appzeto/restaurant/menu-items/l0rssriivxtemg7o8fvm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189462/appzeto/restaurant/menu-items/l0rssriivxtemg7o8fvm.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/091-chicken-masala-boneless.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189792365-0.72707354448962",
+      "itemName": "Andhra Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189791/appzeto/restaurant/menu-items/yrpf4kzl6pgnb37uo0iv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189791/appzeto/restaurant/menu-items/yrpf4kzl6pgnb37uo0iv.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/092-andhra-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772189913040-0.435911230436109",
+      "itemName": "Butter Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189911/appzeto/restaurant/menu-items/y33limxxenmcwuil68gy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189911/appzeto/restaurant/menu-items/y33limxxenmcwuil68gy.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/093-butter-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772190222088-0.8400697582916653",
+      "itemName": "Kadai Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190220/appzeto/restaurant/menu-items/vls9psg5iim08de6vjza.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190220/appzeto/restaurant/menu-items/vls9psg5iim08de6vjza.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/094-kadai-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772190392048-0.7929952843866602",
+      "itemName": "Punjabi Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190390/appzeto/restaurant/menu-items/yaascmaxtspbegbelfs7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190390/appzeto/restaurant/menu-items/yaascmaxtspbegbelfs7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/095-punjabi-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772191840038-0.006104927831120599",
+      "itemName": "Kaju Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772191839/appzeto/restaurant/menu-items/ojzswxctr5aelsmv0f8h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772191839/appzeto/restaurant/menu-items/ojzswxctr5aelsmv0f8h.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/096-kaju-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772192104192-0.7159242909468215",
+      "itemName": "Chicken Afghani Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192102/appzeto/restaurant/menu-items/sytovqxjjge8vkggnjs9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192102/appzeto/restaurant/menu-items/sytovqxjjge8vkggnjs9.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/097-chicken-afghani-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772192269624-0.6834948034730679",
+      "itemName": "Chicken Moglai Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192268/appzeto/restaurant/menu-items/ntoitn523ntoghfc4lsf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192268/appzeto/restaurant/menu-items/ntoitn523ntoghfc4lsf.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/098-chicken-moglai-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772192441313-0.7306930341571505",
+      "itemName": "Chicken Tikka Masala",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192440/appzeto/restaurant/menu-items/uddddk0yxh7lkdbbr20c.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192440/appzeto/restaurant/menu-items/uddddk0yxh7lkdbbr20c.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/099-chicken-tikka-masala.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772192775072-0.17632971695956645",
+      "itemName": "Kashmiri Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192773/appzeto/restaurant/menu-items/qqhg09dfhdtv28geqsak.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192773/appzeto/restaurant/menu-items/qqhg09dfhdtv28geqsak.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/100-kashmiri-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772192907678-0.19815892437964489",
+      "itemName": "Ginger Chicken Wet Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192905/appzeto/restaurant/menu-items/e3cd1bwigen53si1bklg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192905/appzeto/restaurant/menu-items/e3cd1bwigen53si1bklg.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/101-ginger-chicken-wet-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193027289-0.1354484795302363",
+      "itemName": "Chicken Kolapuri",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193026/appzeto/restaurant/menu-items/qxsny7lwlyelztztuzn7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193026/appzeto/restaurant/menu-items/qxsny7lwlyelztztuzn7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/102-chicken-kolapuri.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193162950-0.7849632071470178",
+      "itemName": "Royal Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193162/appzeto/restaurant/menu-items/mbkt092rvyy8fgmebisy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193162/appzeto/restaurant/menu-items/mbkt092rvyy8fgmebisy.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/103-royal-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193393877-0.38253571301326617",
+      "itemName": "Gongura Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193392/appzeto/restaurant/menu-items/uokivj5qnlqxipzgz4w6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193392/appzeto/restaurant/menu-items/uokivj5qnlqxipzgz4w6.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/104-gongura-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193649421-0.19163098402431367",
+      "itemName": "Chicken Chintadu Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193648/appzeto/restaurant/menu-items/rdzerta5e0xsjz6dmdlx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193648/appzeto/restaurant/menu-items/rdzerta5e0xsjz6dmdlx.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/105-chicken-chintadu-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193774797-0.29444282591851034",
+      "itemName": "Methi Chicken Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/106-methi-chicken-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "CHICKEN NON VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772193869223-0.3121872795387637",
+      "itemName": "Natu Kodi Curry",
+      "category": "CHICKEN NON VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193867/appzeto/restaurant/menu-items/eihto1haxxuzc90a01bk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193867/appzeto/restaurant/menu-items/eihto1haxxuzc90a01bk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/107-natu-kodi-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772194089082-0.9650505512040999",
+      "itemName": "Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194088/appzeto/restaurant/menu-items/bn8vjhj8kigjt3dhlcso.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194088/appzeto/restaurant/menu-items/bn8vjhj8kigjt3dhlcso.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/108-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772194195057-0.9068541000726146",
+      "itemName": "Andhra Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194193/appzeto/restaurant/menu-items/y2xcfsj6qbdp9gjkrnab.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194193/appzeto/restaurant/menu-items/y2xcfsj6qbdp9gjkrnab.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/109-andhra-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772194326014-0.6162977836646639",
+      "itemName": "Kadai Mutton",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194324/appzeto/restaurant/menu-items/hut4eebyzocrqboczdoi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194324/appzeto/restaurant/menu-items/hut4eebyzocrqboczdoi.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/110-kadai-mutton.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772194439513-0.5253570260428773",
+      "itemName": "Mutton Rogan Juice",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194437/appzeto/restaurant/menu-items/ovkag5e8fhvzuqa0elx4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194437/appzeto/restaurant/menu-items/ovkag5e8fhvzuqa0elx4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/111-mutton-rogan-juice.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772197452234-0.453182444203731",
+      "itemName": "Kaju Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197451/appzeto/restaurant/menu-items/sigdebwugxkypvzlbosn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197451/appzeto/restaurant/menu-items/sigdebwugxkypvzlbosn.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/112-kaju-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772197659046-0.13215256313553247",
+      "itemName": "Butter Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197658/appzeto/restaurant/menu-items/yq4v8fgthcfsptcrlqoe.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197658/appzeto/restaurant/menu-items/yq4v8fgthcfsptcrlqoe.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/113-butter-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772197792077-0.4915717744496131",
+      "itemName": "Mutton Masala",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197791/appzeto/restaurant/menu-items/fungxbijcnsyasvzayd5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197791/appzeto/restaurant/menu-items/fungxbijcnsyasvzayd5.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/114-mutton-masala.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772197981011-0.9436292450956634",
+      "itemName": "Methi Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197980/appzeto/restaurant/menu-items/rthqhn0a4uqk8sxjshdj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772197980/appzeto/restaurant/menu-items/rthqhn0a4uqk8sxjshdj.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/115-methi-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "MUTTON CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198104396-0.6621336291117",
+      "itemName": "Gongura Mutton Curry",
+      "category": "MUTTON CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198104/appzeto/restaurant/menu-items/gwub9lbh0fg1omafzsmk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198104/appzeto/restaurant/menu-items/gwub9lbh0fg1omafzsmk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/116-gongura-mutton-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198322174-0.5404098737716198",
+      "itemName": "Fish Curry",
+      "category": "FISH CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198321/appzeto/restaurant/menu-items/xxks0leclpr04z9gecte.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198321/appzeto/restaurant/menu-items/xxks0leclpr04z9gecte.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/117-fish-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198463117-0.5452038742032509",
+      "itemName": "Nellore Fish Curry",
+      "category": "FISH CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198462/appzeto/restaurant/menu-items/b93eo0yxgfezab6bxpiz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198462/appzeto/restaurant/menu-items/b93eo0yxgfezab6bxpiz.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/118-nellore-fish-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198615273-0.5626084928457289",
+      "itemName": "Kadali Fish Curry",
+      "category": "FISH CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198615/appzeto/restaurant/menu-items/emr6ro1ojym5w4oegwa2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198615/appzeto/restaurant/menu-items/emr6ro1ojym5w4oegwa2.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/119-kadali-fish-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "FISH CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198843920-0.6455592840125418",
+      "itemName": "Butter Fish Curry",
+      "category": "FISH CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198843/appzeto/restaurant/menu-items/jsjozdo25gyrhekpgsw9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198843/appzeto/restaurant/menu-items/jsjozdo25gyrhekpgsw9.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/120-butter-fish-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS CURRIES",
+      "subsection": "",
+      "itemId": "item-1772198987253-0.8013427337865915",
+      "itemName": "Prawns Curry",
+      "category": "PRAWNS CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198987/appzeto/restaurant/menu-items/mbmalmlzwhww10djc3j4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772198987/appzeto/restaurant/menu-items/mbmalmlzwhww10djc3j4.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/121-prawns-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS CURRIES",
+      "subsection": "",
+      "itemId": "item-1772199387191-0.8924646800699243",
+      "itemName": "Andhra Prawns Curry",
+      "category": "PRAWNS CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199386/appzeto/restaurant/menu-items/rmaz6dvbdmddcr2x6elp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199386/appzeto/restaurant/menu-items/rmaz6dvbdmddcr2x6elp.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/122-andhra-prawns-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS CURRIES",
+      "subsection": "",
+      "itemId": "item-1772199533509-0.21556485688028493",
+      "itemName": "Kadai Prawns Curry",
+      "category": "PRAWNS CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199533/appzeto/restaurant/menu-items/j4bfyiwbgngkbbpepqe7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199533/appzeto/restaurant/menu-items/j4bfyiwbgngkbbpepqe7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/123-kadai-prawns-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "PRAWNS CURRIES",
+      "subsection": "",
+      "itemId": "item-1772199644897-0.900366304014239",
+      "itemName": "Butter Prawns Curry",
+      "category": "PRAWNS CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199644/appzeto/restaurant/menu-items/ogak4nu6snmhoernedlb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199644/appzeto/restaurant/menu-items/ogak4nu6snmhoernedlb.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/124-butter-prawns-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772199742176-0.5725276366464688",
+      "itemName": "Vegetable Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199742/appzeto/restaurant/menu-items/ovxigepgwyjrwcbwbomw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199742/appzeto/restaurant/menu-items/ovxigepgwyjrwcbwbomw.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/125-vegetable-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772199830472-0.46942491773630124",
+      "itemName": "Tomato Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199830/appzeto/restaurant/menu-items/utz4f0ssw9xc3mgw1dcl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772199830/appzeto/restaurant/menu-items/utz4f0ssw9xc3mgw1dcl.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/126-tomato-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200180432-0.10535269313967432",
+      "itemName": "Kaju Tomato Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200179/appzeto/restaurant/menu-items/jioix7y55g1kqmk1wg0r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200179/appzeto/restaurant/menu-items/jioix7y55g1kqmk1wg0r.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/127-kaju-tomato-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200266482-0.0035238504558260386",
+      "itemName": "Palak Panner",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200266/appzeto/restaurant/menu-items/urw7lrnkkks3kbf7q0zk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200266/appzeto/restaurant/menu-items/urw7lrnkkks3kbf7q0zk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/128-palak-panner.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200409995-0.8188934548152943",
+      "itemName": "Panner Butter Masala",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200409/appzeto/restaurant/menu-items/x0cc0upjwud9ml9fzf7z.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200409/appzeto/restaurant/menu-items/x0cc0upjwud9ml9fzf7z.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/129-panner-butter-masala.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200612351-0.5242689572622331",
+      "itemName": "Methi Chaman",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200611/appzeto/restaurant/menu-items/mw2xpsawm4qkrvmqicu7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200611/appzeto/restaurant/menu-items/mw2xpsawm4qkrvmqicu7.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/130-methi-chaman.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200786710-0.3222732688162607",
+      "itemName": "Mushroom Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/131-mushroom-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772200939072-0.840190729555902",
+      "itemName": "Veg Kolapuri",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200939/appzeto/restaurant/menu-items/lhwfvyrq2fvlfvefclzg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200939/appzeto/restaurant/menu-items/lhwfvyrq2fvlfvefclzg.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/132-veg-kolapuri.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772201197647-0.4287121131643644",
+      "itemName": "Dal Tadka",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201188/appzeto/restaurant/menu-items/fj9aumcfvxlfakh8qnfa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201188/appzeto/restaurant/menu-items/fj9aumcfvxlfakh8qnfa.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/133-dal-tadka.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772201287115-0.5841952371254072",
+      "itemName": "Egg Curry",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201286/appzeto/restaurant/menu-items/h7dl8cjkzpwtm5toa9mc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201286/appzeto/restaurant/menu-items/h7dl8cjkzpwtm5toa9mc.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/134-egg-curry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "VEG CURRIES",
+      "subsection": "",
+      "itemId": "item-1772201368055-0.6757319034372646",
+      "itemName": "Egg Burji",
+      "category": "VEG CURRIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201367/appzeto/restaurant/menu-items/v0d46gkmuvcendno4vog.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201367/appzeto/restaurant/menu-items/v0d46gkmuvcendno4vog.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/135-egg-burji.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772256013899-0.4040800512134154",
+      "itemName": "Tandoori Chicken (Full)",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256012/appzeto/restaurant/menu-items/q6kbqw78d3jexgpdn0dk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256012/appzeto/restaurant/menu-items/q6kbqw78d3jexgpdn0dk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/136-tandoori-chicken-full.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772256121673-0.38392572357179",
+      "itemName": "Tandoori Chicken (Half)",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256120/appzeto/restaurant/menu-items/lji91gss74mi409zgrgk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256120/appzeto/restaurant/menu-items/lji91gss74mi409zgrgk.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/137-tandoori-chicken-half.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772256412770-0.5956205935021699",
+      "itemName": "Tangdi Kabab",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256411/appzeto/restaurant/menu-items/iwkjjyw8wehurzphmlfq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256411/appzeto/restaurant/menu-items/iwkjjyw8wehurzphmlfq.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/138-tangdi-kabab.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772257225524-0.1383614906017958",
+      "itemName": "Butter Nan",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257225/appzeto/restaurant/menu-items/wdcanrkzfssfrrlcb6yi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257225/appzeto/restaurant/menu-items/wdcanrkzfssfrrlcb6yi.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/139-butter-nan.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772257444886-0.4434773851662154",
+      "itemName": "Masala Kulcha",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773392447/foods/mxre2qwisznkwvosem1v.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773392447/foods/mxre2qwisznkwvosem1v.webp"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/140-masala-kulcha.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772257331121-0.01472062844751909",
+      "itemName": "Tandoori Parota",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257330/appzeto/restaurant/menu-items/wlu2ywxnlkytajatrta2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257330/appzeto/restaurant/menu-items/wlu2ywxnlkytajatrta2.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/141-tandoori-parota.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772257081309-0.07377426222909145",
+      "itemName": "Pulka",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257080/appzeto/restaurant/menu-items/ellzjbigxlzwaztcbi9d.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772257080/appzeto/restaurant/menu-items/ellzjbigxlzwaztcbi9d.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/142-pulka.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772256627868-0.501485321986297",
+      "itemName": "Kalmi Kabab",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773480444/foods/lgi8bthhzwrbzllwh00b.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773480444/foods/lgi8bthhzwrbzllwh00b.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/143-kalmi-kabab.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ITEMS",
+      "subsection": "",
+      "itemId": "item-1772256527136-0.42154312055139276",
+      "itemName": "Chicken Tikka",
+      "category": "TANDOORI ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256526/appzeto/restaurant/menu-items/jhn33oufijuzrsia5kom.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256526/appzeto/restaurant/menu-items/jhn33oufijuzrsia5kom.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/144-chicken-tikka.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ROTI",
+      "subsection": "",
+      "itemId": "item-1772256740742-0.05701478690975803",
+      "itemName": "Roti",
+      "category": "TANDOORI ROTI",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256739/appzeto/restaurant/menu-items/jn5cmtgvtudqcxqfoz56.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256739/appzeto/restaurant/menu-items/jn5cmtgvtudqcxqfoz56.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/145-roti.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "TANDOORI ROTI",
+      "subsection": "",
+      "itemId": "item-1772256900279-0.7298632427273267",
+      "itemName": "Butter Roti",
+      "category": "TANDOORI ROTI",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256899/appzeto/restaurant/menu-items/ohe4l9eszds4td6ed5ow.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772256899/appzeto/restaurant/menu-items/ohe4l9eszds4td6ed5ow.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/146-butter-roti.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Kamju Items",
+      "subsection": "",
+      "itemId": "item-1773405085358-8v7mjeq",
+      "itemName": "Kamju Roast",
+      "category": "Kamju Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773405084/foods/jgvil1fopeyam8l4nuts.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773405084/foods/jgvil1fopeyam8l4nuts.jpg"
+      ],
+      "localImage": "exports/abhinaya-family-restaurant-images/147-kamju-roast.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:45:28.425Z",
+  "downloadFolder": "exports/abhinaya-family-restaurant-images",
+  "uniqueRemoteImages": 147,
+  "downloadedCount": 147,
+  "failedCount": 0
+}

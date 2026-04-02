@@ -1,0 +1,121 @@
+{
+  "restaurant": {
+    "id": "69aabd5089409992043990cc",
+    "slug": "restaurant-9068",
+    "name": "CAFE CUMBUM CHAI WALA"
+  },
+  "exportedAt": "2026-04-02T13:47:21.123Z",
+  "totalItems": 10,
+  "items": [
+    {
+      "section": "VEGETARIAN APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772800245937-0.9199362212813648",
+      "itemName": "2 Plain Dosa",
+      "category": "VEGETARIAN APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800244/appzeto/restaurant/menu-items/flrrddow88zqz5hvjw1b.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800244/appzeto/restaurant/menu-items/flrrddow88zqz5hvjw1b.jpg"
+      ]
+    },
+    {
+      "section": "VEGETARIAN APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772800339634-0.7156094784377283",
+      "itemName": "Vada [4P]",
+      "category": "VEGETARIAN APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800338/appzeto/restaurant/menu-items/x3yzgpzhexrmv064znhd.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800338/appzeto/restaurant/menu-items/x3yzgpzhexrmv064znhd.webp"
+      ]
+    },
+    {
+      "section": "VEGETARIAN APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772800423595-0.8069195927162076",
+      "itemName": "PUNUGULU [18P]",
+      "category": "VEGETARIAN APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800422/appzeto/restaurant/menu-items/gqryo4i1b7gsawb6oeph.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800422/appzeto/restaurant/menu-items/gqryo4i1b7gsawb6oeph.jpg"
+      ]
+    },
+    {
+      "section": "VEGETARIAN APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772800729634-0.4368264263890488",
+      "itemName": "BONDA [4P]",
+      "category": "VEGETARIAN APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800728/appzeto/restaurant/menu-items/twck25iogcoo6bgr8p8q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800728/appzeto/restaurant/menu-items/twck25iogcoo6bgr8p8q.jpg"
+      ]
+    },
+    {
+      "section": "NON – VEG APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772801047047-0.8795085643760274",
+      "itemName": "DOSA [2P]",
+      "category": "NON – VEG APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801046/appzeto/restaurant/menu-items/mag8niunsoisdfkz86un.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801046/appzeto/restaurant/menu-items/mag8niunsoisdfkz86un.jpg"
+      ]
+    },
+    {
+      "section": "NON – VEG APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772877663672-0.4496369847076568",
+      "itemName": "CHITTI GARE  [4P]",
+      "category": "NON – VEG APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772877661/appzeto/restaurant/menu-items/wsk1awnclunpzfiiilnf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772877661/appzeto/restaurant/menu-items/wsk1awnclunpzfiiilnf.jpg"
+      ]
+    },
+    {
+      "section": "NON – VEG APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772877896037-0.25865610436813846",
+      "itemName": "CHAPATHI  [2P]",
+      "category": "NON – VEG APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772877893/appzeto/restaurant/menu-items/teih2oszxizvchs6p9mj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772877893/appzeto/restaurant/menu-items/teih2oszxizvchs6p9mj.jpg"
+      ]
+    },
+    {
+      "section": "NON – VEG APPETIZERS",
+      "subsection": "",
+      "itemId": "item-1772878018662-0.932254459471109",
+      "itemName": "PURI (2P)",
+      "category": "NON – VEG APPETIZERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878016/appzeto/restaurant/menu-items/ujwocpnixqszati0cqt6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878016/appzeto/restaurant/menu-items/ujwocpnixqszati0cqt6.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772878450139-0.31030746699886214",
+      "itemName": "Bun Maska",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878447/appzeto/restaurant/menu-items/jznj9wlc1kppyipeuir0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878447/appzeto/restaurant/menu-items/jznj9wlc1kppyipeuir0.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772878532801-0.316072439120899",
+      "itemName": "Gulab Jamun",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878530/appzeto/restaurant/menu-items/labj5xcf0n4h98bjpwgn.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772878530/appzeto/restaurant/menu-items/labj5xcf0n4h98bjpwgn.webp"
+      ]
+    }
+  ]
+}

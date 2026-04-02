@@ -1,0 +1,825 @@
+{
+  "restaurant": {
+    "id": "69a44ef7e3c021b953395f99",
+    "slug": "restaurant-2513",
+    "name": "JVR Family Restaurant"
+  },
+  "exportedAt": "2026-04-02T13:47:31.479Z",
+  "totalItems": 74,
+  "items": [
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1772434290555-0.13500753235124796",
+      "itemName": "Boneless Kashmir Biryani",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434290/appzeto/restaurant/menu-items/qdk4jidxywa69edtkvwz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434290/appzeto/restaurant/menu-items/qdk4jidxywa69edtkvwz.jpg"
+      ]
+    },
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1772434621098-0.6175448145566178",
+      "itemName": "Boneless 555 Biryani",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434620/appzeto/restaurant/menu-items/eniagrway9zeapfmtxdl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434620/appzeto/restaurant/menu-items/eniagrway9zeapfmtxdl.jpg"
+      ]
+    },
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1772434799919-0.77008967504829",
+      "itemName": "Boneless Kharjur Biryani",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434799/appzeto/restaurant/menu-items/cw6d2t9kcdlgs7hhagor.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434799/appzeto/restaurant/menu-items/cw6d2t9kcdlgs7hhagor.jpg"
+      ]
+    },
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1772434940795-0.582579755962141",
+      "itemName": "Family Pack Biryani (Boneless)",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434940/appzeto/restaurant/menu-items/zwageupjxkqzmozlsqj8.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434940/appzeto/restaurant/menu-items/zwageupjxkqzmozlsqj8.jpg"
+      ]
+    },
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1772434420511-0.22861528126258734",
+      "itemName": "Boneless Hongkong Biryani",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434419/appzeto/restaurant/menu-items/v8tu5wheeei0pxu8mzd5.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772434419/appzeto/restaurant/menu-items/v8tu5wheeei0pxu8mzd5.webp"
+      ]
+    },
+    {
+      "section": "Mutton Items",
+      "subsection": "",
+      "itemId": "item-1772435191816-0.4152591907473916",
+      "itemName": "Mutton Fry",
+      "category": "Mutton Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435191/appzeto/restaurant/menu-items/j7ifsbniadxjs3nrfbla.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435191/appzeto/restaurant/menu-items/j7ifsbniadxjs3nrfbla.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Items",
+      "subsection": "",
+      "itemId": "item-1772435292600-0.9405077623184158",
+      "itemName": "Mutton Curry",
+      "category": "Mutton Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435292/appzeto/restaurant/menu-items/ea3qxxt6sifhflhdfdsa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435292/appzeto/restaurant/menu-items/ea3qxxt6sifhflhdfdsa.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Items",
+      "subsection": "",
+      "itemId": "item-1772435566444-0.14071691505394357",
+      "itemName": "Mutton Biryani",
+      "category": "Mutton Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435566/appzeto/restaurant/menu-items/llqhfuoqzt1iii6jz7qu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435566/appzeto/restaurant/menu-items/llqhfuoqzt1iii6jz7qu.jpg"
+      ]
+    },
+    {
+      "section": "Natu Kodi Items",
+      "subsection": "",
+      "itemId": "item-1772435789185-0.027111197928575637",
+      "itemName": "Natukodi Fry",
+      "category": "Natu Kodi Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435788/appzeto/restaurant/menu-items/sublioewdfyhucfalfpl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435788/appzeto/restaurant/menu-items/sublioewdfyhucfalfpl.jpg"
+      ]
+    },
+    {
+      "section": "Natu Kodi Items",
+      "subsection": "",
+      "itemId": "item-1772435859854-0.07095097330004496",
+      "itemName": "Natukodi Curry",
+      "category": "Natu Kodi Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435859/appzeto/restaurant/menu-items/tgr5sryirsoevsvijexl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772435859/appzeto/restaurant/menu-items/tgr5sryirsoevsvijexl.jpg"
+      ]
+    },
+    {
+      "section": "Natu Kodi Items",
+      "subsection": "",
+      "itemId": "item-1772436526655-0.6748664777031776",
+      "itemName": "Natukodi Biryani",
+      "category": "Natu Kodi Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772518024/foods/smibgl3e2dk5v5mxv4ax.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772518024/foods/smibgl3e2dk5v5mxv4ax.jpg"
+      ]
+    },
+    {
+      "section": "Kamju Items",
+      "subsection": "",
+      "itemId": "item-1772436628835-0.7821961623813983",
+      "itemName": "Kamju Roast",
+      "category": "Kamju Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772436628/appzeto/restaurant/menu-items/br1tf0epkqu7cdbjodgm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772436628/appzeto/restaurant/menu-items/br1tf0epkqu7cdbjodgm.jpg"
+      ]
+    },
+    {
+      "section": "Kamju Items",
+      "subsection": "",
+      "itemId": "item-1772436824880-0.34887070943819454",
+      "itemName": "Kamju Fry",
+      "category": "Kamju Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772436824/appzeto/restaurant/menu-items/owkove6tbkq7wbjsv2cs.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772436824/appzeto/restaurant/menu-items/owkove6tbkq7wbjsv2cs.jpg"
+      ]
+    },
+    {
+      "section": "Kamju Items",
+      "subsection": "",
+      "itemId": "item-1772437311381-0.9135544573553065",
+      "itemName": "Kamju Biryani",
+      "category": "Kamju Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437311/appzeto/restaurant/menu-items/jwgr86wwhbzf6ofyea8p.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437311/appzeto/restaurant/menu-items/jwgr86wwhbzf6ofyea8p.webp"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772437644044-0.5734778824478014",
+      "itemName": "Prawns Roast",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437643/appzeto/restaurant/menu-items/rn8wmrujxm9keuenyov4.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437643/appzeto/restaurant/menu-items/rn8wmrujxm9keuenyov4.webp"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772437991915-0.40821039471228093",
+      "itemName": "Prawns Fry",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437991/appzeto/restaurant/menu-items/vena6rlq1y5e4pmbo0rb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772437991/appzeto/restaurant/menu-items/vena6rlq1y5e4pmbo0rb.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772438376655-0.07086125648648511",
+      "itemName": "Prawns Curry",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438376/appzeto/restaurant/menu-items/sbu74ij0r8ut5fdqhhhm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438376/appzeto/restaurant/menu-items/sbu74ij0r8ut5fdqhhhm.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772438512005-0.4493451754732277",
+      "itemName": "Prawns Chilli",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438511/appzeto/restaurant/menu-items/mbcnos6nkkuhck3bbihb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438511/appzeto/restaurant/menu-items/mbcnos6nkkuhck3bbihb.webp"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772438660637-0.67204563189537",
+      "itemName": "Loose Prawns",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438660/appzeto/restaurant/menu-items/e3adx85uterrlpq4v72v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438660/appzeto/restaurant/menu-items/e3adx85uterrlpq4v72v.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Items",
+      "subsection": "",
+      "itemId": "item-1772438734993-0.42002927718520766",
+      "itemName": "Prawns Biryani",
+      "category": "Prawns Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438735/appzeto/restaurant/menu-items/t28cghwjhx2qdpkfms9q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438735/appzeto/restaurant/menu-items/t28cghwjhx2qdpkfms9q.jpg"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439151627-0.3947997941759759",
+      "itemName": "Bones Fish Fry",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439151/appzeto/restaurant/menu-items/hhhjlou8qtf64uqqnd44.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439151/appzeto/restaurant/menu-items/hhhjlou8qtf64uqqnd44.webp"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439296781-0.524738017071596",
+      "itemName": "Bones Fish Curry",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439296/appzeto/restaurant/menu-items/a7e1j2chjswgyragoe4z.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439296/appzeto/restaurant/menu-items/a7e1j2chjswgyragoe4z.webp"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439378547-0.9548434359489634",
+      "itemName": "Boneless Fish Roast",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439378/appzeto/restaurant/menu-items/iqbshnhz6twyhddvkpme.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439378/appzeto/restaurant/menu-items/iqbshnhz6twyhddvkpme.jpg"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439066018-0.671489366894774",
+      "itemName": "Bones Fish Roast",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439065/appzeto/restaurant/menu-items/exg6u4miqi0ijhqrugrh.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439065/appzeto/restaurant/menu-items/exg6u4miqi0ijhqrugrh.webp"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439669722-0.6722168480475205",
+      "itemName": "Bone Fish Biryani",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439668/appzeto/restaurant/menu-items/zwrtwn15w2f6whgn2izu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439668/appzeto/restaurant/menu-items/zwrtwn15w2f6whgn2izu.jpg"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439788536-0.9420762236532598",
+      "itemName": "Boneless Fish Fry",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439787/appzeto/restaurant/menu-items/s2synneyoulk3unrvacu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439787/appzeto/restaurant/menu-items/s2synneyoulk3unrvacu.jpg"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439941092-0.7503645378715964",
+      "itemName": "Bone Fish Fry",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439941/appzeto/restaurant/menu-items/k3imfpkpjs4k9e4dl0xt.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439941/appzeto/restaurant/menu-items/k3imfpkpjs4k9e4dl0xt.webp"
+      ]
+    },
+    {
+      "section": "Fish Items",
+      "subsection": "",
+      "itemId": "item-1772439598262-0.29885770890250063",
+      "itemName": "Boneless Fish Biryani",
+      "category": "Fish Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439598/appzeto/restaurant/menu-items/u79sbvhhbaej0jocbpnd.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439598/appzeto/restaurant/menu-items/u79sbvhhbaej0jocbpnd.webp"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448057822-0.6353953355169476",
+      "itemName": "Tandoori Chicken Full",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448057/appzeto/restaurant/menu-items/bpukdcwuk50bd9n7w4wa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448057/appzeto/restaurant/menu-items/bpukdcwuk50bd9n7w4wa.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448113080-0.8304788261012013",
+      "itemName": "Tandoori Chicken Half",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448112/appzeto/restaurant/menu-items/nkppuvdbhdkkm7yj0jci.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448112/appzeto/restaurant/menu-items/nkppuvdbhdkkm7yj0jci.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448176470-0.8623566171748673",
+      "itemName": "Chicken Tikka",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448176/appzeto/restaurant/menu-items/xt9ubccwz8gpibresfeq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448176/appzeto/restaurant/menu-items/xt9ubccwz8gpibresfeq.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448265435-0.2669658721919207",
+      "itemName": "Tandoori Kababs",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448265/appzeto/restaurant/menu-items/yp5qh42gnssohffzz1gq.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448265/appzeto/restaurant/menu-items/yp5qh42gnssohffzz1gq.webp"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448605358-0.8016845069588058",
+      "itemName": "Tandoori Butter Roti",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448605/appzeto/restaurant/menu-items/omasmrlqivh0rwkbye2h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448605/appzeto/restaurant/menu-items/omasmrlqivh0rwkbye2h.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448529234-0.5123487014436603",
+      "itemName": "Tandoori Roti",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448402651-0.6559867144652953",
+      "itemName": "Tandoori Butter Naan",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448403/appzeto/restaurant/menu-items/bpiwpkt5cwu1zclflodg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448403/appzeto/restaurant/menu-items/bpiwpkt5cwu1zclflodg.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772448919971-0.1517568957098241",
+      "itemName": "Pulka",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448920/appzeto/restaurant/menu-items/m7qxfsf800rloak4cu31.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448920/appzeto/restaurant/menu-items/m7qxfsf800rloak4cu31.jpg"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (With Bones)",
+      "subsection": "",
+      "itemId": "item-1772449196999-0.025115078315945505",
+      "itemName": "Bucket Biryani 2 Ltr (2 Persons)",
+      "category": "Bucket Biryani (With Bones)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449197/appzeto/restaurant/menu-items/qbibs2ob8deviynxuukr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449197/appzeto/restaurant/menu-items/qbibs2ob8deviynxuukr.jpg"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (With Bones)",
+      "subsection": "",
+      "itemId": "item-1772449337334-0.06590888289612618",
+      "itemName": "Bucket Biryani  3 Ltr (3 Persons)",
+      "category": "Bucket Biryani (With Bones)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449337/appzeto/restaurant/menu-items/umyqkjy4atfxuwwjza7m.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449337/appzeto/restaurant/menu-items/umyqkjy4atfxuwwjza7m.jpg"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (With Bones)",
+      "subsection": "",
+      "itemId": "item-1772449657813-0.2534990398551157",
+      "itemName": "Bucket Biryani 5 Ltr (6 Persons)",
+      "category": "Bucket Biryani (With Bones)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449658/appzeto/restaurant/menu-items/wwpztsnvylty8bpbzbyb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449658/appzeto/restaurant/menu-items/wwpztsnvylty8bpbzbyb.webp"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (Boneless)",
+      "subsection": "",
+      "itemId": "item-1772449797426-0.987599264185244",
+      "itemName": "Bucket Biryani (Boneless) 2 Ltr (2 Persons)",
+      "category": "Bucket Biryani (Boneless)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449798/appzeto/restaurant/menu-items/f4eyu0ekxjwzeyfmpbcp.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449798/appzeto/restaurant/menu-items/f4eyu0ekxjwzeyfmpbcp.png"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (Boneless)",
+      "subsection": "",
+      "itemId": "item-1772449919211-0.8461049996774649",
+      "itemName": "Bucket Biryani (Boneless) 3 Ltr (3 Persons)",
+      "category": "Bucket Biryani (Boneless)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449920/appzeto/restaurant/menu-items/qq3j5cy0pjmphhlbuoan.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772449920/appzeto/restaurant/menu-items/qq3j5cy0pjmphhlbuoan.png"
+      ]
+    },
+    {
+      "section": "Bucket Biryani (Boneless)",
+      "subsection": "",
+      "itemId": "item-1772450291353-0.4916389224716968",
+      "itemName": "Bucket Biryani (Boneless) 5 Ltr (6 Persons)",
+      "category": "Bucket Biryani (Boneless)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772450291/appzeto/restaurant/menu-items/zwytejls7t6jendr0n5z.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772450291/appzeto/restaurant/menu-items/zwytejls7t6jendr0n5z.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772455345220-0.8669068743128098",
+      "itemName": "Chicken Roast",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772455345/appzeto/restaurant/menu-items/ytmoeoucqhnia7v9orfv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772455345/appzeto/restaurant/menu-items/ytmoeoucqhnia7v9orfv.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772456681058-0.37464201541507225",
+      "itemName": "Chicken Fry",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456681/appzeto/restaurant/menu-items/k5fnaqbpztlyoimxkqaz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456681/appzeto/restaurant/menu-items/k5fnaqbpztlyoimxkqaz.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772456824234-0.1691224654018303",
+      "itemName": "Chicken Bones 85",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456823/appzeto/restaurant/menu-items/kwyzqyj4rlc4fzmux41j.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456823/appzeto/restaurant/menu-items/kwyzqyj4rlc4fzmux41j.webp"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772457097405-0.19690610504235795",
+      "itemName": "Chicken Honkong Bones",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457097/appzeto/restaurant/menu-items/eh7r9qjilgoysspt1cek.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457097/appzeto/restaurant/menu-items/eh7r9qjilgoysspt1cek.webp"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772458095160-0.1633535279937708",
+      "itemName": "Chilli Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772458095/appzeto/restaurant/menu-items/mdziwmvgvndqiuerdyir.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772458095/appzeto/restaurant/menu-items/mdziwmvgvndqiuerdyir.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772458421552-0.817616227628218",
+      "itemName": "Chicken 65",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772458421/appzeto/restaurant/menu-items/ttdteijoedxtss27jyoa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772458421/appzeto/restaurant/menu-items/ttdteijoedxtss27jyoa.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772459812288-0.9597019559671732",
+      "itemName": "Ginger Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772459812/appzeto/restaurant/menu-items/jxmdfdcaroni3jkhgdxa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772459812/appzeto/restaurant/menu-items/jxmdfdcaroni3jkhgdxa.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772459914061-0.767595485726274",
+      "itemName": "Lemon Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772459913/appzeto/restaurant/menu-items/c4rdy3ayvbm6r3b2qtty.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772459913/appzeto/restaurant/menu-items/c4rdy3ayvbm6r3b2qtty.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772460001212-0.15886949741645784",
+      "itemName": "RR Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772460000/appzeto/restaurant/menu-items/kw5cfkvv7emce4qaxyg2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772460000/appzeto/restaurant/menu-items/kw5cfkvv7emce4qaxyg2.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772460088196-0.20638027482186394",
+      "itemName": "Chicken 85 Boneless",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772460088/appzeto/restaurant/menu-items/xokevmzvdnqxyostdvqq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772460088/appzeto/restaurant/menu-items/xokevmzvdnqxyostdvqq.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799241434-lb9eoxp",
+      "itemName": "Chicken 555",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799240/foods/uw4psi5j7b17bqfxahkk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799240/foods/uw4psi5j7b17bqfxahkk.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799344173-5rotput",
+      "itemName": "Chicken Karjura",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799342/foods/kz82rh93jq0o9nhrltrn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799342/foods/kz82rh93jq0o9nhrltrn.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799425143-2qk0ylf",
+      "itemName": "Golden Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799424/foods/yybxotfqqe5h4usxtmnx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799424/foods/yybxotfqqe5h4usxtmnx.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799507247-u67n4qu",
+      "itemName": "Garlic Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799506/foods/nkkxq8xm2z4jyakxtaux.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799506/foods/nkkxq8xm2z4jyakxtaux.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799709488-qpc6heu",
+      "itemName": "Pepper Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799708/foods/ana7n03djtdw768dfxad.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799708/foods/ana7n03djtdw768dfxad.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799805203-3phcdp3",
+      "itemName": "Chicken Kashmir",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799804/foods/ejizznhkmm0ubejytrwn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799804/foods/ejizznhkmm0ubejytrwn.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772799902451-mw3px6k",
+      "itemName": "Chicken Lollypop",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799901/foods/ybrgk9sg37nws1ccihly.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772799901/foods/ybrgk9sg37nws1ccihly.webp"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800011222-5op7jhd",
+      "itemName": "Chicken Manchuria",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800010/foods/ejoz6iy7pn5zuzvp6c8s.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800010/foods/ejoz6iy7pn5zuzvp6c8s.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800216308-4090z1s",
+      "itemName": "Bhutan Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800215/foods/ogyrgd8rvgy1qa4ozxzc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800215/foods/ogyrgd8rvgy1qa4ozxzc.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800382915-hhhodsc",
+      "itemName": "Chicken Hongkong Boneless",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800381/foods/q6gfb1ukzvggzgcl4mgd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800381/foods/q6gfb1ukzvggzgcl4mgd.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800475075-8kcscr5",
+      "itemName": "Chicken Majestic",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800473/foods/gm1tjmlus4kjyf8z7lvc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800473/foods/gm1tjmlus4kjyf8z7lvc.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800620706-fa3jcym",
+      "itemName": "Chicken 70 MM",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800619/foods/wccv40vhpsqy31o5nnfr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800619/foods/wccv40vhpsqy31o5nnfr.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800732946-6silme7",
+      "itemName": "Basket Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800732/foods/tljlxcqmldvfaegdtgmw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800732/foods/tljlxcqmldvfaegdtgmw.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800860075-2p8avyc",
+      "itemName": "Moon Light Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800858/foods/oovhzau1u8vht4sdrbch.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800858/foods/oovhzau1u8vht4sdrbch.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772800953639-z5tkgpx",
+      "itemName": "Star Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800951/foods/f6desllqtzly3z3yukgl.avif",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772800951/foods/f6desllqtzly3z3yukgl.avif"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772801052424-j5tpeok",
+      "itemName": "Cashew Nuts Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801050/foods/wbj5l8fwoojg7w10pp1r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801050/foods/wbj5l8fwoojg7w10pp1r.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772801203101-vrxu36u",
+      "itemName": "Chicken Chaps",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801201/foods/zf0ak4bffeq0c9c5xud4.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801201/foods/zf0ak4bffeq0c9c5xud4.webp"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772801503021-ye0c5yn",
+      "itemName": "Liver Fry",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801502/foods/jrztscaznl4dtnl3ybfu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801502/foods/jrztscaznl4dtnl3ybfu.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772801633236-1itkxtv",
+      "itemName": "Liver Roast",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801632/foods/whwcyunqxo9j0oxad3ia.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801632/foods/whwcyunqxo9j0oxad3ia.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772801922837-utepi0y",
+      "itemName": "Cashew Nuts Roast",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801922/foods/vd8iug2fekfhjmrl3u2q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772801922/foods/vd8iug2fekfhjmrl3u2q.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772802042299-6r8jq00",
+      "itemName": "Dragon Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772802041/foods/zgeor1dadg2pnceprig7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772802041/foods/zgeor1dadg2pnceprig7.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Bones Snacks Items",
+      "subsection": "",
+      "itemId": "item-1772802214648-4mhhit8",
+      "itemName": "Guntur Chicken",
+      "category": "Chicken Bones Snacks Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772802213/foods/wgtdiw4jf6xmskri0dmp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772802213/foods/wgtdiw4jf6xmskri0dmp.jpg"
+      ]
+    }
+  ]
+}

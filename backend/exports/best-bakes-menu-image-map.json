@@ -1,0 +1,1078 @@
+{
+  "restaurant": {
+    "id": "699feea8c1ace609716127b2",
+    "slug": "best-bakes",
+    "name": "Best Bakes"
+  },
+  "exportedAt": "2026-04-02T13:46:35.354Z",
+  "totalItems": 97,
+  "items": [
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092589983-0.4354622604535284",
+      "itemName": "Black Currant Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092588/appzeto/restaurant/menu-items/o16b9ehwbrz1xevytvkm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092588/appzeto/restaurant/menu-items/o16b9ehwbrz1xevytvkm.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772094330519-0.31662424314439785",
+      "itemName": "Lassi",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094329/appzeto/restaurant/menu-items/xitd3d2xkv6yfsl4o18i.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094329/appzeto/restaurant/menu-items/xitd3d2xkv6yfsl4o18i.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092798058-0.059348992529307254",
+      "itemName": "Mango Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092796/appzeto/restaurant/menu-items/jdz8142dwwptngjffrmk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092796/appzeto/restaurant/menu-items/jdz8142dwwptngjffrmk.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092884517-0.0832116328571374",
+      "itemName": "Pomegranate Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092883/appzeto/restaurant/menu-items/rqlsjotbvtthzyblyatb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092883/appzeto/restaurant/menu-items/rqlsjotbvtthzyblyatb.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092991842-0.7959128056466928",
+      "itemName": "Pista Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092990/appzeto/restaurant/menu-items/rtomzyfaunrcvrlfrt1h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092990/appzeto/restaurant/menu-items/rtomzyfaunrcvrlfrt1h.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772094083307-0.3593494205842278",
+      "itemName": "Vanilla Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094081/appzeto/restaurant/menu-items/daqgnuogam8xdjxbtym2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094081/appzeto/restaurant/menu-items/daqgnuogam8xdjxbtym2.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772094704647-0.4547492187191732",
+      "itemName": "Mixed Fruit Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094703/appzeto/restaurant/menu-items/f4ntjfuegirtbcx14zz6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094703/appzeto/restaurant/menu-items/f4ntjfuegirtbcx14zz6.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772095075854-0.9784590013975863",
+      "itemName": "Dark Fantasy Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095074/appzeto/restaurant/menu-items/h3myrdhbacnc1uftdic5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095074/appzeto/restaurant/menu-items/h3myrdhbacnc1uftdic5.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772094469051-0.47297947797005646",
+      "itemName": "Musk Melon Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094468/appzeto/restaurant/menu-items/henwpitnyoxybmdbxjmc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772094468/appzeto/restaurant/menu-items/henwpitnyoxybmdbxjmc.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772093090619-0.43052903301218304",
+      "itemName": "Strawberry Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772091711029-0.43440478516790615",
+      "itemName": "Apple Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772091709/appzeto/restaurant/menu-items/zizwmtrbqczpmhb3f1qj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772091709/appzeto/restaurant/menu-items/zizwmtrbqczpmhb3f1qj.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772091937463-0.7296821306844354",
+      "itemName": "Banana Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772091936/appzeto/restaurant/menu-items/vchkcq3jtrhcwpbsjk7o.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772091936/appzeto/restaurant/menu-items/vchkcq3jtrhcwpbsjk7o.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092406308-0.10492471898205491",
+      "itemName": "Butterscotch Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092404/appzeto/restaurant/menu-items/ujx3cqkerrpqaehp2nra.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092404/appzeto/restaurant/menu-items/ujx3cqkerrpqaehp2nra.jpg"
+      ]
+    },
+    {
+      "section": "MILK SHAKES",
+      "subsection": "",
+      "itemId": "item-1772092690863-0.029072394824485204",
+      "itemName": "Chocolate Milkshake",
+      "category": "MILK SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092689/appzeto/restaurant/menu-items/bultbcoqqfmtwhvqnsv2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772092689/appzeto/restaurant/menu-items/bultbcoqqfmtwhvqnsv2.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772095463764-0.767303156125118",
+      "itemName": "Masala French fries",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095630/appzeto/restaurant/menu-items/hlrojkfdjxmg7uwlrzrb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095630/appzeto/restaurant/menu-items/hlrojkfdjxmg7uwlrzrb.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772097657094-0.12623014644995978",
+      "itemName": "Chicken Popcorn Small [10 P]",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772097655/appzeto/restaurant/menu-items/isu8ima2qe3zfsbmfiea.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772097655/appzeto/restaurant/menu-items/isu8ima2qe3zfsbmfiea.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772100876737-0.6734347831616203",
+      "itemName": "Veg Popcorn",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772100875/appzeto/restaurant/menu-items/xteomgscopc6wqty93og.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772100875/appzeto/restaurant/menu-items/xteomgscopc6wqty93og.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772095328676-0.5122494031410139",
+      "itemName": "French Fries Salt",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095327/appzeto/restaurant/menu-items/louzuvsc4labhdln9cbx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095327/appzeto/restaurant/menu-items/louzuvsc4labhdln9cbx.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772095870795-0.6409941155157273",
+      "itemName": "Smile",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095869/appzeto/restaurant/menu-items/hswj5djpmoiv7unuimb4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772095869/appzeto/restaurant/menu-items/hswj5djpmoiv7unuimb4.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772096033364-0.439604162940863",
+      "itemName": "Veg Nuggets",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096031/appzeto/restaurant/menu-items/batin4tp3xoejgf9xwcx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096031/appzeto/restaurant/menu-items/batin4tp3xoejgf9xwcx.jpg"
+      ]
+    },
+    {
+      "section": "SNACKS",
+      "subsection": "",
+      "itemId": "item-1772096988905-0.17972941165462097",
+      "itemName": "Chicken Nuggets 8-Piece",
+      "category": "SNACKS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096988/appzeto/restaurant/menu-items/lhxon90bfr3pwmttikzi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096988/appzeto/restaurant/menu-items/lhxon90bfr3pwmttikzi.jpg"
+      ]
+    },
+    {
+      "section": "FALOODA",
+      "subsection": "",
+      "itemId": "item-1772102417600-0.7162091838143075",
+      "itemName": "Royal Falooda",
+      "category": "FALOODA",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772102416/appzeto/restaurant/menu-items/teviy8eoicav3jd3ulsb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772102416/appzeto/restaurant/menu-items/teviy8eoicav3jd3ulsb.jpg"
+      ]
+    },
+    {
+      "section": "FALOODA",
+      "subsection": "",
+      "itemId": "item-1772102043371-0.8550310376785926",
+      "itemName": "Normal Falooda",
+      "category": "FALOODA",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772102042/appzeto/restaurant/menu-items/rs24gzejhusxh5ij4bcm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772102042/appzeto/restaurant/menu-items/rs24gzejhusxh5ij4bcm.jpg"
+      ]
+    },
+    {
+      "section": "FALOODA",
+      "subsection": "",
+      "itemId": "item-1772103002503-0.5604563118998894",
+      "itemName": "Fruit Salad",
+      "category": "FALOODA",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772103001/appzeto/restaurant/menu-items/kb88dsgrmeps7ipspqru.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772103001/appzeto/restaurant/menu-items/kb88dsgrmeps7ipspqru.jpg"
+      ]
+    },
+    {
+      "section": "FALOODA",
+      "subsection": "",
+      "itemId": "item-1772113944422-0.10688301107115294",
+      "itemName": "Royal Salad",
+      "category": "FALOODA",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772113943/appzeto/restaurant/menu-items/ddpgk9xvfu98p5tfhwk8.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772113943/appzeto/restaurant/menu-items/ddpgk9xvfu98p5tfhwk8.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772114725696-0.5020609405647379",
+      "itemName": "Chiken Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114724/appzeto/restaurant/menu-items/qgbyzi6nrkfrc0n5pxyf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114724/appzeto/restaurant/menu-items/qgbyzi6nrkfrc0n5pxyf.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772114855498-0.6995025941587878",
+      "itemName": "Veg Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114853/appzeto/restaurant/menu-items/ffikpnyxlvcd0yc6ivrc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114853/appzeto/restaurant/menu-items/ffikpnyxlvcd0yc6ivrc.jpg"
+      ]
+    },
+    {
+      "section": "BEST SPECIAL MENU",
+      "subsection": "",
+      "itemId": "item-1772115062384-0.33000750202124185",
+      "itemName": "Bread Omelette",
+      "category": "BEST SPECIAL MENU",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115060/appzeto/restaurant/menu-items/qsgirradmowkdw0bwjbv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115060/appzeto/restaurant/menu-items/qsgirradmowkdw0bwjbv.jpg"
+      ]
+    },
+    {
+      "section": "BEST SPECIAL MENU",
+      "subsection": "",
+      "itemId": "item-1772115862476-0.954614463656753",
+      "itemName": "Chicken Sandwich",
+      "category": "BEST SPECIAL MENU",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115860/appzeto/restaurant/menu-items/riqskd6bumleixqvykfo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115860/appzeto/restaurant/menu-items/riqskd6bumleixqvykfo.jpg"
+      ]
+    },
+    {
+      "section": "BEST SPECIAL MENU",
+      "subsection": "",
+      "itemId": "item-1772116166962-0.7366631521869933",
+      "itemName": "Egg Sandwich",
+      "category": "BEST SPECIAL MENU",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116165/appzeto/restaurant/menu-items/qpiskkl2q7shtkhon02i.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116165/appzeto/restaurant/menu-items/qpiskkl2q7shtkhon02i.jpg"
+      ]
+    },
+    {
+      "section": "BEST SPECIAL MENU",
+      "subsection": "",
+      "itemId": "item-1772115596328-0.5982873446145716",
+      "itemName": "Veg Sandwich",
+      "category": "BEST SPECIAL MENU",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115595/appzeto/restaurant/menu-items/ycbc0wwyz9csfql5qyjj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115595/appzeto/restaurant/menu-items/ycbc0wwyz9csfql5qyjj.jpg"
+      ]
+    },
+    {
+      "section": "BEST SPECIAL MENU",
+      "subsection": "",
+      "itemId": "item-1772115273750-0.6320920372274412",
+      "itemName": "Bread Omelette with cheese",
+      "category": "BEST SPECIAL MENU",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115270/appzeto/restaurant/menu-items/tm3qxud87m9f4xgj2vuo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115270/appzeto/restaurant/menu-items/tm3qxud87m9f4xgj2vuo.jpg"
+      ]
+    },
+    {
+      "section": "JUICE",
+      "subsection": "",
+      "itemId": "item-1772116673764-0.720311777835428",
+      "itemName": "Grape Juice",
+      "category": "JUICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116672/appzeto/restaurant/menu-items/dxvzepy4sdw1fejgdnia.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116672/appzeto/restaurant/menu-items/dxvzepy4sdw1fejgdnia.jpg"
+      ]
+    },
+    {
+      "section": "JUICE",
+      "subsection": "",
+      "itemId": "item-1772116841961-0.8117150838614873",
+      "itemName": "Orange Juice",
+      "category": "JUICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116841/appzeto/restaurant/menu-items/jq9ud9dxopfninucbuc4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116841/appzeto/restaurant/menu-items/jq9ud9dxopfninucbuc4.jpg"
+      ]
+    },
+    {
+      "section": "JUICE",
+      "subsection": "",
+      "itemId": "item-1772116967495-0.6974997751740447",
+      "itemName": "Watermelon",
+      "category": "JUICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116966/appzeto/restaurant/menu-items/h2yppgk1wvlgnceqmbyg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116966/appzeto/restaurant/menu-items/h2yppgk1wvlgnceqmbyg.jpg"
+      ]
+    },
+    {
+      "section": "JUICE",
+      "subsection": "",
+      "itemId": "item-1772117299528-0.3215227291027102",
+      "itemName": "Pineapple Juice",
+      "category": "JUICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117298/appzeto/restaurant/menu-items/hk2g7owfol6ctdmtxhma.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117298/appzeto/restaurant/menu-items/hk2g7owfol6ctdmtxhma.jpg"
+      ]
+    },
+    {
+      "section": "JUICE",
+      "subsection": "",
+      "itemId": "item-1772117520789-0.7458445294002732",
+      "itemName": "Musambi Juice",
+      "category": "JUICE",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117519/appzeto/restaurant/menu-items/fn1slr9bgi2v54pgxp8s.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117519/appzeto/restaurant/menu-items/fn1slr9bgi2v54pgxp8s.jpg"
+      ]
+    },
+    {
+      "section": "LOVERS SPECIAL",
+      "subsection": "",
+      "itemId": "item-1772118567351-0.5405381813788326",
+      "itemName": "Honeymoon Special Shakes",
+      "category": "LOVERS SPECIAL",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118566/appzeto/restaurant/menu-items/tbw5mljkzvfmhp0blwdb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118566/appzeto/restaurant/menu-items/tbw5mljkzvfmhp0blwdb.jpg"
+      ]
+    },
+    {
+      "section": "LOVERS SPECIAL",
+      "subsection": "",
+      "itemId": "item-1772118759866-0.8881325826629574",
+      "itemName": "Strawberry Passion Milk Shakes",
+      "category": "LOVERS SPECIAL",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118759/appzeto/restaurant/menu-items/pne6g0ixltdyxfh6c0zb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118759/appzeto/restaurant/menu-items/pne6g0ixltdyxfh6c0zb.jpg"
+      ]
+    },
+    {
+      "section": "LOVERS SPECIAL",
+      "subsection": "",
+      "itemId": "item-1772118094446-0.08234139457074252",
+      "itemName": "Lovers Punch Milk Shakes",
+      "category": "LOVERS SPECIAL",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118093/appzeto/restaurant/menu-items/drhzeepoan9uqd2mzegd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772118093/appzeto/restaurant/menu-items/drhzeepoan9uqd2mzegd.jpg"
+      ]
+    },
+    {
+      "section": "LOVERS SPECIAL",
+      "subsection": "",
+      "itemId": "item-1772117939201-0.6352590446101258",
+      "itemName": "Love Me Milk Shakes",
+      "category": "LOVERS SPECIAL",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117938/appzeto/restaurant/menu-items/nwlg9jmfmeqjrtzl3cvf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772117938/appzeto/restaurant/menu-items/nwlg9jmfmeqjrtzl3cvf.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119873757-0.8182311872908232",
+      "itemName": "Oreo Monster Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119872/appzeto/restaurant/menu-items/ceqdmc0rjfymsqufszbp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119872/appzeto/restaurant/menu-items/ceqdmc0rjfymsqufszbp.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119991625-0.9329016573428794",
+      "itemName": "Saudi Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119990/appzeto/restaurant/menu-items/qcsmofmvjcriyjjmv9n2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119990/appzeto/restaurant/menu-items/qcsmofmvjcriyjjmv9n2.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119763793-0.11833951814552368",
+      "itemName": "Choco Cappuccino Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119762/appzeto/restaurant/menu-items/hiqr9z2zzvoawplv7bxh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119762/appzeto/restaurant/menu-items/hiqr9z2zzvoawplv7bxh.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119345374-0.05116326857815523",
+      "itemName": "Chocolate Sharja Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119344/appzeto/restaurant/menu-items/hes3z6tabviiqgghd34t.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119344/appzeto/restaurant/menu-items/hes3z6tabviiqgghd34t.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119198568-0.17245687715826952",
+      "itemName": "Sharja Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119197/appzeto/restaurant/menu-items/iixayeqnc7gwtuwlapqu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119197/appzeto/restaurant/menu-items/iixayeqnc7gwtuwlapqu.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119584597-0.9626838939039751",
+      "itemName": "Dry Fruit Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119583/appzeto/restaurant/menu-items/fbdddhqrftqzkfz0i1wl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119583/appzeto/restaurant/menu-items/fbdddhqrftqzkfz0i1wl.jpg"
+      ]
+    },
+    {
+      "section": "SPECIAL SHAKES",
+      "subsection": "",
+      "itemId": "item-1772119435533-0.37983460821452897",
+      "itemName": "Dates Shakes",
+      "category": "SPECIAL SHAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119434/appzeto/restaurant/menu-items/qwg396cvtgvvchv7wuu5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772119434/appzeto/restaurant/menu-items/qwg396cvtgvvchv7wuu5.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772448084685-0.995506602642469",
+      "itemName": "Butterscotch with Nuts Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448083/appzeto/restaurant/menu-items/keqas2kcqgc2jcijms9u.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448083/appzeto/restaurant/menu-items/keqas2kcqgc2jcijms9u.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772447898257-0.3650590433492743",
+      "itemName": "Butterscotch Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447897/appzeto/restaurant/menu-items/pcmknqnmh13lddesmnih.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447897/appzeto/restaurant/menu-items/pcmknqnmh13lddesmnih.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772447661355-0.5968293425051406",
+      "itemName": "Badam Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447660/appzeto/restaurant/menu-items/gemwuqi55fixdjx2ev5t.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447660/appzeto/restaurant/menu-items/gemwuqi55fixdjx2ev5t.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772447444033-0.25907161555728586",
+      "itemName": "Pista Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447443/appzeto/restaurant/menu-items/let5hxjbscpfddtvu8fb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447443/appzeto/restaurant/menu-items/let5hxjbscpfddtvu8fb.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772447169459-0.9386112960313484",
+      "itemName": "Strawberry Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447168/appzeto/restaurant/menu-items/gpbraqdar192pidssp2v.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447168/appzeto/restaurant/menu-items/gpbraqdar192pidssp2v.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772447002447-0.8266186596462436",
+      "itemName": "Pineapple Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447001/appzeto/restaurant/menu-items/wvz3lq3johcqbfzzatgz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772447001/appzeto/restaurant/menu-items/wvz3lq3johcqbfzzatgz.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772446847917-0.6120066071360042",
+      "itemName": "Chocolate Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772446847/appzeto/restaurant/menu-items/hglrzvohng0y4sz4c9fo.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772446847/appzeto/restaurant/menu-items/hglrzvohng0y4sz4c9fo.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772446736959-0.3948970077391637",
+      "itemName": "Vanilla Cake  [500GM]",
+      "category": "NORMAL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772446736/appzeto/restaurant/menu-items/kmvu37zkzjab2zh8j7vk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772446736/appzeto/restaurant/menu-items/kmvu37zkzjab2zh8j7vk.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457844605-0.8112252133898569",
+      "itemName": "Red Velvet Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457843/appzeto/restaurant/menu-items/ge2ltfxu9n6uwj6g3wmr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457843/appzeto/restaurant/menu-items/ge2ltfxu9n6uwj6g3wmr.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457743151-0.28895569154561973",
+      "itemName": "Black Forest Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457742/appzeto/restaurant/menu-items/macymlkeguuqsbqffnvr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457742/appzeto/restaurant/menu-items/macymlkeguuqsbqffnvr.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457644777-0.17295725734337408",
+      "itemName": "Butterscotch Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457642/appzeto/restaurant/menu-items/j2aydgobuuhvvcvwu6yo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457642/appzeto/restaurant/menu-items/j2aydgobuuhvvcvwu6yo.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457513709-0.5301601535922253",
+      "itemName": "Chocolate Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457513/appzeto/restaurant/menu-items/prpdtqplctlysbjryu6r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457513/appzeto/restaurant/menu-items/prpdtqplctlysbjryu6r.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457381497-0.9386488743577305",
+      "itemName": "Strawberry Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457380/appzeto/restaurant/menu-items/uc6t1r9rm9hxhkye7geu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457380/appzeto/restaurant/menu-items/uc6t1r9rm9hxhkye7geu.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772457165001-0.8977098534016769",
+      "itemName": "Vanilla Cake Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457164/appzeto/restaurant/menu-items/lc4lss3vt0qxyabgkc3d.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772457164/appzeto/restaurant/menu-items/lc4lss3vt0qxyabgkc3d.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 500gm]",
+      "subsection": "",
+      "itemId": "item-1772456983454-0.6744997755532788",
+      "itemName": "Pineapple Cake [ 500GM]",
+      "category": "COOL CAKES [ 500gm]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456982/appzeto/restaurant/menu-items/rvl7qebqcdflls1z9mpt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772456982/appzeto/restaurant/menu-items/rvl7qebqcdflls1z9mpt.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451903316-0.5642403749983426",
+      "itemName": "Butterscotch with Nuts [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451902/appzeto/restaurant/menu-items/ivv5fxbnijfzpzmmkwcj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451902/appzeto/restaurant/menu-items/ivv5fxbnijfzpzmmkwcj.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451629919-0.8733791581107024",
+      "itemName": "Butterscotch  Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451628/appzeto/restaurant/menu-items/mxeer9z6gejnizgahbjd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451628/appzeto/restaurant/menu-items/mxeer9z6gejnizgahbjd.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451541206-0.31948920938008196",
+      "itemName": "Badam Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451540/appzeto/restaurant/menu-items/zbpdkxdvugnyo93eh9fz.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451540/appzeto/restaurant/menu-items/zbpdkxdvugnyo93eh9fz.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451387239-0.7417677319563966",
+      "itemName": "Pista Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451386/appzeto/restaurant/menu-items/bhcesqqj4oxwmvykdjmu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451386/appzeto/restaurant/menu-items/bhcesqqj4oxwmvykdjmu.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451308761-0.3142152902666878",
+      "itemName": "Strawberry Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451308/appzeto/restaurant/menu-items/x0izmdyoxewewk0w8qwc.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451308/appzeto/restaurant/menu-items/x0izmdyoxewewk0w8qwc.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451134494-0.8024132938993744",
+      "itemName": "Pineapple Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451133/appzeto/restaurant/menu-items/n9mkw7irstsnf88wjluf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451133/appzeto/restaurant/menu-items/n9mkw7irstsnf88wjluf.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772451009332-0.4835294503500861",
+      "itemName": "Chocolate Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451008/appzeto/restaurant/menu-items/pvfasrqble5yozpoo3uf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772451008/appzeto/restaurant/menu-items/pvfasrqble5yozpoo3uf.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES   [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772450779678-0.9568262803045171",
+      "itemName": "Vanilla Cake  [1KG]",
+      "category": "NORMAL CAKES   [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772450778/appzeto/restaurant/menu-items/c501plgcswmb9caqtvoh.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772450778/appzeto/restaurant/menu-items/c501plgcswmb9caqtvoh.webp"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772454053671-0.9512068948810084",
+      "itemName": "Honey Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772454052/appzeto/restaurant/menu-items/pohio0mcslbawgq0yghz.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772454052/appzeto/restaurant/menu-items/pohio0mcslbawgq0yghz.webp"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772453446329-0.1988785057607928",
+      "itemName": "Black Forest Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772453445/appzeto/restaurant/menu-items/gyeiv2oryjbtqnabh7e3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772453445/appzeto/restaurant/menu-items/gyeiv2oryjbtqnabh7e3.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772453303839-0.6887851218159714",
+      "itemName": "Red Velvet Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772453899/appzeto/restaurant/menu-items/s7bqnlgaod2wkouuzdhb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772453899/appzeto/restaurant/menu-items/s7bqnlgaod2wkouuzdhb.webp"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772452984003-0.9439956748237072",
+      "itemName": "Butterscotch Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452983/appzeto/restaurant/menu-items/furyq013mfgu0ogzdvle.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452983/appzeto/restaurant/menu-items/furyq013mfgu0ogzdvle.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772452731330-0.7576835736966306",
+      "itemName": "Chocolate Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452730/appzeto/restaurant/menu-items/otpx7ztmysfjcsli4wcu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452730/appzeto/restaurant/menu-items/otpx7ztmysfjcsli4wcu.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772452499405-0.3789518879052092",
+      "itemName": "Strawberry Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452636/appzeto/restaurant/menu-items/hrflcpfbpnl1frvfkwj4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452636/appzeto/restaurant/menu-items/hrflcpfbpnl1frvfkwj4.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772452350306-0.157514449198921",
+      "itemName": "Vanilla Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452349/appzeto/restaurant/menu-items/hz3hkvd2xghitldgn0qh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452349/appzeto/restaurant/menu-items/hz3hkvd2xghitldgn0qh.jpg"
+      ]
+    },
+    {
+      "section": "COOL CAKES [ 1kg]",
+      "subsection": "",
+      "itemId": "item-1772452194252-0.38756647435609604",
+      "itemName": "Pineapple Cake [ 1KG]",
+      "category": "COOL CAKES [ 1kg]",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452193/appzeto/restaurant/menu-items/hsr5wcnfhmslsm8xjode.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772452193/appzeto/restaurant/menu-items/hsr5wcnfhmslsm8xjode.webp"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES",
+      "subsection": "",
+      "itemId": "item-1772897221063-qewiyhd",
+      "itemName": "Honey  Cake   [Normal ]",
+      "category": "NORMAL CAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897219/foods/bl3pxrkxnwnambjqoryv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897219/foods/bl3pxrkxnwnambjqoryv.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES",
+      "subsection": "",
+      "itemId": "item-1772897070120-m7g4s0r",
+      "itemName": "Strawberry Cake [Normal ]",
+      "category": "NORMAL CAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897069/foods/isbw4yd91mnszxrzb4rl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897069/foods/isbw4yd91mnszxrzb4rl.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES",
+      "subsection": "",
+      "itemId": "item-1772896793826-o679fga",
+      "itemName": "Vanilla Cake [Normal ]",
+      "category": "NORMAL CAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772896792/foods/x3dl4oeyuz7yoaijm17d.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772896792/foods/x3dl4oeyuz7yoaijm17d.jpg"
+      ]
+    },
+    {
+      "section": "NORMAL CAKES",
+      "subsection": "",
+      "itemId": "item-1772896682458-2o31jby",
+      "itemName": "Chocolate Cake [Normal ]",
+      "category": "NORMAL CAKES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772896681/foods/wtl2403dsa3fyqpk1yj6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772896681/foods/wtl2403dsa3fyqpk1yj6.jpg"
+      ]
+    },
+    {
+      "section": "Cool Cakes",
+      "subsection": "",
+      "itemId": "item-1772897820299-vv7ga4h",
+      "itemName": "Pineapple Cake [Cool ]",
+      "category": "Cool Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897819/foods/ykwcnag0d3gkzsywpomm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897819/foods/ykwcnag0d3gkzsywpomm.webp"
+      ]
+    },
+    {
+      "section": "Cool Cakes",
+      "subsection": "",
+      "itemId": "item-1772897719689-nd8fk4c",
+      "itemName": "Strawberry Cake  [Cool ]",
+      "category": "Cool Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897717/foods/yua5isas5mwubpkveiaz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897717/foods/yua5isas5mwubpkveiaz.jpg"
+      ]
+    },
+    {
+      "section": "Cool Cakes",
+      "subsection": "",
+      "itemId": "item-1772897615196-msjyurb",
+      "itemName": "Chocolate  Cake  [Cool ]",
+      "category": "Cool Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897614/foods/qjtaklwd7mdjaqvh2jkk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772897614/foods/qjtaklwd7mdjaqvh2jkk.jpg"
+      ]
+    },
+    {
+      "section": "Special Cakes",
+      "subsection": "",
+      "itemId": "item-1772898472953-nbyix7r",
+      "itemName": "Butterscotch",
+      "category": "Special Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898472/foods/jhi00m4etibajma47cdc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898472/foods/jhi00m4etibajma47cdc.jpg"
+      ]
+    },
+    {
+      "section": "Special Cakes",
+      "subsection": "",
+      "itemId": "item-1772898629403-y3gnc9w",
+      "itemName": "Black Forest",
+      "category": "Special Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898628/foods/i59nxbtan0mz5zheqxzc.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898628/foods/i59nxbtan0mz5zheqxzc.webp"
+      ]
+    },
+    {
+      "section": "Special Cakes",
+      "subsection": "",
+      "itemId": "item-1772898789286-fvaxm9r",
+      "itemName": "Red Velvet",
+      "category": "Special Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898787/foods/j8hgcrbtbgu3ltqvudxk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898787/foods/j8hgcrbtbgu3ltqvudxk.jpg"
+      ]
+    },
+    {
+      "section": "Special Cakes",
+      "subsection": "",
+      "itemId": "item-1772898883207-kf0vmch",
+      "itemName": "Brownie Cake",
+      "category": "Special Cakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898882/foods/txnhxfn0crdyaxterf2b.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772898882/foods/txnhxfn0crdyaxterf2b.jpg"
+      ]
+    },
+    {
+      "section": "MOMOS",
+      "subsection": "",
+      "itemId": "item-1773134393062-uwlsrjy",
+      "itemName": "Chicken Momos 8P",
+      "category": "MOMOS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773134389/foods/v8jyc7qkvtfkpea9h1w2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773134389/foods/v8jyc7qkvtfkpea9h1w2.jpg"
+      ]
+    },
+    {
+      "section": "MOMOS",
+      "subsection": "",
+      "itemId": "item-1773134778319-dkpzb8k",
+      "itemName": "veg fried Momos",
+      "category": "MOMOS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773134774/foods/saegmrhllzgc1fkts9pe.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773134774/foods/saegmrhllzgc1fkts9pe.jpg"
+      ]
+    },
+    {
+      "section": "PUFFS",
+      "subsection": "",
+      "itemId": "item-1773135285101-7u8r2na",
+      "itemName": "Chicken Puff [1P]",
+      "category": "PUFFS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135281/foods/ahzb9d5pvis5dtakkpbk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135281/foods/ahzb9d5pvis5dtakkpbk.jpg"
+      ]
+    },
+    {
+      "section": "PUFFS",
+      "subsection": "",
+      "itemId": "item-1773135074346-4kawqxw",
+      "itemName": "Egg Fuff [1P]",
+      "category": "PUFFS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135070/foods/ldp1r8bagbbyr6dm3ssk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135070/foods/ldp1r8bagbbyr6dm3ssk.jpg"
+      ]
+    },
+    {
+      "section": "PUFFS",
+      "subsection": "",
+      "itemId": "item-1773135403075-35ypl31",
+      "itemName": "Paneer puff [1P]",
+      "category": "PUFFS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135399/foods/oazwxdrj5qprohzmqirc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135399/foods/oazwxdrj5qprohzmqirc.jpg"
+      ]
+    },
+    {
+      "section": "NUGGETS",
+      "subsection": "",
+      "itemId": "item-1773135850046-eg70knx",
+      "itemName": "Chicken Nuggets Crispy [8P]",
+      "category": "NUGGETS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135846/foods/a1e6h9yin0lr2sliq7h0.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135846/foods/a1e6h9yin0lr2sliq7h0.webp"
+      ]
+    },
+    {
+      "section": "NUGGETS",
+      "subsection": "",
+      "itemId": "item-1773135982629-ql0qgd0",
+      "itemName": "Veg Nuggets (8P)",
+      "category": "NUGGETS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135978/foods/cymkrtz0zpdt5qcwqtsv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773135978/foods/cymkrtz0zpdt5qcwqtsv.jpg"
+      ]
+    }
+  ]
+}

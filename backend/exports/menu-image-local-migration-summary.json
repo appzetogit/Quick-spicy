@@ -1,0 +1,201 @@
+{
+  "generatedAt": "2026-04-02T14:33:15.014Z",
+  "backendBaseUrl": "https://quickspicy.in",
+  "processedRestaurants": 16,
+  "skippedRestaurants": 5,
+  "updatedItems": 838,
+  "unchangedItems": 40,
+  "failedCopies": 0,
+  "restaurants": [
+    {
+      "restaurantId": "69a12996f42dc2f3f477080c",
+      "restaurantName": "Abhinaya Family Restaurant",
+      "slug": "abhinaya-family-restaurant",
+      "status": "processed",
+      "updatedItems": 147,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/abhinaya-family-restaurant"
+    },
+    {
+      "restaurantId": "69a318da8d5836be4068d040",
+      "restaurantName": "Annapurna Family Garden Restaurant",
+      "slug": "annapurna-family-garden-restaurant",
+      "status": "processed",
+      "updatedItems": 142,
+      "unchangedItems": 14,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/annapurna-family-garden-restaurant"
+    },
+    {
+      "restaurantId": "69a2a82970ba942316a3876d",
+      "restaurantName": "Apple Fast Food Center",
+      "slug": "apple-fast-food-center",
+      "status": "processed",
+      "updatedItems": 15,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/apple-fast-food-center"
+    },
+    {
+      "restaurantId": "699feea8c1ace609716127b2",
+      "restaurantName": "Best Bakes",
+      "slug": "best-bakes",
+      "status": "processed",
+      "updatedItems": 97,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/best-bakes"
+    },
+    {
+      "restaurantId": "69aabd5089409992043990cc",
+      "restaurantName": "CAFE CUMBUM CHAI WALA",
+      "slug": "restaurant-9068",
+      "status": "processed",
+      "updatedItems": 10,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/restaurant-9068"
+    },
+    {
+      "restaurantId": "69ba3b4a8a8d8475f38a788d",
+      "restaurantName": "FRESH JUICES",
+      "slug": "fresh-juices",
+      "status": "processed",
+      "updatedItems": 11,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/fresh-juices"
+    },
+    {
+      "restaurantId": "69a44ef7e3c021b953395f99",
+      "restaurantName": "JVR Family Restaurant",
+      "slug": "restaurant-2513",
+      "status": "processed",
+      "updatedItems": 74,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/restaurant-2513"
+    },
+    {
+      "restaurantId": "69a2a22e70ba942316a38045",
+      "restaurantName": "K Star Spicy Food Court",
+      "slug": "k-star-spicy-food-court",
+      "status": "processed",
+      "updatedItems": 14,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/k-star-spicy-food-court"
+    },
+    {
+      "restaurantId": "69a2cde77ae149b9b415312e",
+      "restaurantName": "KONDAPALLI  RFC",
+      "slug": "kondapalli-rfc",
+      "status": "processed",
+      "updatedItems": 107,
+      "unchangedItems": 17,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/kondapalli-rfc"
+    },
+    {
+      "restaurantId": "69b13a64c3288f4412d0d677",
+      "restaurantName": "Marhaba Saudi  Refreshments Item",
+      "slug": "marhaba-saudi-refreshments-item",
+      "status": "processed",
+      "updatedItems": 4,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/marhaba-saudi-refreshments-item"
+    },
+    {
+      "restaurantId": "69a92f7f5b04a6102a4da69c",
+      "restaurantName": "NVK BADAM MILK",
+      "slug": "nvk-badam-milk",
+      "status": "processed",
+      "updatedItems": 4,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/nvk-badam-milk"
+    },
+    {
+      "restaurantId": "69c7b0582fd498cee7215a2c",
+      "restaurantName": "Name",
+      "slug": "restaurant-5021",
+      "status": "processed",
+      "updatedItems": 0,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/restaurant-5021"
+    },
+    {
+      "restaurantId": "69a134943ad1db3799635710",
+      "restaurantName": "Poojitha Family Restaurant",
+      "slug": "poojitha-family-restaurant",
+      "status": "processed",
+      "updatedItems": 120,
+      "unchangedItems": 9,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/poojitha-family-restaurant"
+    },
+    {
+      "restaurantId": "69a6d360c5b380ecddf0bc23",
+      "restaurantName": "RMA'S PIZZA",
+      "slug": "rma-s-pizza",
+      "status": "processed",
+      "updatedItems": 75,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/rma-s-pizza"
+    },
+    {
+      "restaurantId": "69c3a863e71d5c2cda174508",
+      "restaurantName": "Restaurant 0140",
+      "slug": "restaurant-0140",
+      "status": "skipped-missing-local-manifest"
+    },
+    {
+      "restaurantId": "69ca44a22a750b7125442e72",
+      "restaurantName": "Restaurant 3998",
+      "slug": "restaurant-3998",
+      "status": "skipped-missing-local-manifest"
+    },
+    {
+      "restaurantId": "69cbc0b62a750b71254627ac",
+      "restaurantName": "Restaurant 4140",
+      "slug": "restaurant-4140",
+      "status": "skipped-missing-local-manifest"
+    },
+    {
+      "restaurantId": "69c4d436f57e16390bc135b1",
+      "restaurantName": "Restaurant 5444",
+      "slug": "restaurant-5444",
+      "status": "skipped-missing-local-manifest"
+    },
+    {
+      "restaurantId": "69c542674f7563cd2b37d5f7",
+      "restaurantName": "Restaurant 9907",
+      "slug": "restaurant-9907",
+      "status": "skipped-missing-local-manifest"
+    },
+    {
+      "restaurantId": "69b1582c330d847e1ca31cd6",
+      "restaurantName": "SPICY TIFFIN'S",
+      "slug": "spicy-tiffin-s",
+      "status": "processed",
+      "updatedItems": 17,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/spicy-tiffin-s"
+    },
+    {
+      "restaurantId": "69c281a8500af7f1f696d6d7",
+      "restaurantName": "Test",
+      "slug": "restaurant-7890",
+      "status": "processed",
+      "updatedItems": 1,
+      "unchangedItems": 0,
+      "failedCopies": 0,
+      "uploadFolder": "uploads/menu-images/restaurant-7890"
+    }
+  ]
+}

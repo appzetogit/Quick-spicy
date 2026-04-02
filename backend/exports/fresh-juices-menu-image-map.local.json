@@ -1,0 +1,159 @@
+{
+  "restaurant": {
+    "id": "69ba3b4a8a8d8475f38a788d",
+    "slug": "fresh-juices",
+    "name": "FRESH JUICES"
+  },
+  "exportedAt": "2026-04-02T13:47:26.218Z",
+  "totalItems": 11,
+  "items": [
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774240208829-3q9dzz1",
+      "itemName": "Coconut Water (750ML)",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774240208/foods/s7h9arkyo9b2wk4l3znf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774240208/foods/s7h9arkyo9b2wk4l3znf.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/001-coconut-water-750ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774240354647-kxck102",
+      "itemName": "Thondeer Coconut ( 1 LT)",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774240353/foods/wxg3unlflufek81vfu0w.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774240353/foods/wxg3unlflufek81vfu0w.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/002-thondeer-coconut-1-lt.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774330111454-rgcqh6q",
+      "itemName": "Pineapple Natural Juice  [200 ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774330110/foods/sacldvmg3vvjobizcdfi.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774330110/foods/sacldvmg3vvjobizcdfi.webp"
+      ],
+      "localImage": "exports/fresh-juices-images/003-pineapple-natural-juice-200-ml.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774329771842-r79ds7d",
+      "itemName": "Grape Natural Juice [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774329770/foods/efugbyuh2tfocnsmao3x.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774329770/foods/efugbyuh2tfocnsmao3x.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/004-grape-natural-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774329219115-ltpbem0",
+      "itemName": "Orange Naturel Juice  [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774329217/foods/finpfk4uzpbi52uvcnyr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774329217/foods/finpfk4uzpbi52uvcnyr.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/005-orange-naturel-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774342028718-xk3puat",
+      "itemName": "Banana Natural Juice  [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774342026/foods/o8wygh390xmi7xsz3qjg.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774342026/foods/o8wygh390xmi7xsz3qjg.webp"
+      ],
+      "localImage": "exports/fresh-juices-images/006-banana-natural-juice-200ml.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774280739226-xl7owvo",
+      "itemName": "Sugarcane  Naturel Juice [200ml]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774280738/foods/zb99prd9wrdxzovhexdj.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774280738/foods/zb99prd9wrdxzovhexdj.webp"
+      ],
+      "localImage": "exports/fresh-juices-images/007-sugarcane-naturel-juice-200ml.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774355764550-7h5sl07",
+      "itemName": "Pomegranate Natural Juice [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774355758/foods/o57a9vxe6qcztbgpq02w.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774355758/foods/o57a9vxe6qcztbgpq02w.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/008-pomegranate-natural-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774352659937-qx5f9g8",
+      "itemName": "Sapota Natural Juice [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774352658/foods/zwvefv72foismrisfmeq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774352658/foods/zwvefv72foismrisfmeq.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/009-sapota-natural-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774358705411-ewx0t2m",
+      "itemName": "Apple Natural Juice  [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774358703/foods/tujdxyxxkruerxcqmeus.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774358703/foods/tujdxyxxkruerxcqmeus.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/010-apple-natural-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Summer Special",
+      "subsection": "",
+      "itemId": "item-1774359466803-k69jvw6",
+      "itemName": "Watermelon Juice [200ML]",
+      "category": "Summer Special",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774359462/foods/gdbtwlqvlmx5szrsvivt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774359462/foods/gdbtwlqvlmx5szrsvivt.jpg"
+      ],
+      "localImage": "exports/fresh-juices-images/011-watermelon-juice-200ml.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:47:30.628Z",
+  "downloadFolder": "exports/fresh-juices-images",
+  "uniqueRemoteImages": 11,
+  "downloadedCount": 11,
+  "failedCount": 0
+}

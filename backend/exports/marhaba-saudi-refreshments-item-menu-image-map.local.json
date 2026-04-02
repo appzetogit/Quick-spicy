@@ -1,0 +1,68 @@
+{
+  "restaurant": {
+    "id": "69b13a64c3288f4412d0d677",
+    "slug": "marhaba-saudi-refreshments-item",
+    "name": "Marhaba Saudi  Refreshments Item"
+  },
+  "exportedAt": "2026-04-02T13:48:58.227Z",
+  "totalItems": 4,
+  "items": [
+    {
+      "section": "SOFT DRINK",
+      "subsection": "",
+      "itemId": "item-1773222767300-8j3le52",
+      "itemName": "Kinza Cola",
+      "category": "SOFT DRINK",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773222764/foods/t0yjyhkxwp2ovpkyryi3.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773222764/foods/t0yjyhkxwp2ovpkyryi3.webp"
+      ],
+      "localImage": "exports/marhaba-saudi-refreshments-item-images/001-kinza-cola.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SOFT DRINK",
+      "subsection": "",
+      "itemId": "item-1773223299923-p0au06n",
+      "itemName": "Milaf Cola",
+      "category": "SOFT DRINK",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773223298/foods/pikbobfnyf9cck5ksxow.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773223298/foods/pikbobfnyf9cck5ksxow.jpg"
+      ],
+      "localImage": "exports/marhaba-saudi-refreshments-item-images/002-milaf-cola.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SOFT DRINK",
+      "subsection": "",
+      "itemId": "item-1773222956093-oz97jqy",
+      "itemName": "Kinza Lemon",
+      "category": "SOFT DRINK",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773222954/foods/lml39zmgjtg0maukrone.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773222954/foods/lml39zmgjtg0maukrone.jpg"
+      ],
+      "localImage": "exports/marhaba-saudi-refreshments-item-images/003-kinza-lemon.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "SOFT DRINK",
+      "subsection": "",
+      "itemId": "item-1773223151305-c6hzhnm",
+      "itemName": "Kinza Citrus",
+      "category": "SOFT DRINK",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773223654/foods/ds59crej66bn3ydoavc7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773223654/foods/ds59crej66bn3ydoavc7.jpg"
+      ],
+      "localImage": "exports/marhaba-saudi-refreshments-item-images/004-kinza-citrus.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:48:59.799Z",
+  "downloadFolder": "exports/marhaba-saudi-refreshments-item-images",
+  "uniqueRemoteImages": 4,
+  "downloadedCount": 4,
+  "failedCount": 0
+}

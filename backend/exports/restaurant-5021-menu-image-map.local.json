@@ -1,0 +1,15 @@
+{
+  "restaurant": {
+    "id": "69c7b0582fd498cee7215a2c",
+    "slug": "restaurant-5021",
+    "name": "Name"
+  },
+  "exportedAt": "2026-04-02T13:49:01.776Z",
+  "totalItems": 0,
+  "items": [],
+  "downloadedAt": "2026-04-02T13:49:01.778Z",
+  "downloadFolder": "exports/restaurant-5021-images",
+  "uniqueRemoteImages": 0,
+  "downloadedCount": 0,
+  "failedCount": 0
+}

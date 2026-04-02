@@ -1,0 +1,29 @@
+{
+  "restaurant": {
+    "id": "69c281a8500af7f1f696d6d7",
+    "slug": "restaurant-7890",
+    "name": "Test"
+  },
+  "exportedAt": "2026-04-02T13:49:59.179Z",
+  "totalItems": 1,
+  "items": [
+    {
+      "section": "Biryani Items",
+      "subsection": "",
+      "itemId": "item-1774355596652-0.018980889705494608",
+      "itemName": "test",
+      "category": "Biryani Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774355613/appzeto/restaurant/menu-items/k6f7qdm2df9fjnzt7hkh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1774355613/appzeto/restaurant/menu-items/k6f7qdm2df9fjnzt7hkh.jpg"
+      ],
+      "localImage": "exports/restaurant-7890-images/001-test.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:49:59.475Z",
+  "downloadFolder": "exports/restaurant-7890-images",
+  "uniqueRemoteImages": 1,
+  "downloadedCount": 1,
+  "failedCount": 0
+}

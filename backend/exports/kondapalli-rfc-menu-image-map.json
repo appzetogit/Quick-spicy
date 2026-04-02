@@ -1,0 +1,1375 @@
+{
+  "restaurant": {
+    "id": "69a2cde77ae149b9b415312e",
+    "slug": "kondapalli-rfc",
+    "name": "KONDAPALLI  RFC"
+  },
+  "exportedAt": "2026-04-02T13:48:07.817Z",
+  "totalItems": 124,
+  "items": [
+    {
+      "section": "MOMO'S",
+      "subsection": "",
+      "itemId": "item-1772447797447-2",
+      "itemName": "Panner Momos",
+      "category": "MOMO'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529991/foods/a96bdhwk0qb7hhyjzusb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529991/foods/a96bdhwk0qb7hhyjzusb.jpg"
+      ]
+    },
+    {
+      "section": "MOMO'S",
+      "subsection": "",
+      "itemId": "item-1772447797447-1",
+      "itemName": "Mixed Veg Momos",
+      "category": "MOMO'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529934/foods/srzs0bogaoovdtulptpv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529934/foods/srzs0bogaoovdtulptpv.jpg"
+      ]
+    },
+    {
+      "section": "MOMO'S",
+      "subsection": "",
+      "itemId": "item-1772447797447-3",
+      "itemName": "Chicken Momos",
+      "category": "MOMO'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530069/foods/rfjwgjsffkceeahqw3rm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530069/foods/rfjwgjsffkceeahqw3rm.jpg"
+      ]
+    },
+    {
+      "section": "Samosa & Spring Roll",
+      "subsection": "",
+      "itemId": "item-1772447797447-5",
+      "itemName": "Chicken Samosa",
+      "category": "Samosa & Spring Roll",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387175/appzeto/restaurant/menu-items/brmrbuvmnw1jhx4axdjm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387175/appzeto/restaurant/menu-items/brmrbuvmnw1jhx4axdjm.webp"
+      ]
+    },
+    {
+      "section": "Samosa & Spring Roll",
+      "subsection": "",
+      "itemId": "item-1772447797447-7",
+      "itemName": "Panner Spring Roll",
+      "category": "Samosa & Spring Roll",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530216/foods/n7zyrrtt64d3fuy58ytr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530216/foods/n7zyrrtt64d3fuy58ytr.jpg"
+      ]
+    },
+    {
+      "section": "Samosa & Spring Roll",
+      "subsection": "",
+      "itemId": "item-1772447797447-4",
+      "itemName": "Corn Samosa",
+      "category": "Samosa & Spring Roll",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772386742/appzeto/restaurant/menu-items/umcmisgsiolgpuqr4v7t.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772386742/appzeto/restaurant/menu-items/umcmisgsiolgpuqr4v7t.webp"
+      ]
+    },
+    {
+      "section": "Samosa & Spring Roll",
+      "subsection": "",
+      "itemId": "item-1772447797447-6",
+      "itemName": "Veg Spring Roll",
+      "category": "Samosa & Spring Roll",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226633/appzeto/restaurant/menu-items/wfmi7bdcpg10hlvvpizv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226633/appzeto/restaurant/menu-items/wfmi7bdcpg10hlvvpizv.jpg"
+      ]
+    },
+    {
+      "section": "Samosa & Spring Roll",
+      "subsection": "",
+      "itemId": "item-1772447797447-8",
+      "itemName": "Chicken Spring Roll",
+      "category": "Samosa & Spring Roll",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530406/foods/zzmqgbjq6chqdnqybzym.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530406/foods/zzmqgbjq6chqdnqybzym.jpg"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-9",
+      "itemName": "Mixed Veg Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387355/appzeto/restaurant/menu-items/fa5hwqp18hiyh8ewzyug.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387355/appzeto/restaurant/menu-items/fa5hwqp18hiyh8ewzyug.jpg"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-12",
+      "itemName": "Chicken Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387175/appzeto/restaurant/menu-items/brmrbuvmnw1jhx4axdjm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772387175/appzeto/restaurant/menu-items/brmrbuvmnw1jhx4axdjm.webp"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-13",
+      "itemName": "Fried Chicken Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/8/80/Chicken_Ngohiong.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/80/Chicken_Ngohiong.jpg"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-10",
+      "itemName": "Egg Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530512/foods/noy1mu4camsmmexzvjmo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530512/foods/noy1mu4camsmmexzvjmo.jpg"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-14",
+      "itemName": "Fried Prawns Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485009/foods/o9jksmaptuxekdzpuvvr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485009/foods/o9jksmaptuxekdzpuvvr.jpg"
+      ]
+    },
+    {
+      "section": "WRAPPERS (FRANKIE)",
+      "subsection": "",
+      "itemId": "item-1772447797447-11",
+      "itemName": "Panner Wrapper",
+      "category": "WRAPPERS (FRANKIE)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485578/foods/ybx0ym4cxwwu3imxycmp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485578/foods/ybx0ym4cxwwu3imxycmp.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-15",
+      "itemName": "Mojito",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772388920/appzeto/restaurant/menu-items/ajmmrju1npkgr2vp7kto.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772388920/appzeto/restaurant/menu-items/ajmmrju1npkgr2vp7kto.webp"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-16",
+      "itemName": "Blue Curacao",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465608/foods/oaj7pfzt1vxpm7v97qsn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465608/foods/oaj7pfzt1vxpm7v97qsn.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-17",
+      "itemName": "Grape",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116672/appzeto/restaurant/menu-items/dxvzepy4sdw1fejgdnia.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772116672/appzeto/restaurant/menu-items/dxvzepy4sdw1fejgdnia.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-21",
+      "itemName": "Strawberry",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-20",
+      "itemName": "Pine Apple",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465688/foods/wyijho3hbozyn2zjhd8i.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465688/foods/wyijho3hbozyn2zjhd8i.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-19",
+      "itemName": "Lime & Mint",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465647/foods/q24kluebqk2pjlwrvxzq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465647/foods/q24kluebqk2pjlwrvxzq.jpg"
+      ]
+    },
+    {
+      "section": "MOCKTAILS",
+      "subsection": "",
+      "itemId": "item-1772447797447-18",
+      "itemName": "Green Apple",
+      "category": "MOCKTAILS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772390997/appzeto/restaurant/menu-items/nwukcyoqnaz0semib8ku.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772390997/appzeto/restaurant/menu-items/nwukcyoqnaz0semib8ku.webp"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-42",
+      "itemName": "Thick Shake - Butter Scotch",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772466058/foods/whye4hfuu9bjdnysdygo.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772466058/foods/whye4hfuu9bjdnysdygo.webp"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-43",
+      "itemName": "Thick Shake - Chocolate",
+      "category": "DESSERTS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/8/88/Oreo_Thick_Shake_-_Gujarat_-_SHAILI_018.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/88/Oreo_Thick_Shake_-_Gujarat_-_SHAILI_018.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-46",
+      "itemName": "Thick Shake - Afghan Dry Fruit",
+      "category": "DESSERTS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/4/44/Milo_milkshake_-_BRUHA_2024-05-23.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/4/44/Milo_milkshake_-_BRUHA_2024-05-23.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-41",
+      "itemName": "Thick Shake - Strawberry",
+      "category": "DESSERTS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/68/Strawberry_milk_shake_%28cropped%29.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/6/68/Strawberry_milk_shake_%28cropped%29.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-23",
+      "itemName": "Scoops - Strawberry",
+      "category": "DESSERTS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Strawberry_scoop_icecream.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/7/7d/Strawberry_scoop_icecream.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-24",
+      "itemName": "Scoops - Butter Scotch",
+      "category": "DESSERTS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/b/be/ButterScotch-Waffle-IceCream_Scoop.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/b/be/ButterScotch-Waffle-IceCream_Scoop.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-25",
+      "itemName": "Scoops - Chocolate",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465866/foods/dghbanzmnca5uqbbxjnv.avif",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465866/foods/dghbanzmnca5uqbbxjnv.avif"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-26",
+      "itemName": "Scoops - Mango",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465769/foods/o451aeeb6prynqk2jmuw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465769/foods/o451aeeb6prynqk2jmuw.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-27",
+      "itemName": "Scoops - American Nuts",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465808/foods/cffcw6b51tbd9cmakdyr.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465808/foods/cffcw6b51tbd9cmakdyr.webp"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-28",
+      "itemName": "Scoops - Afghan Dry Fruit",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465905/foods/owa00dou5ptrj8cjwjec.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465905/foods/owa00dou5ptrj8cjwjec.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-31",
+      "itemName": "Milk Shake - Vanilla",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465947/foods/xmmbxtkjg3ulwhvbci3s.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465947/foods/xmmbxtkjg3ulwhvbci3s.webp"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-32",
+      "itemName": "Milk Shake - Strawberry",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772093087/appzeto/restaurant/menu-items/bp5zol3estprx5ihhwn5.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-33",
+      "itemName": "Milk Shake - Butter Scotch",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772394670/appzeto/restaurant/menu-items/cjaddecbyrmuaimjy9iu.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772394670/appzeto/restaurant/menu-items/cjaddecbyrmuaimjy9iu.webp"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-35",
+      "itemName": "Milk Shake - Mango",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772393471/appzeto/restaurant/menu-items/sbkzishbnv714tnftllm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772393471/appzeto/restaurant/menu-items/sbkzishbnv714tnftllm.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-36",
+      "itemName": "Milk Shake - American Nuts",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482330/foods/kvymhau2mpwvbxx27is5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482330/foods/kvymhau2mpwvbxx27is5.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-37",
+      "itemName": "Milk Shake - Afghan Dry Fruit",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482417/foods/czrrqwiv862sqwtbqcqn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482417/foods/czrrqwiv862sqwtbqcqn.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-38",
+      "itemName": "Milk Shake - Roasted Almond",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482500/foods/sitvpyyzhpv2gj3qseqq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482500/foods/sitvpyyzhpv2gj3qseqq.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-39",
+      "itemName": "Milk Shake - Raj Bhog",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482637/foods/riibnhpljqz9jt84lxsf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773482637/foods/riibnhpljqz9jt84lxsf.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-40",
+      "itemName": "Thick Shake - Vanilla",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773483109/foods/muecrcus0f4jdbw120ss.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773483109/foods/muecrcus0f4jdbw120ss.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-44",
+      "itemName": "Thick Shake - Mango",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485274/foods/qilomqpclqpqm1ildfk3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485274/foods/qilomqpclqpqm1ildfk3.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-45",
+      "itemName": "Thick Shake - American Nuts",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485434/foods/mfekci0ah4ztskdiyy4h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485434/foods/mfekci0ah4ztskdiyy4h.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-48",
+      "itemName": "Thick Shake - Raj Bhog",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485507/foods/wzvn17brtkbofr1aphn7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485507/foods/wzvn17brtkbofr1aphn7.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-29",
+      "itemName": "Scoops - Roasted Almond",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485703/foods/vi8qbzqeuztianzcu2ag.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485703/foods/vi8qbzqeuztianzcu2ag.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-30",
+      "itemName": "Scoops - Raj Bhog",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485818/foods/panaz6mvzbb2r9yzasb9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485818/foods/panaz6mvzbb2r9yzasb9.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-34",
+      "itemName": "Milk Shake - Chocolate",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485915/foods/nnfpdcirwxpshftpiuy2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773485915/foods/nnfpdcirwxpshftpiuy2.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-22",
+      "itemName": "Scoops - Vanilla",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486349/foods/k5olhonpmez2n1igysyq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486349/foods/k5olhonpmez2n1igysyq.jpg"
+      ]
+    },
+    {
+      "section": "DESSERTS",
+      "subsection": "",
+      "itemId": "item-1772447797447-47",
+      "itemName": "Thick Shake - Roasted Almond",
+      "category": "DESSERTS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486645/foods/q7g5a9uai5bjhnmlc1ad.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486645/foods/q7g5a9uai5bjhnmlc1ad.png"
+      ]
+    },
+    {
+      "section": "BREAD OMLET",
+      "subsection": "",
+      "itemId": "item-1772447797447-49",
+      "itemName": "Bread Omlet",
+      "category": "BREAD OMLET",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772388149/appzeto/restaurant/menu-items/qdephfcsea07tvyvcqpc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772388149/appzeto/restaurant/menu-items/qdephfcsea07tvyvcqpc.jpg"
+      ]
+    },
+    {
+      "section": "BREAD OMLET",
+      "subsection": "",
+      "itemId": "item-1772447797447-50",
+      "itemName": "Cheese Bread Omlet",
+      "category": "BREAD OMLET",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481341/foods/cvu3kdcxnnqss0iaidjv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481341/foods/cvu3kdcxnnqss0iaidjv.jpg"
+      ]
+    },
+    {
+      "section": "BROWNIES",
+      "subsection": "",
+      "itemId": "item-1772447797447-53",
+      "itemName": "Brownie with Ice Cream",
+      "category": "BROWNIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772396120/appzeto/restaurant/menu-items/ix8uyaiqvwkb4pfoex4i.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772396120/appzeto/restaurant/menu-items/ix8uyaiqvwkb4pfoex4i.webp"
+      ]
+    },
+    {
+      "section": "BROWNIES",
+      "subsection": "",
+      "itemId": "item-1772447797447-51",
+      "itemName": "Choc lava",
+      "category": "BROWNIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772396287/appzeto/restaurant/menu-items/kgt4gayqbz9jpfdb2ifi.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772396287/appzeto/restaurant/menu-items/kgt4gayqbz9jpfdb2ifi.webp"
+      ]
+    },
+    {
+      "section": "BROWNIES",
+      "subsection": "",
+      "itemId": "item-1772447797447-52",
+      "itemName": "Brownie",
+      "category": "BROWNIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486802/foods/equxjd0p5v7e6jvj1hzg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486802/foods/equxjd0p5v7e6jvj1hzg.jpg"
+      ]
+    },
+    {
+      "section": "BROWNIES",
+      "subsection": "",
+      "itemId": "item-1772447797447-54",
+      "itemName": "Sizzling Brownie",
+      "category": "BROWNIES",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486958/foods/xwrkdzqkurroolbvvjkq.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773486958/foods/xwrkdzqkurroolbvvjkq.webp"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-63",
+      "itemName": "Egg Fried Rice",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202470/appzeto/restaurant/menu-items/ha1w8pl0sg4hgfwppug3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202470/appzeto/restaurant/menu-items/ha1w8pl0sg4hgfwppug3.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-55",
+      "itemName": "Veg Manchuria",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-57",
+      "itemName": "Egg Manchuria",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268483/appzeto/restaurant/menu-items/cqsya7laphka5vlsxsr5.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268483/appzeto/restaurant/menu-items/cqsya7laphka5vlsxsr5.webp"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-56",
+      "itemName": "Gobi Manchuria",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286470/appzeto/restaurant/menu-items/ybgfl3ojwe08avkurqxn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286470/appzeto/restaurant/menu-items/ybgfl3ojwe08avkurqxn.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-58",
+      "itemName": "Chicken Manchuria",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468140/foods/qc7ckmbvi64fubuv9cgt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468140/foods/qc7ckmbvi64fubuv9cgt.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-60",
+      "itemName": "Chilli Chicken",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772207023/appzeto/restaurant/menu-items/cl6cowypzonulypgqdcy.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772207023/appzeto/restaurant/menu-items/cl6cowypzonulypgqdcy.webp"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-61",
+      "itemName": "Chilli Panner",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481834/foods/jmaeayyaciguhml478qo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773481834/foods/jmaeayyaciguhml478qo.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-62",
+      "itemName": "Veg Fried Rice",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-64",
+      "itemName": "Chicken Fried Rice",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202283/appzeto/restaurant/menu-items/axyxoukbq8e8j1rwda1v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202283/appzeto/restaurant/menu-items/axyxoukbq8e8j1rwda1v.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-65",
+      "itemName": "Chicken Noodles",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487067/foods/mrp5dfs2krtul2as7hlb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487067/foods/mrp5dfs2krtul2as7hlb.jpg"
+      ]
+    },
+    {
+      "section": "CHINESE FAST FOOD",
+      "subsection": "",
+      "itemId": "item-1772447797447-59",
+      "itemName": "Panner Manchuria",
+      "category": "CHINESE FAST FOOD",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487577/foods/rcawjapacxarkoisw4ha.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487577/foods/rcawjapacxarkoisw4ha.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797447-70",
+      "itemName": "Margherita Pizza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487753/foods/ndsqpttxgfla9axlchxu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487753/foods/ndsqpttxgfla9axlchxu.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797447-75",
+      "itemName": "Cheese  Veg Corn Pizza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487872/foods/abkadhyxhyjegovqcskt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773487872/foods/abkadhyxhyjegovqcskt.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-80",
+      "itemName": "Cheese n Tomato",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488026/foods/g8c6ejzjaut6rweac6b3.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488026/foods/g8c6ejzjaut6rweac6b3.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-85",
+      "itemName": "Double Cheese Margherita",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488123/foods/uwifrineh6fd16vzjppp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488123/foods/uwifrineh6fd16vzjppp.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-90",
+      "itemName": "Fresh Veggie",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488185/foods/ahyd6t8dm8fvw2annzkw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488185/foods/ahyd6t8dm8fvw2annzkw.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-95",
+      "itemName": "Farmhouse Pizza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488257/foods/pdjttoszoxlnikdqbi7q.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488257/foods/pdjttoszoxlnikdqbi7q.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-100",
+      "itemName": "Peppy Paneer",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488352/foods/rl5r0h0hvza2okzvy3bb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488352/foods/rl5r0h0hvza2okzvy3bb.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-104",
+      "itemName": "Veggie Paradise",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488402/foods/q94auvoevnt5vebdc82j.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488402/foods/q94auvoevnt5vebdc82j.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-108",
+      "itemName": "Veg Extravaganza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488475/foods/sxedqgdzvjjifxobznyo.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488475/foods/sxedqgdzvjjifxobznyo.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-112",
+      "itemName": "Deluxe Veggie",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488566/foods/jjscctzas9a02pqyvare.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488566/foods/jjscctzas9a02pqyvare.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-120",
+      "itemName": "Indi Tandoori",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488619/foods/znagmhmvcxmqvsmgtml3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488619/foods/znagmhmvcxmqvsmgtml3.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-124",
+      "itemName": "Achari Do Pyaza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488742/foods/fhaclawua31ogojd4wcg.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488742/foods/fhaclawua31ogojd4wcg.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-116",
+      "itemName": "Paneer Makhani",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772464821/foods/nfcpnba6kwsz8q5xagh1.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772464821/foods/nfcpnba6kwsz8q5xagh1.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-128",
+      "itemName": "Pepper Barbecue Chicken",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772428639/appzeto/restaurant/menu-items/r83qy0scoaohdpr3zq0u.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772428639/appzeto/restaurant/menu-items/r83qy0scoaohdpr3zq0u.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-132",
+      "itemName": "Pepper BBQ Chicken & Onion",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488849/foods/a6k2pyxumxadputcdggq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488849/foods/a6k2pyxumxadputcdggq.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-136",
+      "itemName": "Chicken Sausage",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488951/foods/obghk52jburvvyzl4dsn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773488951/foods/obghk52jburvvyzl4dsn.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-140",
+      "itemName": "Chicken Golden Delight",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489052/foods/c2fts6n9qx7ilvwyvaoi.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489052/foods/c2fts6n9qx7ilvwyvaoi.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-144",
+      "itemName": "Non Veg Supreme",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489115/foods/rgfrfj6biqvjk1jhrm5p.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489115/foods/rgfrfj6biqvjk1jhrm5p.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-148",
+      "itemName": "Chicken Pepperoni",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489210/foods/fgkli6ifx93vqwu64j9q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489210/foods/fgkli6ifx93vqwu64j9q.jpg"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-152",
+      "itemName": "Chicken Dominator",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489288/foods/m2h0dffqyhyqg9elzzgw.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489288/foods/m2h0dffqyhyqg9elzzgw.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-156",
+      "itemName": "Indi Chicken Tikka",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489338/foods/euvflomleotsouq9hzp9.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489338/foods/euvflomleotsouq9hzp9.webp"
+      ]
+    },
+    {
+      "section": "PIZZAS",
+      "subsection": "",
+      "itemId": "item-1772447797448-158",
+      "itemName": "Chicken Chizza",
+      "category": "PIZZAS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489431/foods/qy6z3wszhncwndsfe5sj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773489431/foods/qy6z3wszhncwndsfe5sj.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-160",
+      "itemName": "Egg Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772279590/appzeto/restaurant/menu-items/ibrsny3abxvrrfthwobw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772279590/appzeto/restaurant/menu-items/ibrsny3abxvrrfthwobw.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-159",
+      "itemName": "Aloo Tikki Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772279452/appzeto/restaurant/menu-items/uinr4qulcqhrppu62ybi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772279452/appzeto/restaurant/menu-items/uinr4qulcqhrppu62ybi.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-161",
+      "itemName": "Veg Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114853/appzeto/restaurant/menu-items/ffikpnyxlvcd0yc6ivrc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772114853/appzeto/restaurant/menu-items/ffikpnyxlvcd0yc6ivrc.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-163",
+      "itemName": "Panner Burger",
+      "category": "BURGERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/62/NCI_Visuals_Food_Hamburger.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/6/62/NCI_Visuals_Food_Hamburger.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-165",
+      "itemName": "Hot Dog",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280360/appzeto/restaurant/menu-items/awjz7cwaqc2ot1i5fizv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280360/appzeto/restaurant/menu-items/awjz7cwaqc2ot1i5fizv.jpg"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-162",
+      "itemName": "Chicken Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773484763/foods/h7ga8wwgduaxm8jyvolg.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773484763/foods/h7ga8wwgduaxm8jyvolg.webp"
+      ]
+    },
+    {
+      "section": "BURGERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-164",
+      "itemName": "Crunchy Chicken Burger",
+      "category": "BURGERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773484847/foods/knnvt3vmx98eob5kzljc.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773484847/foods/knnvt3vmx98eob5kzljc.webp"
+      ]
+    },
+    {
+      "section": "SANDWICH",
+      "subsection": "",
+      "itemId": "item-1772447797448-166",
+      "itemName": "Veg Premium Sandwich",
+      "category": "SANDWICH",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280537/appzeto/restaurant/menu-items/sgvbo9tjgfmccu8c54hw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772280537/appzeto/restaurant/menu-items/sgvbo9tjgfmccu8c54hw.jpg"
+      ]
+    },
+    {
+      "section": "SANDWICH",
+      "subsection": "",
+      "itemId": "item-1772447797448-167",
+      "itemName": "Chicken Premium Sandwich",
+      "category": "SANDWICH",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115860/appzeto/restaurant/menu-items/riqskd6bumleixqvykfo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772115860/appzeto/restaurant/menu-items/riqskd6bumleixqvykfo.jpg"
+      ]
+    },
+    {
+      "section": "SANDWICH",
+      "subsection": "",
+      "itemId": "item-1772447797448-168",
+      "itemName": "Fried Chicken Premium Sandwich",
+      "category": "SANDWICH",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/2/24/Bologna_sandwich.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/2/24/Bologna_sandwich.jpg"
+      ]
+    },
+    {
+      "section": "SANDWICH",
+      "subsection": "",
+      "itemId": "item-1772447797448-169",
+      "itemName": "Prawns Fry Classic Sandwich",
+      "category": "SANDWICH",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438735/appzeto/restaurant/menu-items/t28cghwjhx2qdpkfms9q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772438735/appzeto/restaurant/menu-items/t28cghwjhx2qdpkfms9q.jpg"
+      ]
+    },
+    {
+      "section": "FRIED CHICKEN",
+      "subsection": "",
+      "itemId": "item-1772447797448-170",
+      "itemName": "Chicken Popcorn",
+      "category": "FRIED CHICKEN",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295308/appzeto/restaurant/menu-items/be0bl4jjfs7bsgryt31h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295308/appzeto/restaurant/menu-items/be0bl4jjfs7bsgryt31h.jpg"
+      ]
+    },
+    {
+      "section": "FRIED CHICKEN",
+      "subsection": "",
+      "itemId": "item-1772447797448-171",
+      "itemName": "Chicken Wings",
+      "category": "FRIED CHICKEN",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/9/92/Buffalo_wings_served_with_celery_and_dip.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/9/92/Buffalo_wings_served_with_celery_and_dip.jpg"
+      ]
+    },
+    {
+      "section": "FRIED CHICKEN",
+      "subsection": "",
+      "itemId": "item-1772447797448-172",
+      "itemName": "Chicken Lollypops",
+      "category": "FRIED CHICKEN",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/0/03/Chicken_lollypop_with_Sauce_01.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/0/03/Chicken_lollypop_with_Sauce_01.jpg"
+      ]
+    },
+    {
+      "section": "FRIED CHICKEN",
+      "subsection": "",
+      "itemId": "item-1772447797448-173",
+      "itemName": "Chicken Drumsticks",
+      "category": "FRIED CHICKEN",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295596/appzeto/restaurant/menu-items/sttwx723ilfuehbwqzvb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295596/appzeto/restaurant/menu-items/sttwx723ilfuehbwqzvb.webp"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-191",
+      "itemName": "Chicken Pakoda (Bones)",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468731/foods/vy9uu67x0wc7nmlk7yg7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468731/foods/vy9uu67x0wc7nmlk7yg7.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-192",
+      "itemName": "Chicken Pakoda (Boneless)",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468750/foods/gx8yns98rs0ezbzl5i8r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468750/foods/gx8yns98rs0ezbzl5i8r.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "",
+      "itemId": "item-1772447797448-193",
+      "itemName": "Kaju Chicken Pakoda",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468761/foods/ifguc2zjfsk4nfsdrz3y.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772468761/foods/ifguc2zjfsk4nfsdrz3y.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-174",
+      "itemName": "Potato Twister",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772296020/appzeto/restaurant/menu-items/tcm9ylxpjza3w8eufe96.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772296020/appzeto/restaurant/menu-items/tcm9ylxpjza3w8eufe96.webp"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-175",
+      "itemName": "French Fries",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295804/appzeto/restaurant/menu-items/e8fvmtbuiknsvbonsjxp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295804/appzeto/restaurant/menu-items/e8fvmtbuiknsvbonsjxp.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-176",
+      "itemName": "Cheese Fries",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295923/appzeto/restaurant/menu-items/hwjngyuji3xxh4sbzytt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772295923/appzeto/restaurant/menu-items/hwjngyuji3xxh4sbzytt.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-177",
+      "itemName": "Smiles",
+      "category": "STARTERS",
+      "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Plate%20of%20chips%20at%20the%20Chalet%20Cafe%2C%20Cowfold%2C%20West%20Sussex%2C%20England.jpg",
+      "images": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Plate%20of%20chips%20at%20the%20Chalet%20Cafe%2C%20Cowfold%2C%20West%20Sussex%2C%20England.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-178",
+      "itemName": "Aloo Tikka",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772382801/appzeto/restaurant/menu-items/avcv7v7kii0aldz4dxr9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772382801/appzeto/restaurant/menu-items/avcv7v7kii0aldz4dxr9.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-179",
+      "itemName": "Veg Fingers",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772201416/appzeto/restaurant/menu-items/aeyrxo0wwyr9hx3z18ay.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-180",
+      "itemName": "Veg Nuggets",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096031/appzeto/restaurant/menu-items/batin4tp3xoejgf9xwcx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772096031/appzeto/restaurant/menu-items/batin4tp3xoejgf9xwcx.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-181",
+      "itemName": "Veg Lollypops",
+      "category": "STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Starters_01.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/f/fd/Starters_01.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-182",
+      "itemName": "Panner Popcorn",
+      "category": "STARTERS",
+      "image": "https://commons.wikimedia.org/wiki/Special:FilePath/Chicken-Fried%20Chicken%20(34399882906).jpg",
+      "images": [
+        "https://commons.wikimedia.org/wiki/Special:FilePath/Chicken-Fried%20Chicken%20(34399882906).jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-183",
+      "itemName": "Panner Tikka",
+      "category": "STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/c/c2/Paneer_Tikka_Masala.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/c/c2/Paneer_Tikka_Masala.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-184",
+      "itemName": "Panner Fingers",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772296690/appzeto/restaurant/menu-items/ycsmtc2hychspdj4tsyw.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772296690/appzeto/restaurant/menu-items/ycsmtc2hychspdj4tsyw.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Veg",
+      "itemId": "item-1772447797448-185",
+      "itemName": "Panner Cheese Balls",
+      "category": "STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/a/aa/Cold_starters_at_Korean_restaurant.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/a/aa/Cold_starters_at_Korean_restaurant.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-186",
+      "itemName": "Chicken Fingers",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202283/appzeto/restaurant/menu-items/axyxoukbq8e8j1rwda1v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772202283/appzeto/restaurant/menu-items/axyxoukbq8e8j1rwda1v.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-187",
+      "itemName": "Chicken Nuggets",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772383573/appzeto/restaurant/menu-items/kjdngfwmxuf9iwem3mae.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772383573/appzeto/restaurant/menu-items/kjdngfwmxuf9iwem3mae.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-188",
+      "itemName": "Chicken Cutlet",
+      "category": "STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/9/9d/Bihari_Style_Pudina_Chicken_Pulao_with_Raita_and_Sabudana_Cutlet.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/9/9d/Bihari_Style_Pudina_Chicken_Pulao_with_Raita_and_Sabudana_Cutlet.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-189",
+      "itemName": "Chicken Cheese Balls",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772384008/appzeto/restaurant/menu-items/sqzyqprut7vvqcnpyfwh.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772384008/appzeto/restaurant/menu-items/sqzyqprut7vvqcnpyfwh.webp"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-190",
+      "itemName": "Chicken Kabab Tikka",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219444/appzeto/restaurant/menu-items/evidhbvfinfl4ypfud1u.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219444/appzeto/restaurant/menu-items/evidhbvfinfl4ypfud1u.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-194",
+      "itemName": "Chicken Legs (Fry)",
+      "category": "STARTERS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772384955/appzeto/restaurant/menu-items/jakyfywl6ccwqh4jb2lu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772384955/appzeto/restaurant/menu-items/jakyfywl6ccwqh4jb2lu.jpg"
+      ]
+    },
+    {
+      "section": "STARTERS",
+      "subsection": "Non-Veg",
+      "itemId": "item-1772447797448-195",
+      "itemName": "Fried Chicken Loaded Cheese Fries",
+      "category": "STARTERS",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/3/37/Starters_10.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/3/37/Starters_10.jpg"
+      ]
+    }
+  ]
+}

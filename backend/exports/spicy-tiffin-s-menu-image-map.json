@@ -1,0 +1,198 @@
+{
+  "restaurant": {
+    "id": "69b1582c330d847e1ca31cd6",
+    "slug": "spicy-tiffin-s",
+    "name": "SPICY TIFFIN'S"
+  },
+  "exportedAt": "2026-04-02T13:49:51.400Z",
+  "totalItems": 17,
+  "items": [
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773230865374-0.6252716774649487",
+      "itemName": "Plain Dosa  [1P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773230863/appzeto/restaurant/menu-items/gnzmjjhhcpxvoocckpgn.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773230863/appzeto/restaurant/menu-items/gnzmjjhhcpxvoocckpgn.webp"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773231048672-0.054075655997744554",
+      "itemName": "Ghee Karam Dosa [1P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231046/appzeto/restaurant/menu-items/wsegux2bavxuohqo67zd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231046/appzeto/restaurant/menu-items/wsegux2bavxuohqo67zd.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773230674028-0.33699328880914947",
+      "itemName": "Masala Dosa [1P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773230670/appzeto/restaurant/menu-items/ddl8jxr17ogkbzjghkhk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773230670/appzeto/restaurant/menu-items/ddl8jxr17ogkbzjghkhk.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773231365857-0.6936967717371642",
+      "itemName": "Onion Dosa [1P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231364/appzeto/restaurant/menu-items/z0hktovomwfaqaklzoag.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231364/appzeto/restaurant/menu-items/z0hktovomwfaqaklzoag.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773231504351-0.4273627097175935",
+      "itemName": "Egg Dosa",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231502/appzeto/restaurant/menu-items/ojvegv6fgoss2yhvyvah.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231502/appzeto/restaurant/menu-items/ojvegv6fgoss2yhvyvah.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773232000321-0.15071773975635627",
+      "itemName": "Upma Dosa [1P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231998/appzeto/restaurant/menu-items/mlayjfzzehdxax2dn7kq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773231998/appzeto/restaurant/menu-items/mlayjfzzehdxax2dn7kq.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773232477399-0.37747296452886003",
+      "itemName": "Idly [3P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773232475/appzeto/uploads/uls9xdsprlempkzlwa3e.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773232475/appzeto/uploads/uls9xdsprlempkzlwa3e.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773232610566-0.3730949140723221",
+      "itemName": "Idly + Sambre [4P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773232608/appzeto/restaurant/menu-items/sjmci7flictbciydhjdj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773232608/appzeto/restaurant/menu-items/sjmci7flictbciydhjdj.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773233191326-0.538820619214058",
+      "itemName": "Vugani Bajji",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233189/appzeto/restaurant/menu-items/ctaarairogv0ny1czlof.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233189/appzeto/restaurant/menu-items/ctaarairogv0ny1czlof.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773233358321-0.5949876986950255",
+      "itemName": "Poori[2P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233356/appzeto/restaurant/menu-items/jb0qfenrqmebtn1uv0v6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233356/appzeto/restaurant/menu-items/jb0qfenrqmebtn1uv0v6.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773233027608-0.10936277252238102",
+      "itemName": "Mysore Bonda[3P]",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233022/appzeto/restaurant/menu-items/vi2on7zyifcrjbopa0iv.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773233022/appzeto/restaurant/menu-items/vi2on7zyifcrjbopa0iv.webp"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773234028321-0.7273760271979547",
+      "itemName": "Vada 3Pieces",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773234025/appzeto/restaurant/menu-items/se3f2zhkr2jzrxdzzof2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773234025/appzeto/restaurant/menu-items/se3f2zhkr2jzrxdzzof2.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773235071610-0.2201307434814751",
+      "itemName": "Mirchi Bajji (3 pieces)",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773235069/appzeto/restaurant/menu-items/wut8pqtz6c4bm5yluovy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773235069/appzeto/restaurant/menu-items/wut8pqtz6c4bm5yluovy.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773235204282-0.0811509716858444",
+      "itemName": "Utappam",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773235202/appzeto/restaurant/menu-items/ajcnsbfwqrwcttdhymon.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773235202/appzeto/restaurant/menu-items/ajcnsbfwqrwcttdhymon.webp"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773238339733-0.5962991544326707",
+      "itemName": "పెసరట్టు 1",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238338/appzeto/restaurant/menu-items/lnlw7w1tq0icbp8oxxdb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238338/appzeto/restaurant/menu-items/lnlw7w1tq0icbp8oxxdb.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773238612812-0.3963271298962141",
+      "itemName": "Onion Uttapam",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238611/appzeto/restaurant/menu-items/k92v4qthjpggpym3hnzl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238611/appzeto/restaurant/menu-items/k92v4qthjpggpym3hnzl.jpg"
+      ]
+    },
+    {
+      "section": "TIFFIN'S",
+      "subsection": "",
+      "itemId": "item-1773238758816-0.34641563130124653",
+      "itemName": "Upma",
+      "category": "TIFFIN'S",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238757/appzeto/restaurant/menu-items/cmookdl0mpdektc7mh93.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1773238757/appzeto/restaurant/menu-items/cmookdl0mpdektc7mh93.webp"
+      ]
+    }
+  ]
+}

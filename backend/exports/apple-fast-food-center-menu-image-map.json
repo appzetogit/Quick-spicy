@@ -1,0 +1,176 @@
+{
+  "restaurant": {
+    "id": "69a2a82970ba942316a3876d",
+    "slug": "apple-fast-food-center",
+    "name": "Apple Fast Food Center"
+  },
+  "exportedAt": "2026-04-02T13:46:25.264Z",
+  "totalItems": 15,
+  "items": [
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268163490-0.7094474871993707",
+      "itemName": "Veg Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268161/appzeto/restaurant/menu-items/blm8sq0nlnwxpbjx4peu.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268161/appzeto/restaurant/menu-items/blm8sq0nlnwxpbjx4peu.png"
+      ]
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268798426-0.6973759779604246",
+      "itemName": "Veg Manchurian Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268796/appzeto/restaurant/menu-items/vumsrjuqcbtjh38yq4m5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268796/appzeto/restaurant/menu-items/vumsrjuqcbtjh38yq4m5.jpg"
+      ]
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268484744-0.7435179926633422",
+      "itemName": "Veg Manchurian Noodles",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268483/appzeto/restaurant/menu-items/cqsya7laphka5vlsxsr5.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268483/appzeto/restaurant/menu-items/cqsya7laphka5vlsxsr5.webp"
+      ]
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268338160-0.5464163372901353",
+      "itemName": "Jeera Rice",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268336/appzeto/restaurant/menu-items/tvnkcaclewvt9g5xooyr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268336/appzeto/restaurant/menu-items/tvnkcaclewvt9g5xooyr.jpg"
+      ]
+    },
+    {
+      "section": "VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268064906-0.06319227531724747",
+      "itemName": "Veg Manchurian",
+      "category": "VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268063/appzeto/restaurant/menu-items/jciqfz1brngnaji2s0ba.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268063/appzeto/restaurant/menu-items/jciqfz1brngnaji2s0ba.jpg"
+      ]
+    },
+    {
+      "section": "Varieties",
+      "subsection": "",
+      "itemId": "item-1772268269217-0.2340969985060828",
+      "itemName": "Veg Noodles",
+      "category": "Varieties",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268267/appzeto/restaurant/menu-items/f5beklwkdwhgwmflc7lk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268267/appzeto/restaurant/menu-items/f5beklwkdwhgwmflc7lk.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269253982-0.46045701254150884",
+      "itemName": "Chicken Noodles",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269252/appzeto/restaurant/menu-items/ao7bumvkvzx9tiwfwer9.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269252/appzeto/restaurant/menu-items/ao7bumvkvzx9tiwfwer9.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269942550-0.19782194377951434",
+      "itemName": "Egg Manchurian Noodles",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269941/appzeto/restaurant/menu-items/kpjtvqa8uhhbobxjyhw6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269941/appzeto/restaurant/menu-items/kpjtvqa8uhhbobxjyhw6.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269813710-0.30742008050505054",
+      "itemName": "Chicken Manchurian",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269812/appzeto/restaurant/menu-items/s4qak1cycnbtpo7yvikk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269812/appzeto/restaurant/menu-items/s4qak1cycnbtpo7yvikk.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269652649-0.9640777906882786",
+      "itemName": "Chilli Chicken",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269651/appzeto/restaurant/menu-items/gq6vtlzwsx8k7731vtvj.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269651/appzeto/restaurant/menu-items/gq6vtlzwsx8k7731vtvj.webp"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269506124-0.50279103318687",
+      "itemName": "Chicken Rice",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269504/appzeto/restaurant/menu-items/mntjvaayve7tvlysjn3j.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269504/appzeto/restaurant/menu-items/mntjvaayve7tvlysjn3j.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269352424-0.16728116904306778",
+      "itemName": "Egg Manchurian Rice",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269350/appzeto/restaurant/menu-items/cn6kfvrpus4vjvwjlo6h.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269350/appzeto/restaurant/menu-items/cn6kfvrpus4vjvwjlo6h.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269166433-0.2205715262455954",
+      "itemName": "Egg Rice",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269164/appzeto/restaurant/menu-items/fcbo7ay8lcgyw6pqiwyx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269164/appzeto/restaurant/menu-items/fcbo7ay8lcgyw6pqiwyx.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772269081120-0.3393497580669279",
+      "itemName": "Egg Noodles",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269079/appzeto/restaurant/menu-items/z7ptmjtkapkxtgaxz1mv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772269079/appzeto/restaurant/menu-items/z7ptmjtkapkxtgaxz1mv.jpg"
+      ]
+    },
+    {
+      "section": "NON VEG ITEMS",
+      "subsection": "",
+      "itemId": "item-1772268976344-0.6226849813727303",
+      "itemName": "Egg Manchurian",
+      "category": "NON VEG ITEMS",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268974/appzeto/restaurant/menu-items/romxut1j05vucnncd6mt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772268974/appzeto/restaurant/menu-items/romxut1j05vucnncd6mt.jpg"
+      ]
+    }
+  ]
+}

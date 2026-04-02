@@ -1,0 +1,991 @@
+{
+  "restaurant": {
+    "id": "69a6d360c5b380ecddf0bc23",
+    "slug": "rma-s-pizza",
+    "name": "RMA'S PIZZA"
+  },
+  "exportedAt": "2026-04-02T13:49:10.761Z",
+  "totalItems": 75,
+  "items": [
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-fried-2-fried-chicken-2-pcs",
+      "itemName": "Fried Chicken 2 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553517/foods/jd3oxwmz0wp8aojsxpuz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553517/foods/jd3oxwmz0wp8aojsxpuz.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/001-fried-chicken-2-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-fried-5-fried-chicken-5-pcs",
+      "itemName": "Fried Chicken 5 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553614/foods/zfoxliutm681r7e4eimp.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553614/foods/zfoxliutm681r7e4eimp.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/002-fried-chicken-5-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-fried-9-fried-chicken-9-pcs",
+      "itemName": "Fried Chicken 9 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553726/foods/ogiqetk7ucba2qyn24si.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553726/foods/ogiqetk7ucba2qyn24si.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/003-fried-chicken-9-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-grilled-2-grilled-chicken-2-pcs",
+      "itemName": "Grilled Chicken 2 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553857/foods/naiedi4hv4tbbxoczhgx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772553857/foods/naiedi4hv4tbbxoczhgx.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/004-grilled-chicken-2-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-grilled-5-grilled-chicken-5-pcs",
+      "itemName": "Grilled Chicken 5 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554116/foods/orrt1iae9r2uwlzba7dn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554116/foods/orrt1iae9r2uwlzba7dn.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/005-grilled-chicken-5-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-grilled-9-grilled-chicken-9-pcs",
+      "itemName": "Grilled Chicken 9 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554353/foods/r1qsf5gndi9or75zjibv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554353/foods/r1qsf5gndi9or75zjibv.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/006-grilled-chicken-9-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-lollipop-fried-4-fried-chicken-lollipop-4-pcs",
+      "itemName": "Fried Chicken Lollipop 4 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554571/foods/uy2m1zss16c8wpvmsuop.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554571/foods/uy2m1zss16c8wpvmsuop.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/007-fried-chicken-lollipop-4-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-lollipop-fried-6-fried-chicken-lollipop-6-pcs",
+      "itemName": "Fried Chicken Lollipop 6 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554722/foods/qvxnnggpcgnbufx5tsae.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554722/foods/qvxnnggpcgnbufx5tsae.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/008-fried-chicken-lollipop-6-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-wings-4-chicken-wings-4-pcs",
+      "itemName": "Chicken Wings 4 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554931/foods/hbrqhtos8gkq0ahdfzqk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772554931/foods/hbrqhtos8gkq0ahdfzqk.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/009-chicken-wings-4-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Chicken",
+      "subsection": "",
+      "itemId": "chicken-wings-6-chicken-wings-6-pcs",
+      "itemName": "Chicken Wings 6 pcs",
+      "category": "Chicken",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772555081/foods/ec8plnwzqb4a3cwqtrx9.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772555081/foods/ec8plnwzqb4a3cwqtrx9.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/010-chicken-wings-6-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Garlic Breads",
+      "subsection": "",
+      "itemId": "garlic-chicken-supreme-2-chicken-garlic-bread-supreme-2-pcs",
+      "itemName": "Chicken Garlic Bread Supreme 2 pcs",
+      "category": "Garlic Breads",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772556952/foods/zjfgalcwko91gmz6aqtk.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772556952/foods/zjfgalcwko91gmz6aqtk.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/011-chicken-garlic-bread-supreme-2-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Garlic Breads",
+      "subsection": "",
+      "itemId": "garlic-chicken-cheese-4-chicken-garlic-bread-with-cheese-4-pcs",
+      "itemName": "Chicken Garlic Bread With Cheese 4 pcs",
+      "category": "Garlic Breads",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557193/foods/ktyv3blaf4xdvyfrraec.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557193/foods/ktyv3blaf4xdvyfrraec.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/012-chicken-garlic-bread-with-cheese-4-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Momos",
+      "subsection": "",
+      "itemId": "momos-chicken-4-chicken-momos-4-pcs",
+      "itemName": "Chicken Momos 4 pcs",
+      "category": "Momos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772556925/foods/y3wd9vita29gzpttjdut.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772556925/foods/y3wd9vita29gzpttjdut.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/013-chicken-momos-4-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Momos",
+      "subsection": "",
+      "itemId": "momos-chicken-6-chicken-momos-6-pcs",
+      "itemName": "Chicken Momos 6 pcs",
+      "category": "Momos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557006/foods/epnk8fnjdmp6ck65jvsq.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557006/foods/epnk8fnjdmp6ck65jvsq.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/014-chicken-momos-6-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Momos",
+      "subsection": "",
+      "itemId": "spring-rolls-4-spring-rolls-4-pcs",
+      "itemName": "Spring Rolls 4 pcs",
+      "category": "Momos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557071/foods/bin3651ywzyro9x5srwb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557071/foods/bin3651ywzyro9x5srwb.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/015-spring-rolls-4-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Momos",
+      "subsection": "",
+      "itemId": "momos-veg-4-veg-momos-4-pcs",
+      "itemName": "Veg Momos 4 pcs",
+      "category": "Momos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557335/foods/dx7adf1mimkgawwfatal.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557335/foods/dx7adf1mimkgawwfatal.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/016-veg-momos-4-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Momos",
+      "subsection": "",
+      "itemId": "spring-rolls-6-spring-rolls-6-pcs",
+      "itemName": "Spring Rolls 6 pcs",
+      "category": "Momos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557659/foods/cgbsikkrvhieo002fnm0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557659/foods/cgbsikkrvhieo002fnm0.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/017-spring-rolls-6-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Appetizers",
+      "subsection": "",
+      "itemId": "app-paneer-popcorn-paneer-popcorn-8-pcs",
+      "itemName": "Paneer Popcorn (8 pcs)",
+      "category": "Appetizers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557518/foods/nd5sylmj2vh3hwqcjynq.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557518/foods/nd5sylmj2vh3hwqcjynq.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/018-paneer-popcorn-8-pcs.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Appetizers",
+      "subsection": "",
+      "itemId": "app-chicken-popcorn-chicken-popcorn-8-pcs",
+      "itemName": "Chicken Popcorn (8 pcs)",
+      "category": "Appetizers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557588/foods/ocypdynfu3dqhhrzepa0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557588/foods/ocypdynfu3dqhhrzepa0.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/019-chicken-popcorn-8-pcs.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Appetizers",
+      "subsection": "",
+      "itemId": "app-chicken-nuggets-chicken-nuggets",
+      "itemName": "Chicken Nuggets",
+      "category": "Appetizers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557654/foods/b85wvpxj5v7iujeujd2w.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557654/foods/b85wvpxj5v7iujeujd2w.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/020-chicken-nuggets.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Wraps",
+      "subsection": "",
+      "itemId": "wrap-potato-potato-wraps",
+      "itemName": "Potato Wraps",
+      "category": "Wraps",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557725/foods/uqgfd9olzsvah1midwvv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557725/foods/uqgfd9olzsvah1midwvv.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/021-potato-wraps.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Wraps",
+      "subsection": "",
+      "itemId": "wrap-paneer-paneer-wraps",
+      "itemName": "Paneer Wraps",
+      "category": "Wraps",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557844/foods/ggrt31pfwfj94ou1rtlz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557844/foods/ggrt31pfwfj94ou1rtlz.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/022-paneer-wraps.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Wraps",
+      "subsection": "",
+      "itemId": "wrap-chicken-chicken-wraps",
+      "itemName": "Chicken Wraps",
+      "category": "Wraps",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557946/foods/mpyhbrtzjmlpgem5z2v1.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557946/foods/mpyhbrtzjmlpgem5z2v1.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/023-chicken-wraps.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Wraps",
+      "subsection": "",
+      "itemId": "wrap-rams-special-chicken-ram-s-special-chicken-wraps",
+      "itemName": "Ram's Special Chicken Wraps",
+      "category": "Wraps",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558031/foods/ou1glciwaz2mogbyce38.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558031/foods/ou1glciwaz2mogbyce38.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/024-ram-s-special-chicken-wraps.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-extra-cheese-extra-cheese-topping",
+      "itemName": "Extra Cheese Topping",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557968/foods/xawsm3wzexqnmnowyh3u.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772557968/foods/xawsm3wzexqnmnowyh3u.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/025-extra-cheese-topping.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-margherita-large-margherita-pizza-large",
+      "itemName": "Margherita Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558191/foods/nij2eihj7f469r4uuewl.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558191/foods/nij2eihj7f469r4uuewl.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/026-margherita-pizza-large.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-classic-small-classic-pizza-small",
+      "itemName": "Classic Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558271/foods/slj90nmwddbybop3tmby.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558271/foods/slj90nmwddbybop3tmby.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/027-classic-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-classic-large-classic-pizza-large",
+      "itemName": "Classic Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558417/foods/caqaydgcxcinvwf2n2gd.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558417/foods/caqaydgcxcinvwf2n2gd.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/028-classic-pizza-large.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-spicy-paneer-large-spicy-paneer-pizza-large",
+      "itemName": "Spicy Paneer Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558478/foods/xiin7vv3hzpvhieyq79g.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558478/foods/xiin7vv3hzpvhieyq79g.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/029-spicy-paneer-pizza-large.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-spicy-paneer-small-spicy-paneer-pizza-small",
+      "itemName": "Spicy Paneer Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558541/foods/msvhmmoo4lgncg14nbp6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558541/foods/msvhmmoo4lgncg14nbp6.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/030-spicy-paneer-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-paneer-pepper-small-paneer-pepper-pizza-small",
+      "itemName": "Paneer Pepper Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558652/foods/ssb35s8ynirb0cbgsg2z.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558652/foods/ssb35s8ynirb0cbgsg2z.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/031-paneer-pepper-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-paneer-pepper-large-paneer-pepper-pizza-large",
+      "itemName": "Paneer Pepper Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558733/foods/exiyfnyyyip0lglftqvo.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558733/foods/exiyfnyyyip0lglftqvo.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/032-paneer-pepper-pizza-large.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-veg-corn-small-veg-corn-pizza-small",
+      "itemName": "Veg Corn Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558794/foods/ccyddyudqhwyv4dwroe2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558794/foods/ccyddyudqhwyv4dwroe2.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/033-veg-corn-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-veg-corn-large-veg-corn-pizza-large",
+      "itemName": "Veg Corn Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558988/foods/xzmym5glndfqieoq0kzx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558988/foods/xzmym5glndfqieoq0kzx.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/034-veg-corn-pizza-large.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-mushroom-corn-small-mushroom-corn-pizza-small",
+      "itemName": "Mushroom Corn Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559060/foods/us3idxoypzsyjbhp1axt.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559060/foods/us3idxoypzsyjbhp1axt.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/035-mushroom-corn-pizza-small.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-mushroom-corn-large-mushroom-corn-pizza-large",
+      "itemName": "Mushroom Corn Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559158/foods/p5zfwis0jrevp833snm6.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559158/foods/p5zfwis0jrevp833snm6.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/036-mushroom-corn-pizza-large.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-rams-special-small-ram-s-special-pizza-small",
+      "itemName": "Ram's Special Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559229/foods/phypgosedhlooqqmujux.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559229/foods/phypgosedhlooqqmujux.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/037-ram-s-special-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-rams-special-large-ram-s-special-pizza-large",
+      "itemName": "Ram's Special Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559287/foods/lpkluwie2zducn1upx36.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772559287/foods/lpkluwie2zducn1upx36.png"
+      ],
+      "localImage": "exports/rma-s-pizza-images/038-ram-s-special-pizza-large.png",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-rams-double-cheese-burst-small-ram-s-special-double-cheese-burst-pizza-small",
+      "itemName": "Ram's Special Double Cheese Burst Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561343/foods/agy0xggbztijoayw4vkd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561343/foods/agy0xggbztijoayw4vkd.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/039-ram-s-special-double-cheese-burst-pizza-small.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-rams-double-cheese-burst-large-ram-s-special-double-cheese-burst-pizza-large",
+      "itemName": "Ram's Special Double Cheese Burst Pizza Large",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561440/foods/dfrzn8h6uawy86djmist.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561440/foods/dfrzn8h6uawy86djmist.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/040-ram-s-special-double-cheese-burst-pizza-large.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Pizza",
+      "subsection": "",
+      "itemId": "pizza-margherita-small-margherita-pizza-small",
+      "itemName": "Margherita Pizza Small",
+      "category": "Veg Pizza",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563979/foods/wytb86esq7gtqbgczrcc.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563979/foods/wytb86esq7gtqbgczrcc.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/041-margherita-pizza-small.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-veg-surprise-veg-surprise-burger",
+      "itemName": "Veg Surprise Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558113/foods/kyhag6xrkc5pzjxo9fpv.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558113/foods/kyhag6xrkc5pzjxo9fpv.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/042-veg-surprise-burger.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-cheese-veg-cheese-veg-burger",
+      "itemName": "Cheese Veg Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558194/foods/xjwoqedjyouh2ubiwchn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558194/foods/xjwoqedjyouh2ubiwchn.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/043-cheese-veg-burger.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-crunchy-corn-crunchy-corn-burger",
+      "itemName": "Crunchy Corn Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558312/foods/bpkimoe0pjvqthoulsgo.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558312/foods/bpkimoe0pjvqthoulsgo.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/044-crunchy-corn-burger.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-chilli-lava-chilli-lava-burger",
+      "itemName": "Chilli Lava Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558443/foods/zleonxw7kzeo183zodku.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558443/foods/zleonxw7kzeo183zodku.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/045-chilli-lava-burger.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-rams-special-ram-s-special-burger",
+      "itemName": "Ram's Special Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558576/foods/ngipdim8oszcphqbawwx.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558576/foods/ngipdim8oszcphqbawwx.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/046-ram-s-special-burger.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Veg Burgers",
+      "subsection": "",
+      "itemId": "burger-premium-paneer-premium-paneer-burger",
+      "itemName": "Premium Paneer Burger",
+      "category": "Veg Burgers",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558693/foods/oluep9ejdb3iqniatvdk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558693/foods/oluep9ejdb3iqniatvdk.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/047-premium-paneer-burger.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Sandwich (Veg)",
+      "subsection": "",
+      "itemId": "sandwich-veg-grilled-veg-grilled-sandwich",
+      "itemName": "Veg Grilled Sandwich",
+      "category": "Sandwich (Veg)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558878/foods/u1ktzkroameag4bwkmno.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772558878/foods/u1ktzkroameag4bwkmno.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/048-veg-grilled-sandwich.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Sandwich (Veg)",
+      "subsection": "",
+      "itemId": "sandwich-paneer-tikka-paneer-tikka-sandwich",
+      "itemName": "Paneer Tikka Sandwich",
+      "category": "Sandwich (Veg)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561441/foods/svlex86ouz8ecblm1tgq.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561441/foods/svlex86ouz8ecblm1tgq.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/049-paneer-tikka-sandwich.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Sandwich (Veg)",
+      "subsection": "",
+      "itemId": "sandwich-italian-veg-italian-veg-sandwich",
+      "itemName": "Italian Veg Sandwich",
+      "category": "Sandwich (Veg)",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561560/foods/i48ez8d2lpoydwzolqfn.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561560/foods/i48ez8d2lpoydwzolqfn.png"
+      ],
+      "localImage": "exports/rma-s-pizza-images/050-italian-veg-sandwich.png",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-mint-mojito-mint-mojito",
+      "itemName": "Mint Mojito",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561728/foods/j1dgla9rlxawjnwngpni.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561728/foods/j1dgla9rlxawjnwngpni.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/051-mint-mojito.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-blue-curacao-blue-curacao",
+      "itemName": "Blue Curacao",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561825/foods/fzrfi15jhou7ft5pzeiv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561825/foods/fzrfi15jhou7ft5pzeiv.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/052-blue-curacao.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-pine-apple-pine-apple",
+      "itemName": "Pine Apple milk shake",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561921/foods/h5rxsfy6ptwcs7u5ng54.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561921/foods/h5rxsfy6ptwcs7u5ng54.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/053-pine-apple-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-green-apple-green-apple",
+      "itemName": "Green Apple",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561931/foods/ibj3kjhwvzhak3xlqbyn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561931/foods/ibj3kjhwvzhak3xlqbyn.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/054-green-apple.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-black-currant-black-currant",
+      "itemName": "Black Currant",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561992/foods/jkvvhigfzahhzr1btr2n.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772561992/foods/jkvvhigfzahhzr1btr2n.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/055-black-currant.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-blue-berry-blue-berry",
+      "itemName": "Blue Berry",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562067/foods/pls0leqieh0jes90d4uk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562067/foods/pls0leqieh0jes90d4uk.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/056-blue-berry.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-strawberry-blast-strawberry-blast",
+      "itemName": "Strawberry Blast",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562141/foods/qspbrelunajiuqsdufxr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562141/foods/qspbrelunajiuqsdufxr.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/057-strawberry-blast.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Mocktails",
+      "subsection": "",
+      "itemId": "mocktail-mango-mango",
+      "itemName": "Mango",
+      "category": "Mocktails",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562198/foods/yl5qcg8pxdxppwv3jeiu.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562198/foods/yl5qcg8pxdxppwv3jeiu.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/058-mango.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-strawberry-strawberry-milk-shake",
+      "itemName": "Strawberry Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562014/foods/vurnjjmwwoeiac0gkilm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562014/foods/vurnjjmwwoeiac0gkilm.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/059-strawberry-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-oreo-oreo-milk-shake",
+      "itemName": "Oreo Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562070/foods/jdsadwcayrz2phaeb7h7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562070/foods/jdsadwcayrz2phaeb7h7.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/060-oreo-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-kitkat-kitkat-milk-shake",
+      "itemName": "Kitkat Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562184/foods/dakdyby85r1esyrfpy3k.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562184/foods/dakdyby85r1esyrfpy3k.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/061-kitkat-milk-shake.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-butterscotch-butterscotch-milk-shake",
+      "itemName": "Butterscotch Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562252/foods/nstralf1xnpd9ow4wwgn.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562252/foods/nstralf1xnpd9ow4wwgn.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/062-butterscotch-milk-shake.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-vanilla-vanilla-milk-shake",
+      "itemName": "Vanilla Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562298/foods/frexepxagqtsaiymrtii.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562298/foods/frexepxagqtsaiymrtii.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/063-vanilla-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-black-currant-black-currant-milk-shake",
+      "itemName": "Black Currant Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562316/foods/pdw2czsjgttjmp1ohtbm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562316/foods/pdw2czsjgttjmp1ohtbm.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/064-black-currant-milk-shake.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-cold-coffee-cold-coffee",
+      "itemName": "Cold Coffee",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562429/foods/mrwvb4vlntvbvs5f2kpv.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562429/foods/mrwvb4vlntvbvs5f2kpv.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/065-cold-coffee.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-american-nuts-american-nuts-milk-shake",
+      "itemName": "American Nuts Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562478/foods/yb6glmxsahpnyentgdm4.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562478/foods/yb6glmxsahpnyentgdm4.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/066-american-nuts-milk-shake.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Milk Shakes",
+      "subsection": "",
+      "itemId": "shake-chocolate-chocolate-milk-shake",
+      "itemName": "Chocolate Milk Shake",
+      "category": "Milk Shakes",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562562/foods/qbronqngzvtpbspwcurd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562562/foods/qbronqngzvtpbspwcurd.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/067-chocolate-milk-shake.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-veg-classic-fries-coke-veg-classic-pizza-small-french-fries-coke",
+      "itemName": "Veg Classic Pizza (Small) + French Fries + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562566/foods/sppoka0gxs9jsgu5zkan.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772562566/foods/sppoka0gxs9jsgu5zkan.webp"
+      ],
+      "localImage": "exports/rma-s-pizza-images/068-veg-classic-pizza-small-french-fries-coke.webp",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-chicken-classic-popcorn-coke-chicken-classic-pizza-small-chicken-popcorn-coke",
+      "itemName": "Chicken Classic Pizza (Small) + Chicken Popcorn + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563135/foods/wwhkvkqjhinv9see6v0v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563135/foods/wwhkvkqjhinv9see6v0v.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/069-chicken-classic-pizza-small-chicken-popcorn-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-veg-classic-nuggets-coke-veg-classic-pizza-small-veg-nuggets-coke",
+      "itemName": "Veg Classic Pizza (Small) + Veg Nuggets + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563201/foods/czr3pnrqo37oqxytzb1u.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563201/foods/czr3pnrqo37oqxytzb1u.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/070-veg-classic-pizza-small-veg-nuggets-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-chicken-classic-chicken-nuggets-coke-chicken-classic-pizza-small-chicken-nuggets-coke",
+      "itemName": "Chicken Classic Pizza (Small) + Chicken Nuggets + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563394/foods/fgsclgblrc8hqtamhldv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563394/foods/fgsclgblrc8hqtamhldv.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/071-chicken-classic-pizza-small-chicken-nuggets-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-veg-surprise-fries-coke-veg-surprise-burger-french-fries-coke",
+      "itemName": "Veg Surprise Burger + French Fries + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563463/foods/r5aobajbeofdmemjtf4k.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563463/foods/r5aobajbeofdmemjtf4k.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/072-veg-surprise-burger-french-fries-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-veg-surprise-veg-nuggets-coke-veg-surprise-burger-veg-nuggets-coke",
+      "itemName": "Veg Surprise Burger + Veg Nuggets + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563565/foods/d5giwibyjspczhsgpry6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563565/foods/d5giwibyjspczhsgpry6.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/073-veg-surprise-burger-veg-nuggets-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-cheese-corn-paneer-balls-coke-cheese-corn-burger-paneer-balls-coke",
+      "itemName": "Cheese Corn Burger + Paneer Balls + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563648/foods/qj6ouxf6ud46ntp26ens.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563648/foods/qj6ouxf6ud46ntp26ens.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/074-cheese-corn-burger-paneer-balls-coke.jpg",
+      "downloadStatus": "downloaded"
+    },
+    {
+      "section": "Combos",
+      "subsection": "",
+      "itemId": "combo-fried-chicken-burger-popcorn-coke-fried-chicken-burger-chicken-pop-corn-coke",
+      "itemName": "Fried Chicken Burger + Chicken Pop Corn + Coke",
+      "category": "Combos",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563712/foods/gxu09clatccr6djxngty.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772563712/foods/gxu09clatccr6djxngty.jpg"
+      ],
+      "localImage": "exports/rma-s-pizza-images/075-fried-chicken-burger-chicken-pop-corn-coke.jpg",
+      "downloadStatus": "downloaded"
+    }
+  ],
+  "downloadedAt": "2026-04-02T13:49:51.060Z",
+  "downloadFolder": "exports/rma-s-pizza-images",
+  "uniqueRemoteImages": 75,
+  "downloadedCount": 75,
+  "failedCount": 0
+}

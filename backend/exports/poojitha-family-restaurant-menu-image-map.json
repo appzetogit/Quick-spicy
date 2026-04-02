@@ -1,0 +1,1430 @@
+{
+  "restaurant": {
+    "id": "69a134943ad1db3799635710",
+    "slug": "poojitha-family-restaurant",
+    "name": "Poojitha Family Restaurant"
+  },
+  "exportedAt": "2026-04-02T13:49:03.134Z",
+  "totalItems": 129,
+  "items": [
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298729-1",
+      "itemName": "Chicken Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772519055/foods/gymia94sewuvucwdaz6c.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772519055/foods/gymia94sewuvucwdaz6c.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-4",
+      "itemName": "Wings Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523604/foods/h1cwo2w0ho0utm6wwjqp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523604/foods/h1cwo2w0ho0utm6wwjqp.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-2",
+      "itemName": "S/P Chicken Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772524720/foods/tixwwydmwltgcvhj1eu0.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772524720/foods/tixwwydmwltgcvhj1eu0.webp"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-5",
+      "itemName": "Rambo Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527670/foods/dkf8gy8oiwtusma9ulnf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527670/foods/dkf8gy8oiwtusma9ulnf.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-3",
+      "itemName": "Poojitha S/P Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527431/foods/prklv7gyismzshas98c0.avif",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527431/foods/prklv7gyismzshas98c0.avif"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-6",
+      "itemName": "Natu Kodi Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190235/appzeto/restaurant/menu-items/gwbix189c6gwye0tzpzy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772190235/appzeto/restaurant/menu-items/gwbix189c6gwye0tzpzy.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-7",
+      "itemName": "Kamju Biryani",
+      "category": "Chicken Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811566/foods/ryk4wgjodmuxombgn2o5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811566/foods/ryk4wgjodmuxombgn2o5.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-8",
+      "itemName": "muttoon biryani",
+      "category": "Mutton Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527973/foods/nzgrms69m6ubzla7ropn.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527973/foods/nzgrms69m6ubzla7ropn.jpg"
+      ]
+    },
+    {
+      "section": "Fish Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-12",
+      "itemName": "Prawns Biryani",
+      "category": "Fish Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772521409/foods/vj0nlx9kcr0ltqizljvt.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772521409/foods/vj0nlx9kcr0ltqizljvt.png"
+      ]
+    },
+    {
+      "section": "Fish Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-13",
+      "itemName": "Poojitha S/P Prawns Biryani",
+      "category": "Fish Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528427/foods/fxffqkkbtm2nn4mvhnwl.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528427/foods/fxffqkkbtm2nn4mvhnwl.jpg"
+      ]
+    },
+    {
+      "section": "Fish Biryanis",
+      "subsection": "",
+      "itemId": "item-1772446298730-11",
+      "itemName": "Fish Biryani",
+      "category": "Fish Biryanis",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439598/appzeto/restaurant/menu-items/u79sbvhhbaej0jocbpnd.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772439598/appzeto/restaurant/menu-items/u79sbvhhbaej0jocbpnd.webp"
+      ]
+    },
+    {
+      "section": "Egg Biryani",
+      "subsection": "",
+      "itemId": "item-1772446298730-14",
+      "itemName": "Egg Biryani",
+      "category": "Egg Biryani",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528704/foods/wxu3u2c4iwnxgz4jlgju.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528704/foods/wxu3u2c4iwnxgz4jlgju.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-23",
+      "itemName": "Chicken Lollypop [5P]",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525743/foods/krhwb0rupxgocdxuc9on.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525743/foods/krhwb0rupxgocdxuc9on.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-32",
+      "itemName": "Chicken Fry",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525951/foods/u1wt3kmnykrpq0e34mca.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525951/foods/u1wt3kmnykrpq0e34mca.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-33",
+      "itemName": "Chicken Roast",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772526129/foods/gvtermronadmcui5n5ev.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772526129/foods/gvtermronadmcui5n5ev.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-15",
+      "itemName": "Chicken 65",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211339/appzeto/restaurant/menu-items/cfmd5qqs57qey30drec0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211339/appzeto/restaurant/menu-items/cfmd5qqs57qey30drec0.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-17",
+      "itemName": "Ginger Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772173860/appzeto/restaurant/menu-items/d8rloatzbww0gckjj5mz.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-20",
+      "itemName": "Lemon Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772212008/appzeto/restaurant/menu-items/w2uss0onw9qzz7e7wjc4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772212008/appzeto/restaurant/menu-items/w2uss0onw9qzz7e7wjc4.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-21",
+      "itemName": "RR Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465126/foods/bsenvcjadtyoilwnlykh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465126/foods/bsenvcjadtyoilwnlykh.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-22",
+      "itemName": "Chicken Majestic",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211629/appzeto/restaurant/menu-items/bh36nuaexqnptl6hfmnm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211629/appzeto/restaurant/menu-items/bh36nuaexqnptl6hfmnm.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-27",
+      "itemName": "Golden Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211881/appzeto/restaurant/menu-items/mepwxmc3wodl4z5hdusy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772211881/appzeto/restaurant/menu-items/mepwxmc3wodl4z5hdusy.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-25",
+      "itemName": "Banjari Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528834/foods/hqwqzwpdplnrdgt8i1db.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528834/foods/hqwqzwpdplnrdgt8i1db.webp"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-28",
+      "itemName": "Garlic Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465181/foods/vtyz8fx3dswcbnbgyhju.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465181/foods/vtyz8fx3dswcbnbgyhju.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-29",
+      "itemName": "Pepper Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772175949/appzeto/restaurant/menu-items/d4hlsqz7qfsczx5blavv.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-30",
+      "itemName": "Kamju Fry",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465216/foods/rwqsv1yyxtkgkdbrvvju.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772465216/foods/rwqsv1yyxtkgkdbrvvju.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-31",
+      "itemName": "Kamju Roast",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529166/foods/tniknxish49ovgubkmef.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529166/foods/tniknxish49ovgubkmef.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-36",
+      "itemName": "Vega Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181963/appzeto/restaurant/menu-items/riusmdf0zbuzowusyuqp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772181963/appzeto/restaurant/menu-items/riusmdf0zbuzowusyuqp.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-35",
+      "itemName": "Hongkong Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529340/foods/df3mksvv3haj4kktawru.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529340/foods/df3mksvv3haj4kktawru.webp"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-18",
+      "itemName": "Chicken 555",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529441/foods/jto1c75yo9xcitijwcm6.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529441/foods/jto1c75yo9xcitijwcm6.webp"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-16",
+      "itemName": "Chilly Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525536/foods/mey74jpmp2wuwkveadje.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525536/foods/mey74jpmp2wuwkveadje.webp"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-19",
+      "itemName": "Chicken 85",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525621/foods/ienn7v3xvpejpknc0y48.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525621/foods/ienn7v3xvpejpknc0y48.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-24",
+      "itemName": "Chicken Manchuria",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525841/foods/qq1ixzdmeadwbrjjvroj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772525841/foods/qq1ixzdmeadwbrjjvroj.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-34",
+      "itemName": "Kaju Chicken",
+      "category": "Chicken Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527976/foods/eaydqlm3oobbmdleql1c.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772527976/foods/eaydqlm3oobbmdleql1c.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-37",
+      "itemName": "Mutto Fry",
+      "category": "Mutton Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772526852/foods/a60d7gocjbobum6dsbi0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772526852/foods/a60d7gocjbobum6dsbi0.jpg"
+      ]
+    },
+    {
+      "section": "Fish Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-44",
+      "itemName": "Apollo Fish",
+      "category": "Fish Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530116/foods/h7kzdzhicgiygiozeqwc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530116/foods/h7kzdzhicgiygiozeqwc.jpg"
+      ]
+    },
+    {
+      "section": "Fish Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-42",
+      "itemName": "Chilly Fish",
+      "category": "Fish Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530238/foods/ufu9yudx5jbjl8ifgu5v.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530238/foods/ufu9yudx5jbjl8ifgu5v.jpg"
+      ]
+    },
+    {
+      "section": "Fish Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-45",
+      "itemName": "Fryd Fish",
+      "category": "Fish Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530325/foods/k5dhisnszm69yvewomsb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530325/foods/k5dhisnszm69yvewomsb.webp"
+      ]
+    },
+    {
+      "section": "Fish Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-41",
+      "itemName": "Fish Fry",
+      "category": "Fish Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772177646/appzeto/restaurant/menu-items/aolcw9wxriex1n79g6ke.jpg"
+      ]
+    },
+    {
+      "section": "Fish Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-43",
+      "itemName": "Fish Roast",
+      "category": "Fish Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529991/foods/bclwlecg4svdk4dy5tci.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529991/foods/bclwlecg4svdk4dy5tci.webp"
+      ]
+    },
+    {
+      "section": "Prawns Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-48",
+      "itemName": "Chilly Prawns",
+      "category": "Prawns Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530515/foods/huinjhmh6f2cdqq6nkrt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530515/foods/huinjhmh6f2cdqq6nkrt.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-47",
+      "itemName": "Loose Prawns",
+      "category": "Prawns Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772521982/foods/xfawykd5shhd5paoyfew.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772521982/foods/xfawykd5shhd5paoyfew.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-51",
+      "itemName": "Prawns Roast",
+      "category": "Prawns Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522129/foods/ij2hdvlhmpo3prmmych7.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522129/foods/ij2hdvlhmpo3prmmych7.png"
+      ]
+    },
+    {
+      "section": "Prawns Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-46",
+      "itemName": "Prawns Fry",
+      "category": "Prawns Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811797/foods/kty3vqpfi22lzcnyw7wb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811797/foods/kty3vqpfi22lzcnyw7wb.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-52",
+      "itemName": "Veg Biryani",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530979/foods/ddqhzimmqj5yqew6zb2f.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772530979/foods/ddqhzimmqj5yqew6zb2f.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-57",
+      "itemName": "Veg Fried Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531612/foods/pb7cn2tsvswex6ycxyth.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531612/foods/pb7cn2tsvswex6ycxyth.webp"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-58",
+      "itemName": "Egg Fried Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531802/foods/aecuw6vrln6cxx3gnw8r.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531802/foods/aecuw6vrln6cxx3gnw8r.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-59",
+      "itemName": "Zeera Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531985/foods/jobuc0w7yqpfugacpify.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772531985/foods/jobuc0w7yqpfugacpify.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-60",
+      "itemName": "Chicken Fried Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532067/foods/tzy3g6b4cvkuhmamcaoj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532067/foods/tzy3g6b4cvkuhmamcaoj.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-62",
+      "itemName": "Panner Fried Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532273/foods/vvjwgt0da9hpkxou4lgj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532273/foods/vvjwgt0da9hpkxou4lgj.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-53",
+      "itemName": "Mushroom Biryani",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194239/appzeto/restaurant/menu-items/h9kt2upsnkr29ishmkmf.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194239/appzeto/restaurant/menu-items/h9kt2upsnkr29ishmkmf.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-54",
+      "itemName": "Kaju Biryani",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528174/foods/b6kibnpbgd6mqkj8wwsv.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772528174/foods/b6kibnpbgd6mqkj8wwsv.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-55",
+      "itemName": "Panner Biryani",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522326/foods/ylsteyo4ichzzd4oy9gb.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522326/foods/ylsteyo4ichzzd4oy9gb.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Biryanis & Rice",
+      "subsection": "",
+      "itemId": "item-1772446298730-61",
+      "itemName": "S/P Chicken Fried Rice",
+      "category": "Vegetable Biryanis & Rice",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532183/foods/vetmrbyc9omrqos6fcxy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532183/foods/vetmrbyc9omrqos6fcxy.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-73",
+      "itemName": "Fried Vegetables",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529627/foods/gv0yv8a2ryaknxbm4rb4.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529627/foods/gv0yv8a2ryaknxbm4rb4.webp"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-63",
+      "itemName": "Veg Manchuria",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772220630/appzeto/restaurant/menu-items/hwrcav7tn2ziulbdzmfm.webp"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-64",
+      "itemName": "Veg Bullet",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532640/foods/ew7u54oxcyqeqmgcvs2s.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532640/foods/ew7u54oxcyqeqmgcvs2s.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-65",
+      "itemName": "Gobi Manchuria",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532787/foods/xbt9dk1sku0evzw1iedi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532787/foods/xbt9dk1sku0evzw1iedi.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-66",
+      "itemName": "Gobi 65",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532863/foods/djezhqi4zrhtt7i81kv0.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532863/foods/djezhqi4zrhtt7i81kv0.webp"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-71",
+      "itemName": "Panner Majestic",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534919/foods/rkocpsn172ecmj1ag3aa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534919/foods/rkocpsn172ecmj1ag3aa.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-72",
+      "itemName": "Kaju Fry",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535044/foods/orhsbwglzilrz5umalv2.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535044/foods/orhsbwglzilrz5umalv2.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-74",
+      "itemName": "Veg Salad",
+      "category": "Vegetable Snacks",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/d/d9/The_Main_Course.JPG",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/d/d9/The_Main_Course.JPG"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-67",
+      "itemName": "Poojitha Vegetable",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529508/foods/xxmzflvx18ska9q2iec7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529508/foods/xxmzflvx18ska9q2iec7.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-68",
+      "itemName": "Panner 65",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772221166/appzeto/restaurant/menu-items/zplbic3sesttxv8awe4g.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772221166/appzeto/restaurant/menu-items/zplbic3sesttxv8awe4g.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-70",
+      "itemName": "Chilly Panner",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534851/foods/hiaaag8p4dy6o5eacm5s.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772534851/foods/hiaaag8p4dy6o5eacm5s.jpg"
+      ]
+    },
+    {
+      "section": "Vegetable Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-69",
+      "itemName": "Panner Manchuria",
+      "category": "Vegetable Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532968/foods/hhlvgvdsicut7apg1jd6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772532968/foods/hhlvgvdsicut7apg1jd6.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-77",
+      "itemName": "Mushroom Manchuria",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522425/foods/v8y7wvsiw3hnyc0uitkp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522425/foods/v8y7wvsiw3hnyc0uitkp.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-78",
+      "itemName": "Ginger Mushroom",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522472/foods/r1dbovv2oogksd3mqy9e.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522472/foods/r1dbovv2oogksd3mqy9e.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-79",
+      "itemName": "Mushroom Roast",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522515/foods/zavkqknvwaz8kubuiweu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522515/foods/zavkqknvwaz8kubuiweu.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-81",
+      "itemName": "Mushroom Fry",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535623/foods/abvj5enyodjgwy3pgh3b.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535623/foods/abvj5enyodjgwy3pgh3b.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-75",
+      "itemName": "Chilly Mushroom",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772221377/appzeto/restaurant/menu-items/gc7lkwcm5du4lcy5g3ji.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772221377/appzeto/restaurant/menu-items/gc7lkwcm5du4lcy5g3ji.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-76",
+      "itemName": "Mushroom 65",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286342/appzeto/restaurant/menu-items/wzpjmsfrsbqmvrlfqt8d.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772286342/appzeto/restaurant/menu-items/wzpjmsfrsbqmvrlfqt8d.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-80",
+      "itemName": "Pepper Mushroom Dry",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535509/foods/pbhguztsqeu6h38xjkgm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535509/foods/pbhguztsqeu6h38xjkgm.jpg"
+      ]
+    },
+    {
+      "section": "Mushroom Snacks",
+      "subsection": "",
+      "itemId": "item-1772446298730-82",
+      "itemName": "Mushroom 85",
+      "category": "Mushroom Snacks",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535301/foods/ym65t12bz9avxpttl2ns.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535301/foods/ym65t12bz9avxpttl2ns.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-87",
+      "itemName": "Andhra Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522662/foods/c9va38jyc5a3nndyzyrt.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522662/foods/c9va38jyc5a3nndyzyrt.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-89",
+      "itemName": "Kadai Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522736/foods/pyloqqd6dqwngrda4xzg.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522736/foods/pyloqqd6dqwngrda4xzg.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-100",
+      "itemName": "Chicken Chintadu Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522885/foods/lilqdu7tc5rkqhfef6m3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522885/foods/lilqdu7tc5rkqhfef6m3.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-83",
+      "itemName": "Chicken Curry (Bones)",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772189051/appzeto/restaurant/menu-items/j66pgcirbsxo180byfs6.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-84",
+      "itemName": "Chicken Curry (Boneless)",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535939/foods/ckjsymyzo0un5lxjl9ns.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772535939/foods/ckjsymyzo0un5lxjl9ns.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-85",
+      "itemName": "Chicken Masala (Bones)",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536029/foods/cnuqxrshd7w1onvnfsmr.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536029/foods/cnuqxrshd7w1onvnfsmr.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-86",
+      "itemName": "Chicken Masala (Boneless)",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536188/foods/abm6nvfcvy6qestf94vb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536188/foods/abm6nvfcvy6qestf94vb.webp"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-90",
+      "itemName": "Punjabi Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536255/foods/ls1cqrwrk8zfwgnv7tq4.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536255/foods/ls1cqrwrk8zfwgnv7tq4.webp"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-91",
+      "itemName": "Kaju Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536362/foods/qiegdzof6jttk44ujhts.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536362/foods/qiegdzof6jttk44ujhts.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-96",
+      "itemName": "Ginger Chicken Wet Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536550/foods/mjr2qcqtspn8cmbednis.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536550/foods/mjr2qcqtspn8cmbednis.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-97",
+      "itemName": "Chicken Kolapuri",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536618/foods/zkfhrkciby6wilecb3sh.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536618/foods/zkfhrkciby6wilecb3sh.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-98",
+      "itemName": "Royal Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/60/The_Royal_Bengali_Chicken_Curry.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/6/60/The_Royal_Bengali_Chicken_Curry.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-99",
+      "itemName": "Gongura Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536730/foods/asjla8fo9xrd1j1nkvye.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536730/foods/asjla8fo9xrd1j1nkvye.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-101",
+      "itemName": "Methi Chicken Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772193774/appzeto/restaurant/menu-items/ujqy0jgxse06t1iblpuk.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-92",
+      "itemName": "Chicken Afghani Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536434/foods/yba1gm2nw3wmhjcgagvk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772536434/foods/yba1gm2nw3wmhjcgagvk.jpg"
+      ]
+    },
+    {
+      "section": "Chicken Non-Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298730-93",
+      "itemName": "Chicken Moglai Curry",
+      "category": "Chicken Non-Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522783/foods/y0cq3tonhoqqynx20krb.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522783/foods/y0cq3tonhoqqynx20krb.webp"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-106",
+      "itemName": "Kadai Mutton",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194324/appzeto/restaurant/menu-items/hut4eebyzocrqboczdoi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772194324/appzeto/restaurant/menu-items/hut4eebyzocrqboczdoi.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-107",
+      "itemName": "Mutton Rogan Juice",
+      "category": "Mutton Curries",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/f/fe/Odia_Mutton_Curry_%28Mansha_Tarkari%29.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/f/fe/Odia_Mutton_Curry_%28Mansha_Tarkari%29.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-108",
+      "itemName": "Kaju Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522980/foods/saoeneb4gjolvulv1zpp.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772522980/foods/saoeneb4gjolvulv1zpp.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-109",
+      "itemName": "Butter Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523017/foods/svogweujem6ze7fphjoc.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523017/foods/svogweujem6ze7fphjoc.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-111",
+      "itemName": "Mutton Masala",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523100/foods/ygomtt0mlnvjk8hugfuu.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523100/foods/ygomtt0mlnvjk8hugfuu.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-112",
+      "itemName": "Methi Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523152/foods/nji5vmwyd52fuffw9leo.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523152/foods/nji5vmwyd52fuffw9leo.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-113",
+      "itemName": "Gongura Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523192/foods/hsyrbcclaiixolaxtpqz.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523192/foods/hsyrbcclaiixolaxtpqz.jpg"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-105",
+      "itemName": "Andhra Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529010/foods/ajish3loibydplstl8sk.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529010/foods/ajish3loibydplstl8sk.webp"
+      ]
+    },
+    {
+      "section": "Mutton Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-104",
+      "itemName": "Mutton Curry",
+      "category": "Mutton Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529085/foods/cdl8pititvzbao7vvysy.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772529085/foods/cdl8pititvzbao7vvysy.jpg"
+      ]
+    },
+    {
+      "section": "Fish Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-114",
+      "itemName": "Fish Curry",
+      "category": "Fish Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812316/foods/to9khzf9xse8ukmvjqbd.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812316/foods/to9khzf9xse8ukmvjqbd.jpg"
+      ]
+    },
+    {
+      "section": "Fish Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-115",
+      "itemName": "Nellore Fish Curry",
+      "category": "Fish Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812421/foods/iugaw8yugsmibmd6fiq6.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812421/foods/iugaw8yugsmibmd6fiq6.jpg"
+      ]
+    },
+    {
+      "section": "Fish Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-116",
+      "itemName": "Kabali Fish Curry",
+      "category": "Fish Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523249/foods/vbrm8xto4mbm2zziixb5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523249/foods/vbrm8xto4mbm2zziixb5.jpg"
+      ]
+    },
+    {
+      "section": "Fish Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-117",
+      "itemName": "Butter Fish Curry",
+      "category": "Fish Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523292/foods/zbckupxaw4gqdkx77nii.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523292/foods/zbckupxaw4gqdkx77nii.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-123",
+      "itemName": "Poojitha S/P Curry",
+      "category": "Prawns Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263760/appzeto/restaurant/menu-items/biwtub2xrremlqjxqmco.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263760/appzeto/restaurant/menu-items/biwtub2xrremlqjxqmco.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-120",
+      "itemName": "Andhra Prawns Curry",
+      "category": "Prawns Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523401/foods/bawfbhaf1iaech0v4mje.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523401/foods/bawfbhaf1iaech0v4mje.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-121",
+      "itemName": "Kadai Prawns Curry",
+      "category": "Prawns Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523438/foods/vrpmpinkjztrelbtdg6e.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523438/foods/vrpmpinkjztrelbtdg6e.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-119",
+      "itemName": "Prawns Curry",
+      "category": "Prawns Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812793/foods/hmzysatybhlx89pto3y4.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772812793/foods/hmzysatybhlx89pto3y4.jpg"
+      ]
+    },
+    {
+      "section": "Prawns Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-122",
+      "itemName": "Butter Prawns Curry",
+      "category": "Prawns Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523471/foods/ru2zvfxgeidtl9n6ycz3.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523471/foods/ru2zvfxgeidtl9n6ycz3.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-124",
+      "itemName": "Vegetable Curry",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258078/appzeto/restaurant/menu-items/bqz6z23pgg0qrzy0okx5.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-126",
+      "itemName": "Kaju Tomato Curry",
+      "category": "Veg Curries",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Kadai_Paneer-Delhi-12.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/7/7d/Kadai_Paneer-Delhi-12.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-127",
+      "itemName": "Palak Panner",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258437/appzeto/restaurant/menu-items/hobeakjykdc1tbmsipqi.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258437/appzeto/restaurant/menu-items/hobeakjykdc1tbmsipqi.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-128",
+      "itemName": "Panner Butter Masala",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258215/appzeto/restaurant/menu-items/f0fj4cumh66zamjqybxm.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772258215/appzeto/restaurant/menu-items/f0fj4cumh66zamjqybxm.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-129",
+      "itemName": "Methi Chaman",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200611/appzeto/restaurant/menu-items/mw2xpsawm4qkrvmqicu7.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200611/appzeto/restaurant/menu-items/mw2xpsawm4qkrvmqicu7.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-130",
+      "itemName": "Mushroom Curry",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772200786/appzeto/restaurant/menu-items/xxuofwtwejh6oryb0g1q.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-132",
+      "itemName": "Dal Tadka",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226540/appzeto/restaurant/menu-items/pm6fpkrehih7pwhgpt88.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1771226540/appzeto/restaurant/menu-items/pm6fpkrehih7pwhgpt88.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-133",
+      "itemName": "Egg Curry",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263572/appzeto/restaurant/menu-items/tme1nrkdhi9uhltiaham.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772263572/appzeto/restaurant/menu-items/tme1nrkdhi9uhltiaham.jpg"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-125",
+      "itemName": "Tomato Curry",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523669/foods/zkjzefskw0m2blwiavnl.png",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523669/foods/zkjzefskw0m2blwiavnl.png"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-131",
+      "itemName": "Veg Kolapuri",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523733/foods/tohfvqxac4x0kioq9rxn.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523733/foods/tohfvqxac4x0kioq9rxn.webp"
+      ]
+    },
+    {
+      "section": "Veg Curries",
+      "subsection": "",
+      "itemId": "item-1772446298731-134",
+      "itemName": "Egg Burji",
+      "category": "Veg Curries",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523777/foods/pv3t3oyn3hurmxddjky0.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523777/foods/pv3t3oyn3hurmxddjky0.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772446298731-137",
+      "itemName": "Tangdi Kebab",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219532/appzeto/restaurant/menu-items/hj0zyjnjnepby69u2rqu.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772219532/appzeto/restaurant/menu-items/hj0zyjnjnepby69u2rqu.webp"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772446298731-138",
+      "itemName": "Chicken Tikka",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192440/appzeto/restaurant/menu-items/uddddk0yxh7lkdbbr20c.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772192440/appzeto/restaurant/menu-items/uddddk0yxh7lkdbbr20c.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772446298731-139",
+      "itemName": "Kalmi Kebab",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523849/foods/oxta7z5gpzixbzfhphrj.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772523849/foods/oxta7z5gpzixbzfhphrj.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772446298731-135",
+      "itemName": "Tandoori Chicken (Full)",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448057/appzeto/restaurant/menu-items/bpukdcwuk50bd9n7w4wa.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448057/appzeto/restaurant/menu-items/bpukdcwuk50bd9n7w4wa.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Items",
+      "subsection": "",
+      "itemId": "item-1772446298731-136",
+      "itemName": "Tandoori Chicken (Half)",
+      "category": "Tandoori Items",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811397/foods/rh2llsmgsuozyj0kdhrm.webp",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772811397/foods/rh2llsmgsuozyj0kdhrm.webp"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-140",
+      "itemName": "Roti",
+      "category": "Tandoori Roti",
+      "image": "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg",
+      "images": [
+        "https://res.cloudinary.com/dbubwu3lf/image/upload/v1772448529/appzeto/restaurant/menu-items/gyptpxk4apbmltlhuwwk.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-141",
+      "itemName": "Butter Roti",
+      "category": "Tandoori Roti",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/67/Butter-tandoori-roti.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/6/67/Butter-tandoori-roti.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-142",
+      "itemName": "Pulka",
+      "category": "Tandoori Roti",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/a/a1/Chapati_1.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/a/a1/Chapati_1.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-143",
+      "itemName": "Butter Nan",
+      "category": "Tandoori Roti",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/9/98/Butter_Naan_Flatbread_from_North_India.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/9/98/Butter_Naan_Flatbread_from_North_India.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-144",
+      "itemName": "Tandoori Parota",
+      "category": "Tandoori Roti",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/0/0b/Paratha_is_a_dough_fried_flatbread_native_to_India_and_Pakistan.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/0/0b/Paratha_is_a_dough_fried_flatbread_native_to_India_and_Pakistan.jpg"
+      ]
+    },
+    {
+      "section": "Tandoori Roti",
+      "subsection": "",
+      "itemId": "item-1772446298731-145",
+      "itemName": "Masala Kulcha",
+      "category": "Tandoori Roti",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/8/85/Kulcha%2C_Indian_stuffed_bread.jpg",
+      "images": [
+        "https://upload.wikimedia.org/wikipedia/commons/8/85/Kulcha%2C_Indian_stuffed_bread.jpg"
+      ]
+    }
+  ]
+}
