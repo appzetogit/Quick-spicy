@@ -1,6 +1,9 @@
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import Delivery from '../models/Delivery.js';
+import DeliveryWallet from '../models/DeliveryWallet.js';
+import DeliveryWithdrawalRequest from '../models/DeliveryWithdrawalRequest.js';
+import DeliverySupportTicket from '../../admin/models/DeliverySupportTicket.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
@@ -203,5 +206,44 @@ export const reverify = asyncHandler(async (req, res) => {
   } catch (error) {
     logger.error(`Error reverifying delivery partner: ${error.message}`);
     return errorResponse(res, 500, 'Failed to resubmit for verification');
+  }
+});
+
+/**
+ * Delete Delivery Partner Account
+ * DELETE /api/delivery/profile
+ */
+export const deleteAccount = asyncHandler(async (req, res) => {
+  try {
+    const deliveryId = req.delivery?._id;
+    const delivery = await Delivery.findById(deliveryId);
+
+    if (!delivery) {
+      return errorResponse(res, 404, 'Delivery partner not found');
+    }
+
+    await Promise.all([
+      DeliveryWallet.deleteOne({ deliveryId }),
+      DeliveryWithdrawalRequest.deleteMany({ deliveryId }),
+      DeliverySupportTicket.deleteMany({ deliveryId }),
+      Delivery.findByIdAndDelete(deliveryId)
+    ]);
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict'
+    });
+
+    logger.info('Delivery account deleted successfully', {
+      deliveryMongoId: deliveryId?.toString?.() || String(deliveryId),
+      deliveryId: delivery.deliveryId,
+      phone: delivery.phone
+    });
+
+    return successResponse(res, 200, 'Delivery account deleted successfully');
+  } catch (error) {
+    logger.error(`Error deleting delivery account: ${error.message}`);
+    return errorResponse(res, 500, 'Failed to delete delivery account');
   }
 });

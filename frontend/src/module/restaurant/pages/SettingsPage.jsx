@@ -18,11 +18,15 @@ import {
   CreditCard,
   FileText,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  Trash2
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import BottomNavbar from "../components/BottomNavbar"
 import MenuOverlay from "../components/MenuOverlay"
+import { restaurantAPI } from "@/lib/api"
+import { clearModuleAuth } from "@/lib/utils/auth"
+import { firebaseAuth } from "@/lib/firebase"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -33,6 +37,7 @@ export default function SettingsPage() {
   const [showMenu, setShowMenu] = useState(false)
   const [notificationsEnabled, setNotificationsEnabled] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   // Lenis smooth scrolling
   useEffect(() => {
@@ -53,6 +58,46 @@ export default function SettingsPage() {
       lenis.destroy()
     }
   }, [])
+
+  const cleanupRestaurantSession = async () => {
+    try {
+      const { signOut } = await import("firebase/auth")
+      if (firebaseAuth.currentUser) {
+        await signOut(firebaseAuth)
+      }
+    } catch (firebaseError) {
+      debugWarn("Firebase sign-out failed during restaurant cleanup:", firebaseError)
+    }
+
+    clearModuleAuth("restaurant")
+    localStorage.removeItem("restaurant_onboarding")
+    localStorage.removeItem("restaurant_accessToken")
+    localStorage.removeItem("restaurant_authenticated")
+    localStorage.removeItem("restaurant_user")
+    sessionStorage.removeItem("restaurantAuthData")
+    window.dispatchEvent(new Event("restaurantAuthChanged"))
+  }
+
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount) return
+
+    const confirmed = window.confirm(
+      "Delete your restaurant account permanently? This action cannot be undone."
+    )
+    if (!confirmed) return
+
+    setIsDeletingAccount(true)
+
+    try {
+      await restaurantAPI.deleteAccount()
+      await cleanupRestaurantSession()
+      navigate("/restaurant/welcome", { replace: true })
+    } catch (error) {
+      debugError("Error deleting restaurant account:", error)
+      alert(`Failed to delete account: ${error.response?.data?.message || error.message || "Please try again."}`)
+      setIsDeletingAccount(false)
+    }
+  }
 
   // Settings sections
   const settingsSections = [
@@ -77,6 +122,7 @@ export default function SettingsPage() {
       title: "Support & Information",
       items: [
         { id: "conversation", label: "Conversation", icon: MessageSquare, route: "/restaurant/conversation" },
+        { id: "support", label: "Support", icon: MessageSquare, route: "/restaurant/support" },
         { id: "terms", label: "Terms & Conditions", icon: FileText, route: "/restaurant/terms" },
         { id: "privacy-policy", label: "Privacy Policy", icon: Shield, route: "/restaurant/privacy" },
         { id: "about", label: "About", icon: Info, route: "/restaurant/about" },
@@ -90,6 +136,13 @@ export default function SettingsPage() {
           debugLog("Logout clicked")
           // Add logout logic here
         } },
+        {
+          id: "delete-account",
+          label: isDeletingAccount ? "Deleting account..." : "Delete account",
+          icon: Trash2,
+          isDestructive: true,
+          action: handleDeleteAccount
+        },
       ]
     }
   ]

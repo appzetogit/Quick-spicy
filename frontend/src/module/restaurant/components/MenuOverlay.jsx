@@ -61,6 +61,7 @@ export default function MenuOverlay({ showMenu, setShowMenu }) {
       { id: 14, name: "Wallet Method", icon: Settings, route: "/restaurant/wallet" },
       { id: 16, name: "Settings", icon: Settings, route: "/restaurant/settings" },
       { id: 17, name: "Conversation", icon: MessageCircle, route: "/restaurant/conversation" },
+      { id: 171, name: "Support", icon: MessageSquare, route: "/restaurant/support" },
       { id: 18, name: "Privacy Policy", icon: Shield, route: "/restaurant/privacy" },
       { id: 19, name: "Terms & Condition", icon: CheckSquare, route: "/restaurant/terms" },
     ]

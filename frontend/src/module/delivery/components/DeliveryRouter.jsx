@@ -21,6 +21,7 @@ const Settings = lazy(() => import("../pages/Settings"))
 const Conversation = lazy(() => import("../pages/Conversation"))
 const TermsAndConditions = lazy(() => import("../pages/TermsAndConditions"))
 const PrivacyPolicy = lazy(() => import("../pages/PrivacyPolicy"))
+const Support = lazy(() => import("../pages/Support"))
 const Payout = lazy(() => import("../pages/Payout"))
 const DeductionStatement = lazy(() => import("../pages/DeductionStatement"))
 const TipsStatement = lazy(() => import("../pages/TipsStatement"))
@@ -376,6 +377,16 @@ export default function DeliveryRouter() {
             </ProtectedRoute>
           }
           path="/profile/privacy"
+        />
+        <Route
+          element={
+            <ProtectedRoute>
+              <DeliveryLayout>
+                <Support />
+              </DeliveryLayout>
+            </ProtectedRoute>
+          }
+          path="/profile/support"
         />
         <Route
           element={

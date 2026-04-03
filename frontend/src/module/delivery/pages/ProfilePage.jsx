@@ -19,6 +19,7 @@ import {
   IndianRupee,
   Sparkles,
   LogOut,
+  Trash2,
   X,
   Loader2
 } from "lucide-react"
@@ -43,6 +44,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showAlertSoundPopup, setShowAlertSoundPopup] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
   const [selectedAlertSound, setSelectedAlertSound] = useState(() => {
     // Load from localStorage, default to "zomato_tone"
     return localStorage.getItem('delivery_alert_sound') || 'zomato_tone'
@@ -213,6 +215,47 @@ export default function ProfilePage() {
     }, 100)
   }
 
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount) return
+
+    const confirmed = window.confirm(
+      "Delete your delivery account permanently? This action cannot be undone."
+    )
+    if (!confirmed) return
+
+    setIsDeletingAccount(true)
+
+    try {
+      await deliveryAPI.deleteAccount()
+    } catch (error) {
+      debugError("Delete account API error:", error)
+      toast.error(error?.response?.data?.message || "Failed to delete account")
+      setIsDeletingAccount(false)
+      return
+    }
+
+    clearModuleAuth("delivery")
+    localStorage.removeItem("delivery_gig_storage")
+    localStorage.removeItem("delivery_module_storage")
+    localStorage.removeItem("app:isOnline")
+    sessionStorage.removeItem("deliveryAuthData")
+
+    const keysToRemove = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith("delivery_")) {
+        keysToRemove.push(key)
+      }
+    }
+    keysToRemove.forEach(key => localStorage.removeItem(key))
+
+    window.dispatchEvent(new Event('deliveryAuthChanged'))
+    window.dispatchEvent(new Event('onlineStatusChanged'))
+
+    toast.success("Account deleted successfully")
+    navigate("/delivery/sign-in", { replace: true })
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -329,6 +372,42 @@ export default function ProfilePage() {
             <div className="space-y-0">
               <div className="h-px bg-gray-200"></div>
               <Card
+                onClick={() => navigate("/delivery/profile/support")}
+                className="bg-white py-0 border-0 shadow-none rounded-none first:rounded-t-lg last:rounded-b-lg cursor-pointer hover:bg-gray-200 transition-colors"
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Headphones className="w-5 h-5" />
+                    <span className="text-sm font-medium">Support</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </CardContent>
+              </Card>
+              <Card
+                onClick={() => navigate("/delivery/profile/terms")}
+                className="bg-white py-0 border-0 shadow-none rounded-none first:rounded-t-lg last:rounded-b-lg cursor-pointer hover:bg-gray-200 transition-colors"
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm font-medium">Terms and Conditions</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </CardContent>
+              </Card>
+              <Card
+                onClick={() => navigate("/delivery/profile/privacy")}
+                className="bg-white py-0 border-0 shadow-none rounded-none first:rounded-t-lg last:rounded-b-lg cursor-pointer hover:bg-gray-200 transition-colors"
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="w-5 h-5" />
+                    <span className="text-sm font-medium">Privacy Policy</span>
+                  </div>
+                  <ArrowRight className="w-5 h-5 text-gray-400" />
+                </CardContent>
+              </Card>
+              <Card
                 onClick={() => navigate("/delivery/help/tickets")}
                 className="bg-white py-0 border-0 shadow-none rounded-none first:rounded-t-lg last:rounded-b-lg cursor-pointer hover:bg-gray-200 transition-colors"
               >
@@ -370,6 +449,23 @@ export default function ProfilePage() {
                 <div className="flex items-center gap-3">
                   <LogOut className="w-5 h-5 text-red-600" />
                   <span className="text-sm font-medium text-red-600">Log out</span>
+                </div>
+                <ArrowRight className="w-5 h-5 text-gray-400" />
+              </CardContent>
+            </Card>
+          </div>
+
+          <div>
+            <Card
+              onClick={handleDeleteAccount}
+              className="bg-white py-0 border-0 shadow-none rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
+            >
+              <CardContent className="p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                  <span className="text-sm font-medium text-red-600">
+                    {isDeletingAccount ? "Deleting account..." : "Delete account"}
+                  </span>
                 </div>
                 <ArrowRight className="w-5 h-5 text-gray-400" />
               </CardContent>

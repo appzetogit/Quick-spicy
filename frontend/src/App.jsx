@@ -56,6 +56,7 @@ const UpdateReplyPage = lazy(() => import("@/module/restaurant/pages/UpdateReply
 const SettingsPage = lazy(() => import("@/module/restaurant/pages/SettingsPage"))
 const PrivacyPolicyPage = lazy(() => import("@/module/restaurant/pages/PrivacyPolicyPage"))
 const TermsAndConditionsPage = lazy(() => import("@/module/restaurant/pages/TermsAndConditionsPage"))
+const RestaurantSupportPage = lazy(() => import("@/module/restaurant/pages/SupportPage"))
 const RestaurantConfigPage = lazy(() => import("@/module/restaurant/pages/RestaurantConfigPage"))
 const RestaurantCategoriesPage = lazy(() => import("@/module/restaurant/pages/RestaurantCategoriesPage"))
 const MenuCategoriesPage = lazy(() => import("@/module/restaurant/pages/MenuCategoriesPage"))
@@ -472,6 +473,14 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
                 <TermsAndConditionsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/restaurant/support"
+            element={
+              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
+                <RestaurantSupportPage />
               </ProtectedRoute>
             }
           />

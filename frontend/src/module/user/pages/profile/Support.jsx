@@ -14,17 +14,14 @@ import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
-
-const supportEmail = "quickspicyenterprises@gmail.com"
-const supportPhone = "+91 81256 33886"
-const supportPhoneHref = "+918125633886"
-const ownerName = "Shaik Irfan Basha"
-
-const supportTopics = [
-  "Order updates and delivery-related questions",
-  "Payment, refund, or wallet assistance",
-  "Account help and general app support",
-]
+import {
+  SUPPORT_EMAIL,
+  SUPPORT_NOTE,
+  SUPPORT_OWNER_NAME,
+  SUPPORT_PHONE,
+  SUPPORT_PHONE_HREF,
+  SUPPORT_TOPICS,
+} from "@/lib/constants/support"
 
 export default function Support() {
   const companyName = useCompanyName()
@@ -62,12 +59,12 @@ export default function Support() {
                 <div className="rounded-2xl border border-orange-100 dark:border-gray-800 bg-orange-50/70 dark:bg-[#1f1f1f] p-5">
                   <div className="flex items-start gap-4">
                     <div className="rounded-xl bg-white dark:bg-[#2a2a2a] p-3 shadow-sm">
-                      <Headset className="h-5 w-5 text-[#EB590E]" />
+                        <Headset className="h-5 w-5 text-[#EB590E]" />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Owner</p>
                       <p className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
-                        {ownerName}
+                        {SUPPORT_OWNER_NAME}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                         For any assistance, you can reach out using the support contacts below.
@@ -77,7 +74,7 @@ export default function Support() {
                 </div>
 
                 <a
-                  href={`mailto:${supportEmail}`}
+                  href={`mailto:${SUPPORT_EMAIL}`}
                   className="group rounded-2xl border border-orange-100 dark:border-gray-800 bg-orange-50/70 dark:bg-[#1f1f1f] p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start gap-4">
@@ -87,7 +84,7 @@ export default function Support() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Email support</p>
                       <p className="text-base md:text-lg font-semibold text-gray-900 dark:text-white break-all">
-                        {supportEmail}
+                        {SUPPORT_EMAIL}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                         Best for detailed queries, order follow-ups, and account assistance.
@@ -97,7 +94,7 @@ export default function Support() {
                 </a>
 
                 <a
-                  href={`tel:${supportPhoneHref}`}
+                  href={`tel:${SUPPORT_PHONE_HREF}`}
                   className="group rounded-2xl border border-orange-100 dark:border-gray-800 bg-orange-50/70 dark:bg-[#1f1f1f] p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start gap-4">
@@ -107,7 +104,7 @@ export default function Support() {
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Call support</p>
                       <p className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
-                        {supportPhone}
+                        {SUPPORT_PHONE}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                         Reach us directly if you need urgent help with an active issue.
@@ -128,7 +125,7 @@ export default function Support() {
                     </div>
 
                     <div className="space-y-3">
-                      {supportTopics.map((topic) => (
+                      {SUPPORT_TOPICS.map((topic) => (
                         <div
                           key={topic}
                           className="flex items-start gap-3 rounded-xl bg-gray-50 dark:bg-[#1b1b1b] px-4 py-3"
@@ -151,7 +148,7 @@ export default function Support() {
                     </div>
 
                     <p className="text-sm md:text-base text-gray-700 dark:text-gray-300 leading-relaxed mb-4">
-                      When contacting support, share your registered phone number and order details so we can help faster.
+                      {SUPPORT_NOTE}
                     </p>
 
                     <Link

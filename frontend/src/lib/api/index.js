@@ -983,6 +983,11 @@ export const deliveryAPI = {
     return apiClient.put(API_ENDPOINTS.DELIVERY.PROFILE, data);
   },
 
+  // Delete delivery account
+  deleteAccount: () => {
+    return apiClient.delete(API_ENDPOINTS.DELIVERY.PROFILE);
+  },
+
   // Get orders
   getOrders: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.DELIVERY.ORDERS, { params });

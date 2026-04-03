@@ -1,5 +1,5 @@
 import express from 'express';
-import { getProfile, updateProfile, reverify } from '../controllers/deliveryProfileController.js';
+import { getProfile, updateProfile, reverify, deleteAccount } from '../controllers/deliveryProfileController.js';
 import { authenticate } from '../middleware/deliveryAuth.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
@@ -77,6 +77,7 @@ router.put('/profile', validate(Joi.object({
     }).optional()
   }).optional()
 })), updateProfile);
+router.delete('/profile', deleteAccount);
 
 // Reverify route (resubmit for approval)
 router.post('/reverify', reverify);
