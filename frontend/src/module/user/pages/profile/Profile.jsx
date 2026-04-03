@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Settings as SettingsIcon,
   Power,
+  Trash2,
   ShoppingCart,
   MapPin,
   Copy,
@@ -41,7 +42,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { authAPI } from "@/lib/api"
+import { authAPI, userAPI } from "@/lib/api"
 import { firebaseAuth } from "@/lib/firebase"
 import { clearModuleAuth } from "@/lib/utils/auth"
 const debugLog = (...args) => {}
@@ -69,6 +70,7 @@ export default function Profile() {
   const [vegModeOpen, setVegModeOpen] = useState(false)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isDeletingProfile, setIsDeletingProfile] = useState(false)
   const [referralCopied, setReferralCopied] = useState(false)
 
   const handleVegModeUpdate = (nextValue) => {
@@ -299,6 +301,51 @@ export default function Profile() {
     } finally {
       setIsLoggingOut(false)
     }
+  }
+
+  const handleDeleteProfile = async () => {
+    if (isDeletingProfile || isLoggingOut) return
+
+    const confirmed = window.confirm(
+      "Delete your profile permanently? This action cannot be undone."
+    )
+    if (!confirmed) return
+
+    setIsDeletingProfile(true)
+
+    try {
+      await userAPI.deleteAccount()
+    } catch (error) {
+      debugError("Failed to delete profile:", error)
+      setIsDeletingProfile(false)
+      return
+    }
+
+    try {
+      await authAPI.logout()
+    } catch (apiError) {
+      debugWarn("Logout API call failed after profile deletion:", apiError)
+    }
+
+    try {
+      const { signOut } = await import("firebase/auth")
+      if (firebaseAuth.currentUser) {
+        await signOut(firebaseAuth)
+      }
+    } catch (firebaseError) {
+      debugWarn("Firebase logout failed after profile deletion:", firebaseError)
+    }
+
+    clearModuleAuth("user")
+    localStorage.removeItem("accessToken")
+    localStorage.removeItem("user_authenticated")
+    localStorage.removeItem("user_user")
+    localStorage.removeItem("user")
+    localStorage.removeItem("userProfile")
+    localStorage.removeItem("cart")
+    window.dispatchEvent(new Event("userAuthChanged"))
+    navigate("/user/auth/sign-in", { replace: true })
+    setIsDeletingProfile(false)
   }
 
   return (
@@ -883,6 +930,37 @@ export default function Profile() {
                 </Card>
               </motion.div>
             </Link>
+
+            <motion.div
+              whileHover={{ x: 4, scale: 1.01 }}
+              transition={{ duration: 0.2, type: "spring", stiffness: 300 }}
+            >
+              <Card
+                className="bg-white dark:bg-[#1a1a1a] py-0 rounded-xl shadow-sm border-0 dark:border-gray-800 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleDeleteProfile}
+              >
+                <CardContent className="p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <motion.div
+                      className="bg-red-50 dark:bg-red-900/20 rounded-full p-2"
+                      whileHover={{ rotate: 15, scale: 1.1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Trash2 className={`h-5 w-5 text-red-600 dark:text-red-400 ${isDeletingProfile ? 'animate-pulse' : ''}`} />
+                    </motion.div>
+                    <span className="text-base font-medium text-red-600 dark:text-red-400">
+                      {isDeletingProfile ? 'Deleting profile...' : 'Delete profile'}
+                    </span>
+                  </div>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronRight className="h-5 w-5 text-gray-400 dark:text-gray-500" />
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
             <motion.div
               whileHover={{ x: 4, scale: 1.01 }}

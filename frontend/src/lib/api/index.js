@@ -164,6 +164,11 @@ export const userAPI = {
     return apiClient.put(API_ENDPOINTS.USER.PROFILE, data);
   },
 
+  // Delete user account/profile
+  deleteAccount: () => {
+    return apiClient.delete(API_ENDPOINTS.USER.PROFILE);
+  },
+
   // Save/update FCM token for push notifications
   saveFcmToken: (token, options = {}) => {
     const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : "";

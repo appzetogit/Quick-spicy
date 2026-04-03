@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getUserProfile,
   updateUserProfile,
+  deleteUserProfile,
   uploadProfileImage,
   updateUserLocation,
   getUserLocation,
@@ -25,6 +26,7 @@ router.use(authenticate);
 // Profile routes
 router.get('/profile', getUserProfile);
 router.put('/profile', updateUserProfile);
+router.delete('/profile', deleteUserProfile);
 
 // Profile image upload
 router.post(

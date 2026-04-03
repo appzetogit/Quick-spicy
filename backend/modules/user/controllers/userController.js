@@ -1,6 +1,7 @@
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import User from '../../auth/models/User.js';
+import UserWallet from '../models/UserWallet.js';
 import { uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
 import axios from 'axios';
 import winston from 'winston';
@@ -147,6 +148,43 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
   } catch (error) {
     logger.error(`Error updating user profile: ${error.message}`, { error: error.stack });
     return errorResponse(res, 500, 'Failed to update profile');
+  }
+});
+
+/**
+ * Delete user profile/account
+ * DELETE /api/user/profile
+ */
+export const deleteUserProfile = asyncHandler(async (req, res) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return errorResponse(res, 401, 'User not authenticated');
+    }
+
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return errorResponse(res, 404, 'User profile not found');
+    }
+
+    // Best-effort cleanup of dedicated wallet document.
+    await UserWallet.deleteOne({ userId });
+
+    // Clear refresh token cookie so current session is fully ended.
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+
+    logger.info(`User profile deleted: ${userId}`);
+
+    return successResponse(res, 200, 'Profile deleted successfully');
+  } catch (error) {
+    logger.error(`Error deleting user profile: ${error.message}`, { error: error.stack });
+    return errorResponse(res, 500, 'Failed to delete profile');
   }
 });
 
