@@ -29,6 +29,7 @@ import {
   CheckCircle,
   Calendar,
   MapPin,
+  Trash2,
 } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
@@ -455,6 +456,7 @@ export default function ExploreMore() {
   const restaurantDisplayAddress = restaurantData?.location ? formatAddress(restaurantData.location) : ""
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false)
 
   const handleLogout = async () => {
     if (isLoggingOut) return // Prevent multiple clicks
@@ -580,6 +582,46 @@ export default function ExploreMore() {
       navigate("/restaurant/welcome", { replace: true })
     } finally {
       setIsLoggingOut(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    if (isDeletingAccount || isLoggingOut) return
+
+    const confirmed = window.confirm(
+      "Delete your restaurant account permanently? This action cannot be undone."
+    )
+    if (!confirmed) return
+
+    setIsDeletingAccount(true)
+    setProfileOpen(false)
+
+    try {
+      await restaurantAPI.deleteAccount()
+
+      try {
+        const { signOut } = await import("firebase/auth")
+        const currentUser = firebaseAuth.currentUser
+        if (currentUser) {
+          await signOut(firebaseAuth)
+        }
+      } catch (firebaseError) {
+        debugWarn("Firebase logout failed during account deletion:", firebaseError)
+      }
+
+      clearModuleAuth("restaurant")
+      localStorage.removeItem("restaurant_onboarding")
+      localStorage.removeItem("restaurant_accessToken")
+      localStorage.removeItem("restaurant_authenticated")
+      localStorage.removeItem("restaurant_user")
+      sessionStorage.removeItem("restaurantAuthData")
+      window.dispatchEvent(new Event("restaurantAuthChanged"))
+
+      navigate("/restaurant/welcome", { replace: true })
+    } catch (error) {
+      debugError("Error deleting restaurant account:", error)
+      alert(`Failed to delete account: ${error.response?.data?.message || error.message || "Please try again."}`)
+      setIsDeletingAccount(false)
     }
   }
 
@@ -1166,7 +1208,7 @@ export default function ExploreMore() {
                 {/* Logout Button */}
                 <button
                   onClick={handleLogout}
-                  disabled={isLoggingOut}
+                  disabled={isLoggingOut || isDeletingAccount}
                   className="w-full bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors"
                 >
                   {isLoggingOut ? "Logging out..." : "Logout"}
@@ -1175,10 +1217,19 @@ export default function ExploreMore() {
                 {/* Logout from all devices Button */}
                 <button
                   onClick={handleLogoutAllDevices}
-                  disabled={isLoggingOut}
+                  disabled={isLoggingOut || isDeletingAccount}
                   className="w-full bg-white border-2 border-red-600 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 px-4 rounded-lg transition-colors"
                 >
                   {isLoggingOut ? "Logging out..." : "Logout from all devices"}
+                </button>
+
+                <button
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount || isLoggingOut}
+                  className="w-full flex items-center justify-center gap-2 bg-red-50 border-2 border-red-200 text-red-700 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed font-semibold py-3 px-4 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeletingAccount ? "Deleting account..." : "Delete account"}
                 </button>
               </div>
 
