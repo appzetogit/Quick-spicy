@@ -265,11 +265,7 @@ export default function UserRouter() {
           />
           <Route
             path="/profile/support"
-            element={
-              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
-                <Support />
-              </ProtectedRoute>
-            }
+            element={<Support />}
           />
 
           <Route

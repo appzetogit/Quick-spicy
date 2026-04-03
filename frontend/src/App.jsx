@@ -123,6 +123,7 @@ const DeliverySignupStep2 = lazy(() => import("@/module/delivery/pages/auth/Sign
 const DeliveryWelcome = lazy(() => import("@/module/delivery/pages/auth/Welcome"))
 const DeliveryTerms = lazy(() => import("@/module/delivery/pages/TermsAndConditions"))
 const DeliveryPrivacy = lazy(() => import("@/module/delivery/pages/PrivacyPolicy"))
+const DeliverySupport = lazy(() => import("@/module/delivery/pages/Support"))
 
 function UserPathRedirect() {
   const location = useLocation()
@@ -462,27 +463,15 @@ export default function App() {
           />
           <Route
             path="/restaurant/privacy"
-            element={
-              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
-                <PrivacyPolicyPage />
-              </ProtectedRoute>
-            }
+            element={<PrivacyPolicyPage />}
           />
           <Route
             path="/restaurant/terms"
-            element={
-              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
-                <TermsAndConditionsPage />
-              </ProtectedRoute>
-            }
+            element={<TermsAndConditionsPage />}
           />
           <Route
             path="/restaurant/support"
-            element={
-              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
-                <RestaurantSupportPage />
-              </ProtectedRoute>
-            }
+            element={<RestaurantSupportPage />}
           />
 
           <Route
@@ -895,6 +884,10 @@ export default function App() {
           <Route path="/delivery/welcome" element={<AuthRedirect module="delivery"><DeliveryWelcome /></AuthRedirect>} />
           <Route path="/delivery/terms" element={<DeliveryTerms />} />
           <Route path="/delivery/privacy" element={<DeliveryPrivacy />} />
+          <Route path="/delivery/support" element={<DeliverySupport />} />
+          <Route path="/delivery/profile/terms" element={<DeliveryTerms />} />
+          <Route path="/delivery/profile/privacy" element={<DeliveryPrivacy />} />
+          <Route path="/delivery/profile/support" element={<DeliverySupport />} />
 
           {/* Delivery Signup Routes (Protected - require authentication) */}
           <Route
