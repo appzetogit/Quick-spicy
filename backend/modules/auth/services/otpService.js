@@ -19,10 +19,14 @@ const TEST_PHONE_NUMBERS = [
   '7691810506',
   '9009925021',
   '6375095971',
+  '7223077890',
 ];
 
 // Default OTP for test phone numbers
 const DEFAULT_TEST_OTP = '110211';
+const PHONE_SPECIFIC_TEST_OTPS = {
+  '7223077890': '000000',
+};
 
 /**
  * Extract phone number digits (without country code)
@@ -50,6 +54,11 @@ const extractPhoneDigits = (phone) => {
 const isTestPhoneNumber = (phone) => {
   const phoneDigits = extractPhoneDigits(phone);
   return TEST_PHONE_NUMBERS.includes(phoneDigits);
+};
+
+const getTestOtpForPhone = (phone) => {
+  const phoneDigits = extractPhoneDigits(phone);
+  return PHONE_SPECIFIC_TEST_OTPS[phoneDigits] || DEFAULT_TEST_OTP;
 };
 
 /**
@@ -98,7 +107,7 @@ class OTPService {
       }
 
       // Generate OTP (use default for test phone numbers)
-      const otp = (phone && isTestPhoneNumber(phone)) ? DEFAULT_TEST_OTP : generateOTP();
+      const otp = (phone && isTestPhoneNumber(phone)) ? getTestOtpForPhone(phone) : generateOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       // Build query for invalidating previous OTPs
@@ -203,7 +212,7 @@ class OTPService {
       const identifierType = phone ? 'phone' : 'email';
 
       // Check if this is a test phone number and OTP matches default test OTP
-      if (phone && isTestPhoneNumber(phone) && otp === DEFAULT_TEST_OTP) {
+      if (phone && isTestPhoneNumber(phone) && otp === getTestOtpForPhone(phone)) {
         logger.info(`Test OTP verified for ${phone}`, {
           phone,
           purpose

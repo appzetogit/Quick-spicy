@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useNavigate, Link } from "react-router-dom"
 import { AlertCircle, Loader2 } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
@@ -21,24 +21,6 @@ export default function SignIn() {
 
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem("userAuthData")
-    if (!stored) return
-
-    try {
-      const data = JSON.parse(stored)
-      const fullPhone = String(data.phone || "").trim()
-      const phoneDigits = fullPhone.replace(/^\+91\s*/, "").replace(/\D/g, "").slice(0, 10)
-
-      setFormData((prev) => ({
-        ...prev,
-        phone: phoneDigits || prev.phone,
-      }))
-    } catch (err) {
-      debugError("Error parsing stored auth data:", err)
-    }
-  }, [])
 
   const validatePhone = (phone) => {
     if (!phone.trim()) return "Phone number is required"
@@ -188,4 +170,3 @@ export default function SignIn() {
     </AnimatedPage>
   )
 }
-

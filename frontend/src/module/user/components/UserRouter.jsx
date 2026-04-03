@@ -54,6 +54,7 @@ const Settings = lazy(() => import("../pages/profile/Settings"))
 const Coupons = lazy(() => import("../pages/profile/Coupons"))
 const RedeemGoldCoupon = lazy(() => import("../pages/profile/RedeemGoldCoupon"))
 const About = lazy(() => import("../pages/profile/About"))
+const Support = lazy(() => import("../pages/profile/Support"))
 const Terms = lazy(() => import("../pages/profile/Terms"))
 const Privacy = lazy(() => import("../pages/profile/Privacy"))
 const Refund = lazy(() => import("../pages/profile/Refund"))
@@ -96,6 +97,7 @@ export default function UserRouter() {
           <Route path="/restaurants/:slug" element={<RestaurantDetails />} />
           <Route path="/search" element={<SearchResults />} />
           <Route path="/product/:id" element={<ProductDetail />} />
+          <Route path="/support" element={<Support />} />
 
           {/* Cart - Protected */}
           <Route
@@ -258,6 +260,14 @@ export default function UserRouter() {
             element={
               <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
                 <About />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/support"
+            element={
+              <ProtectedRoute requiredRole="user" loginPath="/user/auth/sign-in">
+                <Support />
               </ProtectedRoute>
             }
           />

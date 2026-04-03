@@ -1,0 +1,14 @@
+📦 Loading adminRoutes.js - All routes will be registered
+🔧 [ROUTE REGISTRATION] Registering POST /orders/refund/:orderId route...
+✅ [ROUTE REGISTRATION] POST /orders/refund/:orderId route registered
+🔧 [ROUTE REGISTRATION] Registering /refund-requests routes...
+🔧 [ROUTE REGISTRATION] Route pattern: POST /refund-requests/:orderId/process
+🔧 [ROUTE REGISTRATION] Full path will be: /api/admin/refund-requests/:orderId/process
+✅ [ROUTE REGISTRATION] POST /refund-requests/:orderId/process route registered
+✅ [ROUTE REGISTRATION] GET /refund-requests route registered
+✅ [ROUTE REGISTRATION] Full path: /api/admin/refund-requests/:orderId/process
+Rate limiting disabled (development mode)
+info: MongoDB Connected: ac-2kmkdec-shard-00-00.qilrmoh.mongodb.net
+info: Firebase Admin initialized for auth verification
+warn: No SMTP or Ethereal email configuration found. Email OTP will not work.
+✅ SMSIndia Hub credentials loaded successfully

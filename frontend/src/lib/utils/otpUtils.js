@@ -9,6 +9,7 @@ const TEST_PHONE_NUMBERS = [
   '7691810506',
   '9009925021',
   '6375095971',
+  '7223077890',
 ];
 
 // Default OTP for test phone numbers
