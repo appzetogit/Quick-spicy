@@ -22,6 +22,22 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
   return R * c; // Distance in kilometers
 }
 
+function extractRestaurantCoordinates(restaurant = {}) {
+  const baseLocation = restaurant?.location || restaurant?.onboarding?.step1?.location || {};
+  const latitude = Number(baseLocation?.latitude ?? baseLocation?.coordinates?.[1]);
+  const longitude = Number(baseLocation?.longitude ?? baseLocation?.coordinates?.[0]);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    (latitude === 0 && longitude === 0)
+  ) {
+    return { latitude: null, longitude: null };
+  }
+
+  return { latitude, longitude };
+}
+
 /**
  * Check if a point is within a zone polygon using ray casting algorithm
  * @param {number} lat - Latitude
@@ -121,10 +137,9 @@ export async function findNearestRestaurant(deliveryLat, deliveryLng, orderItems
     const restaurantsInZones = [];
     
     for (const restaurant of allRestaurants) {
-      const restaurantLat = restaurant.location?.latitude || restaurant.location?.coordinates?.[1];
-      const restaurantLng = restaurant.location?.longitude || restaurant.location?.coordinates?.[0];
+      const { latitude: restaurantLat, longitude: restaurantLng } = extractRestaurantCoordinates(restaurant);
       
-      if (!restaurantLat || !restaurantLng) continue;
+      if (!Number.isFinite(restaurantLat) || !Number.isFinite(restaurantLng)) continue;
       
       // Check if restaurant's location (pin) is within any active zone
       const zone = await isRestaurantInAnyZone(restaurantLat, restaurantLng);

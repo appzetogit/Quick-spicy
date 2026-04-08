@@ -151,13 +151,20 @@ function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
   return null;
 }
 
-function extractRestaurantCoordinates(location = {}) {
+function extractRestaurantCoordinates(locationOrRestaurant = {}) {
+  const location = locationOrRestaurant?.location || locationOrRestaurant?.onboarding?.step1?.location || locationOrRestaurant || {};
   const lat = location?.latitude
     ?? (Array.isArray(location?.coordinates) ? location.coordinates[1] : null);
   const lng = location?.longitude
     ?? (Array.isArray(location?.coordinates) ? location.coordinates[0] : null);
 
-  if (lat === null || lng === null || Number.isNaN(Number(lat)) || Number.isNaN(Number(lng))) {
+  if (
+    lat === null ||
+    lng === null ||
+    Number.isNaN(Number(lat)) ||
+    Number.isNaN(Number(lng)) ||
+    (Number(lat) === 0 && Number(lng) === 0)
+  ) {
     return { lat: null, lng: null };
   }
 
@@ -332,7 +339,10 @@ export const getRestaurants = async (req, res) => {
       const isFreeDelivery = hasDeliveryFeeRanges
         ? false
         : (restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured);
-      const { lat, lng } = extractRestaurantCoordinates(restaurant.location);
+      const { lat, lng } = extractRestaurantCoordinates(restaurant);
+      if (lat === null || lng === null) {
+        return null;
+      }
       const restaurantZoneId = activeZones.length > 0
         ? getRestaurantZoneId(lat, lng, activeZones)
         : null;
@@ -347,12 +357,7 @@ export const getRestaurants = async (req, res) => {
         restaurantZoneId,
         ...(userZoneId ? { isInUserZone } : {}),
       };
-    });
-    
-    // Get total count (before filtering by string fields)
-    const totalQuery = { ...query };
-    delete totalQuery.$or; // Remove $or for count
-    const total = await Restaurant.countDocuments(totalQuery);
+    }).filter(Boolean);
     
     console.log(`Fetched ${restaurants.length} restaurants from database with filters:`, {
       sortBy,
@@ -419,6 +424,11 @@ export const getRestaurantById = async (req, res) => {
     if (!restaurantDoc) {
       return errorResponse(res, 404, 'Restaurant not found');
     }
+    const { lat, lng } = extractRestaurantCoordinates(restaurantDoc);
+    if (lat === null || lng === null) {
+      return errorResponse(res, 404, 'Restaurant not found');
+    }
+
     const restaurant = normalizeRestaurantImageFields(restaurantDoc);
 
     return successResponse(res, 200, 'Restaurant retrieved successfully', {
@@ -1062,7 +1072,10 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
 
         // Only include restaurant if it has at least one dish under ₹250
         if (dishesUnder250.length > 0) {
-          const { lat, lng } = extractRestaurantCoordinates(restaurant.location);
+          const { lat, lng } = extractRestaurantCoordinates(restaurant);
+          if (lat === null || lng === null) {
+            return null;
+          }
           const restaurantZoneId = activeZones.length > 0
             ? getRestaurantZoneId(lat, lng, activeZones)
             : null;

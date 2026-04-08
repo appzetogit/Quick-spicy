@@ -1,12 +1,12 @@
 import Order from '../models/Order.js';
 import Payment from '../../payment/models/Payment.js';
-import { createOrder as createRazorpayOrder, verifyPayment } from '../../payment/services/razorpayService.js';
+import { createCashfreeOrder, verifyCashfreeOrderPayment, mapCashfreePaymentMethod } from '../../payment/services/cashfreeService.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Zone from '../../admin/models/Zone.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
 import { calculateOrderPricing } from '../services/orderCalculationService.js';
-import { getRazorpayCredentials } from '../../../shared/utils/envService.js';
+import { getCashfreeCredentials } from '../../../shared/utils/envService.js';
 import { notifyRestaurantNewOrder } from '../services/restaurantNotificationService.js';
 import { notifyAdminNewOrder } from '../services/adminNotificationService.js';
 import { calculateOrderSettlement } from '../services/orderSettlementService.js';
@@ -57,6 +57,46 @@ function normalizeRestaurantLocation(location = {}) {
   return normalized;
 }
 
+function extractRestaurantCoordinates(restaurant = {}) {
+  const resolvedLocation = normalizeRestaurantLocation(
+    restaurant?.location || restaurant?.onboarding?.step1?.location
+  );
+
+  const latitude = Number(
+    resolvedLocation?.latitude ?? resolvedLocation?.coordinates?.[1]
+  );
+  const longitude = Number(
+    resolvedLocation?.longitude ?? resolvedLocation?.coordinates?.[0]
+  );
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    (latitude === 0 && longitude === 0)
+  ) {
+    return {
+      location: resolvedLocation,
+      latitude: null,
+      longitude: null
+    };
+  }
+
+  return {
+    location: resolvedLocation,
+    latitude,
+    longitude
+  };
+}
+
+function normalizeRestaurantNameValue(value) {
+  if (!value) return '';
+  return String(value).trim().toLowerCase();
+}
+
+function escapeRegex(value = '') {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 async function resolveRestaurantForOrder(restaurantId) {
   if (!restaurantId) return null;
   const restaurantIdStr = String(restaurantId);
@@ -70,13 +110,58 @@ async function resolveRestaurantForOrder(restaurantId) {
       };
 
   const restaurant = await Restaurant.findOne(query)
-    .select('name slug profileImage address location phone ownerPhone restaurantId')
+    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location')
     .lean();
 
   if (!restaurant) return null;
+  const { location } = extractRestaurantCoordinates(restaurant);
+
   return {
     ...restaurant,
-    location: normalizeRestaurantLocation(restaurant.location)
+    location
+  };
+}
+
+async function resolveRestaurantByNameForOrder(restaurantName) {
+  const trimmedRestaurantName = String(restaurantName || '').trim();
+  if (!trimmedRestaurantName) return null;
+
+  const exactNameRegex = new RegExp(`^${escapeRegex(trimmedRestaurantName)}$`, 'i');
+  const restaurant = await Restaurant.findOne({
+    name: exactNameRegex
+  })
+    .sort({ isActive: -1, isAcceptingOrders: -1, updatedAt: -1 })
+    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location isActive isAcceptingOrders')
+    .lean();
+
+  if (!restaurant) return null;
+  const { location } = extractRestaurantCoordinates(restaurant);
+
+  return {
+    ...restaurant,
+    location
+  };
+}
+
+async function resolveActiveRestaurantByNameForOrder(restaurantName) {
+  const trimmedRestaurantName = String(restaurantName || '').trim();
+  if (!trimmedRestaurantName) return null;
+
+  const exactNameRegex = new RegExp(`^${escapeRegex(trimmedRestaurantName)}$`, 'i');
+  const restaurant = await Restaurant.findOne({
+    name: exactNameRegex,
+    isActive: true
+  })
+    .sort({ isAcceptingOrders: -1, updatedAt: -1 })
+    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location isActive isAcceptingOrders')
+    .lean();
+
+  if (!restaurant) return null;
+  const { location } = extractRestaurantCoordinates(restaurant);
+
+  return {
+    ...restaurant,
+    location
   };
 }
 
@@ -161,7 +246,7 @@ export const createOrder = async (req, res) => {
       const m = (paymentMethod && String(paymentMethod).toLowerCase().trim()) || '';
       if (m === 'cash' || m === 'cod' || m === 'cash on delivery') return 'cash';
       if (m === 'wallet') return 'wallet';
-      return paymentMethod || 'razorpay';
+      return paymentMethod || 'cashfree';
     })();
     logger.info('Order create paymentMethod:', { raw: paymentMethod, normalized: normalizedPaymentMethod, bodyKeys: Object.keys(req.body || {}).filter(k => k.toLowerCase().includes('payment')) });
 
@@ -200,7 +285,7 @@ export const createOrder = async (req, res) => {
     });
 
     // Find and validate the restaurant
-    let restaurant = null;
+    let restaurant = await resolveRestaurantForOrder(restaurantId);
     // Try to find restaurant by restaurantId, _id, or slug
     if (mongoose.Types.ObjectId.isValid(restaurantId) && restaurantId.length === 24) {
       restaurant = await Restaurant.findById(restaurantId);
@@ -226,6 +311,32 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const normalizedIncomingRestaurantName = normalizeRestaurantNameValue(restaurantName);
+    const normalizedFoundRestaurantName = normalizeRestaurantNameValue(restaurant?.name);
+
+    if (
+      normalizedIncomingRestaurantName &&
+      (!restaurant || normalizedFoundRestaurantName !== normalizedIncomingRestaurantName)
+    ) {
+      const restaurantByName = await resolveRestaurantByNameForOrder(restaurantName);
+      logger.info('Order restaurant lookup by incoming name:', {
+        restaurantName,
+        found: !!restaurantByName,
+        restaurantIdFromName: restaurantByName?.restaurantId,
+        restaurantMongoIdFromName: restaurantByName?._id?.toString(),
+        restaurantIdFromIncomingId: restaurant?._id?.toString() || restaurant?.restaurantId
+      });
+
+      if (restaurantByName) {
+        restaurant = restaurantByName;
+        assignedRestaurantId =
+          restaurant.restaurantId ||
+          restaurant._id?.toString() ||
+          assignedRestaurantId;
+        assignedRestaurantName = restaurant.name || assignedRestaurantName;
+      }
+    }
+
     if (!restaurant) {
       logger.error('❌ Restaurant not found:', {
         searchedRestaurantId: restaurantId,
@@ -238,7 +349,7 @@ export const createOrder = async (req, res) => {
     }
 
     // CRITICAL: Validate restaurant name matches
-    if (restaurantName && restaurant.name !== restaurantName) {
+    if (restaurantName && normalizeRestaurantNameValue(restaurant.name) !== normalizedIncomingRestaurantName) {
       logger.warn('⚠️ Restaurant name mismatch:', {
         incomingName: restaurantName,
         foundRestaurantName: restaurant.name,
@@ -261,10 +372,31 @@ export const createOrder = async (req, res) => {
     //   });
     // }
 
+    if (!restaurant.isActive && normalizedIncomingRestaurantName) {
+      const activeRestaurantByName = await resolveActiveRestaurantByNameForOrder(restaurantName);
+      logger.info('Order inactive restaurant recovery by name:', {
+        incomingRestaurantName: restaurantName,
+        currentRestaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+        recoveredRestaurantId: activeRestaurantByName?._id?.toString() || activeRestaurantByName?.restaurantId,
+        recoveredRestaurantName: activeRestaurantByName?.name
+      });
+
+      if (activeRestaurantByName) {
+        restaurant = activeRestaurantByName;
+        assignedRestaurantId =
+          restaurant.restaurantId ||
+          restaurant._id?.toString() ||
+          assignedRestaurantId;
+        assignedRestaurantName = restaurant.name || assignedRestaurantName;
+      }
+    }
+
     if (!restaurant.isActive) {
       logger.warn('⚠️ Restaurant is inactive:', {
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
-        restaurantName: restaurant.name
+        restaurantName: restaurant.name,
+        location: restaurant.location,
+        onboardingLocation: restaurant.onboarding?.step1?.location
       });
       return res.status(403).json({
         success: false,
@@ -273,10 +405,14 @@ export const createOrder = async (req, res) => {
     }
 
     // CRITICAL: Validate that restaurant's location (pin) is within an active zone
-    const restaurantLat = restaurant.location?.latitude || restaurant.location?.coordinates?.[1];
-    const restaurantLng = restaurant.location?.longitude || restaurant.location?.coordinates?.[0];
+    const {
+      location: normalizedRestaurantLocation,
+      latitude: restaurantLat,
+      longitude: restaurantLng
+    } = extractRestaurantCoordinates(restaurant);
+    restaurant.location = normalizedRestaurantLocation;
     
-    if (!restaurantLat || !restaurantLng) {
+    if (!Number.isFinite(restaurantLat) || !Number.isFinite(restaurantLng)) {
       logger.error('❌ Restaurant location not found:', {
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
         restaurantName: restaurant.name
@@ -476,10 +612,10 @@ export const createOrder = async (req, res) => {
 
     // Calculate initial ETA
     try {
-      const restaurantLocation = restaurant.location 
+      const restaurantLocation = Number.isFinite(restaurantLat) && Number.isFinite(restaurantLng)
         ? {
-            latitude: restaurant.location.latitude,
-            longitude: restaurant.location.longitude
+            latitude: restaurantLat,
+            longitude: restaurantLng
           }
         : null;
 
@@ -681,7 +817,7 @@ export const createOrder = async (req, res) => {
               total: order.pricing.total,
               deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
             },
-            razorpay: null,
+            cashfree: null,
             wallet: {
               balance: wallet.balance,
               deducted: order.pricing.total
@@ -699,7 +835,7 @@ export const createOrder = async (req, res) => {
     }
 
     // For cash-on-delivery orders, confirm immediately and notify restaurant.
-    // Online (Razorpay) orders follow the existing verifyOrderPayment flow.
+    // Online (Cashfree) orders follow the existing verifyOrderPayment flow.
     if (normalizedPaymentMethod === 'cash') {
       // Best-effort payment record; even if it fails we still proceed with order.
       try {
@@ -767,7 +903,7 @@ export const createOrder = async (req, res) => {
         });
       }
 
-      // Respond to client (no Razorpay details for COD)
+      // Respond to client (no online payment details for COD)
       return res.status(201).json({
         success: true,
         data: {
@@ -778,37 +914,56 @@ export const createOrder = async (req, res) => {
             total: order.pricing.total,
             deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
           },
-          razorpay: null
+          cashfree: null
         }
       });
     }
 
-    // Note: For Razorpay / online payments, restaurant notification will be sent
+    // Note: For online payments, restaurant notification will be sent
     // after payment verification in verifyOrderPayment. This ensures restaurant
     // only receives prepaid orders after successful payment.
 
-    // Create Razorpay order for online payments
-    let razorpayOrder = null;
-    if (normalizedPaymentMethod === 'razorpay' || !normalizedPaymentMethod) {
+    // Create Cashfree order for online payments
+    let cashfreeOrder = null;
+    if (normalizedPaymentMethod === 'cashfree' || !normalizedPaymentMethod) {
       try {
-        razorpayOrder = await createRazorpayOrder({
-          amount: Math.round(order.pricing.total * 100), // Convert to paise
-          currency: 'INR',
-          receipt: order.orderId,
-          notes: {
+        const userCustomer = req.user || {};
+        cashfreeOrder = await createCashfreeOrder({
+          orderId: order.orderId,
+          orderAmount: Number(order.pricing.total.toFixed(2)),
+          customerDetails: {
+            customerId: String(userId),
+            customerName: userCustomer.name || 'Customer',
+            customerEmail: userCustomer.email || 'customer@example.com',
+            customerPhone: userCustomer.phone || ''
+          },
+          orderNote: `Order ${order.orderId}`,
+          orderTags: {
             orderId: order.orderId,
             userId: userId.toString(),
             restaurantId: restaurantId || 'unknown'
           }
         });
 
-        // Update order with Razorpay order ID
-        order.payment.razorpayOrderId = razorpayOrder.id;
+        order.payment.cashfreeOrderId = cashfreeOrder.order_id;
+        order.payment.cashfreePaymentSessionId = cashfreeOrder.payment_session_id;
         await order.save();
-      } catch (razorpayError) {
-        logger.error(`Error creating Razorpay order: ${razorpayError.message}`);
-        // Continue with order creation even if Razorpay fails
-        // Payment can be handled later
+      } catch (cashfreeError) {
+        const gatewayMessage =
+          cashfreeError?.response?.data?.message ||
+          cashfreeError?.response?.data?.type ||
+          cashfreeError.message ||
+          'Unable to initialize online payment';
+
+        logger.error(`Error creating Cashfree order: ${gatewayMessage}`, {
+          status: cashfreeError?.response?.status,
+          data: cashfreeError?.response?.data
+        });
+
+        return res.status(502).json({
+          success: false,
+          message: gatewayMessage
+        });
       }
     }
 
@@ -816,20 +971,10 @@ export const createOrder = async (req, res) => {
       orderId: order.orderId,
       userId,
       amount: order.pricing.total,
-      razorpayOrderId: razorpayOrder?.id
+      cashfreeOrderId: cashfreeOrder?.order_id
     });
 
-    // Get Razorpay key ID from env service
-    let razorpayKeyId = null;
-    if (razorpayOrder) {
-      try {
-        const credentials = await getRazorpayCredentials();
-        razorpayKeyId = credentials.keyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-      } catch (error) {
-        logger.warn(`Failed to get Razorpay key ID from env service: ${error.message}`);
-        razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-      }
-    }
+    const cashfreeCredentials = cashfreeOrder ? await getCashfreeCredentials().catch(() => null) : null;
 
     res.status(201).json({
       success: true,
@@ -841,11 +986,12 @@ export const createOrder = async (req, res) => {
           total: order.pricing.total,
           deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
         },
-        razorpay: razorpayOrder ? {
-          orderId: razorpayOrder.id,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-          key: razorpayKeyId
+        cashfree: cashfreeOrder ? {
+          orderId: cashfreeOrder.order_id,
+          paymentSessionId: cashfreeOrder.payment_session_id,
+          amount: cashfreeOrder.order_amount,
+          currency: cashfreeOrder.order_currency || 'INR',
+          environment: cashfreeCredentials?.environment || 'sandbox'
         } : null
       }
     });
@@ -868,9 +1014,9 @@ export const createOrder = async (req, res) => {
 export const verifyOrderPayment = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { orderId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
+    const { orderId, cashfreeOrderId } = req.body;
 
-    if (!orderId || !razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    if (!orderId || !cashfreeOrderId) {
       return res.status(400).json({
         success: false,
         message: 'Missing required payment verification fields'
@@ -914,19 +1060,19 @@ export const verifyOrderPayment = async (req, res) => {
       });
     }
 
-    // Verify payment signature
-    const isValid = await verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-
-    if (!isValid) {
+    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    if (!verification?.isPaid || !verification?.payment) {
       // Update order payment status to failed
       order.payment.status = 'failed';
       await order.save();
 
       return res.status(400).json({
         success: false,
-        message: 'Invalid payment signature'
+        message: 'Payment verification failed'
       });
     }
+
+    const cashfreePaymentId = verification.payment.cf_payment_id;
 
     // Create payment record
     const payment = new Payment({
@@ -935,21 +1081,30 @@ export const verifyOrderPayment = async (req, res) => {
       userId,
       amount: order.pricing.total,
       currency: 'INR',
-      method: 'razorpay',
+      method: 'cashfree',
       status: 'completed',
-      razorpay: {
-        orderId: razorpayOrderId,
-        paymentId: razorpayPaymentId,
-        signature: razorpaySignature
+      cashfree: {
+        orderId: cashfreeOrderId,
+        paymentId: cashfreePaymentId,
+        paymentSessionId: order.payment?.cashfreePaymentSessionId || null,
+        orderStatus: verification.order?.order_status || null,
+        paymentStatus: verification.payment?.payment_status || null,
+        notes: {
+          orderId: order.orderId
+        }
       },
-      transactionId: razorpayPaymentId,
+      transactionId: cashfreePaymentId,
+      gatewayResponse: {
+        order: verification.order,
+        payment: verification.payment
+      },
       completedAt: new Date(),
       logs: [{
         action: 'completed',
         timestamp: new Date(),
         details: {
-          razorpayOrderId,
-          razorpayPaymentId
+          cashfreeOrderId,
+          cashfreePaymentId
         },
         ipAddress: req.ip,
         userAgent: req.get('user-agent')
@@ -960,9 +1115,12 @@ export const verifyOrderPayment = async (req, res) => {
 
     // Update order status
     order.payment.status = 'completed';
-    order.payment.razorpayPaymentId = razorpayPaymentId;
-    order.payment.razorpaySignature = razorpaySignature;
-    order.payment.transactionId = razorpayPaymentId;
+    order.payment.method = 'cashfree';
+    order.payment.cashfreeOrderId = cashfreeOrderId;
+    order.payment.cashfreePaymentId = cashfreePaymentId;
+    order.payment.cashfreeOrderStatus = verification.order?.order_status || null;
+    order.payment.cashfreePaymentStatus = verification.payment?.payment_status || null;
+    order.payment.transactionId = cashfreePaymentId;
     order.status = 'confirmed';
     order.tracking.confirmed = { status: true, timestamp: new Date() };
     await order.save();
@@ -1063,7 +1221,7 @@ export const verifyOrderPayment = async (req, res) => {
     logger.info(`Order payment verified: ${order.orderId}`, {
       orderId: order.orderId,
       paymentId: payment.paymentId,
-      razorpayPaymentId
+      cashfreePaymentId
     });
 
     res.json({
@@ -1095,7 +1253,7 @@ export const verifyOrderPayment = async (req, res) => {
 };
 
 /**
- * Create Razorpay order for post-delivery tip payment
+ * Create Cashfree order for post-delivery tip payment
  * POST /api/order/:id/tip/create-order
  */
 export const createOrderTipPayment = async (req, res) => {
@@ -1133,12 +1291,18 @@ export const createOrderTipPayment = async (req, res) => {
       });
     }
 
-    const receipt = `TIP-${Date.now()}-${Math.floor(Math.random() * 1000)}`.slice(0, 40);
-    const razorpayOrder = await createRazorpayOrder({
-      amount: Math.round(tipAmount * 100),
-      currency: 'INR',
-      receipt,
-      notes: {
+    const cashfreeOrderId = `TIP_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    const cashfreeOrder = await createCashfreeOrder({
+      orderId: cashfreeOrderId,
+      orderAmount: Number(tipAmount.toFixed(2)),
+      customerDetails: {
+        customerId: String(userId),
+        customerName: req.user?.name || 'Customer',
+        customerEmail: req.user?.email || 'customer@example.com',
+        customerPhone: req.user?.phone || ''
+      },
+      orderNote: `Tip for order ${order.orderId}`,
+      orderTags: {
         type: 'delivery_tip',
         orderId: order.orderId,
         orderMongoId: order._id.toString(),
@@ -1152,29 +1316,24 @@ export const createOrderTipPayment = async (req, res) => {
     order.tipPayments.push({
       amount: tipAmount,
       status: 'pending',
-      razorpayOrderId: razorpayOrder.id
+      cashfreeOrderId: cashfreeOrder.order_id,
+      cashfreePaymentSessionId: cashfreeOrder.payment_session_id
     });
     await order.save();
 
-    let razorpayKeyId = null;
-    try {
-      const credentials = await getRazorpayCredentials();
-      razorpayKeyId = credentials.keyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-    } catch (error) {
-      logger.warn(`Failed to get Razorpay key ID for tip payment: ${error.message}`);
-      razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-    }
+    const credentials = await getCashfreeCredentials().catch(() => null);
 
     return res.status(201).json({
       success: true,
       data: {
         orderId: order.orderId,
         tipAmount,
-        razorpay: {
-          orderId: razorpayOrder.id,
-          amount: razorpayOrder.amount,
-          currency: razorpayOrder.currency,
-          key: razorpayKeyId
+        cashfree: {
+          orderId: cashfreeOrder.order_id,
+          paymentSessionId: cashfreeOrder.payment_session_id,
+          amount: cashfreeOrder.order_amount,
+          currency: cashfreeOrder.order_currency || 'INR',
+          environment: credentials?.environment || 'sandbox'
         }
       }
     });
@@ -1198,9 +1357,9 @@ export const verifyOrderTipPayment = async (req, res) => {
   try {
     const userId = req.user.id;
     const { id } = req.params;
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body || {};
+    const { cashfreeOrderId } = req.body || {};
 
-    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+    if (!cashfreeOrderId) {
       return res.status(400).json({
         success: false,
         message: 'Missing required payment verification fields'
@@ -1231,10 +1390,9 @@ export const verifyOrderTipPayment = async (req, res) => {
 
     const existingPayment = await Payment.findOne({
       orderId: order._id,
-      transactionId: razorpayPaymentId,
-      method: 'razorpay',
+      method: 'cashfree',
       status: 'completed',
-      'razorpay.paymentId': razorpayPaymentId
+      'cashfree.orderId': cashfreeOrderId
     });
 
     if (existingPayment) {
@@ -1248,9 +1406,9 @@ export const verifyOrderTipPayment = async (req, res) => {
       });
     }
 
-    const isValid = await verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-    if (!isValid) {
-      const tipEntry = (order.tipPayments || []).find(t => t.razorpayOrderId === razorpayOrderId);
+    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    if (!verification?.isPaid || !verification?.payment) {
+      const tipEntry = (order.tipPayments || []).find(t => t.cashfreeOrderId === cashfreeOrderId);
       if (tipEntry) {
         tipEntry.status = 'failed';
         await order.save();
@@ -1258,11 +1416,12 @@ export const verifyOrderTipPayment = async (req, res) => {
 
       return res.status(400).json({
         success: false,
-        message: 'Invalid payment signature'
+        message: 'Payment verification failed'
       });
     }
 
-    const tipEntry = (order.tipPayments || []).find(t => t.razorpayOrderId === razorpayOrderId);
+    const cashfreePaymentId = verification.payment.cf_payment_id;
+    const tipEntry = (order.tipPayments || []).find(t => t.cashfreeOrderId === cashfreeOrderId);
     if (!tipEntry) {
       return res.status(400).json({
         success: false,
@@ -1294,18 +1453,24 @@ export const verifyOrderTipPayment = async (req, res) => {
       userId,
       amount: tipAmount,
       currency: 'INR',
-      method: 'razorpay',
+      method: 'cashfree',
       status: 'completed',
-      razorpay: {
-        orderId: razorpayOrderId,
-        paymentId: razorpayPaymentId,
-        signature: razorpaySignature,
+      cashfree: {
+        orderId: cashfreeOrderId,
+        paymentId: cashfreePaymentId,
+        paymentSessionId: tipEntry.cashfreePaymentSessionId || null,
+        orderStatus: verification.order?.order_status || null,
+        paymentStatus: verification.payment?.payment_status || null,
         notes: {
           type: 'delivery_tip',
           orderId: order.orderId
         }
       },
-      transactionId: razorpayPaymentId,
+      transactionId: cashfreePaymentId,
+      gatewayResponse: {
+        order: verification.order,
+        payment: verification.payment
+      },
       completedAt: new Date(),
       logs: [{
         action: 'completed',
@@ -1313,8 +1478,8 @@ export const verifyOrderTipPayment = async (req, res) => {
         details: {
           type: 'delivery_tip',
           orderId: order.orderId,
-          razorpayOrderId,
-          razorpayPaymentId
+          cashfreeOrderId,
+          cashfreePaymentId
         },
         ipAddress: req.ip,
         userAgent: req.get('user-agent')
@@ -1333,8 +1498,8 @@ export const verifyOrderTipPayment = async (req, res) => {
       paymentCollected: false,
       metadata: {
         source: 'post_delivery_tip',
-        razorpayOrderId,
-        razorpayPaymentId,
+        cashfreeOrderId,
+        cashfreePaymentId,
         paymentRecordId: payment._id.toString()
       },
       processedAt: new Date()
@@ -1342,8 +1507,9 @@ export const verifyOrderTipPayment = async (req, res) => {
     await wallet.save();
 
     tipEntry.status = 'completed';
-    tipEntry.razorpayPaymentId = razorpayPaymentId;
-    tipEntry.razorpaySignature = razorpaySignature;
+    tipEntry.cashfreePaymentId = cashfreePaymentId;
+    tipEntry.cashfreeOrderStatus = verification.order?.order_status || null;
+    tipEntry.cashfreePaymentStatus = verification.payment?.payment_status || null;
     tipEntry.paymentRecordId = payment._id;
     tipEntry.paidAt = new Date();
     order.additionalTip = Math.max(0, Number(order.additionalTip) || 0) + tipAmount;
@@ -1352,7 +1518,7 @@ export const verifyOrderTipPayment = async (req, res) => {
     logger.info(`Order tip payment verified: ${order.orderId}`, {
       orderId: order.orderId,
       tipAmount,
-      razorpayPaymentId,
+      cashfreePaymentId,
       deliveryPartnerId: String(order.deliveryPartnerId)
     });
 
@@ -1700,7 +1866,7 @@ export const cancelOrder = async (req, res) => {
     // Determine the actual payment method
     const actualPaymentMethod = paymentMethod || paymentMethodFromPayment;
 
-    // Allow cancellation for all payment methods (Razorpay, COD, Wallet)
+    // Allow cancellation for all payment methods (Cashfree, COD, Wallet)
     // Only restrict if order is already cancelled or delivered (checked above)
 
     // Update order status
@@ -1710,10 +1876,10 @@ export const cancelOrder = async (req, res) => {
     order.cancelledAt = new Date();
     await order.save();
 
-    // Calculate refund amount only for online payments (Razorpay) and wallet
+    // Calculate refund amount only for online payments (Cashfree) and wallet
     // COD orders don't need refund since payment hasn't been made
     let refundMessage = '';
-    if (actualPaymentMethod === 'razorpay' || actualPaymentMethod === 'wallet') {
+    if (actualPaymentMethod === 'cashfree' || actualPaymentMethod === 'razorpay' || actualPaymentMethod === 'wallet') {
       try {
         const { calculateCancellationRefund } = await import('../services/cancellationRefundService.js');
         await calculateCancellationRefund(order._id, reason);

@@ -2885,7 +2885,7 @@ export default function DeliveryHome() {
                 total: order.pricing?.total || 0,
                 tipAmount: Number(order.pricing?.tip || 0),
                 additionalTip: Number(order.additionalTip || 0),
-                paymentMethod: order.paymentMethod || order.payment?.method || 'razorpay', // backend-resolved first (COD vs Online)
+                paymentMethod: order.paymentMethod || order.payment?.method || 'cashfree', // backend-resolved first (COD vs Online)
                 deliveryVerification: order.deliveryVerification || null,
                 phone: order.restaurantId?.phone || order.restaurantId?.ownerPhone || null, // Restaurant phone number (prefer phone, fallback to ownerPhone)
                 ownerPhone: order.restaurantId?.ownerPhone || null, // Owner phone number (separate field for direct access)

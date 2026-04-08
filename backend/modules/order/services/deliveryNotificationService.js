@@ -64,7 +64,7 @@ function normalizePaymentMethod(value) {
   const method = String(value || '').toLowerCase().trim();
   if (method === 'cash' || method === 'cod' || method === 'cash on delivery') return 'cash';
   if (method === 'wallet') return 'wallet';
-  return method || 'razorpay';
+  return method || 'cashfree';
 }
 
 function buildPaymentMeta(order, paymentRecord = null) {

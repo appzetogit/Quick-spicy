@@ -278,6 +278,10 @@ export default function RestaurantsList() {
             bValue = String(b.foodPreference || "both").toLowerCase();
             break;
           case 'status':
+            aValue = a.status ? 1 : 0;
+            bValue = b.status ? 1 : 0;
+            break;
+          case 'availability':
             aValue = getRestaurantAvailabilityStatus(a.originalData || a, now).isOpen ? 1 : 0;
             bValue = getRestaurantAvailabilityStatus(b.originalData || b, now).isOpen ? 1 : 0;
             break;
@@ -1231,13 +1235,22 @@ export default function RestaurantsList() {
                         <ArrowUpDown className={`w-3 h-3 ${sortConfig.key === 'status' ? 'text-blue-600' : 'text-slate-400'}`} />
                       </div>
                     </th>
+                    <th
+                      className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider cursor-pointer hover:bg-slate-100 transition-colors"
+                      onClick={() => handleSort('availability')}
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Availability</span>
+                        <ArrowUpDown className={`w-3 h-3 ${sortConfig.key === 'availability' ? 'text-blue-600' : 'text-slate-400'}`} />
+                      </div>
+                    </th>
                     <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {filteredRestaurants.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-20 text-center">
+                      <td colSpan={8} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
                           <p className="text-sm text-slate-500">No restaurants match your search</p>
@@ -1283,6 +1296,25 @@ export default function RestaurantsList() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-slate-700">{formatFoodPreference(restaurant.foodPreference)}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${restaurant.status ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                              {restaurant.status ? "Active" : "Inactive"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleBanRestaurant(restaurant)}
+                              disabled={banning}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${restaurant.status ? "bg-emerald-500" : "bg-slate-300"} ${banning ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                              title={restaurant.status ? "Deactivate restaurant" : "Activate restaurant"}
+                              aria-label={restaurant.status ? "Deactivate restaurant" : "Activate restaurant"}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${restaurant.status ? "translate-x-6" : "translate-x-1"}`}
+                              />
+                            </button>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-1">

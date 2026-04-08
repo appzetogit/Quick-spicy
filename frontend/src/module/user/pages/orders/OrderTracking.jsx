@@ -35,7 +35,7 @@ import { useProfile } from "../../context/ProfileContext"
 import { useLocation as useUserLocation } from "../../hooks/useLocation"
 import DeliveryTrackingMap from "../../components/DeliveryTrackingMap"
 import { orderAPI, restaurantAPI } from "@/lib/api"
-import { initRazorpayPayment } from "@/lib/utils/razorpay"
+import { initCashfreePayment } from "@/lib/utils/cashfree"
 import circleIcon from "@/assets/circleicon.png"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -968,55 +968,31 @@ export default function OrderTracking() {
     setIsTipLoading(true)
     try {
       const tipOrderResponse = await orderAPI.createTipPaymentOrder(orderId, tipAmount)
-      const razorpay = tipOrderResponse?.data?.data?.razorpay
-      if (!razorpay?.orderId || !razorpay?.key) {
+      const cashfree = tipOrderResponse?.data?.data?.cashfree
+      if (!cashfree?.orderId || !cashfree?.paymentSessionId) {
         throw new Error("Failed to initialize tip payment")
       }
 
-      await initRazorpayPayment({
-        key: razorpay.key,
-        amount: razorpay.amount,
-        currency: razorpay.currency || "INR",
-        order_id: razorpay.orderId,
-        name: "Quick Spicy",
-        description: `Tip for ${order?.deliveryPartner?.name || "Delivery Partner"}`,
-        prefill: {
-          name: profile?.name || profile?.fullName || "",
-          email: profile?.email || "",
-          contact: profile?.phone || "",
-        },
-        notes: {
-          orderId: order?.orderId || orderId,
-          type: "delivery_tip",
-        },
-        handler: async (response) => {
-          try {
-            await orderAPI.verifyTipPayment(orderId, {
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            })
-
-            toast.success(`Tip of ₹${tipAmount.toFixed(0)} sent successfully`)
-            setSelectedTipAmount(0)
-            setCustomTipAmount("")
-            await handleRefresh()
-          } catch (verifyError) {
-            debugError("Tip payment verify error:", verifyError)
-            toast.error(verifyError?.response?.data?.message || "Tip payment verification failed")
-          } finally {
-            setIsTipLoading(false)
-          }
-        },
-        onError: (error) => {
-          debugError("Tip payment error:", error)
-          toast.error(error?.description || "Tip payment failed")
-          setIsTipLoading(false)
-        },
-        onClose: () => {
-          setIsTipLoading(false)
-        },
+      await initCashfreePayment({
+        paymentSessionId: cashfree.paymentSessionId,
+        environment: cashfree.environment
       })
+
+      try {
+        await orderAPI.verifyTipPayment(orderId, {
+          cashfreeOrderId: cashfree.orderId,
+        })
+
+        toast.success(`Tip of ₹${tipAmount.toFixed(0)} sent successfully`)
+        setSelectedTipAmount(0)
+        setCustomTipAmount("")
+        await handleRefresh()
+      } catch (verifyError) {
+        debugError("Tip payment verify error:", verifyError)
+        toast.error(verifyError?.response?.data?.message || "Tip payment verification failed")
+      } finally {
+        setIsTipLoading(false)
+      }
     } catch (error) {
       debugError("Error creating tip order:", error)
       toast.error(error?.response?.data?.message || error?.message || "Unable to initiate tip payment")

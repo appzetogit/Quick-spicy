@@ -7,6 +7,7 @@ import AdminWallet from '../../admin/models/AdminWallet.js';
 import AuditLog from '../../admin/models/AuditLog.js';
 import Payment from '../../payment/models/Payment.js';
 import { createRefund } from '../../payment/services/razorpayService.js';
+import { createCashfreeRefund } from '../../payment/services/cashfreeService.js';
 
 /**
  * Determine cancellation stage based on order status
@@ -585,6 +586,148 @@ export const processRazorpayRefund = async (orderId, adminId = null) => {
     };
   } catch (error) {
     console.error('Error processing Razorpay refund:', error);
+    throw error;
+  }
+};
+
+/**
+ * Process Cashfree refund for cancelled order (called by admin)
+ * @param {String} orderId
+ * @param {String} adminId
+ * @returns {Promise<Object>}
+ */
+export const processCashfreeRefund = async (orderId, adminId = null) => {
+  try {
+    const order = await Order.findById(orderId);
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'cancelled') {
+      throw new Error('Order is not cancelled');
+    }
+
+    if (order.payment.method !== 'cashfree') {
+      throw new Error('Refund can only be processed for Cashfree payments.');
+    }
+
+    if (!order.payment.cashfreeOrderId) {
+      throw new Error('Cashfree order ID not found for this order');
+    }
+
+    const settlement = await OrderSettlement.findOne({ orderId });
+    if (!settlement) {
+      throw new Error('Settlement not found');
+    }
+
+    if (settlement.cancellationDetails?.refundStatus === 'processed' ||
+        settlement.cancellationDetails?.refundStatus === 'initiated') {
+      throw new Error('Refund already processed or initiated for this order');
+    }
+
+    const refundAmount = settlement.cancellationDetails?.refundAmount || 0;
+    if (refundAmount <= 0) {
+      throw new Error('No refund amount calculated for this order');
+    }
+
+    settlement.cancellationDetails.refundStatus = 'initiated';
+    settlement.cancellationDetails.refundInitiatedAt = new Date();
+    if (adminId) {
+      settlement.cancellationDetails.refundInitiatedBy = adminId;
+    }
+    await settlement.save();
+
+    let cashfreeRefund = null;
+    try {
+      cashfreeRefund = await createCashfreeRefund({
+        orderId: order.payment.cashfreeOrderId,
+        refundAmount: Number(refundAmount.toFixed(2)),
+        refundId: `cf_ref_${Date.now()}`,
+        refundNote: order.cancellationReason || 'Order cancelled'
+      });
+    } catch (cashfreeError) {
+      settlement.cancellationDetails.refundStatus = 'failed';
+      settlement.cancellationDetails.refundFailureReason = cashfreeError.message;
+      await settlement.save();
+      throw new Error(`Failed to create Cashfree refund: ${cashfreeError.message}`);
+    }
+
+    const payment = await Payment.findOne({
+      orderId: order._id,
+      'cashfree.orderId': order.payment.cashfreeOrderId
+    });
+
+    if (payment) {
+      payment.status = 'refunded';
+      payment.refund = {
+        amount: refundAmount,
+        status: refundAmount === order.pricing.total ? 'full' : 'partial',
+        refundId: cashfreeRefund.refund_id || cashfreeRefund.cf_refund_id || cashfreeRefund.refundId,
+        refundedAt: new Date(),
+        reason: order.cancellationReason || 'Order cancelled'
+      };
+      payment.logs.push({
+        action: 'refunded',
+        timestamp: new Date(),
+        details: {
+          refundId: payment.refund.refundId,
+          amount: refundAmount,
+          cashfreeRefund
+        }
+      });
+      await payment.save();
+    }
+
+    settlement.cancellationDetails.cashfreeRefundId =
+      cashfreeRefund.refund_id || cashfreeRefund.cf_refund_id || cashfreeRefund.refundId || null;
+    settlement.cancellationDetails.refundStatus = 'initiated';
+    await settlement.save();
+
+    const restaurantCompensation = settlement.cancellationDetails?.restaurantCompensation || 0;
+    if (restaurantCompensation > 0) {
+      await compensateRestaurant(
+        settlement.restaurantId,
+        orderId,
+        restaurantCompensation,
+        settlement.orderNumber
+      );
+    }
+
+    const cancellationStage = settlement.cancellationDetails?.cancellationStage;
+    if (cancellationStage === 'pre_accept' || cancellationStage === 'post_accept_pre_cook') {
+      await reverseAdminEarnings(orderId, settlement.adminEarning, settlement.orderNumber);
+    }
+
+    await AuditLog.createLog({
+      entityType: 'order',
+      entityId: orderId,
+      action: 'cashfree_refund_initiated',
+      actionType: 'refund',
+      performedBy: {
+        type: adminId ? 'admin' : 'system',
+        id: adminId || null,
+        name: adminId ? 'Admin' : 'System'
+      },
+      transactionDetails: {
+        amount: refundAmount,
+        type: 'cashfree_refund',
+        status: 'initiated',
+        orderId,
+        cashfreeRefundId: settlement.cancellationDetails.cashfreeRefundId,
+        cashfreeOrderId: order.payment.cashfreeOrderId
+      },
+      description: `Cashfree refund initiated for order ${settlement.orderNumber}. Amount: ₹${refundAmount}`
+    });
+
+    return {
+      success: true,
+      refundId: settlement.cancellationDetails.cashfreeRefundId,
+      refundAmount,
+      cashfreeRefund,
+      message: `Refund of ₹${refundAmount} initiated successfully. Amount will be credited to customer's account within 3-5 working days.`
+    };
+  } catch (error) {
+    console.error('Error processing Cashfree refund:', error);
     throw error;
   }
 };

@@ -32,6 +32,9 @@ const defaultCartContext = {
   cleanCartForRestaurant: () => {
     debugWarn('CartProvider not available - cleanCartForRestaurant called');
   },
+  syncCartRestaurant: () => {
+    debugWarn('CartProvider not available - syncCartRestaurant called');
+  },
 }
 
 const CartContext = createContext(defaultCartContext)
@@ -372,6 +375,23 @@ export function CartProvider({ children }) {
 
   const clearCart = () => setCart([])
 
+  const syncCartRestaurant = (restaurantId, restaurantName) => {
+    const normalizedRestaurantId = normalizeIdentifier(restaurantId)
+    const normalizedRestaurantName = restaurantName ? String(restaurantName).trim() : ""
+
+    if (!normalizedRestaurantId && !normalizedRestaurantName) {
+      return
+    }
+
+    setCart((prev) =>
+      normalizeCartData(prev).map((item) => ({
+        ...item,
+        restaurantId: normalizedRestaurantId || item.restaurantId || null,
+        restaurant: normalizedRestaurantName || item.restaurant || "",
+      }))
+    )
+  }
+
   // Clean cart to remove items from different restaurants
   // Keeps only items from the specified restaurant
   const cleanCartForRestaurant = (restaurantId, restaurantName) => {
@@ -516,6 +536,7 @@ export function CartProvider({ children }) {
       getCartItem,
       clearCart,
       cleanCartForRestaurant,
+      syncCartRestaurant,
     }),
     [cart, cartForAnimation, lastAddEvent, lastRemoveEvent]
   )

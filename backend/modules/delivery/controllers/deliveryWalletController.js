@@ -7,9 +7,8 @@ import BusinessSettings from '../../admin/models/BusinessSettings.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
-import { createOrder as createRazorpayOrder } from '../../payment/services/razorpayService.js';
-import { verifyPayment } from '../../payment/services/razorpayService.js';
-import { getRazorpayCredentials } from '../../../shared/utils/envService.js';
+import { createCashfreeOrder, verifyCashfreeOrderPayment } from '../../payment/services/cashfreeService.js';
+import { getCashfreeCredentials } from '../../../shared/utils/envService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -735,7 +734,7 @@ const createDepositOrderSchema = Joi.object({
 });
 
 /**
- * Create Razorpay order for cash limit deposit
+ * Create Cashfree order for cash limit deposit
  * POST /api/delivery/wallet/deposit/create-order
  * Body: { amount } (INR)
  */
@@ -758,52 +757,57 @@ export const createDepositOrder = asyncHandler(async (req, res) => {
 
   let credentials;
   try {
-    credentials = await getRazorpayCredentials();
+    credentials = await getCashfreeCredentials();
   } catch (e) {
-    logger.error('Razorpay credentials error:', e);
+    logger.error('Cashfree credentials error:', e);
     return errorResponse(res, 500, 'Payment gateway is not configured. Please contact support.');
   }
-  if (!credentials?.keyId || !credentials?.keySecret || !credentials.keyId.trim() || !credentials.keySecret.trim()) {
-    return errorResponse(res, 500, 'Payment gateway credentials are missing. Please configure Razorpay in admin.');
+  if (!credentials?.appId || !credentials?.secretKey || !credentials.appId.trim() || !credentials.secretKey.trim()) {
+    return errorResponse(res, 500, 'Payment gateway credentials are missing. Please configure Cashfree in admin.');
   }
 
-  const receipt = `dl_dep_${delivery._id.toString().slice(-8)}_${Date.now().toString().slice(-8)}`;
-  let razorpayOrder;
+  const orderId = `DLDEP_${delivery._id.toString().slice(-8)}_${Date.now().toString().slice(-8)}`;
+  let cashfreeOrder;
   try {
-    razorpayOrder = await createRazorpayOrder({
-      amount: Math.round(amount * 100),
-      currency: 'INR',
-      receipt,
-      notes: { deliveryId: delivery._id.toString(), type: 'cash_limit_deposit', amount: String(amount) }
+    cashfreeOrder = await createCashfreeOrder({
+      orderId,
+      orderAmount: Number(amount.toFixed(2)),
+      customerDetails: {
+        customerId: delivery._id.toString(),
+        customerName: delivery.name || 'Delivery Partner',
+        customerEmail: delivery.email || 'delivery@example.com',
+        customerPhone: delivery.phone || ''
+      },
+      orderNote: `Cash limit deposit of INR ${amount}`,
+      orderTags: { deliveryId: delivery._id.toString(), type: 'cash_limit_deposit', amount: String(amount) }
     });
   } catch (e) {
-    logger.error('Razorpay create order error:', e);
+    logger.error('Cashfree create order error:', e);
     return errorResponse(res, 500, e.message || 'Failed to create payment order');
   }
-  if (!razorpayOrder?.id) {
+  if (!cashfreeOrder?.order_id || !cashfreeOrder?.payment_session_id) {
     return errorResponse(res, 500, 'Failed to create payment order');
   }
 
   return successResponse(res, 201, 'Order created', {
-    razorpay: {
-      orderId: razorpayOrder.id,
-      amount: razorpayOrder.amount,
-      currency: razorpayOrder.currency || 'INR',
-      key: credentials.keyId
+    cashfree: {
+      orderId: cashfreeOrder.order_id,
+      paymentSessionId: cashfreeOrder.payment_session_id,
+      amount: cashfreeOrder.order_amount,
+      currency: cashfreeOrder.order_currency || 'INR',
+      environment: credentials.environment || 'sandbox'
     },
     amount
   });
 });
 
 const verifyDepositSchema = Joi.object({
-  razorpay_order_id: Joi.string().required(),
-  razorpay_payment_id: Joi.string().required(),
-  razorpay_signature: Joi.string().required(),
+  cashfreeOrderId: Joi.string().required(),
   amount: Joi.number().positive().required()
 });
 
 /**
- * Verify Razorpay payment and apply deposit (reduce cash in hand, add to available limit)
+ * Verify Cashfree payment and apply deposit (reduce cash in hand, add to available limit)
  * POST /api/delivery/wallet/deposit/verify
  */
 export const verifyDepositPayment = asyncHandler(async (req, res) => {
@@ -815,13 +819,14 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
   if (ve) {
     return errorResponse(res, 400, ve.details[0].message || 'Invalid payload');
   }
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, amount } = req.body;
+  const { cashfreeOrderId, amount } = req.body;
   const amt = Number(amount);
 
-  const isValid = await verifyPayment(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-  if (!isValid) {
-    return errorResponse(res, 400, 'Invalid payment signature');
+  const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+  if (!verification?.isPaid || !verification?.payment) {
+    return errorResponse(res, 400, 'Payment verification failed');
   }
+  const cashfreePaymentId = verification.payment.cf_payment_id;
 
   const wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
   const cashInHand = Number(wallet.cashInHand) || 0;
@@ -829,23 +834,23 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, `Insufficient cash in hand (₹${cashInHand.toFixed(2)}). Deposit amount cannot exceed cash in hand.`);
   }
 
-  const pid = (t) => (t.metadata?.get ? t.metadata.get('razorpayPaymentId') : t.metadata?.razorpayPaymentId);
+  const pid = (t) => (t.metadata?.get ? t.metadata.get('cashfreePaymentId') : t.metadata?.cashfreePaymentId);
   const existing = (wallet.transactions || []).find(
-    t => t.type === 'deposit' && pid(t) === razorpay_payment_id
+    t => t.type === 'deposit' && pid(t) === cashfreePaymentId
   );
   if (existing) {
     return errorResponse(res, 400, 'Payment already processed');
   }
 
   const meta = new Map();
-  meta.set('razorpayOrderId', razorpay_order_id);
-  meta.set('razorpayPaymentId', razorpay_payment_id);
+  meta.set('cashfreeOrderId', cashfreeOrderId);
+  meta.set('cashfreePaymentId', cashfreePaymentId);
 
   wallet.addTransaction({
     amount: amt,
     type: 'deposit',
     status: 'Completed',
-    description: `Cash limit deposit via Razorpay`,
+    description: 'Cash limit deposit via Cashfree',
     paymentMethod: 'other',
     metadata: Object.fromEntries(meta),
     processedAt: new Date()

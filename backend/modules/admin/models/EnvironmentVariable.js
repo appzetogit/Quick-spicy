@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 import { encrypt, decrypt, isEncrypted } from '../../../shared/utils/encryption.js';
 
 export const ENV_VARIABLE_KEYS = [
+  'CASHFREE_APP_ID',
+  'CASHFREE_SECRET_KEY',
+  'CASHFREE_ENVIRONMENT',
   'RAZORPAY_API_KEY',
   'RAZORPAY_SECRET_KEY',
   'CLOUDINARY_CLOUD_NAME',
@@ -31,6 +34,23 @@ export const ENV_VARIABLE_KEYS = [
 
 const environmentVariableSchema = new mongoose.Schema(
   {
+    // Cashfree
+    CASHFREE_APP_ID: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    CASHFREE_SECRET_KEY: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    CASHFREE_ENVIRONMENT: {
+      type: String,
+      default: 'sandbox',
+      trim: true
+    },
+
     // Razorpay
     RAZORPAY_API_KEY: {
       type: String,
@@ -207,6 +227,8 @@ environmentVariableSchema.methods.toEnvObject = function() {
   
   // Decrypt all sensitive fields
   const sensitiveFields = [
+    'CASHFREE_APP_ID',
+    'CASHFREE_SECRET_KEY',
     'RAZORPAY_API_KEY',
     'RAZORPAY_SECRET_KEY',
     'CLOUDINARY_API_KEY',
@@ -237,6 +259,8 @@ environmentVariableSchema.methods.toEnvObject = function() {
 // Pre-save hook to encrypt sensitive fields
 environmentVariableSchema.pre('save', function(next) {
   const sensitiveFields = [
+    'CASHFREE_APP_ID',
+    'CASHFREE_SECRET_KEY',
     'RAZORPAY_API_KEY',
     'RAZORPAY_SECRET_KEY',
     'CLOUDINARY_API_KEY',

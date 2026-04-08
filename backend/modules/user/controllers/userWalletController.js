@@ -2,11 +2,10 @@ import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import UserWallet from '../models/UserWallet.js';
 import User from '../../auth/models/User.js';
-import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
-import { createOrder as createRazorpayOrder, verifyPayment } from '../../payment/services/razorpayService.js';
-import { getRazorpayCredentials } from '../../../shared/utils/envService.js';
+import { createCashfreeOrder, verifyCashfreeOrderPayment, mapCashfreePaymentMethod } from '../../payment/services/cashfreeService.js';
+import { getCashfreeCredentials } from '../../../shared/utils/envService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -27,11 +26,9 @@ export const getWallet = asyncHandler(async (req, res) => {
   try {
     const user = req.user;
 
-    // Find or create wallet for this user
     let wallet = await UserWallet.findOne({ userId: user._id });
 
     if (!wallet) {
-      // Create wallet if doesn't exist
       wallet = await UserWallet.create({
         userId: user._id,
         balance: 0,
@@ -41,7 +38,6 @@ export const getWallet = asyncHandler(async (req, res) => {
       });
     }
 
-    // Get all transactions (sorted by date, newest first)
     const allTransactions = wallet.transactions
       .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -52,7 +48,6 @@ export const getWallet = asyncHandler(async (req, res) => {
       return metadata;
     };
 
-    // Map transactions for frontend
     const transactions = allTransactions.map(t => ({
       id: t._id,
       _id: t._id,
@@ -86,7 +81,7 @@ export const getWallet = asyncHandler(async (req, res) => {
       totalSpent: wallet.totalSpent || 0,
       totalRefunded: wallet.totalRefunded || 0,
       referralEarnings,
-      transactions: transactions,
+      transactions,
       totalTransactions: wallet.transactions.length
     };
 
@@ -114,30 +109,28 @@ export const getTransactions = asyncHandler(async (req, res) => {
     const user = req.user;
     const { type, status, page = 1, limit = 50 } = req.query;
 
-    let wallet = await UserWallet.findOne({ userId: user._id });
+    const wallet = await UserWallet.findOne({ userId: user._id });
 
     if (!wallet) {
       return successResponse(res, 200, 'No transactions found', {
         transactions: [],
         pagination: {
-          page: parseInt(page),
-          limit: parseInt(limit),
+          page: parseInt(page, 10),
+          limit: parseInt(limit, 10),
           total: 0,
           pages: 0
         }
       });
     }
 
-    // Filter transactions
     let transactions = wallet.transactions || [];
 
     if (type) {
-      // Map frontend filter types to backend types
       const typeMap = {
-        'all': null,
-        'additions': 'addition',
-        'deductions': 'deduction',
-        'refunds': 'refund'
+        all: null,
+        additions: 'addition',
+        deductions: 'deduction',
+        refunds: 'refund'
       };
       const backendType = typeMap[type];
       if (backendType) {
@@ -149,13 +142,11 @@ export const getTransactions = asyncHandler(async (req, res) => {
       transactions = transactions.filter(t => t.status === status);
     }
 
-    // Sort by date (newest first)
     transactions.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-    // Pagination
     const total = transactions.length;
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    const paginatedTransactions = transactions.slice(skip, skip + parseInt(limit));
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const paginatedTransactions = transactions.slice(skip, skip + parseInt(limit, 10));
 
     const mapMetadata = (metadata) => {
       if (!metadata) return null;
@@ -183,10 +174,10 @@ export const getTransactions = asyncHandler(async (req, res) => {
         failureReason: t.failureReason
       })),
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parseInt(page, 10),
+        limit: parseInt(limit, 10),
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / parseInt(limit, 10))
       }
     });
   } catch (error) {
@@ -196,7 +187,7 @@ export const getTransactions = asyncHandler(async (req, res) => {
 });
 
 /**
- * Create Razorpay Order for Wallet Top-up
+ * Create Cashfree Order for Wallet Top-up
  * POST /api/user/wallet/create-topup-order
  */
 const createTopupOrderSchema = Joi.object({
@@ -205,7 +196,6 @@ const createTopupOrderSchema = Joi.object({
 
 export const createTopupOrder = asyncHandler(async (req, res) => {
   try {
-    // Validate user exists
     if (!req.user || !req.user._id) {
       logger.error('User not found in request');
       return errorResponse(res, 401, 'User not authenticated');
@@ -214,161 +204,69 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
     const user = req.user;
     const { amount } = req.body;
 
-    logger.info(`Creating wallet top-up order request:`, {
-      userId: user._id,
-      amount: amount
-    });
-
-    // Validate amount exists
     if (amount === undefined || amount === null) {
-      logger.error('Amount is missing in request body');
       return errorResponse(res, 400, 'Amount is required');
     }
 
-    // Validation
     const { error: validationError } = createTopupOrderSchema.validate(req.body);
     if (validationError) {
-      logger.warn(`Validation error: ${validationError.details[0].message}`);
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    // Check minimum amount
-    const minAmount = 1;
-    if (amount < minAmount) {
-      return errorResponse(res, 400, `Minimum amount to add is ₹${minAmount}`);
+    if (amount < 1) {
+      return errorResponse(res, 400, 'Minimum amount to add is INR 1');
     }
 
-    // Check maximum amount
-    const maxAmount = 50000;
-    if (amount > maxAmount) {
-      return errorResponse(res, 400, `Maximum amount to add is ₹${maxAmount}`);
+    if (amount > 50000) {
+      return errorResponse(res, 400, 'Maximum amount to add is INR 50,000');
     }
 
-    // Check Razorpay credentials first
-    let credentials = null;
-    try {
-      logger.info('Fetching Razorpay credentials from database...');
-      credentials = await getRazorpayCredentials();
-      
-      logger.info('Razorpay credentials check:', {
-        hasKeyId: !!credentials.keyId,
-        hasKeySecret: !!credentials.keySecret,
-        keyIdLength: credentials.keyId?.length || 0,
-        keySecretLength: credentials.keySecret?.length || 0
-      });
-      
-      if (!credentials || !credentials.keyId || !credentials.keySecret) {
-        logger.error('Razorpay credentials are missing or empty in database');
-        return errorResponse(res, 500, 'Payment gateway is not configured. Please configure Razorpay API Key and Secret Key in admin panel → System Settings.');
+    const credentials = await getCashfreeCredentials();
+    if (!credentials?.appId || !credentials?.secretKey) {
+      return errorResponse(res, 500, 'Payment gateway is not configured. Please configure Cashfree App ID and Secret Key.');
+    }
+
+    const orderId = `WT_${user._id.toString().slice(-8)}_${Date.now().toString().slice(-10)}`;
+    const cashfreeOrder = await createCashfreeOrder({
+      orderId,
+      orderAmount: Number(amount.toFixed(2)),
+      customerDetails: {
+        customerId: user._id.toString(),
+        customerName: user.name || 'Wallet User',
+        customerEmail: user.email || 'wallet@example.com',
+        customerPhone: user.phone || ''
+      },
+      orderNote: `Wallet top-up of INR ${amount}`,
+      orderTags: {
+        type: 'wallet_topup',
+        userId: user._id.toString()
       }
+    });
 
-      // Check if credentials are not just empty strings
-      if (credentials.keyId.trim() === '' || credentials.keySecret.trim() === '') {
-        logger.error('Razorpay credentials are empty strings');
-        return errorResponse(res, 500, 'Payment gateway credentials are empty. Please set valid Razorpay API Key and Secret Key in admin panel.');
-      }
-    } catch (credError) {
-      logger.error('Error fetching Razorpay credentials:', {
-        message: credError.message,
-        stack: credError.stack,
-        errorType: credError.constructor.name
-      });
-      return errorResponse(res, 500, 'Failed to fetch payment gateway configuration. Please contact support.');
-    }
-
-    // Create Razorpay order
-    // Receipt ID must be max 40 characters (Razorpay requirement)
-    // Format: wt_{userId_short}_{timestamp_short}
-    const userIdShort = user._id.toString().slice(-8); // Last 8 chars of ObjectId
-    const timestampShort = Date.now().toString().slice(-10); // Last 10 digits
-    const receiptId = `wt_${userIdShort}_${timestampShort}`; // Max ~20 chars
-    let razorpayOrder = null;
-    
-    try {
-      logger.info(`Attempting to create Razorpay order for amount: ${amount}`);
-      razorpayOrder = await createRazorpayOrder({
-        amount: Math.round(amount * 100), // Convert to paise
-        currency: 'INR',
-        receipt: receiptId,
-        notes: {
-          userId: user._id.toString(),
-          type: 'wallet_topup',
-          amount: amount.toString()
-        }
-      });
-      logger.info(`Razorpay order created successfully: ${razorpayOrder?.id}`);
-    } catch (razorpayError) {
-      logger.error(`Error creating Razorpay order:`, {
-        message: razorpayError.message,
-        stack: razorpayError.stack,
-        userId: user._id,
-        amount: amount,
-        errorType: razorpayError.constructor.name
-      });
-      
-      // Check if it's a credentials issue
-      if (razorpayError.message && (
-        razorpayError.message.includes('not initialized') || 
-        razorpayError.message.includes('credentials') ||
-        razorpayError.message.includes('key_id') ||
-        razorpayError.message.includes('key_secret') ||
-        razorpayError.message.includes('Invalid')
-      )) {
-        return errorResponse(res, 500, 'Payment gateway configuration error. Please check Razorpay credentials in admin panel.');
-      }
-      
-      // Return the error message to frontend
-      return errorResponse(res, 500, razorpayError.message || 'Failed to create payment order. Please try again.');
-    }
-
-    if (!razorpayOrder || !razorpayOrder.id) {
-      logger.error('Razorpay order is null or missing ID');
-      return errorResponse(res, 500, 'Failed to create payment order. Please try again.');
-    }
-
-    // Get Razorpay key ID
-    let razorpayKeyId = null;
-    try {
-      const credentials = await getRazorpayCredentials();
-      razorpayKeyId = credentials.keyId || process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-      logger.info(`Razorpay key ID retrieved: ${razorpayKeyId ? 'Yes' : 'No'}`);
-    } catch (error) {
-      logger.warn(`Failed to get Razorpay key ID: ${error.message}`);
-      razorpayKeyId = process.env.RAZORPAY_KEY_ID || process.env.RAZORPAY_API_KEY;
-    }
-
-    if (!razorpayKeyId) {
-      logger.error('Razorpay key ID not found');
-      return errorResponse(res, 500, 'Payment gateway configuration error. Please contact support.');
-    }
-
-    logger.info(`Razorpay order created for wallet top-up: ${user._id}`, {
+    logger.info('Cashfree order created for wallet top-up', {
       userId: user._id,
       amount,
-      razorpayOrderId: razorpayOrder.id
+      cashfreeOrderId: cashfreeOrder.order_id
     });
 
-    return successResponse(res, 201, 'Razorpay order created successfully', {
-      razorpay: {
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        key: razorpayKeyId
+    return successResponse(res, 201, 'Cashfree order created successfully', {
+      cashfree: {
+        orderId: cashfreeOrder.order_id,
+        paymentSessionId: cashfreeOrder.payment_session_id,
+        amount: cashfreeOrder.order_amount,
+        currency: cashfreeOrder.order_currency || 'INR',
+        environment: credentials.environment || 'sandbox'
       },
-      amount: amount
+      amount
     });
   } catch (error) {
-    logger.error('Unexpected error creating Razorpay order for wallet top-up:', {
+    logger.error('Unexpected error creating Cashfree order for wallet top-up', {
       error: error.message,
       stack: error.stack,
       userId: req.user?._id,
-      amount: req.body?.amount,
-      errorType: error.constructor.name
+      amount: req.body?.amount
     });
-    
-    // Return more specific error message
-    const errorMessage = error.message || 'Failed to create payment order. Please try again.';
-    return errorResponse(res, 500, errorMessage);
+    return errorResponse(res, 500, error.message || 'Failed to create payment order. Please try again.');
   }
 });
 
@@ -377,69 +275,68 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
  * POST /api/user/wallet/verify-topup-payment
  */
 const verifyTopupPaymentSchema = Joi.object({
-  razorpayOrderId: Joi.string().required(),
-  razorpayPaymentId: Joi.string().required(),
-  razorpaySignature: Joi.string().required(),
+  cashfreeOrderId: Joi.string().required(),
   amount: Joi.number().positive().required()
 });
 
 export const verifyTopupPayment = asyncHandler(async (req, res) => {
   try {
     const user = req.user;
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, amount } = req.body;
+    const { cashfreeOrderId, amount } = req.body;
 
-    // Validation
     const { error: validationError } = verifyTopupPaymentSchema.validate(req.body);
     if (validationError) {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    // Verify payment signature
-    const isValid = await verifyPayment(razorpayOrderId, razorpayPaymentId, razorpaySignature);
-    
-    if (!isValid) {
-      logger.warn(`Invalid payment signature for wallet top-up: ${user._id}`, {
-        razorpayOrderId,
-        razorpayPaymentId
+    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    if (!verification?.isPaid || !verification?.payment) {
+      logger.warn('Cashfree payment verification failed for wallet top-up', {
+        userId: user._id,
+        cashfreeOrderId
       });
-      return errorResponse(res, 400, 'Invalid payment signature');
+      return errorResponse(res, 400, 'Payment verification failed');
     }
 
-    // Find or create wallet
-    let wallet = await UserWallet.findOrCreateByUserId(user._id);
+    const cashfreePaymentId = verification.payment.cf_payment_id;
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
-    // Check if transaction already exists for this payment
     const existingTransaction = wallet.transactions.find(
-      t => t.paymentId && t.paymentId === razorpayPaymentId
+      t => t.paymentId && t.paymentId === cashfreePaymentId
     );
 
     if (existingTransaction) {
       return errorResponse(res, 400, 'Payment already processed');
     }
 
-    // Add money transaction
     const transaction = wallet.addTransaction({
-      amount: amount,
+      amount,
       type: 'addition',
       status: 'Completed',
-      description: `Added money via Razorpay`,
-      paymentMethod: 'card', // Default, actual method will be in Razorpay
-      paymentGateway: 'razorpay',
-      paymentId: razorpayPaymentId
+      description: 'Added money via Cashfree',
+      paymentMethod: mapCashfreePaymentMethod(verification.payment),
+      paymentGateway: 'cashfree',
+      paymentId: cashfreePaymentId,
+      orderId: cashfreeOrderId,
+      metadata: {
+        cashfreeOrderId,
+        cashfreePaymentId,
+        cashfreeOrderStatus: verification.order?.order_status || null,
+        cashfreePaymentStatus: verification.payment?.payment_status || null
+      }
     });
 
     await wallet.save();
 
-    // Update user's wallet balance in User model (for backward compatibility)
     await User.findByIdAndUpdate(user._id, {
       'wallet.balance': wallet.balance,
       'wallet.currency': wallet.currency
     });
 
-    logger.info(`Money added to wallet after payment verification: ${user._id}`, {
+    logger.info('Money added to wallet after Cashfree payment verification', {
       userId: user._id,
       amount,
-      razorpayPaymentId,
+      cashfreePaymentId,
       transactionId: transaction._id,
       newBalance: wallet.balance
     });
@@ -460,7 +357,7 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error('Error verifying payment and adding money to wallet:', error);
+    logger.error('Error verifying Cashfree payment and adding money to wallet:', error);
     return errorResponse(res, 500, 'Failed to verify payment');
   }
 });
@@ -482,35 +379,29 @@ export const addMoney = asyncHandler(async (req, res) => {
     const user = req.user;
     const { amount, paymentMethod, paymentGateway, paymentId, description } = req.body;
 
-    // Validation
     const { error: validationError } = addMoneySchema.validate(req.body);
     if (validationError) {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    // Check minimum amount
-    const minAmount = 1;
-    if (amount < minAmount) {
-      return errorResponse(res, 400, `Minimum amount to add is ₹${minAmount}`);
+    if (amount < 1) {
+      return errorResponse(res, 400, 'Minimum amount to add is INR 1');
     }
 
-    // Find or create wallet
-    let wallet = await UserWallet.findOrCreateByUserId(user._id);
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
-    // Add money transaction
     const transaction = wallet.addTransaction({
-      amount: amount,
+      amount,
       type: 'addition',
       status: 'Completed',
       description: description || `Added money via ${paymentMethod}`,
-      paymentMethod: paymentMethod,
+      paymentMethod,
       paymentGateway: paymentGateway || null,
       paymentId: paymentId || null
     });
 
     await wallet.save();
 
-    // Update user's wallet balance in User model (for backward compatibility)
     await User.findByIdAndUpdate(user._id, {
       'wallet.balance': wallet.balance,
       'wallet.currency': wallet.currency
@@ -561,21 +452,17 @@ export const deductMoney = asyncHandler(async (req, res) => {
     const user = req.user;
     const { amount, orderId, description } = req.body;
 
-    // Validation
     const { error: validationError } = deductMoneySchema.validate(req.body);
     if (validationError) {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    // Find wallet
-    let wallet = await UserWallet.findOrCreateByUserId(user._id);
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
-    // Check if sufficient balance
     if (amount > wallet.balance) {
       return errorResponse(res, 400, 'Insufficient wallet balance');
     }
 
-    // Check if transaction already exists for this order
     const existingTransaction = wallet.transactions.find(
       t => t.orderId && t.orderId.toString() === orderId.toString() && t.type === 'deduction'
     );
@@ -584,18 +471,16 @@ export const deductMoney = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'Payment already processed for this order');
     }
 
-    // Deduct money transaction
     const transaction = wallet.addTransaction({
-      amount: amount,
+      amount,
       type: 'deduction',
       status: 'Completed',
       description: description || `Order payment - Order #${orderId}`,
-      orderId: orderId
+      orderId
     });
 
     await wallet.save();
 
-    // Update user's wallet balance in User model (for backward compatibility)
     await User.findByIdAndUpdate(user._id, {
       'wallet.balance': wallet.balance,
       'wallet.currency': wallet.currency
@@ -649,16 +534,13 @@ export const addRefund = asyncHandler(async (req, res) => {
     const user = req.user;
     const { amount, orderId, description } = req.body;
 
-    // Validation
     const { error: validationError } = addRefundSchema.validate(req.body);
     if (validationError) {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    // Find or create wallet
-    let wallet = await UserWallet.findOrCreateByUserId(user._id);
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
-    // Check if refund already exists for this order
     const existingTransaction = wallet.transactions.find(
       t => t.orderId && t.orderId.toString() === orderId.toString() && t.type === 'refund'
     );
@@ -667,18 +549,16 @@ export const addRefund = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'Refund already processed for this order');
     }
 
-    // Add refund transaction
     const transaction = wallet.addTransaction({
-      amount: amount,
+      amount,
       type: 'refund',
       status: 'Completed',
       description: description || `Refund - Order #${orderId}`,
-      orderId: orderId
+      orderId
     });
 
     await wallet.save();
 
-    // Update user's wallet balance in User model (for backward compatibility)
     await User.findByIdAndUpdate(user._id, {
       'wallet.balance': wallet.balance,
       'wallet.currency': wallet.currency
@@ -712,4 +592,3 @@ export const addRefund = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to add refund to wallet');
   }
 });
-

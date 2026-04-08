@@ -95,6 +95,57 @@ export function clearEnvCache() {
   logger.info("Environment variables cache cleared");
 }
 
+function inferCashfreeEnvironment(secretKey = "", fallbackEnvironment = "sandbox") {
+  const normalizedSecretKey = String(secretKey || "").trim().toLowerCase();
+
+  if (normalizedSecretKey.includes("_prod_")) {
+    return "production";
+  }
+
+  if (
+    normalizedSecretKey.includes("_test_") ||
+    normalizedSecretKey.includes("_sandbox_")
+  ) {
+    return "sandbox";
+  }
+
+  return String(fallbackEnvironment || "sandbox").trim().toLowerCase();
+}
+
+/**
+ * Get Cashfree credentials
+ * @returns {Promise<Object>} { appId, secretKey, environment }
+ */
+export async function getCashfreeCredentials() {
+  const envVars = await getAllEnvVars();
+  const dbAppId = envVars.CASHFREE_APP_ID || "";
+  const dbSecretKey = envVars.CASHFREE_SECRET_KEY || "";
+  const dbEnvironment = envVars.CASHFREE_ENVIRONMENT || "";
+
+  const appId = dbAppId || process.env.CASHFREE_APP_ID || "";
+  const secretKey = dbSecretKey || process.env.CASHFREE_SECRET_KEY || "";
+  const configuredEnvironment =
+    (dbAppId || dbSecretKey)
+      ? dbEnvironment || process.env.CASHFREE_ENVIRONMENT || "sandbox"
+      : process.env.CASHFREE_ENVIRONMENT || dbEnvironment || "sandbox";
+  const environment = inferCashfreeEnvironment(secretKey, configuredEnvironment);
+
+  if (
+    secretKey &&
+    String(configuredEnvironment || "").trim().toLowerCase() !== environment
+  ) {
+    logger.warn(
+      `Cashfree environment adjusted from ${configuredEnvironment || "unset"} to ${environment} based on the configured secret key`
+    );
+  }
+
+  return {
+    appId,
+    secretKey,
+    environment,
+  };
+}
+
 /**
  * Get Razorpay credentials
  * @returns {Promise<Object>} { keyId, keySecret }

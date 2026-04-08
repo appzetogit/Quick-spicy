@@ -14,9 +14,8 @@ import { useZone } from "../../hooks/useZone"
 import { useLocationSelector } from "../../components/UserLayout"
 import { orderAPI, restaurantAPI, adminAPI, userAPI, API_ENDPOINTS } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
-import { initRazorpayPayment } from "@/lib/utils/razorpay"
+import { initCashfreePayment } from "@/lib/utils/cashfree"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
 const debugLog = (...args) => {}
@@ -64,9 +63,41 @@ const formatFullAddress = (address) => {
 const RUPEE_SYMBOL = "\u20B9"
 const CANCELLATION_NOTE_TEXT = "If a cancellation is made within 1 minute without the vendor accepting, a 100% refund will be issued. No refund will be given for cancellations made after 1 minute"
 
+const normalizeIdentifier = (value) => {
+  if (value === undefined || value === null || value === "") return null
+  return String(value).trim()
+}
+
+const normalizeName = (value) => {
+  if (!value) return ""
+  return String(value).trim().toLowerCase()
+}
+
+const normalizeFrontendPaymentMethod = (value) => {
+  const normalizedValue = String(value || "").trim().toLowerCase()
+
+  if (
+    normalizedValue === "cashfree" ||
+    normalizedValue === "online" ||
+    normalizedValue === "online payment" ||
+    normalizedValue === "card" ||
+    normalizedValue === "upi" ||
+    normalizedValue === "netbanking"
+  ) {
+    return "cashfree"
+  }
+
+  if (normalizedValue === "wallet") {
+    return "wallet"
+  }
+
+  return "cash"
+}
+
 export default function Cart() {
   const navigate = useNavigate()
   const orderSuccessAudioRef = useRef(null)
+  const paymentMethodSelectRef = useRef(null)
 
   // Defensive check: Ensure CartProvider is available
   let cartContext;
@@ -93,7 +124,7 @@ export default function Cart() {
     );
   }
 
-  const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant } = cartContext;
+  const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant, syncCartRestaurant } = cartContext;
   const { getDefaultAddress, getDefaultPaymentMethod, setDefaultAddress, addresses, paymentMethods, userProfile } = useProfile()
   const { createOrder } = useOrders()
   const { openLocationSelector } = useLocationSelector()
@@ -103,7 +134,7 @@ export default function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [manualCouponCode, setManualCouponCode] = useState("")
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash") // COD only for now
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
   const [deliveryFleet, setDeliveryFleet] = useState("standard")
@@ -257,6 +288,43 @@ export default function Cart() {
     ? (restaurantData?._id || restaurantData?.restaurantId || cart[0]?.restaurantId || null)
     : null
 
+  useEffect(() => {
+    if (!cart.length) {
+      if (restaurantData) {
+        setRestaurantData(null)
+      }
+      return
+    }
+
+    if (!restaurantData) return
+
+    const cartRestaurantId = normalizeIdentifier(cart[0]?.restaurantId)
+    const cartRestaurantName = normalizeName(cart[0]?.restaurant)
+    const loadedRestaurantId =
+      normalizeIdentifier(restaurantData?.restaurantId) ||
+      normalizeIdentifier(restaurantData?._id)
+    const loadedRestaurantName = normalizeName(restaurantData?.name)
+
+    const idMatches =
+      !cartRestaurantId ||
+      !loadedRestaurantId ||
+      cartRestaurantId === loadedRestaurantId
+    const nameMatches =
+      !cartRestaurantName ||
+      !loadedRestaurantName ||
+      cartRestaurantName === loadedRestaurantName
+
+    if (!idMatches || !nameMatches) {
+      debugWarn("⚠️ Cart restaurant changed, clearing stale restaurantData cache.", {
+        cartRestaurantId,
+        cartRestaurantName,
+        loadedRestaurantId,
+        loadedRestaurantName,
+      })
+      setRestaurantData(null)
+    }
+  }, [cart, restaurantData])
+
   // Stable restaurant ID for addons fetch (memoized to prevent dependency array issues)
   // Prefer restaurantData IDs (more reliable) over slug from cart
   const restaurantIdForAddons = useMemo(() => {
@@ -319,10 +387,9 @@ export default function Cart() {
 
       // Strategy 1: Try using restaurantId from cart if available
       if (cart[0]?.restaurantId) {
+        const cartRestaurantId = cart[0].restaurantId;
+        const cartRestaurantName = cart[0].restaurant;
         try {
-          const cartRestaurantId = cart[0].restaurantId;
-          const cartRestaurantName = cart[0].restaurant;
-
           debugLog("🔄 Fetching restaurant data by restaurantId from cart:", cartRestaurantId)
           const response = await restaurantAPI.getRestaurantById(cartRestaurantId)
           const data = response?.data?.data?.restaurant || response?.data?.restaurant
@@ -362,21 +429,72 @@ export default function Cart() {
                 cartRestaurantName: cartRestaurantName,
                 fetchedRestaurantName: fetchedRestaurantName
               });
-              // Still proceed but log warning
+              // Don't trust a stale restaurantId when it resolves to a different restaurant.
+              // Fall through to the name-based recovery below.
+              setLoadingRestaurant(false);
+            } else {
+              debugLog("✅ Restaurant data loaded from cart restaurantId:", {
+                _id: data._id,
+                restaurantId: data.restaurantId,
+                name: data.name,
+                cartRestaurantId: cartRestaurantId,
+                cartRestaurantName: cartRestaurantName
+              })
+              setRestaurantData(data)
+              setLoadingRestaurant(false)
+              return
+            }
+          }
+        } catch (error) {
+          const status = error?.response?.status
+          if (status === 404) {
+            debugWarn("⚠️ Cart restaurant id is stale. Trying to recover using cart restaurant name.", {
+              cartRestaurantId,
+              cartRestaurantName
+            })
+
+            if (cartRestaurantName) {
+              try {
+                const searchResponse = await restaurantAPI.getRestaurants({ limit: 100 })
+                const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
+                const normalizedCartName = normalizeName(cartRestaurantName)
+                const recoveredRestaurant = restaurants.find((restaurant) => {
+                  const normalizedRestaurantName = normalizeName(restaurant?.name)
+                  return normalizedRestaurantName && normalizedRestaurantName === normalizedCartName
+                })
+
+                if (recoveredRestaurant?._id || recoveredRestaurant?.restaurantId) {
+                  const recoveredRestaurantId =
+                    recoveredRestaurant.restaurantId ||
+                    recoveredRestaurant._id
+
+                  debugLog("✅ Recovered stale cart restaurant using name match:", {
+                    previousRestaurantId: cartRestaurantId,
+                    recoveredRestaurantId,
+                    recoveredRestaurantName: recoveredRestaurant.name
+                  })
+
+                  syncCartRestaurant(recoveredRestaurantId, recoveredRestaurant.name || cartRestaurantName)
+                  setRestaurantData(recoveredRestaurant)
+                  setLoadingRestaurant(false)
+                  toast.success("Cart restaurant was refreshed automatically.")
+                  return
+                }
+              } catch (recoveryError) {
+                debugWarn("⚠️ Failed to recover stale cart restaurant by name.", recoveryError)
+              }
             }
 
-            debugLog("✅ Restaurant data loaded from cart restaurantId:", {
-              _id: data._id,
-              restaurantId: data.restaurantId,
-              name: data.name,
-              cartRestaurantId: cartRestaurantId,
-              cartRestaurantName: cartRestaurantName
+            debugWarn("⚠️ Cart restaurant is no longer available. Clearing stale cart items.", {
+              cartRestaurantId,
+              cartRestaurantName
             })
-            setRestaurantData(data)
+            clearCart()
+            toast.error("This restaurant is no longer available right now. Cart has been cleared.")
+            setRestaurantData(null)
             setLoadingRestaurant(false)
             return
           }
-        } catch (error) {
           debugWarn("⚠️ Failed to fetch by cart restaurantId, trying fallback...", error)
         }
       }
@@ -427,6 +545,24 @@ export default function Cart() {
               slug: matchingRestaurant.slug,
               cartRestaurantName: cart[0]?.restaurant
             })
+            const resolvedRestaurantId =
+              matchingRestaurant.restaurantId ||
+              matchingRestaurant._id
+            const normalizedCartRestaurantId = normalizeIdentifier(cart[0]?.restaurantId)
+            const normalizedResolvedRestaurantId = normalizeIdentifier(resolvedRestaurantId)
+
+            if (
+              normalizedResolvedRestaurantId &&
+              normalizedCartRestaurantId &&
+              normalizedResolvedRestaurantId !== normalizedCartRestaurantId
+            ) {
+              debugWarn("⚠️ Repairing stale cart restaurant id using name match.", {
+                previousRestaurantId: normalizedCartRestaurantId,
+                resolvedRestaurantId: normalizedResolvedRestaurantId,
+                restaurantName: matchingRestaurant.name
+              })
+              syncCartRestaurant(resolvedRestaurantId, matchingRestaurant.name)
+            }
             setRestaurantData(matchingRestaurant)
             setLoadingRestaurant(false)
             return
@@ -797,10 +933,10 @@ export default function Cart() {
   const total = pricing?.total || (totalBeforeDiscount - discount)
   const savings = pricing?.savings || (discount + (subtotal > 500 ? 32 : 0))
   const selectedPaymentLabel =
-    selectedPaymentMethod === "wallet"
+    normalizeFrontendPaymentMethod(selectedPaymentMethod) === "wallet"
       ? "Wallet"
-      : selectedPaymentMethod === "razorpay"
-        ? "Online Payment"
+      : normalizeFrontendPaymentMethod(selectedPaymentMethod) === "cashfree"
+        ? "Cashfree"
         : "Cash on Delivery"
 
   // Restaurant name from data or cart
@@ -1092,18 +1228,85 @@ export default function Cart() {
       debugLog("🌐 Making request to:", fullUrl)
       debugLog("🔑 Authentication token present:", !!localStorage.getItem('accessToken') || !!localStorage.getItem('user_accessToken'))
 
+      const effectivePaymentMethod = normalizeFrontendPaymentMethod(
+        paymentMethodSelectRef.current?.value || selectedPaymentMethod
+      )
+      setSelectedPaymentMethod(effectivePaymentMethod)
+
+      debugLog("💳 Effective payment method resolved for order:", {
+        selectedPaymentMethod,
+        selectValue: paymentMethodSelectRef.current?.value || null,
+        effectivePaymentMethod
+      })
+
+      let resolvedRestaurantData = restaurantData
+      const cartRestaurantNameForOrder = cart[0]?.restaurant || null
+      const cartRestaurantIdForOrder = normalizeIdentifier(cart[0]?.restaurantId)
+
+      // Final repair at submit time: trust the restaurant name shown in the cart
+      // and rewrite any stale restaurantId before sending the order.
+      if (cartRestaurantNameForOrder) {
+        try {
+          const searchResponse = await restaurantAPI.getRestaurants({ limit: 100 })
+          const restaurants = searchResponse?.data?.data?.restaurants || searchResponse?.data?.data || []
+          const matchingRestaurant = restaurants.find((restaurant) =>
+            normalizeName(restaurant?.name) === normalizeName(cartRestaurantNameForOrder)
+          )
+
+          if (matchingRestaurant?._id || matchingRestaurant?.restaurantId) {
+            const matchingRestaurantId = normalizeIdentifier(
+              matchingRestaurant.restaurantId || matchingRestaurant._id
+            )
+            const loadedRestaurantId =
+              normalizeIdentifier(resolvedRestaurantData?.restaurantId) ||
+              normalizeIdentifier(resolvedRestaurantData?._id)
+            const loadedRestaurantName = normalizeName(resolvedRestaurantData?.name)
+
+            const shouldRepairRestaurant =
+              !resolvedRestaurantData ||
+              loadedRestaurantName !== normalizeName(cartRestaurantNameForOrder) ||
+              (cartRestaurantIdForOrder && matchingRestaurantId && cartRestaurantIdForOrder !== matchingRestaurantId) ||
+              (loadedRestaurantId && matchingRestaurantId && loadedRestaurantId !== matchingRestaurantId)
+
+            if (shouldRepairRestaurant) {
+              debugWarn("⚠️ Repairing restaurant info before order placement.", {
+                cartRestaurantName: cartRestaurantNameForOrder,
+                previousRestaurantId: cartRestaurantIdForOrder,
+                resolvedRestaurantId: matchingRestaurantId,
+                resolvedRestaurantName: matchingRestaurant.name
+              })
+              resolvedRestaurantData = matchingRestaurant
+              setRestaurantData(matchingRestaurant)
+              if (matchingRestaurantId) {
+                syncCartRestaurant(matchingRestaurantId, matchingRestaurant.name)
+              }
+            }
+          }
+        } catch (restaurantRepairError) {
+          debugWarn("⚠️ Failed to repair restaurant data before order placement.", restaurantRepairError)
+        }
+      }
+
       // CRITICAL: Validate restaurant ID before placing order
-      // Ensure we're using the correct restaurant from restaurantData (most reliable)
-      const finalRestaurantId = restaurantData?.restaurantId || restaurantData?._id || null;
-      const finalRestaurantName = restaurantData?.name || null;
+      // Ensure we're using the corrected restaurant data first
+      const finalRestaurantId =
+        normalizeIdentifier(resolvedRestaurantData?.restaurantId) ||
+        normalizeIdentifier(resolvedRestaurantData?._id) ||
+        normalizeIdentifier(cart[0]?.restaurantId) ||
+        normalizeIdentifier(restaurantId) ||
+        null;
+      const finalRestaurantName =
+        resolvedRestaurantData?.name ||
+        cart[0]?.restaurant ||
+        null;
 
       if (!finalRestaurantId) {
         debugError('❌ CRITICAL: Cannot place order - Restaurant ID is missing!');
         debugError('📋 Debug info:', {
           restaurantData: restaurantData ? {
-            _id: restaurantData._id,
-            restaurantId: restaurantData.restaurantId,
-            name: restaurantData.name
+            _id: resolvedRestaurantData?._id,
+            restaurantId: resolvedRestaurantData?.restaurantId,
+            name: resolvedRestaurantData?.name
           } : 'Not loaded',
           cartRestaurantId: restaurantId,
           cartRestaurantName: cart[0]?.restaurant,
@@ -1189,16 +1392,16 @@ export default function Cart() {
         // Check if cart restaurantId matches restaurantData
         const restaurantIdMatches =
           cartRestaurantId === finalRestaurantId ||
-          cartRestaurantId === restaurantData?._id?.toString() ||
-          cartRestaurantId === restaurantData?.restaurantId;
+          cartRestaurantId === normalizeIdentifier(resolvedRestaurantData?._id) ||
+          cartRestaurantId === normalizeIdentifier(resolvedRestaurantData?.restaurantId);
 
         if (!restaurantIdMatches) {
           debugError('❌ CRITICAL ERROR: Cart restaurantId does not match restaurantData!', {
             cartRestaurantId: cartRestaurantId,
             finalRestaurantId: finalRestaurantId,
-            restaurantDataId: restaurantData?._id?.toString(),
-            restaurantDataRestaurantId: restaurantData?.restaurantId,
-            restaurantDataName: restaurantData?.name,
+            restaurantDataId: resolvedRestaurantData?._id?.toString(),
+            restaurantDataRestaurantId: resolvedRestaurantData?.restaurantId,
+            restaurantDataName: resolvedRestaurantData?.name,
             cartRestaurantName: cartRestaurantNames[0]
           });
           alert(`Error: Cart items belong to "${cartRestaurantNames[0] || 'Unknown Restaurant'}" but restaurant data doesn't match. Please refresh the page and try again.`);
@@ -1210,7 +1413,7 @@ export default function Cart() {
       // Validate restaurant name matches
       if (cartRestaurantNames.length > 0 && finalRestaurantName) {
         const cartRestaurantName = cartRestaurantNames[0];
-        if (cartRestaurantName.toLowerCase().trim() !== finalRestaurantName.toLowerCase().trim()) {
+        if (normalizeName(cartRestaurantName) !== normalizeName(finalRestaurantName)) {
           debugError('❌ CRITICAL ERROR: Restaurant name mismatch!', {
             cartRestaurantName: cartRestaurantName,
             finalRestaurantName: finalRestaurantName
@@ -1225,23 +1428,23 @@ export default function Cart() {
       debugLog('✅ Order validation passed - Placing order with restaurant:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
-        restaurantDataId: restaurantData?._id,
-        restaurantDataRestaurantId: restaurantData?.restaurantId,
+        restaurantDataId: resolvedRestaurantData?._id,
+        restaurantDataRestaurantId: resolvedRestaurantData?.restaurantId,
         cartRestaurantId: cartRestaurantIds[0],
         cartRestaurantName: cartRestaurantNames[0],
         cartItemCount: cart.length
       });
 
       // FINAL VALIDATION: Double-check restaurantId before sending to backend
-      const cartRestaurantId = cart[0]?.restaurantId;
+      const cartRestaurantId = normalizeIdentifier(cart[0]?.restaurantId);
       if (cartRestaurantId && cartRestaurantId !== finalRestaurantId &&
-        cartRestaurantId !== restaurantData?._id?.toString() &&
-        cartRestaurantId !== restaurantData?.restaurantId) {
+        cartRestaurantId !== normalizeIdentifier(resolvedRestaurantData?._id) &&
+        cartRestaurantId !== normalizeIdentifier(resolvedRestaurantData?.restaurantId)) {
         debugError('❌ CRITICAL: Final validation failed - restaurantId mismatch!', {
           cartRestaurantId: cartRestaurantId,
           finalRestaurantId: finalRestaurantId,
-          restaurantDataId: restaurantData?._id?.toString(),
-          restaurantDataRestaurantId: restaurantData?.restaurantId,
+          restaurantDataId: resolvedRestaurantData?._id?.toString(),
+          restaurantDataRestaurantId: resolvedRestaurantData?.restaurantId,
           cartRestaurantName: cart[0]?.restaurant,
           finalRestaurantName: finalRestaurantName
         });
@@ -1260,7 +1463,7 @@ export default function Cart() {
         tipAmount,
         note: note || "",
         sendCutlery: sendCutlery !== false,
-        paymentMethod: selectedPaymentMethod,
+        paymentMethod: effectivePaymentMethod,
         zoneId: zoneId // CRITICAL: Pass zoneId for strict zone validation
       };
       // Log final order details (including paymentMethod for COD debugging)
@@ -1273,7 +1476,7 @@ export default function Cart() {
       });
 
       // Check wallet balance if wallet payment selected
-      if (selectedPaymentMethod === "wallet" && walletBalance < total) {
+      if (effectivePaymentMethod === "wallet" && walletBalance < total) {
         toast.error(`Insufficient wallet balance. Required: ${RUPEE_SYMBOL}${total.toFixed(0)}, Available: ${RUPEE_SYMBOL}${walletBalance.toFixed(0)}`)
         setIsPlacingOrder(false)
         return
@@ -1284,10 +1487,10 @@ export default function Cart() {
 
       debugLog("✅ Order created successfully:", orderResponse.data)
 
-      const { order, razorpay } = orderResponse.data.data
+      const { order, cashfree } = orderResponse.data.data
 
       // Cash flow: order placed without online payment
-      if (selectedPaymentMethod === "cash") {
+      if (effectivePaymentMethod === "cash") {
         toast.success("Order placed with Cash on Delivery")
         setPlacedOrderId(order?.orderId || order?.id || null)
         setShowOrderSuccess(true)
@@ -1297,7 +1500,7 @@ export default function Cart() {
       }
 
       // Wallet flow: order placed with wallet payment (already processed in backend)
-      if (selectedPaymentMethod === "wallet") {
+      if (effectivePaymentMethod === "wallet") {
         toast.success("Order placed with Wallet payment")
         setPlacedOrderId(order?.orderId || order?.id || null)
         setShowOrderSuccess(true)
@@ -1315,19 +1518,19 @@ export default function Cart() {
         return
       }
 
-      if (!razorpay || !razorpay.orderId || !razorpay.key) {
-        debugError("❌ Razorpay initialization failed:", { razorpay, order })
-        throw new Error(razorpay ? "Razorpay payment gateway is not configured. Please contact support." : "Failed to initialize payment")
+      if (!cashfree || !cashfree.orderId || !cashfree.paymentSessionId) {
+        debugError("❌ Cashfree initialization failed:", { cashfree, order })
+        throw new Error(cashfree ? "Cashfree payment gateway is not configured. Please contact support." : "Failed to initialize payment")
       }
 
-      debugLog("💳 Razorpay order created:", {
-        orderId: razorpay.orderId,
-        amount: razorpay.amount,
-        currency: razorpay.currency,
-        keyPresent: !!razorpay.key
+      debugLog("💳 Cashfree order created:", {
+        orderId: cashfree.orderId,
+        amount: cashfree.amount,
+        currency: cashfree.currency,
+        paymentSessionIdPresent: !!cashfree.paymentSessionId
       })
 
-      // Get user info for Razorpay prefill
+      // Get user info for payment prefill
       const userInfo = userProfile || {}
       const userPhone = userInfo.phone || defaultAddress?.phone || ""
       const userEmail = userInfo.email || ""
@@ -1342,78 +1545,37 @@ export default function Cart() {
         phone: formattedPhone
       })
 
-      // Get company name for Razorpay
-      const companyName = await getCompanyNameAsync()
-
-      // Initialize Razorpay payment
-      await initRazorpayPayment({
-        key: razorpay.key,
-        amount: razorpay.amount, // Already in paise from backend
-        currency: razorpay.currency || 'INR',
-        order_id: razorpay.orderId,
-        name: companyName,
-        description: `Order ${order.orderId} - ${RUPEE_SYMBOL}${(razorpay.amount / 100).toFixed(2)}`,
-        prefill: {
-          name: userName,
-          email: userEmail,
-          contact: formattedPhone
-        },
-        notes: {
-          orderId: order.orderId,
-          userId: userInfo.id || "",
-          restaurantId: restaurantId || "unknown"
-        },
-        handler: async (response) => {
-          try {
-            debugLog("✅ Payment successful, verifying...", {
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id
-            })
-
-            // Verify payment with backend
-            const verifyResponse = await orderAPI.verifyPayment({
-              orderId: order.id,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature
-            })
-
-            debugLog("✅ Payment verification response:", verifyResponse.data)
-
-            if (verifyResponse.data.success) {
-              // Payment successful
-              debugLog("🎉 Order placed successfully:", {
-                orderId: order.orderId,
-                paymentId: verifyResponse.data.data?.payment?.paymentId
-              })
-              setPlacedOrderId(order.orderId)
-              setShowOrderSuccess(true)
-              clearCart()
-              setIsPlacingOrder(false)
-            } else {
-              throw new Error(verifyResponse.data.message || "Payment verification failed")
-            }
-          } catch (error) {
-            debugError("❌ Payment verification error:", error)
-            const errorMessage = error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
-            alert(errorMessage)
-            setIsPlacingOrder(false)
-          }
-        },
-        onError: (error) => {
-          debugError("❌ Razorpay payment error:", error)
-          // Don't show alert for user cancellation
-          if (error?.code !== 'PAYMENT_CANCELLED' && error?.message !== 'PAYMENT_CANCELLED') {
-            const errorMessage = error?.description || error?.message || "Payment failed. Please try again."
-            alert(errorMessage)
-          }
-          setIsPlacingOrder(false)
-        },
-        onClose: () => {
-          debugLog("⚠️ Payment modal closed by user")
-          setIsPlacingOrder(false)
-        }
+      await initCashfreePayment({
+        paymentSessionId: cashfree.paymentSessionId,
+        environment: cashfree.environment
       })
+
+      try {
+        const verifyResponse = await orderAPI.verifyPayment({
+          orderId: order.id,
+          cashfreeOrderId: cashfree.orderId
+        })
+
+        debugLog("✅ Payment verification response:", verifyResponse.data)
+
+        if (verifyResponse.data.success) {
+          debugLog("🎉 Order placed successfully:", {
+            orderId: order.orderId,
+            paymentId: verifyResponse.data.data?.payment?.paymentId
+          })
+          setPlacedOrderId(order.orderId)
+          setShowOrderSuccess(true)
+          clearCart()
+          setIsPlacingOrder(false)
+        } else {
+          throw new Error(verifyResponse.data.message || "Payment verification failed")
+        }
+      } catch (error) {
+        debugError("❌ Payment verification error:", error)
+        const errorMessage = error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
+        alert(errorMessage)
+        setIsPlacingOrder(false)
+      }
     } catch (error) {
       debugError("❌ Order creation error:", error)
 
@@ -2203,11 +2365,13 @@ export default function Cart() {
 
                 <div className="relative">
                   <select
+                    ref={paymentMethodSelectRef}
                     value={selectedPaymentMethod}
-                    onChange={(e) => setSelectedPaymentMethod(e.target.value)}
+                    onChange={(e) => setSelectedPaymentMethod(normalizeFrontendPaymentMethod(e.target.value))}
                     className="appearance-none bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-9 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#EB590E]/40"
                   >
                     <option value="cash">COD</option>
+                    <option value="cashfree">Online</option>
                     <option value="wallet">
                       Wallet ({RUPEE_SYMBOL}{isLoadingWallet ? "..." : walletBalance.toFixed(0)})
                     </option>
@@ -2222,7 +2386,7 @@ export default function Cart() {
                 disabled={isPlacingOrder || (selectedPaymentMethod === "wallet" && walletBalance < total)}
                 className="w-full bg-[#EB590E] hover:bg-[#D94F0C] dark:bg-[#EB590E] dark:hover:bg-[#D94F0C] text-white px-6 md:px-10 h-14 md:h-16 rounded-lg md:rounded-xl text-base md:text-lg font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {(selectedPaymentMethod === "razorpay" || selectedPaymentMethod === "wallet") && (
+                {(selectedPaymentMethod === "cashfree" || selectedPaymentMethod === "wallet") && (
                   <div className="text-left mr-3 md:mr-4">
                     <p className="text-sm md:text-base opacity-90">{RUPEE_SYMBOL}{total.toFixed(0)}</p>
                     <p className="text-xs md:text-sm opacity-75">TOTAL</p>
@@ -2264,8 +2428,8 @@ export default function Cart() {
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-gray-900">
-                    {selectedPaymentMethod === "razorpay"
-                      ? `Pay ${RUPEE_SYMBOL}${total.toFixed(2)} online (Razorpay)`
+                    {selectedPaymentMethod === "cashfree"
+                      ? `Pay ${RUPEE_SYMBOL}${total.toFixed(2)} online (Cashfree)`
                       : selectedPaymentMethod === "wallet"
                         ? `Pay ${RUPEE_SYMBOL}${total.toFixed(2)} from Wallet`
                         : `Pay on delivery (COD)`}

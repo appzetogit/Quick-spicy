@@ -310,7 +310,7 @@ const normalizePaymentMethod = (value) => {
   if (method === 'cash' || method === 'cod' || method === 'cash on delivery') return 'cash';
   if (method === 'wallet') return 'wallet';
   if (method) return method;
-  return 'razorpay';
+  return 'cashfree';
 };
 
 const isCashPaymentMethod = (value) => normalizePaymentMethod(value) === 'cash';

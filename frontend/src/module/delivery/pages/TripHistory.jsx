@@ -454,7 +454,7 @@ export default function TripHistory() {
                     })()}
                     {/* Payment Method Badge */}
                     {(() => {
-                      const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'razorpay').toLowerCase()
+                      const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'cashfree').toLowerCase()
                       const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod'
                       return (
                         <span className={`inline-block mt-2 text-xs font-medium px-2 py-1 rounded-full ${
@@ -474,7 +474,7 @@ export default function TripHistory() {
                   </span>
                 </div>
                 {(() => {
-                  const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'razorpay').toLowerCase()
+                  const paymentMethod = String(trip.paymentMethod || trip.payment?.method || 'cashfree').toLowerCase()
                   const isCOD = paymentMethod === 'cash' || paymentMethod === 'cod'
                   const status = String(trip.status || "").toLowerCase()
                   const isCompleted = status === "completed"

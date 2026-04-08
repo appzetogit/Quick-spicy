@@ -58,6 +58,7 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Build query
     const query = {};
+    const queryAndConditions = [];
 
     // Status filter
     if (status && status !== 'all') {
@@ -208,6 +209,23 @@ export const getOrders = asyncHandler(async (req, res) => {
       if (query.$or && query.$or.length === 0) {
         delete query.$or;
       }
+    }
+
+    // Hide unpaid online placeholder orders from admin lists.
+    // These records are created before Cashfree verification, but they should
+    // not appear as real admin-manageable orders until payment succeeds or fails.
+    queryAndConditions.push({
+      $nor: [
+        {
+          'payment.method': { $in: ['cashfree', 'razorpay', 'upi', 'card'] },
+          'payment.status': 'pending',
+          'tracking.confirmed.status': { $ne: true }
+        }
+      ]
+    });
+
+    if (queryAndConditions.length > 0) {
+      query.$and = [...(query.$and || []), ...queryAndConditions];
     }
 
     // Calculate pagination
@@ -2046,7 +2064,7 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
 });
 
 /**
- * Process refund for an order via Razorpay
+ * Process refund for an order
  * POST /api/admin/orders/:orderId/refund
  */
 export const processRefund = asyncHandler(async (req, res) => {
@@ -2181,15 +2199,15 @@ export const processRefund = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'This order was not cancelled by restaurant or user');
     }
 
-    // Check payment method - wallet payments don't use Razorpay
+    // Check payment method - wallet payments don't use an external gateway
     const paymentMethod = order.payment?.method;
     
     if (!paymentMethod) {
       return errorResponse(res, 400, 'Payment method not found for this order');
     }
     
-    // For wallet payments, allow refund regardless of delivery type (no Razorpay involved)
-    // For other payments (Razorpay), only allow refund for Home Delivery orders
+    // For wallet payments, allow refund regardless of delivery type (no external gateway involved)
+    // For other payments, only allow refund for Home Delivery orders
     // Note: Order model uses deliveryFleet, not deliveryType
     if (paymentMethod !== 'wallet') {
       // Check deliveryFleet - 'standard' and 'fast' are home delivery types
@@ -2283,7 +2301,7 @@ export const processRefund = asyncHandler(async (req, res) => {
     }
 
     // Handle wallet refunds differently (paymentMethod already declared above)
-    // Wallet payments don't use Razorpay - refund is direct wallet credit
+    // Wallet payments don't use an external gateway - refund is direct wallet credit
     let refundResult;
     if (paymentMethod === 'wallet') {
       // For wallet payments, use provided refundAmount or calculate from order
@@ -2339,15 +2357,18 @@ export const processRefund = asyncHandler(async (req, res) => {
       const { processWalletRefund } = await import('../../order/services/cancellationRefundService.js');
       refundResult = await processWalletRefund(order._id, adminId, finalRefundAmount);
     } else {
-      // For Razorpay, check if refund amount is calculated
-      const refundAmount = settlement.cancellationDetails?.refundAmount || 0;
-      if (refundAmount <= 0) {
+      const calculatedRefundAmount = settlement.cancellationDetails?.refundAmount || 0;
+      if (calculatedRefundAmount <= 0) {
         return errorResponse(res, 400, 'No refund amount calculated for this order');
       }
-      
-      // Process Razorpay refund
-      const { processRazorpayRefund } = await import('../../order/services/cancellationRefundService.js');
-      refundResult = await processRazorpayRefund(order._id, adminId);
+
+      if (paymentMethod === 'cashfree') {
+        const { processCashfreeRefund } = await import('../../order/services/cancellationRefundService.js');
+        refundResult = await processCashfreeRefund(order._id, adminId);
+      } else {
+        const { processRazorpayRefund } = await import('../../order/services/cancellationRefundService.js');
+        refundResult = await processRazorpayRefund(order._id, adminId);
+      }
     }
 
     // Update settlement with admin notes if provided
@@ -2361,6 +2382,7 @@ export const processRefund = asyncHandler(async (req, res) => {
       orderId: order.orderId,
       refundId: refundResult.refundId,
       refundAmount: refundResult.refundAmount,
+      cashfreeRefund: refundResult.cashfreeRefund,
       razorpayRefund: refundResult.razorpayRefund,
       message: refundResult.message
     });

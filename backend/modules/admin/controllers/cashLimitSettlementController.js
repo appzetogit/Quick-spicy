@@ -30,7 +30,12 @@ export const getCashLimitSettlements = asyncHandler(async (req, res) => {
         if (toDate && createdAt && createdAt > new Date(toDate)) continue;
         let meta = t.metadata;
         if (meta && typeof meta.get === 'function') {
-          meta = { razorpayOrderId: meta.get('razorpayOrderId'), razorpayPaymentId: meta.get('razorpayPaymentId') };
+          meta = {
+            razorpayOrderId: meta.get('razorpayOrderId'),
+            razorpayPaymentId: meta.get('razorpayPaymentId'),
+            cashfreeOrderId: meta.get('cashfreeOrderId'),
+            cashfreePaymentId: meta.get('cashfreePaymentId')
+          };
         }
         list.push({
           id: t._id,
@@ -40,6 +45,8 @@ export const getCashLimitSettlements = asyncHandler(async (req, res) => {
           createdAt: t.createdAt,
           razorpayOrderId: meta?.razorpayOrderId,
           razorpayPaymentId: meta?.razorpayPaymentId,
+          cashfreeOrderId: meta?.cashfreeOrderId,
+          cashfreePaymentId: meta?.cashfreePaymentId,
           deliveryId: d._id,
           deliveryName,
           deliveryIdString,

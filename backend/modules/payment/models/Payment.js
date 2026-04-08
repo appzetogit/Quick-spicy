@@ -30,7 +30,7 @@ const paymentSchema = new mongoose.Schema({
   },
   method: {
     type: String,
-    enum: ['razorpay', 'cash', 'wallet', 'upi', 'card'],
+    enum: ['cashfree', 'razorpay', 'cash', 'wallet', 'upi', 'card'],
     required: true
   },
   status: {
@@ -53,6 +53,29 @@ const paymentSchema = new mongoose.Schema({
       type: String
     },
     receipt: {
+      type: String
+    },
+    notes: {
+      type: mongoose.Schema.Types.Mixed
+    }
+  },
+  cashfree: {
+    orderId: {
+      type: String
+    },
+    paymentId: {
+      type: String
+    },
+    paymentSessionId: {
+      type: String
+    },
+    orderStatus: {
+      type: String
+    },
+    paymentStatus: {
+      type: String
+    },
+    signature: {
       type: String
     },
     notes: {
@@ -139,6 +162,8 @@ paymentSchema.index({ orderId: 1 });
 paymentSchema.index({ status: 1, createdAt: -1 });
 paymentSchema.index({ 'razorpay.orderId': 1 });
 paymentSchema.index({ 'razorpay.paymentId': 1 });
+paymentSchema.index({ 'cashfree.orderId': 1 });
+paymentSchema.index({ 'cashfree.paymentId': 1 });
 
 // Add log entry before status change
 paymentSchema.pre('save', function(next) {

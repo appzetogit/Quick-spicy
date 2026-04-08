@@ -4,9 +4,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { IndianRupee, Loader2 } from "lucide-react"
 import { userAPI } from "@/lib/api"
-import { initRazorpayPayment } from "@/lib/utils/razorpay"
+import { initCashfreePayment } from "@/lib/utils/cashfree"
 import { toast } from "sonner"
-import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -47,21 +46,21 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     try {
       setLoading(true)
 
-      // Create Razorpay order
+      // Create Cashfree order
       debugLog('Creating wallet top-up order for amount:', amountNum)
       const orderResponse = await userAPI.createWalletTopupOrder(amountNum)
       debugLog('Order response:', orderResponse)
 
-      const { razorpay } = orderResponse.data.data
+      const { cashfree } = orderResponse.data.data
 
-      if (!razorpay || !razorpay.orderId || !razorpay.key) {
-        debugError('Invalid Razorpay response:', { razorpay, orderResponse })
+      if (!cashfree || !cashfree.orderId || !cashfree.paymentSessionId) {
+        debugError('Invalid Cashfree response:', { cashfree, orderResponse })
         throw new Error("Failed to initialize payment gateway")
       }
 
       setLoading(false)
 
-      // Close the modal before opening Razorpay to avoid z-index conflicts
+      // Close the modal before opening Cashfree to avoid z-index conflicts
       onOpenChange(false)
 
       // Small delay to ensure modal is closed
@@ -69,13 +68,13 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
 
       setProcessing(true)
 
-      // Get user info for Razorpay prefill
+      // Get user info for payment prefill
       let userInfo = {}
       try {
         const userResponse = await userAPI.getProfile()
         userInfo = userResponse?.data?.data?.user || userResponse?.data?.user || {}
       } catch (err) {
-        debugWarn("Could not fetch user profile for Razorpay prefill:", err)
+        debugWarn("Could not fetch user profile for payment prefill:", err)
       }
 
       const userPhone = userInfo.phone || ""
@@ -85,63 +84,32 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
       // Format phone number (remove non-digits, take last 10 digits)
       const formattedPhone = userPhone.replace(/\D/g, "").slice(-10)
 
-      // Get company name for Razorpay
-      const companyName = await getCompanyNameAsync()
+      debugLog("Payment prefill info:", { userName, userEmail, formattedPhone })
 
-      // Initialize Razorpay payment
-      await initRazorpayPayment({
-        key: razorpay.key,
-        amount: razorpay.amount, // Already in paise from backend
-        currency: razorpay.currency || 'INR',
-        order_id: razorpay.orderId,
-        name: companyName,
-        description: `Wallet Top-up - ₹${amountNum.toFixed(2)}`,
-        prefill: {
-          name: userName,
-          email: userEmail,
-          contact: formattedPhone
-        },
-        notes: {
-          type: 'wallet_topup',
-          amount: amountNum.toString()
-        },
-        handler: async (response) => {
-          try {
-            // Verify payment and add money to wallet
-            const verifyResponse = await userAPI.verifyWalletTopupPayment({
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-              amount: amountNum
-            })
-
-            toast.success(`₹${amountNum} added to wallet successfully!`)
-
-            // Reset form
-            setAmount("")
-            setProcessing(false)
-            onOpenChange(false)
-
-            // Refresh wallet data
-            if (onSuccess) {
-              onSuccess()
-            }
-          } catch (error) {
-            debugError("Payment verification error:", error)
-            toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.")
-            setProcessing(false)
-          }
-        },
-        onError: (error) => {
-          debugError("Razorpay payment error:", error)
-          toast.error(error?.description || "Payment failed. Please try again.")
-          setProcessing(false)
-        },
-        onClose: () => {
-          setProcessing(false)
-          // Modal already closed, no need to close again
-        }
+      await initCashfreePayment({
+        paymentSessionId: cashfree.paymentSessionId,
+        environment: cashfree.environment
       })
+
+      try {
+        await userAPI.verifyWalletTopupPayment({
+          cashfreeOrderId: cashfree.orderId,
+          amount: amountNum
+        })
+
+        toast.success(`₹${amountNum} added to wallet successfully!`)
+        setAmount("")
+        setProcessing(false)
+        onOpenChange(false)
+
+        if (onSuccess) {
+          onSuccess()
+        }
+      } catch (error) {
+        debugError("Payment verification error:", error)
+        toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.")
+        setProcessing(false)
+      }
     } catch (error) {
       debugError("Error creating payment order:", error)
       debugError("Error response:", error?.response)
@@ -246,7 +214,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
             {loading || processing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {loading ? "Processing..." : "Opening Payment Gateway..."}
+                {loading ? "Processing..." : "Opening Cashfree..."}
               </>
             ) : (
               `Add ₹${amount || "0"}`

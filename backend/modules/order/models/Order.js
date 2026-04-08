@@ -127,7 +127,7 @@ const orderSchema = new mongoose.Schema({
   payment: {
     method: {
       type: String,
-      enum: ['razorpay', 'cash', 'wallet', 'upi', 'card'],
+      enum: ['cashfree', 'razorpay', 'cash', 'wallet', 'upi', 'card'],
       required: true
     },
     status: {
@@ -142,6 +142,21 @@ const orderSchema = new mongoose.Schema({
       type: String
     },
     razorpaySignature: {
+      type: String
+    },
+    cashfreeOrderId: {
+      type: String
+    },
+    cashfreePaymentId: {
+      type: String
+    },
+    cashfreePaymentSessionId: {
+      type: String
+    },
+    cashfreeOrderStatus: {
+      type: String
+    },
+    cashfreePaymentStatus: {
       type: String
     },
     transactionId: {
@@ -171,6 +186,21 @@ const orderSchema = new mongoose.Schema({
       type: String
     },
     razorpaySignature: {
+      type: String
+    },
+    cashfreeOrderId: {
+      type: String
+    },
+    cashfreePaymentId: {
+      type: String
+    },
+    cashfreePaymentSessionId: {
+      type: String
+    },
+    cashfreeOrderStatus: {
+      type: String
+    },
+    cashfreePaymentStatus: {
       type: String
     },
     paymentRecordId: {
@@ -404,6 +434,7 @@ orderSchema.index({ userId: 1, createdAt: -1 });
 orderSchema.index({ restaurantId: 1, status: 1 });
 orderSchema.index({ status: 1, createdAt: -1 });
 orderSchema.index({ 'payment.razorpayOrderId': 1 });
+orderSchema.index({ 'payment.cashfreeOrderId': 1 });
 
 // Generate order ID before saving (fallback if not provided)
 orderSchema.pre('save', async function(next) {

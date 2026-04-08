@@ -229,7 +229,7 @@ export const getTripHistory = asyncHandler(async (req, res) => {
       const orderTotal = Number(order.pricing?.total || 0);
 
       // Get payment method - check Payment collection as fallback (for COD orders)
-      let paymentMethod = order.payment?.method || 'razorpay';
+      let paymentMethod = order.payment?.method || 'cashfree';
       // If order.payment.method is not 'cash', check Payment collection for COD
       if (paymentMethod !== 'cash' && codOrderIds.has(order._id?.toString())) {
         paymentMethod = 'cash';

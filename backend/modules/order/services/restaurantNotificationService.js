@@ -124,7 +124,7 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
  * Notify restaurant about new order via Socket.IO
  * @param {Object} order - Order document
  * @param {string} restaurantId - Restaurant ID
- * @param {string} [paymentMethodOverride] - Explicit payment method ('cash' | 'razorpay') so restaurant sees correct value
+ * @param {string} [paymentMethodOverride] - Explicit payment method ('cash' | 'cashfree') so restaurant sees correct value
  */
 export async function notifyRestaurantNewOrder(order, restaurantId, paymentMethodOverride) {
   try {
@@ -175,7 +175,7 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
     }
 
     // Resolve payment method: override > order.payment > Payment collection (COD fallback)
-    let resolvedPaymentMethod = paymentMethodOverride ?? order.payment?.method ?? 'razorpay';
+    let resolvedPaymentMethod = paymentMethodOverride ?? order.payment?.method ?? 'cashfree';
     if (resolvedPaymentMethod !== 'cash') {
       try {
         const paymentRecord = await Payment.findOne({ orderId: order._id }).select('method').lean();
