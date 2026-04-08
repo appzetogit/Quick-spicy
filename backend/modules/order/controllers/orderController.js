@@ -203,6 +203,35 @@ const isPointInsideZone = (lat, lng, coordinates = []) => {
   return inside;
 };
 
+const calculateZoneArea = (coordinates = []) => {
+  if (!Array.isArray(coordinates) || coordinates.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let area = 0;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+    const pointI = coordinates[i] || {};
+    const pointJ = coordinates[j] || {};
+    const yi = Number(pointI.latitude);
+    const xi = Number(pointI.longitude);
+    const yj = Number(pointJ.latitude);
+    const xj = Number(pointJ.longitude);
+
+    if (
+      Number.isNaN(yi) ||
+      Number.isNaN(xi) ||
+      Number.isNaN(yj) ||
+      Number.isNaN(xj)
+    ) {
+      continue;
+    }
+
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
+};
+
 /**
  * Find active zone containing a point
  * @param {Array} activeZones
@@ -212,12 +241,42 @@ const isPointInsideZone = (lat, lng, coordinates = []) => {
  */
 const findActiveZoneForPoint = (activeZones, lat, lng) => {
   if (!Array.isArray(activeZones)) return null;
+
+  let bestZone = null;
+  let bestArea = Number.POSITIVE_INFINITY;
+
   for (const zone of activeZones) {
     if (isPointInsideZone(lat, lng, zone?.coordinates)) {
-      return zone;
+      const area = calculateZoneArea(zone?.coordinates);
+      if (area < bestArea) {
+        bestArea = area;
+        bestZone = zone;
+      }
     }
   }
+  return bestZone;
+};
+
+const findMappedZoneForRestaurant = (activeZones, restaurant = {}) => {
+  if (!Array.isArray(activeZones) || !restaurant) return null;
+
+  const restaurantMongoId = restaurant?._id?.toString?.() || String(restaurant?._id || '');
+  const restaurantPublicId = restaurant?.restaurantId ? String(restaurant.restaurantId) : null;
+
+  for (const zone of activeZones) {
+    const zoneRestaurantId = zone?.restaurantId?.toString?.() || String(zone?.restaurantId || '');
+    if (!zoneRestaurantId) continue;
+    if (restaurantMongoId && zoneRestaurantId === restaurantMongoId) return zone;
+    if (restaurantPublicId && zoneRestaurantId === restaurantPublicId) return zone;
+  }
+
   return null;
+};
+
+const resolveRestaurantZone = (activeZones, restaurant, restaurantLat, restaurantLng) => {
+  const mappedZone = findMappedZoneForRestaurant(activeZones, restaurant);
+  if (mappedZone) return mappedZone;
+  return findActiveZoneForPoint(activeZones, restaurantLat, restaurantLng);
 };
 
 /**
@@ -425,7 +484,7 @@ export const createOrder = async (req, res) => {
 
     // Check if restaurant is within any active zone
     const activeZones = await Zone.find({ isActive: true }).lean();
-    const restaurantZone = findActiveZoneForPoint(activeZones, restaurantLat, restaurantLng);
+    const restaurantZone = resolveRestaurantZone(activeZones, restaurant, restaurantLat, restaurantLng);
     if (!restaurantZone) {
       logger.warn('⚠️ Restaurant location is not within any active zone:', {
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,

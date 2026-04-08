@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { notificationDeviceSchema } from '../../notification/utils/deviceTokens.js';
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -228,6 +229,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true,
     default: null
+  },
+  notificationDevices: {
+    type: [notificationDeviceSchema],
+    default: [],
   },
   isActive: {
     type: Boolean,

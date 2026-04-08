@@ -55,6 +55,35 @@ function isPointInsideZone(lat, lng, coordinates = []) {
   return inside;
 }
 
+function calculateZoneArea(coordinates = []) {
+  if (!Array.isArray(coordinates) || coordinates.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let area = 0;
+  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
+    const pointI = coordinates[i] || {};
+    const pointJ = coordinates[j] || {};
+    const yi = Number(pointI.latitude);
+    const xi = Number(pointI.longitude);
+    const yj = Number(pointJ.latitude);
+    const xj = Number(pointJ.longitude);
+
+    if (
+      Number.isNaN(yi) ||
+      Number.isNaN(xi) ||
+      Number.isNaN(yj) ||
+      Number.isNaN(xj)
+    ) {
+      continue;
+    }
+
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
+}
+
 async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng) {
   // Prefer an explicit zone linked to the restaurant when available.
   if (restaurantId) {
@@ -76,13 +105,19 @@ async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng)
 
   // Otherwise, resolve the active polygon containing the restaurant pin.
   const activeZones = await Zone.find({ isActive: true }).lean();
+  let bestZone = null;
+  let bestArea = Number.POSITIVE_INFINITY;
   for (const zone of activeZones) {
     if (isPointInsideZone(restaurantLat, restaurantLng, zone?.coordinates)) {
-      return zone;
+      const area = calculateZoneArea(zone?.coordinates);
+      if (area < bestArea) {
+        bestArea = area;
+        bestZone = zone;
+      }
     }
   }
 
-  return null;
+  return bestZone;
 }
 
 async function resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, restaurantLng) {

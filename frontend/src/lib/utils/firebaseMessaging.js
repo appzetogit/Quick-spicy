@@ -28,6 +28,7 @@ const PUSH_DEBUG_PREFIX = "[push-debug]";
 const notificationDedupWindowMs = 8000;
 const pushDebugLog = () => {};
 const pushDebugWarn = () => {};
+const clientDeviceIdStorageKey = "push_client_device_id";
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -71,6 +72,25 @@ function isSecureContextForPush() {
 
 function sanitize(value) {
   return String(value || "").trim().replace(/^['"]|['"]$/g, "");
+}
+
+function getClientDeviceId() {
+  if (typeof window === "undefined") return "";
+
+  try {
+    const existing = localStorage.getItem(clientDeviceIdStorageKey);
+    if (existing) return existing;
+
+    const generated =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `device-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+
+    localStorage.setItem(clientDeviceIdStorageKey, generated);
+    return generated;
+  } catch {
+    return "";
+  }
 }
 
 function normalizeNotificationText(value) {
@@ -461,19 +481,25 @@ function setSavedToken(moduleName, token) {
 }
 
 async function saveTokenByModule(moduleName, token) {
+  const isNativeWebView = isFlutterWebView();
+  const source = isNativeWebView ? "flutter-webview" : "web";
+  const platform = isNativeWebView ? "flutter-webview" : "web";
+  const channel = isNativeWebView ? "mobile" : "web";
+  const deviceId = getClientDeviceId();
+
   if (moduleName === "admin") {
     return;
   }
   if (moduleName === "restaurant") {
-    await restaurantAPI.saveFcmToken(token, "web");
+    await restaurantAPI.saveFcmToken(token, { platform, channel, deviceId, source });
     return;
   }
   if (moduleName === "delivery") {
-    await deliveryAPI.saveFcmToken(token, "web");
+    await deliveryAPI.saveFcmToken(token, { platform, channel, deviceId, source });
     return;
   }
   if (moduleName === "user") {
-    await userAPI.saveFcmToken(token, { platform: "web", channel: "web" });
+    await userAPI.saveFcmToken(token, { platform, channel, deviceId, source });
   }
 }
 
@@ -680,6 +706,7 @@ export async function registerWebPushForCurrentModule(pathname = window.location
   // Flutter WebView fallback: register native token when available.
   // This keeps restaurant/delivery FCM alerts working even when Web Push APIs are limited.
   await registerNativeWebViewFcmToken(moduleName);
+  if (isFlutterWebView()) return;
 
   if (!isSupportedBrowser() || !isSecureContextForPush()) return;
 

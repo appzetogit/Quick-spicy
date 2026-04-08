@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import { normalizePhoneNumber } from "../../../shared/utils/phoneUtils.js";
+import { notificationDeviceSchema } from "../../notification/utils/deviceTokens.js";
 
 const locationSchema = new mongoose.Schema({
   latitude: Number,
@@ -70,6 +71,10 @@ const restaurantSchema = new mongoose.Schema(
     fcmtokenmobile: {
       type: String,
       default: null,
+    },
+    notificationDevices: {
+      type: [notificationDeviceSchema],
+      default: [],
     },
     googleId: {
       type: String,

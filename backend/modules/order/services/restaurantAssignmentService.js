@@ -78,6 +78,35 @@ function isPointInZone(lat, lng, zoneCoordinates) {
   return inside;
 }
 
+function calculateZoneArea(zoneCoordinates) {
+  if (!zoneCoordinates || zoneCoordinates.length < 3) return Number.POSITIVE_INFINITY;
+
+  let area = 0;
+  for (let i = 0, j = zoneCoordinates.length - 1; i < zoneCoordinates.length; j = i++) {
+    const coordI = zoneCoordinates[i];
+    const coordJ = zoneCoordinates[j];
+
+    const xi = typeof coordI === 'object'
+      ? (coordI.latitude || coordI.lat)
+      : (Array.isArray(coordI) ? coordI[0] : null);
+    const yi = typeof coordI === 'object'
+      ? (coordI.longitude || coordI.lng)
+      : (Array.isArray(coordI) ? coordI[1] : null);
+    const xj = typeof coordJ === 'object'
+      ? (coordJ.latitude || coordJ.lat)
+      : (Array.isArray(coordJ) ? coordJ[0] : null);
+    const yj = typeof coordJ === 'object'
+      ? (coordJ.longitude || coordJ.lng)
+      : (Array.isArray(coordJ) ? coordJ[1] : null);
+
+    if (xi === null || yi === null || xj === null || yj === null) continue;
+
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
+}
+
 /**
  * Check if a restaurant's location (pin) is within any active zone
  * @param {number} restaurantLat - Restaurant latitude
@@ -88,7 +117,9 @@ async function isRestaurantInAnyZone(restaurantLat, restaurantLng) {
   if (!restaurantLat || !restaurantLng) return null;
   
   const activeZones = await Zone.find({ isActive: true }).lean();
-  
+
+  let bestZone = null;
+  let bestArea = Number.POSITIVE_INFINITY;
   for (const zone of activeZones) {
     if (!zone.coordinates || zone.coordinates.length < 3) continue;
     
@@ -100,11 +131,15 @@ async function isRestaurantInAnyZone(restaurantLat, restaurantLng) {
     }
     
     if (isInZone) {
-      return zone;
+      const area = calculateZoneArea(zone.coordinates);
+      if (area < bestArea) {
+        bestArea = area;
+        bestZone = zone;
+      }
     }
   }
-  
-  return null;
+
+  return bestZone;
 }
 
 /**

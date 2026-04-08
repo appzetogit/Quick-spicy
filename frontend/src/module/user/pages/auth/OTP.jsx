@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { authAPI } from "@/lib/api"
 import { setAuthData as setUserAuthData } from "@/lib/utils/auth"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 
 export default function OTP() {
   const navigate = useNavigate()
@@ -217,6 +218,12 @@ export default function OTP() {
       // Replace old token with new one (handles cross-module login)
       setUserAuthData("user", accessToken, user)
 
+      try {
+        await registerWebPushForCurrentModule("/user")
+      } catch (pushError) {
+        console.warn("User push registration after login failed:", pushError)
+      }
+
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new Event("userAuthChanged"))
 
@@ -290,6 +297,12 @@ export default function OTP() {
 
       // Replace old token with new one (handles cross-module login)
       setUserAuthData("user", accessToken, user)
+
+      try {
+        await registerWebPushForCurrentModule("/user")
+      } catch (pushError) {
+        console.warn("User push registration after signup failed:", pushError)
+      }
 
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new Event("userAuthChanged"))

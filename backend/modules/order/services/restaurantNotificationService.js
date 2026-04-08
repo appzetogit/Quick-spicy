@@ -4,6 +4,7 @@ import Restaurant from '../../restaurant/models/Restaurant.js';
 import mongoose from 'mongoose';
 import admin from 'firebase-admin';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
+import { extractNotificationTokens } from '../../notification/utils/deviceTokens.js';
 
 const RESTAURANT_ANDROID_CHANNEL_ID = 'quick_spicy_popup_v2';
 const RESTAURANT_ANDROID_SOUND = 'original';
@@ -17,18 +18,6 @@ async function getIOInstance() {
     getIO = serverModule.getIO;
   }
   return getIO ? getIO() : null;
-}
-
-function extractRestaurantTokens(restaurantRecord = null) {
-  const tokens = [];
-  const addToken = (token) => {
-    const normalized = String(token || '').trim();
-    if (normalized.length >= 10) tokens.push(normalized);
-  };
-
-  addToken(restaurantRecord?.fcmtokenweb);
-  addToken(restaurantRecord?.fcmtokenmobile);
-  return [...new Set(tokens)];
 }
 
 function getRestaurantStatusMessage(status, orderRef) {
@@ -47,52 +36,63 @@ function getRestaurantStatusMessage(status, orderRef) {
   return statusMessages[normalizedStatus] || `${orderLabel} status updated to ${normalizedStatus || 'updated'}.`;
 }
 
-async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
+async function sendEachMulticast(tokens = [], message = {}) {
   const uniqueTokens = [...new Set((tokens || []).map((t) => String(t || '').trim()).filter((t) => t.length >= 10))];
   if (uniqueTokens.length === 0) {
     return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
   }
 
+  const response = await admin.messaging().sendEachForMulticast({
+    ...message,
+    tokens: uniqueTokens,
+  });
+
+  return {
+    success: (response.successCount || 0) > 0,
+    sentCount: response.successCount || 0,
+    failedCount: response.failureCount || 0
+  };
+}
+
+async function sendRestaurantPushNotifications(tokenGroups = {}, payload = {}) {
+  const normalizedWebTokens = Array.isArray(tokenGroups?.webTokens)
+    ? tokenGroups.webTokens.map((token) => String(token || '').trim()).filter((token) => token.length >= 10)
+    : [];
+  const normalizedMobileTokens = Array.isArray(tokenGroups?.mobileTokens)
+    ? tokenGroups.mobileTokens.map((token) => String(token || '').trim()).filter((token) => token.length >= 10)
+    : [];
+
+  const webTokens = [...new Set(normalizedWebTokens)];
+  const webTokenSet = new Set(webTokens);
+  const mobileTokens = [...new Set(normalizedMobileTokens.filter((token) => !webTokenSet.has(token)))];
+
+  if (webTokens.length === 0 && mobileTokens.length === 0) {
+    return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
+  }
+
   await firebaseAuthService.init();
   if (!firebaseAuthService.isEnabled()) {
-    return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
+    return { success: false, sentCount: 0, failedCount: webTokens.length + mobileTokens.length, reason: 'Firebase not configured' };
   }
 
   const targetUrl = String(payload?.targetUrl || '/restaurant/orders');
-  const message = {
-    notification: {
-      title: String(payload?.title || 'Restaurant Order Update'),
-      body: String(payload?.body || 'You have an order update')
-    },
+  const title = String(payload?.title || 'Restaurant Order Update');
+  const body = String(payload?.body || 'You have an order update');
+  const baseData = {
+    notificationId: String(payload?.notificationId || `restaurant-push:${payload?.orderMongoId || payload?.orderId || 'unknown'}:${payload?.type || 'update'}`),
+    type: String(payload?.type || 'restaurant_order_update'),
+    orderId: String(payload?.orderId || ''),
+    orderMongoId: String(payload?.orderMongoId || ''),
+    status: String(payload?.status || ''),
+    sentAt: new Date().toISOString(),
+    targetUrl
+  };
+
+  const webMessage = {
     data: {
-      type: String(payload?.type || 'restaurant_order_update'),
-      orderId: String(payload?.orderId || ''),
-      orderMongoId: String(payload?.orderMongoId || ''),
-      status: String(payload?.status || ''),
-      sentAt: new Date().toISOString(),
-      targetUrl
-    },
-    android: {
-      priority: 'high',
-      ttl: 120000,
-      notification: {
-        channelId: RESTAURANT_ANDROID_CHANNEL_ID,
-        sound: RESTAURANT_ANDROID_SOUND,
-        defaultSound: false,
-        defaultVibrateTimings: true,
-        priority: 'max'
-      }
-    },
-    apns: {
-      headers: {
-        'apns-priority': '10'
-      },
-      payload: {
-        aps: {
-          sound: 'default',
-          badge: 1
-        }
-      }
+      ...baseData,
+      title,
+      body,
     },
     webpush: {
       headers: {
@@ -103,20 +103,53 @@ async function sendRestaurantPushNotifications(tokens = [], payload = {}) {
         link: targetUrl
       },
       notification: {
+        title,
+        body,
         icon: '/favicon.ico',
         requireInteraction: true,
         vibrate: [200, 100, 200, 100, 300],
         silent: false
       },
-    },
-    tokens: uniqueTokens
+    }
   };
 
-  const response = await admin.messaging().sendEachForMulticast(message);
+  const mobileMessage = {
+    data: {
+      ...baseData,
+      title,
+      body,
+      androidChannelId: RESTAURANT_ANDROID_CHANNEL_ID,
+      sound: RESTAURANT_ANDROID_SOUND,
+    },
+    android: {
+      priority: 'high',
+      ttl: 120000,
+    },
+    apns: {
+      headers: {
+        'apns-priority': '5'
+      },
+      payload: {
+        aps: {
+          'content-available': 1,
+          badge: 1
+        }
+      }
+    },
+  };
+
+  const results = await Promise.all([
+    sendEachMulticast(webTokens, webMessage),
+    sendEachMulticast(mobileTokens, mobileMessage),
+  ]);
+
+  const sentCount = results.reduce((sum, result) => sum + (result.sentCount || 0), 0);
+  const failedCount = results.reduce((sum, result) => sum + (result.failedCount || 0), 0);
+
   return {
-    success: (response.successCount || 0) > 0,
-    sentCount: response.successCount || 0,
-    failedCount: response.failureCount || 0
+    success: sentCount > 0,
+    sentCount,
+    failedCount
   };
 }
 
@@ -310,7 +343,7 @@ export async function notifyRestaurantNewOrder(order, restaurantId, paymentMetho
     }
 
     try {
-      const pushTokens = extractRestaurantTokens(restaurant);
+      const pushTokens = extractNotificationTokens(restaurant);
       const pushResult = await sendRestaurantPushNotifications(pushTokens, {
         type: 'new_order',
         title: 'New Order Received',
@@ -360,7 +393,7 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
         { restaurantId: String(order.restaurantId || '') }
       ]
     })
-      .select('fcmtokenweb fcmtokenmobile')
+      .select('fcmtokenweb fcmtokenmobile notificationDevices')
       .lean();
 
     // Get restaurant namespace
@@ -376,7 +409,7 @@ export async function notifyRestaurantOrderUpdate(orderId, status) {
     const socketsInRoom = await restaurantNamespace.in(room).fetchSockets();
     if (socketsInRoom.length === 0) {
       try {
-        const pushTokens = extractRestaurantTokens(restaurant);
+        const pushTokens = extractNotificationTokens(restaurant);
         const pushResult = await sendRestaurantPushNotifications(pushTokens, {
           type: 'order_status_update',
           title: 'Order Status Updated',

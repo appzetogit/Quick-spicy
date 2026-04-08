@@ -872,6 +872,7 @@ export default function RestaurantsList() {
         offer: detailsForm.offer.trim(),
         openingTime: detailsForm.openingTime.trim(),
         closingTime: detailsForm.closingTime.trim(),
+        zoneId: detailsForm.zoneId || "",
         isActive: detailsForm.isActive,
       }
 
@@ -896,7 +897,7 @@ export default function RestaurantsList() {
                   ? updatedRestaurant.cuisines[0]
                   : item.cuisine,
                 foodPreference: updatedRestaurant.foodPreference || item.foodPreference,
-                zone: updatedRestaurant.location?.area || updatedRestaurant.location?.city || item.zone,
+                zone: updatedRestaurant.zone || updatedRestaurant.location?.area || updatedRestaurant.location?.city || item.zone,
                 status: updatedRestaurant.isActive !== false,
                 logo: updatedRestaurant.profileImage?.url || item.logo,
                 originalData: {

@@ -79,13 +79,16 @@ const fcmTokenSchema = Joi.object({
   token: Joi.string().trim().min(10).required(),
   platform: Joi.string().valid('web', 'mobile', 'android', 'ios', 'flutter', 'flutter-webview', 'apk', 'all', 'both').default('web'),
   channel: Joi.string().valid('web', 'mobile', 'both').optional(),
+  deviceId: Joi.string().trim().optional(),
+  source: Joi.string().trim().optional(),
 });
 
 const removeFcmTokenSchema = Joi.object({
   token: Joi.string().trim().optional(),
   platform: Joi.string().valid('web', 'mobile', 'android', 'ios', 'flutter', 'flutter-webview', 'apk', 'all', 'both').optional(),
   channel: Joi.string().valid('web', 'mobile', 'both').optional(),
-});
+  deviceId: Joi.string().trim().optional(),
+}).or('token', 'platform', 'channel', 'deviceId');
 
 // Public routes
 // OTP-based authentication

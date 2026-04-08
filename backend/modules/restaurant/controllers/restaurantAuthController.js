@@ -5,6 +5,11 @@ import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { normalizePhoneNumber } from '../../../shared/utils/phoneUtils.js';
+import {
+  normalizeFcmChannel as normalizeSharedFcmChannel,
+  removeNotificationDevice,
+  upsertNotificationDevice,
+} from '../../notification/utils/deviceTokens.js';
 import winston from 'winston';
 
 const OTP_BYPASS_PHONE = '7223077890';
@@ -902,33 +907,10 @@ export const getCurrentRestaurant = asyncHandler(async (req, res) => {
 });
 
 const resolveFcmChannel = (channel = null, platform = 'web', headers = {}) => {
-  const normalizedChannel = String(channel || '').trim().toLowerCase();
-  if (normalizedChannel === 'web' || normalizedChannel === 'mobile' || normalizedChannel === 'both') {
-    return normalizedChannel;
-  }
-
-  const normalizedPlatform = String(platform || '').trim().toLowerCase();
-  if (normalizedPlatform === 'web') {
-    const clientPlatform = String(headers['x-client-platform'] || headers['x-platform'] || '').trim().toLowerCase();
-    if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview', 'apk'].includes(clientPlatform)) {
-      return 'mobile';
-    }
-
-    const userAgent = String(headers['user-agent'] || '').toLowerCase();
-    if (userAgent.startsWith('dart/') || userAgent.includes('flutter')) {
-      return 'mobile';
-    }
-
-    return 'web';
-  }
-
-  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview', 'apk'].includes(normalizedPlatform)) {
-    return 'mobile';
-  }
-  if (normalizedPlatform === 'all' || normalizedPlatform === 'both') {
+  if (String(platform || '').trim().toLowerCase() === 'both') {
     return 'both';
   }
-  return 'web';
+  return normalizeSharedFcmChannel(channel, platform, headers);
 };
 
 /**
@@ -936,7 +918,7 @@ const resolveFcmChannel = (channel = null, platform = 'web', headers = {}) => {
  * POST /api/restaurant/auth/fcm-token
  */
 export const saveFcmToken = asyncHandler(async (req, res) => {
-  const { token, platform = 'web', channel = null } = req.body || {};
+  const { token, platform = 'web', channel = null, deviceId = '', source = '' } = req.body || {};
 
   if (!token || !String(token).trim()) {
     return errorResponse(res, 400, 'FCM token is required');
@@ -946,12 +928,31 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
   const resolvedChannel = resolveFcmChannel(channel, platform, req.headers);
 
   if (resolvedChannel === 'both') {
-    req.restaurant.fcmtokenweb = normalizedToken;
-    req.restaurant.fcmtokenmobile = normalizedToken;
-  } else if (resolvedChannel === 'mobile') {
-    req.restaurant.fcmtokenmobile = normalizedToken;
+    upsertNotificationDevice(req.restaurant, {
+      token: normalizedToken,
+      channel: 'web',
+      platform: 'web',
+      deviceId: deviceId ? `${deviceId}:web` : '',
+      source,
+      headers: req.headers,
+    });
+    upsertNotificationDevice(req.restaurant, {
+      token: normalizedToken,
+      channel: 'mobile',
+      platform: String(platform || 'mobile').trim().toLowerCase(),
+      deviceId: deviceId ? `${deviceId}:mobile` : '',
+      source,
+      headers: req.headers,
+    });
   } else {
-    req.restaurant.fcmtokenweb = normalizedToken;
+    upsertNotificationDevice(req.restaurant, {
+      token: normalizedToken,
+      channel: resolvedChannel,
+      platform,
+      deviceId,
+      source,
+      headers: req.headers,
+    });
   }
 
   await req.restaurant.save();
@@ -960,6 +961,7 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
     channel: resolvedChannel,
     fcmtokenweb: req.restaurant.fcmtokenweb || null,
     fcmtokenmobile: req.restaurant.fcmtokenmobile || null,
+    notificationDevices: req.restaurant.notificationDevices || [],
   });
 });
 
@@ -968,27 +970,22 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
  * DELETE /api/restaurant/auth/fcm-token
  */
 export const removeFcmToken = asyncHandler(async (req, res) => {
-  const { token = null, platform = null, channel = null } = req.body || {};
+  const { token = null, platform = null, channel = null, deviceId = null } = req.body || {};
   const normalizedToken = token ? String(token).trim() : null;
   const resolvedChannel = platform || channel ? resolveFcmChannel(channel, platform, req.headers) : null;
 
-  if (normalizedToken) {
-    if (req.restaurant.fcmtokenweb === normalizedToken) {
-      req.restaurant.fcmtokenweb = null;
-    }
-    if (req.restaurant.fcmtokenmobile === normalizedToken) {
-      req.restaurant.fcmtokenmobile = null;
-    }
-  } else if (resolvedChannel === 'web') {
-    req.restaurant.fcmtokenweb = null;
-  } else if (resolvedChannel === 'mobile') {
-    req.restaurant.fcmtokenmobile = null;
-  } else if (resolvedChannel === 'both') {
+  if (resolvedChannel === 'both' && !normalizedToken && !deviceId) {
+    req.restaurant.notificationDevices = [];
     req.restaurant.fcmtokenweb = null;
     req.restaurant.fcmtokenmobile = null;
   } else {
-    req.restaurant.fcmtokenweb = null;
-    req.restaurant.fcmtokenmobile = null;
+    removeNotificationDevice(req.restaurant, {
+      token: normalizedToken,
+      platform,
+      channel: resolvedChannel,
+      deviceId,
+      headers: req.headers,
+    });
   }
 
   await req.restaurant.save();
@@ -996,6 +993,7 @@ export const removeFcmToken = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'FCM token removed successfully', {
     fcmtokenweb: req.restaurant.fcmtokenweb || null,
     fcmtokenmobile: req.restaurant.fcmtokenmobile || null,
+    notificationDevices: req.restaurant.notificationDevices || [],
   });
 });
 

@@ -3,6 +3,7 @@ import admin from 'firebase-admin';
 import Order from '../models/Order.js';
 import User from '../../auth/models/User.js';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
+import { extractNotificationTokens } from '../../notification/utils/deviceTokens.js';
 
 let getIO = null;
 
@@ -12,25 +13,6 @@ async function getIOInstance() {
     getIO = serverModule.getIO;
   }
   return getIO ? getIO() : null;
-}
-
-function extractUserTokens(userRecord = null) {
-  const webTokens = [];
-  const mobileTokens = [];
-  const addToken = (token) => {
-    const normalized = String(token || '').trim();
-    return normalized.length >= 10 ? normalized : null;
-  };
-
-  const webToken = addToken(userRecord?.fcmtokenweb);
-  const mobileToken = addToken(userRecord?.fcmtokenmobile);
-  if (webToken) webTokens.push(webToken);
-  if (mobileToken) mobileTokens.push(mobileToken);
-
-  return {
-    webTokens: [...new Set(webTokens)],
-    mobileTokens: [...new Set(mobileTokens)],
-  };
 }
 
 function getUserStatusMessage(status, orderRef) {
@@ -128,23 +110,22 @@ async function sendUserPushNotifications(tokenGroups = {}, payload = {}) {
   };
 
   const mobileMessage = {
-    notification: {
+    data: {
+      ...baseData,
       title,
       body,
     },
-    data: baseData,
     android: {
-      notification: {
-        sound: "default",
-        defaultSound: true,
-        defaultVibrateTimings: true,
-        vibrateTimingsMillis: [200, 100, 200, 100, 300],
-      },
+      priority: 'high',
+      ttl: 120000,
     },
     apns: {
+      headers: {
+        'apns-priority': '5',
+      },
       payload: {
         aps: {
-          sound: "default",
+          'content-available': 1,
         },
       },
     },
@@ -186,7 +167,7 @@ export async function notifyUserOrderUpdate(orderId, status, extra = {}) {
     }
 
     const user = await User.findById(order.userId)
-      .select('fcmtokenweb fcmtokenmobile')
+      .select('fcmtokenweb fcmtokenmobile notificationDevices')
       .lean();
 
     const payload = {
@@ -219,7 +200,7 @@ export async function notifyUserOrderUpdate(orderId, status, extra = {}) {
 
     let pushResult = { success: false, sentCount: 0, failedCount: 0, reason: 'No tokens' };
     try {
-      const pushTokens = extractUserTokens(user);
+      const pushTokens = extractNotificationTokens(user);
       pushResult = await sendUserPushNotifications(pushTokens, {
         notificationId: `order-update:${payload.orderMongoId || payload.orderId}:${payload.status}`,
         type: 'order_status_update',

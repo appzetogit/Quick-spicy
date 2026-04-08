@@ -1,6 +1,7 @@
 import Admin from "../models/Admin.js";
 import Order from "../../order/models/Order.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
+import Zone from "../models/Zone.js";
 import Delivery from "../../delivery/models/Delivery.js";
 import OutletTimings from "../../restaurant/models/OutletTimings.js";
 import Menu from "../../restaurant/models/Menu.js";
@@ -1199,11 +1200,43 @@ export const getRestaurants = asyncHandler(async (req, res) => {
       .limit(parseInt(limit))
       .lean();
 
+    const restaurantIds = restaurants.map((restaurant) => restaurant?._id).filter(Boolean);
+    const mappedZones = restaurantIds.length > 0
+      ? await Zone.find({
+          isActive: true,
+          restaurantId: { $in: restaurantIds },
+        })
+          .select("_id name zoneName restaurantId")
+          .lean()
+      : [];
+
+    const zoneByRestaurantId = new Map(
+      mappedZones.map((zone) => [
+        zone?.restaurantId?.toString?.() || String(zone?.restaurantId || ""),
+        zone,
+      ]),
+    );
+
+    const restaurantsWithZones = restaurants.map((restaurant) => {
+      const mappedZone = zoneByRestaurantId.get(
+        restaurant?._id?.toString?.() || String(restaurant?._id || ""),
+      );
+
+      if (!mappedZone) return restaurant;
+
+      return {
+        ...restaurant,
+        zoneId: mappedZone._id?.toString?.() || String(mappedZone._id),
+        restaurantZoneId: mappedZone._id?.toString?.() || String(mappedZone._id),
+        zone: mappedZone.name || mappedZone.zoneName || restaurant.zone,
+      };
+    });
+
     // Get total count
     const total = await Restaurant.countDocuments(query);
 
     return successResponse(res, 200, "Restaurants retrieved successfully", {
-      restaurants: restaurants,
+      restaurants: restaurantsWithZones,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -1928,6 +1961,29 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
 
     await restaurant.save();
 
+    if (payload.zoneId !== undefined) {
+      const zoneId = String(payload.zoneId || "").trim();
+
+      await Zone.updateMany(
+        { restaurantId: restaurant._id },
+        { $unset: { restaurantId: 1 } },
+      );
+
+      if (zoneId) {
+        if (!mongoose.Types.ObjectId.isValid(zoneId)) {
+          return errorResponse(res, 400, "Invalid zone ID");
+        }
+
+        const zone = await Zone.findOne({ _id: zoneId, isActive: true });
+        if (!zone) {
+          return errorResponse(res, 404, "Zone not found");
+        }
+
+        zone.restaurantId = restaurant._id;
+        await zone.save();
+      }
+    }
+
     // Keep source-of-truth OutletTimings in sync with admin-side opening/closing/openDays edits.
     if (shouldSyncOutletTimings) {
       const dayOrder = [
@@ -2018,8 +2074,22 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       updatedBy: req.user._id,
     });
 
+    const mappedZone = await Zone.findOne({
+      restaurantId: restaurant._id,
+      isActive: true,
+    })
+      .select("_id name zoneName")
+      .lean();
+
+    const restaurantResponse = {
+      ...restaurant.toObject(),
+      zoneId: mappedZone?._id?.toString?.() || "",
+      restaurantZoneId: mappedZone?._id?.toString?.() || "",
+      zone: mappedZone?.name || mappedZone?.zoneName || restaurant.location?.area || restaurant.location?.city || "",
+    };
+
     return successResponse(res, 200, "Restaurant updated successfully", {
-      restaurant,
+      restaurant: restaurantResponse,
     });
   } catch (error) {
     logger.error(`Error updating restaurant: ${error.message}`, {

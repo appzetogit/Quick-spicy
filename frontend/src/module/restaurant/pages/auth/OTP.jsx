@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { restaurantAPI } from "@/lib/api"
 import { setAuthData as setRestaurantAuthData } from "@/lib/utils/auth"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { checkOnboardingStatus, isRestaurantOnboardingComplete } from "../../utils/onboardingUtils"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -217,6 +218,12 @@ export default function RestaurantOTP() {
       if (accessToken && restaurant) {
         // Store auth data using utility function to ensure proper module-specific token storage
         setRestaurantAuthData("restaurant", accessToken, restaurant)
+
+        try {
+          await registerWebPushForCurrentModule("/restaurant")
+        } catch (pushError) {
+          debugWarn("Restaurant push registration after OTP auth failed:", pushError)
+        }
 
         // Dispatch custom event for same-tab updates
         window.dispatchEvent(new Event("restaurantAuthChanged"))

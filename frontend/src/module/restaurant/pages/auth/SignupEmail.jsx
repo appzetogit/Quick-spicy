@@ -1,6 +1,7 @@
 import { useState, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { setAuthData } from "@/lib/utils/auth"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { Mail, User, Lock, Eye, EyeOff, ArrowLeft, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -161,11 +162,17 @@ export default function RestaurantSignupEmail() {
 
       const data = response?.data?.data || response?.data
       
-      if (data.accessToken && data.restaurant) {
-        // Replace old token with new one (handles cross-module login)
-        setAuthData("restaurant", data.accessToken, data.restaurant)
-        
-        window.dispatchEvent(new Event("restaurantAuthChanged"))
+        if (data.accessToken && data.restaurant) {
+          // Replace old token with new one (handles cross-module login)
+          setAuthData("restaurant", data.accessToken, data.restaurant)
+
+          try {
+            await registerWebPushForCurrentModule("/restaurant")
+          } catch (pushError) {
+            console.warn("Restaurant push registration after signup failed:", pushError)
+          }
+          
+          window.dispatchEvent(new Event("restaurantAuthChanged"))
         
         navigate("/restaurant/onboarding", { replace: true })
       } else {

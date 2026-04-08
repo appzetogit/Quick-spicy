@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { deliveryAPI } from "@/lib/api"
 import { setAuthData as storeAuthData } from "@/lib/utils/auth"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -229,6 +230,12 @@ export default function DeliveryOTP() {
           return
         }
 
+        try {
+          await registerWebPushForCurrentModule("/delivery")
+        } catch (pushError) {
+          debugWarn("Delivery push registration after signup-flow login failed:", pushError)
+        }
+
         // Dispatch custom event
         window.dispatchEvent(new Event("deliveryAuthChanged"))
 
@@ -265,6 +272,12 @@ export default function DeliveryOTP() {
         setError("Failed to save authentication. Please try again or clear your browser storage.")
         setIsLoading(false)
         return
+      }
+
+      try {
+        await registerWebPushForCurrentModule("/delivery")
+      } catch (pushError) {
+        debugWarn("Delivery push registration after login failed:", pushError)
       }
 
       // Dispatch custom event for same-tab updates
@@ -362,6 +375,12 @@ export default function DeliveryOTP() {
         setError("Failed to save authentication. Please try again or clear your browser storage.")
         setIsLoading(false)
         return
+      }
+
+      try {
+        await registerWebPushForCurrentModule("/delivery")
+      } catch (pushError) {
+        debugWarn("Delivery push registration after name flow failed:", pushError)
       }
 
       // Dispatch custom event for same-tab updates

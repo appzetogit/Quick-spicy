@@ -6,6 +6,7 @@ import User from "../../auth/models/User.js";
 import Delivery from "../../delivery/models/Delivery.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
+import { extractNotificationTokens } from "../../notification/utils/deviceTokens.js";
 
 const BATCH_SIZE = 500;
 const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v2";
@@ -52,17 +53,9 @@ const extractTokensByPlatform = (records = [], platform = "all") => {
   const mobileTokens = [];
 
   records.forEach((record) => {
-    if (platform === "web" || platform === "all") {
-      if (record?.fcmtokenweb && String(record.fcmtokenweb).trim().length >= 10) {
-        webTokens.push(String(record.fcmtokenweb).trim());
-      }
-    }
-
-    if (platform === "mobile" || platform === "all") {
-      if (record?.fcmtokenmobile && String(record.fcmtokenmobile).trim().length >= 10) {
-        mobileTokens.push(String(record.fcmtokenmobile).trim());
-      }
-    }
+    const tokenGroups = extractNotificationTokens(record, platform);
+    webTokens.push(...(tokenGroups?.webTokens || []));
+    mobileTokens.push(...(tokenGroups?.mobileTokens || []));
   });
 
   return {
@@ -96,21 +89,21 @@ async function getTargetTokens(target, platform) {
 
   if (target === "customer") {
     const users = await User.find({ role: "user", ...baseFilter })
-      .select("fcmtokenweb fcmtokenmobile")
+      .select("fcmtokenweb fcmtokenmobile notificationDevices")
       .lean();
     return extractTokensByPlatform(users, platform);
   }
 
   if (target === "delivery") {
     const deliveryPartners = await Delivery.find(baseFilter)
-      .select("fcmtokenweb fcmtokenmobile")
+      .select("fcmtokenweb fcmtokenmobile notificationDevices")
       .lean();
     return extractTokensByPlatform(deliveryPartners, platform);
   }
 
   if (target === "restaurant") {
     const restaurants = await Restaurant.find(baseFilter)
-      .select("fcmtokenweb fcmtokenmobile")
+      .select("fcmtokenweb fcmtokenmobile notificationDevices")
       .lean();
     return extractTokensByPlatform(restaurants, platform);
   }
@@ -274,6 +267,11 @@ const executePushNotification = async ({
       fcmOptions: {
         link: targetLink,
       },
+      notification: {
+        title: normalizedTitle,
+        body: normalizedDescription,
+        ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
+      },
     },
   };
 
@@ -281,63 +279,28 @@ const executePushNotification = async ({
     (normalizedTarget === "restaurant" || normalizedTarget === "delivery") &&
     (normalizedPlatform === "mobile" || normalizedPlatform === "all");
 
-  const androidNotificationConfig = isPartnerMobileTarget
-    ? {
-      channelId: PARTNER_ANDROID_CHANNEL_ID,
-      sound: PARTNER_ANDROID_SOUND,
-      defaultSound: false,
-      defaultVibrateTimings: true,
-      vibrateTimingsMillis: [200, 100, 200, 100, 300],
-    }
-    : {
-      sound: "default",
-      defaultSound: true,
-      defaultVibrateTimings: true,
-      vibrateTimingsMillis: [200, 100, 200, 100, 300],
-    };
-
-  const apnsSound = isPartnerMobileTarget ? "default" : "default";
-
   const mobilePayload = {
-    notification: {
+    data: {
+      ...baseData,
       title: normalizedTitle,
       body: normalizedDescription,
       ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+      ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
     },
-    data: baseData,
-    ...(normalizedImageUrl
-      ? {
-        android: {
-          notification: {
-            imageUrl: normalizedImageUrl,
-            ...androidNotificationConfig,
-          },
+    android: {
+      priority: "high",
+      ttl: 120000,
+    },
+    apns: {
+      headers: {
+        "apns-priority": "5",
+      },
+      payload: {
+        aps: {
+          "content-available": 1,
         },
-        apns: {
-          payload: {
-            aps: {
-              sound: apnsSound,
-            },
-          },
-          fcmOptions: {
-            imageUrl: normalizedImageUrl,
-          },
-        },
-      }
-      : {
-        android: {
-          notification: {
-            ...androidNotificationConfig,
-          },
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: apnsSound,
-            },
-          },
-        },
-      }),
+      },
+    },
   };
 
   let sentCount = 0;

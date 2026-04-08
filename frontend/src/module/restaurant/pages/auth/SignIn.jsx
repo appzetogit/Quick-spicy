@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated, setAuthData } from "@/lib/utils/auth"
+import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { Mail, Lock, EyeOff, Eye, CheckSquare, UtensilsCrossed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +53,12 @@ export default function RestaurantSignIn() {
       if (data.accessToken && data.restaurant) {
         // Replace old token with new one (handles cross-module login)
         setAuthData("restaurant", data.accessToken, data.restaurant)
+
+        try {
+          await registerWebPushForCurrentModule("/restaurant")
+        } catch (pushError) {
+          console.warn("Restaurant push registration after sign in failed:", pushError)
+        }
         
         // Dispatch custom event for same-tab updates
         window.dispatchEvent(new Event('restaurantAuthChanged'))

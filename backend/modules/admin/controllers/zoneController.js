@@ -359,9 +359,10 @@ export const detectUserZone = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check which zone the user belongs to
+    // Check which zone the user belongs to.
+    // When zones overlap, prefer the most specific (smallest polygon area).
     let userZone = null;
-    let minDistance = Infinity;
+    const containingZones = [];
 
     for (const zone of activeZones) {
       const polygonCoords = extractZonePolygon(zone);
@@ -370,20 +371,16 @@ export const detectUserZone = asyncHandler(async (req, res) => {
       const isInZone = isPointInPolygon(userLat, userLng, polygonCoords);
 
       if (isInZone) {
-        // Calculate distance to zone centroid for buffer logic
-        const centroid = calculateZoneCentroid(polygonCoords);
-        const distance = calculateDistance(userLat, userLng, centroid.lat, centroid.lng);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          userZone = zone;
-        }
+        containingZones.push(zone);
       }
     }
+
+    userZone = pickMostSpecificZone(containingZones);
 
     // If user is not in any zone, check buffer area (50-100 meters)
     if (!userZone) {
       const BUFFER_DISTANCE = 0.1; // 100 meters in km
+      let minDistance = Infinity;
       
       for (const zone of activeZones) {
         const polygonCoords = extractZonePolygon(zone);
@@ -463,6 +460,40 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+function calculatePolygonArea(polygonCoords) {
+  if (!Array.isArray(polygonCoords) || polygonCoords.length < 3) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  let area = 0;
+  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
+    const [xi, yi] = polygonCoords[i];
+    const [xj, yj] = polygonCoords[j];
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
+}
+
+function pickMostSpecificZone(zones = []) {
+  if (!Array.isArray(zones) || zones.length === 0) return null;
+
+  let bestZone = null;
+  let bestArea = Number.POSITIVE_INFINITY;
+
+  for (const zone of zones) {
+    const polygonCoords = extractZonePolygon(zone);
+    const area = calculatePolygonArea(polygonCoords);
+
+    if (area < bestArea) {
+      bestArea = area;
+      bestZone = zone;
+    }
+  }
+
+  return bestZone;
 }
 
 /**

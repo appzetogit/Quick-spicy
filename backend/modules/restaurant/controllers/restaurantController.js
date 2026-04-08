@@ -95,6 +95,27 @@ function isPointInZone(lat, lng, zoneCoordinates) {
   return inside;
 }
 
+function calculateZoneArea(zoneCoordinates) {
+  if (!zoneCoordinates || zoneCoordinates.length < 3) return Number.POSITIVE_INFINITY;
+
+  let area = 0;
+  for (let i = 0, j = zoneCoordinates.length - 1; i < zoneCoordinates.length; j = i++) {
+    const coordI = zoneCoordinates[i];
+    const coordJ = zoneCoordinates[j];
+
+    const xi = typeof coordI === 'object' ? (coordI.latitude || coordI.lat) : null;
+    const yi = typeof coordI === 'object' ? (coordI.longitude || coordI.lng) : null;
+    const xj = typeof coordJ === 'object' ? (coordJ.latitude || coordJ.lat) : null;
+    const yj = typeof coordJ === 'object' ? (coordJ.longitude || coordJ.lng) : null;
+
+    if (xi === null || yi === null || xj === null || yj === null) continue;
+
+    area += (xj * yi) - (xi * yj);
+  }
+
+  return Math.abs(area / 2);
+}
+
 /**
  * Check if a restaurant's location (pin) is within any active zone
  * @param {number} restaurantLat - Restaurant latitude
@@ -132,7 +153,10 @@ function isRestaurantInAnyZone(restaurantLat, restaurantLng, activeZones) {
  */
 function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
   if (!restaurantLat || !restaurantLng) return null;
-  
+
+  let bestZoneId = null;
+  let bestArea = Number.POSITIVE_INFINITY;
+
   for (const zone of activeZones) {
     if (!zone.coordinates || zone.coordinates.length < 3) continue;
     
@@ -144,11 +168,41 @@ function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
     }
     
     if (isInZone) {
+      const area = calculateZoneArea(zone.coordinates);
+      if (area < bestArea) {
+        bestArea = area;
+        bestZoneId = zone._id.toString();
+      }
+    }
+  }
+
+  return bestZoneId;
+}
+
+function getExplicitRestaurantZoneId(restaurant, activeZones) {
+  if (!restaurant || !Array.isArray(activeZones)) return null;
+
+  const restaurantMongoId = restaurant?._id?.toString?.() || String(restaurant?._id || '');
+  const restaurantPublicId = restaurant?.restaurantId ? String(restaurant.restaurantId) : null;
+
+  for (const zone of activeZones) {
+    const zoneRestaurantId = zone?.restaurantId?.toString?.() || String(zone?.restaurantId || '');
+    if (!zoneRestaurantId) continue;
+    if (restaurantMongoId && zoneRestaurantId === restaurantMongoId) {
+      return zone._id.toString();
+    }
+    if (restaurantPublicId && zoneRestaurantId === restaurantPublicId) {
       return zone._id.toString();
     }
   }
-  
+
   return null;
+}
+
+function resolveRestaurantZoneId(restaurant, restaurantLat, restaurantLng, activeZones) {
+  const explicitZoneId = getExplicitRestaurantZoneId(restaurant, activeZones);
+  if (explicitZoneId) return explicitZoneId;
+  return getRestaurantZoneId(restaurantLat, restaurantLng, activeZones);
 }
 
 function extractRestaurantCoordinates(locationOrRestaurant = {}) {
@@ -344,7 +398,7 @@ export const getRestaurants = async (req, res) => {
         return null;
       }
       const restaurantZoneId = activeZones.length > 0
-        ? getRestaurantZoneId(lat, lng, activeZones)
+        ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
         : null;
       const isInUserZone = userZoneId
         ? restaurantZoneId === userZoneId
@@ -1077,7 +1131,7 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
             return null;
           }
           const restaurantZoneId = activeZones.length > 0
-            ? getRestaurantZoneId(lat, lng, activeZones)
+            ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
             : null;
 
           if (userZoneId && restaurantZoneId !== userZoneId) {

@@ -5,6 +5,7 @@ import Payment from '../../payment/models/Payment.js';
 import mongoose from 'mongoose';
 import admin from 'firebase-admin';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
+import { extractNotificationTokens } from '../../notification/utils/deviceTokens.js';
 
 const DELIVERY_ANDROID_CHANNEL_ID = 'quick_spicy_popup_v2';
 const DELIVERY_ANDROID_SOUND = 'original';
@@ -86,68 +87,69 @@ function buildPaymentMeta(order, paymentRecord = null) {
   };
 }
 
-function extractDeliveryTokens(deliveryRecord = null) {
-  const tokens = [];
-  const addToken = (token) => {
-    const normalized = String(token || '').trim();
-    if (normalized.length >= 10) {
-      tokens.push(normalized);
-    }
-  };
-
-  addToken(deliveryRecord?.fcmtokenmobile);
-  addToken(deliveryRecord?.fcmtokenweb);
-  return [...new Set(tokens)];
-}
-
-async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
+async function sendEachMulticast(tokens = [], message = {}) {
   const uniqueTokens = [...new Set((tokens || []).map((t) => String(t || '').trim()).filter((t) => t.length >= 10))];
   if (uniqueTokens.length === 0) {
+    return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
+  }
+
+  const response = await admin.messaging().sendEachForMulticast({
+    ...message,
+    tokens: uniqueTokens,
+  });
+
+  return {
+    success: (response.successCount || 0) > 0,
+    sentCount: response.successCount || 0,
+    failedCount: response.failureCount || 0
+  };
+}
+
+async function sendDeliveryPushNotifications(tokenGroups = {}, payload = {}) {
+  const normalizedWebTokens = Array.isArray(tokenGroups)
+    ? tokenGroups.map((token) => String(token || '').trim()).filter((token) => token.length >= 10)
+    : Array.isArray(tokenGroups?.webTokens)
+    ? tokenGroups.webTokens.map((token) => String(token || '').trim()).filter((token) => token.length >= 10)
+    : [];
+  const normalizedMobileTokens = Array.isArray(tokenGroups)
+    ? []
+    : Array.isArray(tokenGroups?.mobileTokens)
+    ? tokenGroups.mobileTokens.map((token) => String(token || '').trim()).filter((token) => token.length >= 10)
+    : [];
+
+  const webTokens = [...new Set(normalizedWebTokens)];
+  const webTokenSet = new Set(webTokens);
+  const mobileTokens = [...new Set(normalizedMobileTokens.filter((token) => !webTokenSet.has(token)))];
+
+  if (webTokens.length === 0 && mobileTokens.length === 0) {
     return { success: false, sentCount: 0, failedCount: 0, reason: 'No valid FCM tokens' };
   }
 
   await firebaseAuthService.init();
   if (!firebaseAuthService.isEnabled()) {
     console.warn('FCM push skipped for delivery notifications: Firebase not configured');
-    return { success: false, sentCount: 0, failedCount: uniqueTokens.length, reason: 'Firebase not configured' };
+    return { success: false, sentCount: 0, failedCount: webTokens.length + mobileTokens.length, reason: 'Firebase not configured' };
   }
 
   const targetUrl = String(payload?.targetUrl || '/delivery');
-  const message = {
-    notification: {
-      title: String(payload?.title || 'New Delivery Update'),
-      body: String(payload?.body || 'You have an order update')
-    },
+  const title = String(payload?.title || 'New Delivery Update');
+  const body = String(payload?.body || 'You have an order update');
+  const baseData = {
+    notificationId: String(payload?.notificationId || `delivery-push:${payload?.orderMongoId || payload?.orderId || 'unknown'}:${payload?.type || 'update'}`),
+    type: String(payload?.type || 'delivery_update'),
+    orderId: String(payload?.orderId || ''),
+    orderMongoId: String(payload?.orderMongoId || ''),
+    status: String(payload?.status || ''),
+    phase: String(payload?.phase || ''),
+    sentAt: new Date().toISOString(),
+    targetUrl
+  };
+
+  const webMessage = {
     data: {
-      type: String(payload?.type || 'delivery_update'),
-      orderId: String(payload?.orderId || ''),
-      orderMongoId: String(payload?.orderMongoId || ''),
-      status: String(payload?.status || ''),
-      phase: String(payload?.phase || ''),
-      sentAt: new Date().toISOString(),
-      targetUrl
-    },
-    android: {
-      priority: 'high',
-      ttl: 120000,
-      notification: {
-        channelId: DELIVERY_ANDROID_CHANNEL_ID,
-        sound: DELIVERY_ANDROID_SOUND,
-        defaultSound: false,
-        defaultVibrateTimings: true,
-        priority: 'max'
-      }
-    },
-    apns: {
-      headers: {
-        'apns-priority': '10'
-      },
-      payload: {
-        aps: {
-          sound: 'default',
-          badge: 1
-        }
-      }
+      ...baseData,
+      title,
+      body,
     },
     webpush: {
       headers: {
@@ -158,31 +160,58 @@ async function sendDeliveryPushNotifications(tokens = [], payload = {}) {
         link: targetUrl
       },
       notification: {
+        title,
+        body,
         icon: '/favicon.ico',
         requireInteraction: true,
         vibrate: [200, 100, 200, 100, 300],
         silent: false
       }
-    },
-    tokens: uniqueTokens
+    }
   };
 
   if (payload?.imageUrl) {
-    message.notification.imageUrl = payload.imageUrl;
-    message.notification.image = payload.imageUrl;
-    message.webpush.notification.image = payload.imageUrl;
-    message.android.notification.imageUrl = payload.imageUrl;
-    message.android.notification.image = payload.imageUrl;
-    message.apns.fcmOptions = {
-      imageUrl: payload.imageUrl
-    };
+    webMessage.webpush.notification.image = payload.imageUrl;
   }
 
-  const response = await admin.messaging().sendEachForMulticast(message);
+  const mobileMessage = {
+    data: {
+      ...baseData,
+      title,
+      body,
+      androidChannelId: DELIVERY_ANDROID_CHANNEL_ID,
+      sound: DELIVERY_ANDROID_SOUND,
+      ...(payload?.imageUrl ? { imageUrl: String(payload.imageUrl) } : {}),
+    },
+    android: {
+      priority: 'high',
+      ttl: 120000,
+    },
+    apns: {
+      headers: {
+        'apns-priority': '5'
+      },
+      payload: {
+        aps: {
+          'content-available': 1,
+          badge: 1
+        }
+      }
+    },
+  };
+
+  const results = await Promise.all([
+    sendEachMulticast(webTokens, webMessage),
+    sendEachMulticast(mobileTokens, mobileMessage),
+  ]);
+
+  const sentCount = results.reduce((sum, result) => sum + (result.sentCount || 0), 0);
+  const failedCount = results.reduce((sum, result) => sum + (result.failedCount || 0), 0);
+
   return {
-    success: (response.successCount || 0) > 0,
-    sentCount: response.successCount || 0,
-    failedCount: response.failureCount || 0
+    success: sentCount > 0,
+    sentCount,
+    failedCount
   };
 }
 
@@ -267,7 +296,7 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
 
     // Get delivery partner details
     const deliveryPartner = await Delivery.findById(deliveryPartnerId)
-      .select('name phone availability.currentLocation availability.isOnline status isActive fcmtokenweb fcmtokenmobile')
+      .select('name phone availability.currentLocation availability.isOnline status isActive fcmtokenweb fcmtokenmobile notificationDevices')
       .lean();
 
     if (!deliveryPartner) {
@@ -454,7 +483,7 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
 
     let pushResult = { success: false, sentCount: 0, failedCount: 0, reason: 'No push attempt' };
     try {
-      const pushTokens = extractDeliveryTokens(deliveryPartner);
+      const pushTokens = extractNotificationTokens(deliveryPartner);
       pushResult = await sendDeliveryPushNotifications(pushTokens, {
         type: 'new_order',
         title: 'New Delivery Request',
@@ -745,7 +774,7 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         $in: freeDeliveryPartnerIds.filter((id) => mongoose.Types.ObjectId.isValid(id))
       }
     })
-      .select('_id fcmtokenweb fcmtokenmobile')
+      .select('_id fcmtokenweb fcmtokenmobile notificationDevices')
       .lean();
 
     const deliveryById = new Map();
@@ -753,14 +782,17 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       deliveryById.set(record._id.toString(), record);
     });
 
-    const pushTokens = [];
+    const pushTokens = {
+      webTokens: [],
+      mobileTokens: [],
+    };
 
     // Notify each delivery partner
     for (const deliveryPartnerId of freeDeliveryPartnerIds) {
       try {
         const normalizedId = deliveryPartnerId?.toString() || deliveryPartnerId;
         const deliveryRecord = deliveryById.get(normalizedId);
-        const deliveryTokens = extractDeliveryTokens(deliveryRecord);
+        const deliveryTokens = extractNotificationTokens(deliveryRecord);
         const roomVariations = [
           `delivery:${normalizedId}`,
           `delivery:${deliveryPartnerId}`,
@@ -796,7 +828,8 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
           notifiedCount++;
         }
         // Always include tokens so minimized/background web clients still get FCM notification.
-        deliveryTokens.forEach((token) => pushTokens.push(token));
+        (deliveryTokens?.webTokens || []).forEach((token) => pushTokens.webTokens.push(token));
+        (deliveryTokens?.mobileTokens || []).forEach((token) => pushTokens.mobileTokens.push(token));
       } catch (partnerError) {
         console.error(`❌ Error notifying delivery partner ${deliveryPartnerId}:`, partnerError);
       }
@@ -859,10 +892,10 @@ export async function notifyDeliveryBoyOrderReady(order, deliveryPartnerId) {
     };
 
     const deliveryPartnerRecord = await Delivery.findById(deliveryPartnerId)
-      .select('fcmtokenweb fcmtokenmobile')
+      .select('fcmtokenweb fcmtokenmobile notificationDevices')
       .lean();
 
-    const pushTokens = extractDeliveryTokens(deliveryPartnerRecord);
+    const pushTokens = extractNotificationTokens(deliveryPartnerRecord);
 
     // Try to find delivery partner's room
     const roomVariations = [

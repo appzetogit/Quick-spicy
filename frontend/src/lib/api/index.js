@@ -127,8 +127,16 @@ export const authAPI = {
   },
 
   // Save FCM token for authenticated role (user/restaurant/delivery via /auth/login)
-  saveFcmToken: (token, platform = "web") => {
-    return apiClient.post("/auth/fcm-token", { token, platform });
+  saveFcmToken: (token, options = {}) => {
+    const normalizedOptions =
+      typeof options === "string" ? { platform: options } : options || {};
+    return apiClient.post("/auth/fcm-token", {
+      token,
+      ...(normalizedOptions.platform ? { platform: normalizedOptions.platform } : {}),
+      ...(normalizedOptions.channel ? { channel: normalizedOptions.channel } : {}),
+      ...(normalizedOptions.deviceId ? { deviceId: normalizedOptions.deviceId } : {}),
+      ...(normalizedOptions.source ? { source: normalizedOptions.source } : {}),
+    });
   },
 
   // Remove FCM token
@@ -178,24 +186,26 @@ export const userAPI = {
     const channel = options.channel || inferredChannel;
     const platform = options.platform || (channel === "mobile" ? "android" : "web");
 
-    return apiClient.post("/user/fcm-token", {
-      token,
-      channel,
-      platform,
-      ...(options.deviceId ? { deviceId: options.deviceId } : {}),
-    });
-  },
+      return apiClient.post("/user/fcm-token", {
+        token,
+        channel,
+        platform,
+        ...(options.deviceId ? { deviceId: options.deviceId } : {}),
+        ...(options.source ? { source: options.source } : {}),
+      });
+    },
 
   // Remove/deactivate FCM token
   removeFcmToken: (token = null, options = {}) => {
     return apiClient.delete("/user/fcm-token", {
-      data: {
-        ...(token ? { token } : {}),
-        ...(options.channel ? { channel: options.channel } : {}),
-        ...(options.platform ? { platform: options.platform } : {}),
-      },
-    });
-  },
+        data: {
+          ...(token ? { token } : {}),
+          ...(options.channel ? { channel: options.channel } : {}),
+          ...(options.platform ? { platform: options.platform } : {}),
+          ...(options.deviceId ? { deviceId: options.deviceId } : {}),
+        },
+      });
+    },
 
   // Upload profile image
   uploadProfileImage: (file) => {
@@ -388,10 +398,15 @@ export const restaurantAPI = {
   getCurrentRestaurant: () => {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.AUTH.ME);
   },
-  saveFcmToken: (token, platform = "web") => {
+  saveFcmToken: (token, options = {}) => {
+    const normalizedOptions =
+      typeof options === "string" ? { platform: options } : options || {};
     return apiClient.post(API_ENDPOINTS.RESTAURANT.AUTH.FCM_TOKEN, {
       token,
-      platform,
+      ...(normalizedOptions.platform ? { platform: normalizedOptions.platform } : {}),
+      ...(normalizedOptions.channel ? { channel: normalizedOptions.channel } : {}),
+      ...(normalizedOptions.deviceId ? { deviceId: normalizedOptions.deviceId } : {}),
+      ...(normalizedOptions.source ? { source: normalizedOptions.source } : {}),
     });
   },
   removeFcmToken: (payload = {}) => {
@@ -894,10 +909,15 @@ export const deliveryAPI = {
   getCurrentDelivery: () => {
     return apiClient.get(API_ENDPOINTS.DELIVERY.AUTH.ME);
   },
-  saveFcmToken: (token, platform = "web") => {
+  saveFcmToken: (token, options = {}) => {
+    const normalizedOptions =
+      typeof options === "string" ? { platform: options } : options || {};
     return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.FCM_TOKEN, {
       token,
-      platform,
+      ...(normalizedOptions.platform ? { platform: normalizedOptions.platform } : {}),
+      ...(normalizedOptions.channel ? { channel: normalizedOptions.channel } : {}),
+      ...(normalizedOptions.deviceId ? { deviceId: normalizedOptions.deviceId } : {}),
+      ...(normalizedOptions.source ? { source: normalizedOptions.source } : {}),
     });
   },
   removeFcmToken: (payload = {}) => {

@@ -5,6 +5,12 @@ import UserWallet from '../models/UserWallet.js';
 import { uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
 import axios from 'axios';
 import winston from 'winston';
+import {
+  normalizeFcmChannel,
+  removeNotificationDevice,
+  syncLegacyFcmFields,
+  upsertNotificationDevice,
+} from '../../notification/utils/deviceTokens.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -16,21 +22,7 @@ const logger = winston.createLogger({
   ]
 });
 
-const resolveFcmChannel = (channel, platform) => {
-  const normalizedChannel = String(channel || '').trim().toLowerCase();
-  if (normalizedChannel === 'web' || normalizedChannel === 'mobile') {
-    return normalizedChannel;
-  }
-
-  const normalizedPlatform = String(platform || '').trim().toLowerCase();
-  if (normalizedPlatform === 'web') {
-    return 'web';
-  }
-  if (['android', 'ios', 'mobile', 'flutter', 'flutter-webview'].includes(normalizedPlatform)) {
-    return 'mobile';
-  }
-  return 'web';
-};
+const resolveFcmChannel = (channel, platform) => normalizeFcmChannel(channel, platform);
 
 /**
  * Get user profile
@@ -194,7 +186,7 @@ export const deleteUserProfile = asyncHandler(async (req, res) => {
  */
 export const registerUserFcmToken = asyncHandler(async (req, res) => {
   try {
-    const { token, channel = 'web', platform = 'web' } = req.body || {};
+    const { token, channel = 'web', platform = 'web', deviceId = '', source = '' } = req.body || {};
 
     if (!token || !String(token).trim()) {
       return errorResponse(res, 400, 'FCM token is required');
@@ -209,16 +201,19 @@ export const registerUserFcmToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'User not found');
     }
 
-    if (normalizedChannel === 'mobile') {
-      user.fcmtokenmobile = normalizedToken;
-    } else {
-      user.fcmtokenweb = normalizedToken;
-    }
+    upsertNotificationDevice(user, {
+      token: normalizedToken,
+      channel: normalizedChannel,
+      platform: normalizedPlatform,
+      deviceId,
+      source,
+    });
     await user.save();
 
     return successResponse(res, 200, 'FCM token saved successfully', {
       fcmtokenweb: user.fcmtokenweb || null,
       fcmtokenmobile: user.fcmtokenmobile || null,
+      notificationDevices: user.notificationDevices || [],
       channel: normalizedChannel,
     });
   } catch (error) {
@@ -233,7 +228,7 @@ export const registerUserFcmToken = asyncHandler(async (req, res) => {
  */
 export const removeUserFcmToken = asyncHandler(async (req, res) => {
   try {
-    const { token, channel = null, platform = null } = req.body || {};
+    const { token, channel = null, platform = null, deviceId = null } = req.body || {};
     const normalizedToken = token ? String(token).trim() : null;
     const normalizedChannel = channel ? resolveFcmChannel(channel, platform) : null;
 
@@ -242,27 +237,21 @@ export const removeUserFcmToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'User not found');
     }
 
-    if (normalizedToken) {
-      if (user.fcmtokenweb === normalizedToken) {
-        user.fcmtokenweb = null;
-      }
-      if (user.fcmtokenmobile === normalizedToken) {
-        user.fcmtokenmobile = null;
-      }
-    } else if (normalizedChannel) {
-      if (normalizedChannel === 'web') {
-        user.fcmtokenweb = null;
-      } else {
-        user.fcmtokenmobile = null;
-      }
-    } else {
-      user.fcmtokenweb = null;
-      user.fcmtokenmobile = null;
-    }
+    removeNotificationDevice(user, {
+      token: normalizedToken,
+      channel: normalizedChannel,
+      platform,
+      deviceId,
+    });
+    syncLegacyFcmFields(user);
 
     await user.save();
 
-    return successResponse(res, 200, 'FCM token removed successfully');
+    return successResponse(res, 200, 'FCM token removed successfully', {
+      fcmtokenweb: user.fcmtokenweb || null,
+      fcmtokenmobile: user.fcmtokenmobile || null,
+      notificationDevices: user.notificationDevices || [],
+    });
   } catch (error) {
     logger.error(`Error removing user FCM token: ${error.message}`, { error: error.stack });
     return errorResponse(res, 500, 'Failed to remove FCM token');

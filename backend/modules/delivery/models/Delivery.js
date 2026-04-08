@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import { notificationDeviceSchema } from '../../notification/utils/deviceTokens.js';
 
 const locationSchema = new mongoose.Schema({
   latitude: Number,
@@ -246,6 +247,10 @@ const deliverySchema = new mongoose.Schema(
     fcmtokenmobile: {
       type: String,
       default: null
+    },
+    notificationDevices: {
+      type: [notificationDeviceSchema],
+      default: []
     },
     // Active status
     isActive: {
