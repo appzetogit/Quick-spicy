@@ -9,6 +9,26 @@ import { assignOrderToDeliveryBoy, findNearestDeliveryBoys } from '../../order/s
 import { notifyDeliveryBoyNewOrder, notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
 import mongoose from 'mongoose';
 
+const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
+
+function buildUnpaidOnlinePlaceholderCondition() {
+  return {
+    'payment.method': { $in: ONLINE_PAYMENT_METHODS },
+    'payment.status': 'pending',
+    'tracking.confirmed.status': { $ne: true }
+  };
+}
+
+function isUnpaidOnlinePlaceholderOrder(order) {
+  const paymentMethod = String(order?.payment?.method || '').toLowerCase();
+  const paymentStatus = String(order?.payment?.status || '').toLowerCase();
+  const isConfirmed = order?.tracking?.confirmed?.status === true;
+
+  return ONLINE_PAYMENT_METHODS.includes(paymentMethod) &&
+    paymentStatus === 'pending' &&
+    !isConfirmed;
+}
+
 /**
  * Get all orders for restaurant
  * GET /api/restaurant/orders
@@ -68,6 +88,10 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
     if (status && status !== 'all') {
       query.status = status;
     }
+
+    query.$and = [...(query.$and || []), {
+      $nor: [buildUnpaidOnlinePlaceholderCondition()]
+    }];
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
@@ -217,6 +241,10 @@ export const getRestaurantOrderById = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found');
     }
 
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 404, 'Order not found');
+    }
+
     return successResponse(res, 200, 'Order retrieved successfully', {
       order
     });
@@ -262,6 +290,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
 
     if (!order) {
       return errorResponse(res, 404, 'Order not found');
+    }
+
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 400, 'This order is still waiting for successful online payment.');
     }
 
     // Allow accepting orders with status 'pending' or 'confirmed'
@@ -551,6 +583,10 @@ export const rejectOrder = asyncHandler(async (req, res) => {
       orderStatus: order.status
     });
 
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 400, 'This order is still waiting for successful online payment.');
+    }
+
     // Allow rejecting/cancelling orders with status 'pending', 'confirmed', or 'preparing'
     if (!['pending', 'confirmed', 'preparing'].includes(order.status)) {
       return errorResponse(res, 400, `Order cannot be cancelled. Current status: ${order.status}`);
@@ -629,6 +665,10 @@ export const markOrderPreparing = asyncHandler(async (req, res) => {
 
     if (!order) {
       return errorResponse(res, 404, 'Order not found');
+    }
+
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 400, 'This order is still waiting for successful online payment.');
     }
 
     // Allow marking as preparing if status is 'confirmed', 'pending', or already 'preparing' (for retry scenarios)
@@ -874,6 +914,10 @@ export const markOrderReady = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found');
     }
 
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 400, 'This order is still waiting for successful online payment.');
+    }
+
     if (order.status !== 'preparing') {
       return errorResponse(res, 400, `Order cannot be marked as ready. Current status: ${order.status}`);
     }
@@ -973,6 +1017,10 @@ export const resendDeliveryNotification = asyncHandler(async (req, res) => {
 
     if (!order) {
       return errorResponse(res, 404, 'Order not found');
+    }
+
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 400, 'This order is still waiting for successful online payment.');
     }
 
     // Check if order is in valid status (preparing or ready)

@@ -10,6 +10,25 @@ import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotifi
 import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
+const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
+
+function buildUnpaidOnlinePlaceholderCondition() {
+  return {
+    'payment.method': { $in: ONLINE_PAYMENT_METHODS },
+    'payment.status': 'pending',
+    'tracking.confirmed.status': { $ne: true }
+  };
+}
+
+function isUnpaidOnlinePlaceholderOrder(order) {
+  const paymentMethod = String(order?.payment?.method || '').toLowerCase();
+  const paymentStatus = String(order?.payment?.status || '').toLowerCase();
+  const isConfirmed = order?.tracking?.confirmed?.status === true;
+
+  return ONLINE_PAYMENT_METHODS.includes(paymentMethod) &&
+    paymentStatus === 'pending' &&
+    !isConfirmed;
+}
 
 async function sendAdminOrderSmsAlertsFromOrders(orders = []) {
   const now = Date.now();
@@ -215,13 +234,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // These records are created before Cashfree verification, but they should
     // not appear as real admin-manageable orders until payment succeeds or fails.
     queryAndConditions.push({
-      $nor: [
-        {
-          'payment.method': { $in: ['cashfree', 'razorpay', 'upi', 'card'] },
-          'payment.status': 'pending',
-          'tracking.confirmed.status': { $ne: true }
-        }
-      ]
+      $nor: [buildUnpaidOnlinePlaceholderCondition()]
     });
 
     if (queryAndConditions.length > 0) {
@@ -486,6 +499,10 @@ export const getOrderById = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found');
     }
 
+    if (isUnpaidOnlinePlaceholderOrder(order)) {
+      return errorResponse(res, 404, 'Order not found');
+    }
+
     return successResponse(res, 200, 'Order retrieved successfully', {
       order
     });
@@ -556,6 +573,10 @@ const findOrderByIdOrOrderId = async (id) => {
 
   if (!order) {
     order = await Order.findOne({ orderId: id });
+  }
+
+  if (order && isUnpaidOnlinePlaceholderOrder(order)) {
+    return null;
   }
 
   return order;
