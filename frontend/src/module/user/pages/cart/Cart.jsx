@@ -174,6 +174,7 @@ export default function Cart() {
   const [showOrderSuccess, setShowOrderSuccess] = useState(false)
   const [placedOrderId, setPlacedOrderId] = useState(null)
   const [selectedAddressId, setSelectedAddressId] = useState(null)
+  const [checkoutAddressSnapshot, setCheckoutAddressSnapshot] = useState(null)
 
   useEffect(() => {
     const audio = new Audio(zoopSound)
@@ -241,8 +242,16 @@ export default function Cart() {
     return label || "Saved address"
   }
   const savedAddress = getDefaultAddress()
-  const selectedAddress = addresses.find((addr) => getAddressId(addr) && getAddressId(addr) === selectedAddressId)
-  const defaultAddress = selectedAddress || savedAddress || null
+  const selectedAddress = addresses.find((addr) => {
+    const addressId = getAddressId(addr)
+    return addressId && selectedAddressId && String(addressId) === String(selectedAddressId)
+  })
+  const selectedAddressSnapshot = checkoutAddressSnapshot &&
+    selectedAddressId &&
+    String(getAddressId(checkoutAddressSnapshot)) === String(selectedAddressId)
+    ? checkoutAddressSnapshot
+    : null
+  const defaultAddress = selectedAddress || selectedAddressSnapshot || savedAddress || null
   const hasSavedAddress = Boolean(defaultAddress && formatFullAddress(defaultAddress))
   const selectedAddressCoordinates = defaultAddress?.location?.coordinates
   const zoneLocation = selectedAddressCoordinates?.length === 2
@@ -251,8 +260,14 @@ export default function Cart() {
       longitude: selectedAddressCoordinates[0]
     }
     : currentLocation
-  const { zoneId } = useZone(zoneLocation) // Prefer selected/saved address zone
+  const { zoneId, zone } = useZone(zoneLocation) // Prefer selected/saved address zone
   const defaultPayment = getDefaultPaymentMethod()
+  const restaurantAssignedZoneId = restaurantData?.restaurantZoneId || null
+  const restaurantZoneMismatch = Boolean(
+    zoneId &&
+    restaurantAssignedZoneId &&
+    String(zoneId) !== String(restaurantAssignedZoneId)
+  )
 
   const cancellationPolicyNotice = (
     <div className="mt-3 md:mt-4 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-gray-700 dark:bg-[#1a1a1a]">
@@ -278,6 +293,7 @@ export default function Cart() {
     const defaultId = getAddressId(savedAddress)
     if (!selectedAddressId && defaultId) {
       setSelectedAddressId(defaultId)
+      setCheckoutAddressSnapshot(savedAddress)
     }
   }, [savedAddress, selectedAddressId])
 
@@ -965,7 +981,8 @@ export default function Cart() {
     try {
       const addressId = getAddressId(address)
       if (addressId) {
-        setSelectedAddressId(addressId)
+        setSelectedAddressId(String(addressId))
+        setCheckoutAddressSnapshot(address)
         setDefaultAddress(addressId)
       }
 
@@ -975,7 +992,7 @@ export default function Cart() {
       const latitude = coordinates[1]
 
       if (!latitude || !longitude) {
-        toast.error(`Invalid coordinates for ${label} address`)
+        toast.error(`Invalid coordinates for ${getDisplayAddressLabel(address?.label)} address`)
         return
       }
 
@@ -1180,6 +1197,13 @@ export default function Cart() {
       return
     }
 
+    if (restaurantZoneMismatch) {
+      toast.error(
+        `This restaurant belongs to a different delivery zone than your selected address${zone?.zoneName || zone?.name ? ` (${zone.zoneName || zone.name})` : ""}.`
+      )
+      return
+    }
+
     setIsPlacingOrder(true)
 
     // Use API_BASE_URL from config (supports both dev and production)
@@ -1275,8 +1299,15 @@ export default function Cart() {
                 resolvedRestaurantId: matchingRestaurantId,
                 resolvedRestaurantName: matchingRestaurant.name
               })
-              resolvedRestaurantData = matchingRestaurant
-              setRestaurantData(matchingRestaurant)
+              resolvedRestaurantData = {
+                ...matchingRestaurant,
+                restaurantZoneId:
+                  matchingRestaurant.restaurantZoneId ||
+                  resolvedRestaurantData?.restaurantZoneId ||
+                  restaurantData?.restaurantZoneId ||
+                  null
+              }
+              setRestaurantData(resolvedRestaurantData)
               if (matchingRestaurantId) {
                 syncCartRestaurant(matchingRestaurantId, matchingRestaurant.name)
               }
@@ -1321,6 +1352,39 @@ export default function Cart() {
         setIsPlacingOrder(false);
         return;
       }
+
+      let finalRestaurantZoneId =
+        normalizeIdentifier(resolvedRestaurantData?.restaurantZoneId) ||
+        normalizeIdentifier(restaurantData?.restaurantZoneId) ||
+        null
+
+      if (!finalRestaurantZoneId && finalRestaurantId) {
+        try {
+          const zoneResponse = await restaurantAPI.getRestaurantById(finalRestaurantId)
+          const zoneRestaurantData = zoneResponse?.data?.data?.restaurant || zoneResponse?.data?.restaurant
+
+          if (zoneRestaurantData) {
+            finalRestaurantZoneId =
+              normalizeIdentifier(zoneRestaurantData?.restaurantZoneId) ||
+              finalRestaurantZoneId
+
+            resolvedRestaurantData = {
+              ...resolvedRestaurantData,
+              ...zoneRestaurantData,
+              restaurantZoneId:
+                finalRestaurantZoneId ||
+                zoneRestaurantData?.restaurantZoneId ||
+                resolvedRestaurantData?.restaurantZoneId ||
+                null
+            }
+            setRestaurantData(resolvedRestaurantData)
+          }
+        } catch (restaurantZoneError) {
+          debugWarn("⚠️ Failed to resolve restaurant zone before order placement.", restaurantZoneError)
+        }
+      }
+
+      const finalZoneId = zoneId || finalRestaurantZoneId || null
 
       // CRITICAL: Validate that ALL cart items belong to the SAME restaurant
       const cartRestaurantIds = cart
@@ -1456,6 +1520,7 @@ export default function Cart() {
       const orderPayload = {
         items: orderItems,
         address: defaultAddress,
+        addressId: getAddressId(defaultAddress),
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         pricing: orderPricing,
@@ -1464,12 +1529,15 @@ export default function Cart() {
         note: note || "",
         sendCutlery: sendCutlery !== false,
         paymentMethod: effectivePaymentMethod,
-        zoneId: zoneId // CRITICAL: Pass zoneId for strict zone validation
+        zoneId: finalZoneId
       };
       // Log final order details (including paymentMethod for COD debugging)
       debugLog('📤 FINAL: Sending order to backend with:', {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
+        zoneId: orderPayload.zoneId,
+        detectedZoneId: zoneId,
+        restaurantZoneId: finalRestaurantZoneId,
         itemCount: orderItems.length,
         totalAmount: orderPricing.total,
         paymentMethod: orderPayload.paymentMethod
@@ -2097,7 +2165,7 @@ export default function Cart() {
                         <div className="mt-3 space-y-2">
                           {addresses.map((address) => {
                             const addressId = getAddressId(address)
-                            const isSelected = addressId && addressId === selectedAddressId
+                            const isSelected = addressId && selectedAddressId && String(addressId) === String(selectedAddressId)
                             return (
                               <button
                                 key={addressId || `${address.label}-${address.street}-${address.city}`}
@@ -2380,10 +2448,16 @@ export default function Cart() {
                 </div>
               </div>
 
+              {restaurantZoneMismatch && (
+                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs md:text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
+                  This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order.
+                </div>
+              )}
+
               <Button
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={isPlacingOrder || (selectedPaymentMethod === "wallet" && walletBalance < total)}
+                disabled={isPlacingOrder || restaurantZoneMismatch || (selectedPaymentMethod === "wallet" && walletBalance < total)}
                 className="w-full bg-[#EB590E] hover:bg-[#D94F0C] dark:bg-[#EB590E] dark:hover:bg-[#D94F0C] text-white px-6 md:px-10 h-14 md:h-16 rounded-lg md:rounded-xl text-base md:text-lg font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {(selectedPaymentMethod === "cashfree" || selectedPaymentMethod === "wallet") && (
@@ -2395,6 +2469,8 @@ export default function Cart() {
                 <span className="font-bold text-base md:text-lg">
                   {isPlacingOrder
                     ? "Processing..."
+                    : restaurantZoneMismatch
+                      ? "Restaurant Not In Address Zone"
                     : !hasSavedAddress
                       ? "Add Address to Continue"
                     : "Place Order"}

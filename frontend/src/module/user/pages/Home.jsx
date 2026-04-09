@@ -39,7 +39,7 @@ import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import offerImage from "@/assets/offerimage.png"
-import api, { restaurantAPI } from "@/lib/api"
+import api, { restaurantAPI, zoneAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import OptimizedImage from "@/components/OptimizedImage"
 import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
@@ -65,6 +65,7 @@ const placeholders = [
 
 const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
+const USER_ZONE_SELECTION_KEY = "userZoneSelection"
 
 // Restaurant Image Carousel Component
 const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, backendOrigin = "" }) => {
@@ -330,6 +331,17 @@ export default function Home() {
   const [loadingLandingConfig, setLoadingLandingConfig] = useState(true)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
+  const [availableZones, setAvailableZones] = useState([])
+  const [loadingAvailableZones, setLoadingAvailableZones] = useState(false)
+  const [zoneSelection, setZoneSelection] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(USER_ZONE_SELECTION_KEY) || "{}")
+      if (saved?.mode === "manual" && saved?.zoneId) {
+        return { mode: "manual", zoneId: String(saved.zoneId) }
+      }
+    } catch (_) {}
+    return { mode: "auto", zoneId: "" }
+  })
   const [realCategories, setRealCategories] = useState([])
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
   const [menuCategories, setMenuCategories] = useState([])
@@ -951,10 +963,13 @@ export default function Home() {
   const { addFavorite, removeFavorite, isFavorite, getFavorites, getDefaultAddress } = profileContext
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
-  const { zoneId, zoneStatus, isInService, isOutOfService, loading: zoneLoading, error: zoneError } = useZone(location)
+  const { zoneId, zone, zoneStatus, isInService, isOutOfService, loading: zoneLoading, error: zoneError } = useZone(location)
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
+  const effectiveZoneId = zoneSelection.mode === "manual" && zoneSelection.zoneId
+    ? zoneSelection.zoneId
+    : zoneId
 
   // Memoize cartCount to prevent recalculation on every render - use cart directly
   const cartCount = useMemo(() =>
@@ -1040,6 +1055,96 @@ export default function Home() {
   const userPoints = 99
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
+  const selectedZoneMeta = useMemo(() => {
+    if (zoneSelection.mode === "manual") {
+      return availableZones.find((item) => String(item?._id || "") === String(zoneSelection.zoneId || "")) || null
+    }
+    return null
+  }, [availableZones, zoneSelection])
+  const selectedZoneLabel = useMemo(() => {
+    if (zoneSelection.mode === "manual") {
+      return selectedZoneMeta?.name || selectedZoneMeta?.zoneName || selectedZoneMeta?.serviceLocation || "Selected zone"
+    }
+    if (zoneLoading) return "Detecting zone..."
+    if (zone?.name || zone?.zoneName) return zone.name || zone.zoneName
+    if (zoneStatus === "OUT_OF_SERVICE") return "Auto: outside service zone"
+    return "Auto detect"
+  }, [selectedZoneMeta, zoneSelection.mode, zoneLoading, zone, zoneStatus])
+
+  useEffect(() => {
+    localStorage.setItem(USER_ZONE_SELECTION_KEY, JSON.stringify(zoneSelection))
+  }, [zoneSelection])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchAvailableZones = async () => {
+      try {
+        setLoadingAvailableZones(true)
+        const response = await zoneAPI.getZones()
+        const zones = response?.data?.data?.zones || []
+        if (!mounted) return
+        setAvailableZones(Array.isArray(zones) ? zones : [])
+      } catch (error) {
+        if (!mounted) return
+        debugError("Error fetching public zones:", error)
+        setAvailableZones([])
+      } finally {
+        if (mounted) {
+          setLoadingAvailableZones(false)
+        }
+      }
+    }
+
+    fetchAvailableZones()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  useEffect(() => {
+    if (zoneSelection.mode !== "manual" || !zoneSelection.zoneId || availableZones.length === 0) return
+    const hasSelectedZone = availableZones.some((item) => String(item?._id || "") === String(zoneSelection.zoneId))
+    if (!hasSelectedZone) {
+      setZoneSelection({ mode: "auto", zoneId: "" })
+    }
+  }, [availableZones, zoneSelection])
+
+  const handleZoneSelectionChange = useCallback((event) => {
+    const nextValue = String(event.target.value || "")
+    if (nextValue === "auto") {
+      setZoneSelection({ mode: "auto", zoneId: "" })
+      return
+    }
+    setZoneSelection({ mode: "manual", zoneId: nextValue })
+  }, [])
+
+  const renderZoneSelectorControl = () => (
+    <div className="ml-auto flex w-full max-w-[170px] items-center justify-end gap-1.5">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        Zone
+      </span>
+      <div className="min-w-0 flex-1">
+        <select
+          value={zoneSelection.mode === "manual" && zoneSelection.zoneId ? zoneSelection.zoneId : "auto"}
+          onChange={handleZoneSelectionChange}
+          disabled={loadingAvailableZones}
+          className="w-full border-0 bg-transparent px-0 py-0 text-xs font-medium text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0"
+          aria-label="Choose delivery zone"
+        >
+          <option value="auto">
+            {zoneLoading ? "Detecting..." : "Auto detect"}
+          </option>
+          {availableZones.map((item) => (
+            <option key={item._id} value={item._id}>
+              {item.name || item.zoneName || item.serviceLocation || "Unnamed zone"}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  )
 
   // Simple filter toggle function
   const toggleFilter = (filterId) => {
@@ -1165,9 +1270,9 @@ export default function Home() {
         params.trusted = 'true'
       }
 
-      // Optional: Add zoneId if available (for sorting/filtering, but show all restaurants)
-      if (zoneId) {
-        params.zoneId = zoneId
+      // Apply either auto-detected zone or the user's manual zone override.
+      if (effectiveZoneId) {
+        params.zoneId = effectiveZoneId
       }
       // Avoid stale API cache in WebView after admin image updates.
       params._ts = Date.now()
@@ -1362,7 +1467,7 @@ export default function Home() {
       setLoadingRestaurants(false)
       debugLog('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [normalizeImageUrl, zoneId, extractImages, buildRestaurantImageCandidates])
+  }, [normalizeImageUrl, effectiveZoneId, extractImages, buildRestaurantImageCandidates])
 
   const applyFiltersAndRefetch = useCallback(async (
     nextActiveFilters = activeFilters,
@@ -1944,74 +2049,78 @@ export default function Home() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
         >
-          <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4 lg:gap-6">
-            <motion.div
-              className="flex-1 relative"
-              whileHover={{ scale: 1.02 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
-                <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                  <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
-                  <div className="flex-1 relative">
-                    <div className="relative w-full">
-                      <Input
-                        value={heroSearch}
-                        onChange={(e) => setHeroSearch(e.target.value)}
-                        onFocus={handleSearchFocus}
-                        onClick={handleSearchFocus}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && heroSearch.trim()) {
-                            navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
-                            closeSearch()
-                            setHeroSearch("")
-                          }
-                        }}
-                        aria-label="Search restaurants and food"
-                        className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                      />
-                      {!heroSearch && (
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
-                          <AnimatePresence mode="wait">
-                            <motion.span
-                              key={placeholderIndex}
-                              initial={{ y: 16, opacity: 0 }}
-                              animate={{ y: 0, opacity: 1 }}
-                              exit={{ y: -16, opacity: 0 }}
-                              transition={{ duration: 0.3 }}
-                              className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
-                            >
-                              {placeholders[placeholderIndex]}
-                            </motion.span>
-                          </AnimatePresence>
-                        </div>
-                      )}
+          <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8">
+            <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
+              <motion.div
+                className="flex-1 relative"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+              >
+                <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
+                  <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                    <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
+                    <div className="flex-1 relative">
+                      <div className="relative w-full">
+                        <Input
+                          value={heroSearch}
+                          onChange={(e) => setHeroSearch(e.target.value)}
+                          onFocus={handleSearchFocus}
+                          onClick={handleSearchFocus}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && heroSearch.trim()) {
+                              navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
+                              closeSearch()
+                              setHeroSearch("")
+                            }
+                          }}
+                          aria-label="Search restaurants and food"
+                          className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                        />
+                        {!heroSearch && (
+                          <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
+                            <AnimatePresence mode="wait">
+                              <motion.span
+                                key={placeholderIndex}
+                                initial={{ y: 16, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                exit={{ y: -16, opacity: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
+                              >
+                                {placeholders[placeholderIndex]}
+                              </motion.span>
+                            </AnimatePresence>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </motion.div>
-
-            <motion.div
-              ref={vegModeToggleRef}
-              className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <div className="flex flex-col items-center">
-                <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
-                <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
-              </div>
-              <Switch
-                checked={vegMode}
-                onCheckedChange={handleVegModeChange}
-                aria-label="Toggle Veg Mode"
-                className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
-              />
-            </motion.div>
+              </motion.div>
+              <motion.div
+                ref={vegModeToggleRef}
+                className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <div className="flex flex-col items-center">
+                  <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
+                  <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
+                </div>
+                <Switch
+                  checked={vegMode}
+                  onCheckedChange={handleVegModeChange}
+                  aria-label="Toggle Veg Mode"
+                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
+                />
+              </motion.div>
+            </div>
+            <div className="pt-2">
+              {renderZoneSelectorControl()}
+            </div>
           </div>
         </motion.div>
         </div>
@@ -2104,74 +2213,78 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: "easeOut" }}
           >
-            <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 flex items-center gap-3 sm:gap-4 lg:gap-6">
-              <motion.div
-                className="flex-1 relative"
-                whileHover={{ scale: 1.02 }}
-                transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              >
-                <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
-                  <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
-                    <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
-                    <div className="flex-1 relative">
-                      <div className="relative w-full">
-                        <Input
-                          value={heroSearch}
-                          onChange={(e) => setHeroSearch(e.target.value)}
-                          onFocus={handleSearchFocus}
-                          onClick={handleSearchFocus}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' && heroSearch.trim()) {
-                              navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
-                              closeSearch()
-                              setHeroSearch("")
-                            }
-                          }}
-                          aria-label="Search restaurants and food"
-                          className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
-                        />
-                        {!heroSearch && (
-                          <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
-                            <AnimatePresence mode="wait">
-                              <motion.span
-                                key={placeholderIndex}
-                                initial={{ y: 16, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                exit={{ y: -16, opacity: 0 }}
-                                transition={{ duration: 0.3 }}
-                                className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
-                              >
-                                {placeholders[placeholderIndex]}
-                              </motion.span>
-                            </AnimatePresence>
-                          </div>
-                        )}
+            <div className="max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="flex items-center gap-3 sm:gap-4 lg:gap-6">
+                <motion.div
+                  className="flex-1 relative"
+                  whileHover={{ scale: 1.02 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                >
+                  <div className="relative bg-gray-50 dark:bg-[#1a1a1a] rounded-xl lg:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-1 sm:p-1.5 lg:p-2 transition-all duration-300 hover:shadow-lg focus-within:ring-2 focus-within:ring-[#EB590E] focus-within:border-transparent">
+                    <div className="flex items-center gap-2 sm:gap-3 lg:gap-4">
+                      <Search className="h-4 w-4 sm:h-4 sm:w-4 lg:h-5 lg:w-5 text-[#EB590E] flex-shrink-0 ml-2 sm:ml-3 lg:ml-4" strokeWidth={2.5} />
+                      <div className="flex-1 relative">
+                        <div className="relative w-full">
+                          <Input
+                            value={heroSearch}
+                            onChange={(e) => setHeroSearch(e.target.value)}
+                            onFocus={handleSearchFocus}
+                            onClick={handleSearchFocus}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && heroSearch.trim()) {
+                                navigate(`/user/search?q=${encodeURIComponent(heroSearch.trim())}`)
+                                closeSearch()
+                                setHeroSearch("")
+                              }
+                            }}
+                            aria-label="Search restaurants and food"
+                            className="pl-0 pr-2 h-8 sm:h-9 lg:h-11 w-full bg-transparent border-0 text-sm sm:text-base lg:text-lg font-semibold text-gray-700 dark:text-white focus-visible:ring-0 focus-visible:ring-offset-0 rounded-full placeholder:text-gray-500 dark:placeholder:text-gray-400"
+                          />
+                          {!heroSearch && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none h-5 lg:h-6 overflow-hidden">
+                              <AnimatePresence mode="wait">
+                                <motion.span
+                                  key={placeholderIndex}
+                                  initial={{ y: 16, opacity: 0 }}
+                                  animate={{ y: 0, opacity: 1 }}
+                                  exit={{ y: -16, opacity: 0 }}
+                                  transition={{ duration: 0.3 }}
+                                  className="text-sm sm:text-base lg:text-lg font-semibold text-gray-500 dark:text-gray-400 inline-block"
+                                >
+                                  {placeholders[placeholderIndex]}
+                                </motion.span>
+                              </AnimatePresence>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-
-              <motion.div
-                ref={vegModeToggleRef}
-                className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <div className="flex flex-col items-center">
-                  <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
-                  <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
-                </div>
-                <Switch
-                  checked={vegMode}
-                  onCheckedChange={handleVegModeChange}
-                  aria-label="Toggle Veg Mode"
-                  className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
-                />
-              </motion.div>
+                </motion.div>
+                <motion.div
+                  ref={vegModeToggleRef}
+                  className="flex flex-col items-center gap-0.5 sm:gap-1 lg:gap-1.5 flex-shrink-0 relative"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5, delay: 0.3, ease: "easeOut" }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <div className="flex flex-col items-center">
+                    <span className="text-green-700 dark:text-green-500 text-[10px] sm:text-[11px] lg:text-sm font-black leading-none">VEG</span>
+                    <span className="text-green-700 dark:text-green-500 text-[8px] sm:text-[10px] lg:text-xs font-black leading-none">MODE</span>
+                  </div>
+                  <Switch
+                    checked={vegMode}
+                    onCheckedChange={handleVegModeChange}
+                    aria-label="Toggle Veg Mode"
+                    className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
+                  />
+                </motion.div>
+              </div>
+              <div className="pt-2">
+                {renderZoneSelectorControl()}
+              </div>
             </div>
           </motion.div>
         </div>
@@ -2556,7 +2669,7 @@ export default function Home() {
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
               <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
-                {filteredRestaurants.length} Restaurants Delivering to You
+                {filteredRestaurants.length} Restaurants {zoneSelection.mode === "manual" ? `in ${selectedZoneLabel}` : "delivering to you"}
               </h2>
               <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
             </div>

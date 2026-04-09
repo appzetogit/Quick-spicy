@@ -317,6 +317,11 @@ export const locationAPI = {
 
 // Export zone API helper functions
 export const zoneAPI = {
+  // Get all active public zones
+  getZones: () => {
+    return apiClient.get(API_ENDPOINTS.ZONE.LIST);
+  },
+
   // Detect user's zone based on location
   detectZone: (lat, lng) => {
     return apiClient.get(API_ENDPOINTS.ZONE.DETECT, {

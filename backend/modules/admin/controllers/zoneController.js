@@ -72,6 +72,26 @@ export const getZones = asyncHandler(async (req, res) => {
 });
 
 /**
+ * Get active zones for public user-facing dropdowns
+ * GET /api/zones
+ */
+export const getPublicZones = asyncHandler(async (_req, res) => {
+  try {
+    const zones = await Zone.find({ isActive: true })
+      .select('_id name zoneName serviceLocation country restaurantId')
+      .sort({ name: 1, zoneName: 1, createdAt: -1 })
+      .lean();
+
+    return successResponse(res, 200, 'Active zones retrieved successfully', {
+      zones
+    });
+  } catch (error) {
+    console.error('Error fetching public zones:', error);
+    return errorResponse(res, 500, 'Failed to fetch active zones');
+  }
+});
+
+/**
  * Get zone by ID
  * GET /api/admin/zones/:id
  */

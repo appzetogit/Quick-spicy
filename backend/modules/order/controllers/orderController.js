@@ -3,6 +3,7 @@ import Payment from '../../payment/models/Payment.js';
 import { createCashfreeOrder, verifyCashfreeOrderPayment, mapCashfreePaymentMethod } from '../../payment/services/cashfreeService.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Zone from '../../admin/models/Zone.js';
+import User from '../../auth/models/User.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
 import { calculateOrderPricing } from '../services/orderCalculationService.js';
@@ -165,37 +166,84 @@ async function resolveActiveRestaurantByNameForOrder(restaurantName) {
   };
 }
 
-/**
- * Point-in-polygon check for zone coordinates
- * @param {number} lat
- * @param {number} lng
- * @param {Array<{latitude:number,longitude:number}>} coordinates
- * @returns {boolean}
- */
-const isPointInsideZone = (lat, lng, coordinates = []) => {
-  if (!Array.isArray(coordinates) || coordinates.length < 3) return false;
+function normalizeZoneCoordinate(coord) {
+  if (!coord) return { lat: null, lng: null };
+
+  if (Array.isArray(coord) && coord.length >= 2) {
+    const lng = parseFloat(coord[0]);
+    const lat = parseFloat(coord[1]);
+    return {
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null
+    };
+  }
+
+  if (typeof coord === 'object') {
+    const latRaw = coord.latitude ?? coord.lat;
+    const lngRaw = coord.longitude ?? coord.lng;
+    const lat = parseFloat(latRaw);
+    const lng = parseFloat(lngRaw);
+    return {
+      lat: Number.isFinite(lat) ? lat : null,
+      lng: Number.isFinite(lng) ? lng : null
+    };
+  }
+
+  return { lat: null, lng: null };
+}
+
+function extractZonePolygon(zone) {
+  if (!zone) return null;
+
+  if (Array.isArray(zone.boundary?.coordinates?.[0]) && zone.boundary.coordinates[0].length >= 3) {
+    return zone.boundary.coordinates[0];
+  }
+
+  if (!Array.isArray(zone.coordinates) || zone.coordinates.length < 3) return null;
+
+  const polygon = zone.coordinates
+    .map((coord) => normalizeZoneCoordinate(coord))
+    .filter((coord) => coord.lat !== null && coord.lng !== null)
+    .map((coord) => [coord.lng, coord.lat]);
+
+  if (polygon.length < 3) return null;
+
+  const [firstLng, firstLat] = polygon[0];
+  const [lastLng, lastLat] = polygon[polygon.length - 1];
+  if (firstLng !== lastLng || firstLat !== lastLat) {
+    polygon.push([firstLng, firstLat]);
+  }
+
+  return polygon;
+}
+
+const isPointInsideZone = (lat, lng, zone) => {
+  const polygonCoords = extractZonePolygon(zone);
+  if (!Array.isArray(polygonCoords) || polygonCoords.length < 3) return false;
 
   let inside = false;
-  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
-    const pointI = coordinates[i] || {};
-    const pointJ = coordinates[j] || {};
+  const epsilon = 1e-10;
 
-    const yi = Number(pointI.latitude);
-    const xi = Number(pointI.longitude);
-    const yj = Number(pointJ.latitude);
-    const xj = Number(pointJ.longitude);
+  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
+    const xi = polygonCoords[i][0];
+    const yi = polygonCoords[i][1];
+    const xj = polygonCoords[j][0];
+    const yj = polygonCoords[j][1];
 
-    if (
-      Number.isNaN(yi) ||
-      Number.isNaN(xi) ||
-      Number.isNaN(yj) ||
-      Number.isNaN(xj)
-    ) {
-      continue;
+    // Treat boundary points as inside so cart validation matches public zone detection.
+    const cross = (lng - xi) * (yj - yi) - (lat - yi) * (xj - xi);
+    if (Math.abs(cross) < epsilon) {
+      const minX = Math.min(xi, xj) - epsilon;
+      const maxX = Math.max(xi, xj) + epsilon;
+      const minY = Math.min(yi, yj) - epsilon;
+      const maxY = Math.max(yi, yj) + epsilon;
+      if (lng >= minX && lng <= maxX && lat >= minY && lat <= maxY) {
+        return true;
+      }
     }
 
     const intersects = ((yi > lat) !== (yj > lat)) &&
-      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || Number.EPSILON) + xi);
+      (lng < ((xj - xi) * (lat - yi)) / ((yj - yi) || epsilon) + xi);
 
     if (intersects) inside = !inside;
   }
@@ -203,29 +251,16 @@ const isPointInsideZone = (lat, lng, coordinates = []) => {
   return inside;
 };
 
-const calculateZoneArea = (coordinates = []) => {
-  if (!Array.isArray(coordinates) || coordinates.length < 3) {
+const calculateZoneArea = (zone) => {
+  const polygonCoords = extractZonePolygon(zone);
+  if (!Array.isArray(polygonCoords) || polygonCoords.length < 3) {
     return Number.POSITIVE_INFINITY;
   }
 
   let area = 0;
-  for (let i = 0, j = coordinates.length - 1; i < coordinates.length; j = i++) {
-    const pointI = coordinates[i] || {};
-    const pointJ = coordinates[j] || {};
-    const yi = Number(pointI.latitude);
-    const xi = Number(pointI.longitude);
-    const yj = Number(pointJ.latitude);
-    const xj = Number(pointJ.longitude);
-
-    if (
-      Number.isNaN(yi) ||
-      Number.isNaN(xi) ||
-      Number.isNaN(yj) ||
-      Number.isNaN(xj)
-    ) {
-      continue;
-    }
-
+  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
+    const [xi, yi] = polygonCoords[i];
+    const [xj, yj] = polygonCoords[j];
     area += (xj * yi) - (xi * yj);
   }
 
@@ -246,8 +281,8 @@ const findActiveZoneForPoint = (activeZones, lat, lng) => {
   let bestArea = Number.POSITIVE_INFINITY;
 
   for (const zone of activeZones) {
-    if (isPointInsideZone(lat, lng, zone?.coordinates)) {
-      const area = calculateZoneArea(zone?.coordinates);
+    if (isPointInsideZone(lat, lng, zone)) {
+      const area = calculateZoneArea(zone);
       if (area < bestArea) {
         bestArea = area;
         bestZone = zone;
@@ -288,6 +323,7 @@ export const createOrder = async (req, res) => {
     const {
       items,
       address,
+      addressId,
       restaurantId,
       restaurantName,
       pricing,
@@ -322,6 +358,22 @@ export const createOrder = async (req, res) => {
         success: false,
         message: 'Delivery address is required'
       });
+    }
+
+    let resolvedAddress = address;
+    const normalizedAddressId = String(addressId || '').trim();
+    if (normalizedAddressId) {
+      const user = await User.findById(userId).select('addresses').lean();
+      const matchedSavedAddress = (user?.addresses || []).find(
+        (savedAddress) => savedAddress?._id?.toString?.() === normalizedAddressId
+      );
+
+      if (matchedSavedAddress) {
+        resolvedAddress = {
+          ...matchedSavedAddress,
+          id: matchedSavedAddress._id?.toString?.() || normalizedAddressId
+        };
+      }
     }
 
     // Validate and assign restaurant - order goes to the restaurant whose food was ordered
@@ -506,8 +558,8 @@ export const createOrder = async (req, res) => {
     });
 
     // CRITICAL: User must be in an active zone and it must match the restaurant zone
-    const addressLng = Number(address?.location?.coordinates?.[0]);
-    const addressLat = Number(address?.location?.coordinates?.[1]);
+    const addressLng = Number(resolvedAddress?.location?.coordinates?.[0]);
+    const addressLat = Number(resolvedAddress?.location?.coordinates?.[1]);
     const hasValidAddressCoordinates = Number.isFinite(addressLat) &&
       Number.isFinite(addressLng) &&
       !(addressLat === 0 && addressLng === 0);
@@ -523,12 +575,18 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const providedZoneId = String(req.body?.zoneId || '').trim();
     const userDetectedZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
-    if (!userDetectedZone) {
+    const providedZoneMatchesRestaurantZone = providedZoneId && providedZoneId === restaurantZone._id.toString();
+    const effectiveUserZone = userDetectedZone || (providedZoneMatchesRestaurantZone ? restaurantZone : null);
+
+    if (!effectiveUserZone) {
       logger.warn('⚠️ Order blocked: customer is outside active service zones', {
         userId,
         addressLat,
-        addressLng
+        addressLng,
+        providedZoneId: providedZoneId || null,
+        restaurantZoneId: restaurantZone._id.toString()
       });
       return res.status(403).json({
         success: false,
@@ -537,12 +595,13 @@ export const createOrder = async (req, res) => {
     }
 
     const restaurantZoneId = restaurantZone._id.toString();
-    const userDetectedZoneId = userDetectedZone._id.toString();
+    const userDetectedZoneId = effectiveUserZone._id.toString();
     if (restaurantZoneId !== userDetectedZoneId) {
       logger.warn('⚠️ Zone mismatch - customer and restaurant are in different zones:', {
         userId,
         userDetectedZoneId,
         restaurantZoneId,
+        providedZoneId: providedZoneId || null,
         restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
         restaurantName: restaurant.name
       });
@@ -563,7 +622,8 @@ export const createOrder = async (req, res) => {
 
     logger.info('✅ Customer zone validated and matched with restaurant zone:', {
       zoneId: userDetectedZoneId,
-      zoneName: userDetectedZone?.name || userDetectedZone?.zoneName,
+      zoneName: effectiveUserZone?.name || effectiveUserZone?.zoneName,
+      usedRestaurantZoneFallback: !userDetectedZone && providedZoneMatchesRestaurantZone,
       userId,
       restaurantId: restaurant._id?.toString() || restaurant.restaurantId
     });
@@ -596,7 +656,7 @@ export const createOrder = async (req, res) => {
     const authoritativePricing = await calculateOrderPricing({
       items,
       restaurantId: assignedRestaurantId,
-      deliveryAddress: address,
+      deliveryAddress: resolvedAddress,
       couponCode,
       deliveryFleet: deliveryFleet || 'standard',
       tipAmount
@@ -616,7 +676,7 @@ export const createOrder = async (req, res) => {
       restaurantId: assignedRestaurantId,
       restaurantName: assignedRestaurantName,
       items,
-      address,
+      address: resolvedAddress,
       pricing: {
         ...authoritativePricing,
         couponCode

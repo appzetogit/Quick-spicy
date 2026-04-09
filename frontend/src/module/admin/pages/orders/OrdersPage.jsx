@@ -38,6 +38,7 @@ const statusConfig = {
 export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
   const [orders, setOrders] = useState([])
+  const [zones, setZones] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
@@ -415,6 +416,31 @@ export default function OrdersPage({ statusKey = "all" }) {
     latestSeenOrderMarkerRef.current = ""
     fetchOrders({ silent: false, withRingCheck: false })
   }, [fetchOrders])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchZones = async () => {
+      try {
+        const response = await adminAPI.getZones({ limit: 1000 })
+        const nextZones = response?.data?.data?.zones || response?.data?.zones || []
+        if (mounted) {
+          setZones(Array.isArray(nextZones) ? nextZones : [])
+        }
+      } catch (error) {
+        debugWarn("Failed to load order zone filters:", error)
+        if (mounted) {
+          setZones([])
+        }
+      }
+    }
+
+    fetchZones()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   useEffect(() => {
     if (statusKey !== "all") return undefined
@@ -886,6 +912,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     count,
     activeFiltersCount,
     restaurants,
+    zones: orderZoneOptions,
     handleApplyFilters,
     handleResetFilters,
     handleExport,
@@ -893,7 +920,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     handlePrintOrder,
     toggleColumn,
     resetColumns,
-  } = useOrdersManagement(normalizedOrders, statusKey, config.title)
+  } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones)
 
   if (isLoading) {
     return (
@@ -956,6 +983,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         onApply={handleApplyFilters}
         onReset={handleResetFilters}
         restaurants={restaurants}
+        zones={orderZoneOptions}
       />
       <SettingsDialog
         isOpen={isSettingsOpen}

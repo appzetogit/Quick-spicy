@@ -35,7 +35,7 @@ export function useLocation() {
   // Default to Google enabled unless explicitly set to "false".
   // This ensures runtime key from Admin System Env is used without requiring extra flags.
   const ENABLE_GOOGLE_GEOCODING = import.meta.env.VITE_ENABLE_GOOGLE_GEOCODING !== "false"
-  const ENABLE_GOOGLE_PLACES = import.meta.env.VITE_ENABLE_GOOGLE_PLACES !== "false"
+  const ENABLE_GOOGLE_PLACES = false
 
   const getDistanceMeters = (lat1, lng1, lat2, lng2) => {
     if (
@@ -547,7 +547,10 @@ export function useLocation() {
       }
 
       // ===================== GOOGLE PLACES API - GET DETAILED PLACE INFORMATION =====================
-      // Cost control: only fetch place details on explicit high-detail requests.
+      // Note: Google Places REST nearby/details endpoints cannot be called directly
+      // from the browser because they are blocked by CORS. Keep browser reverse
+      // geocoding on the Geocoding API path only unless a backend proxy or the
+      // Maps JS PlacesService is added later.
       let placeDetails = null;
       let placeId = null;
       let placeName = "";

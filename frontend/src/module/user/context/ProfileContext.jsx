@@ -269,13 +269,26 @@ export function ProfileProvider({ children }) {
     }
   }, [])
 
-  const setDefaultAddress = useCallback((id) => {
-    setAddresses((prev) =>
-      prev.map((addr) => ({
+  const setDefaultAddress = useCallback(async (id) => {
+    const normalizedId = String(id || "")
+    if (!normalizedId) return null
+
+    setAddresses((prev) => {
+      const updated = prev.map((addr) => ({
         ...addr,
-        isDefault: String(getAddressId(addr)) === String(id),
+        isDefault: String(getAddressId(addr)) === normalizedId,
       }))
-    )
+      localStorage.setItem("userAddresses", JSON.stringify(updated))
+      return updated
+    })
+
+    try {
+      await userAPI.updateAddress(normalizedId, { isDefault: true })
+    } catch (error) {
+      debugError("Error persisting default address:", error)
+    }
+
+    return normalizedId
   }, [])
 
   const getDefaultAddress = useCallback(() => {

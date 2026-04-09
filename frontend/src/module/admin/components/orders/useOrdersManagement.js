@@ -83,7 +83,13 @@ const imageUrlToDataUrl = async (url) => {
   }
 }
 
-export function useOrdersManagement(orders, statusKey, title) {
+const getZoneDisplayName = (zone) =>
+  String(zone?.zoneName || zone?.name || zone?.label || "").trim()
+
+const getZoneIdentifier = (zone) =>
+  String(zone?._id || zone?.id || zone?.zoneId || getZoneDisplayName(zone)).trim()
+
+export function useOrdersManagement(orders, statusKey, title, zones = []) {
   const [searchQuery, setSearchQuery] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -96,6 +102,7 @@ export function useOrdersManagement(orders, statusKey, title) {
     fromDate: "",
     toDate: "",
     restaurant: "",
+    zone: "",
   }
   const [filters, setFilters] = useState(defaultFilters)
   const [draftFilters, setDraftFilters] = useState(defaultFilters)
@@ -118,6 +125,30 @@ export function useOrdersManagement(orders, statusKey, title) {
   const restaurants = useMemo(() => {
     return [...new Set(orders.map(o => o.restaurant))]
   }, [orders])
+
+  const zoneOptions = useMemo(() => {
+    const zoneMap = new Map()
+
+    zones.forEach((zone) => {
+      const id = getZoneIdentifier(zone)
+      const name = getZoneDisplayName(zone)
+      if (id && name) {
+        zoneMap.set(id, name)
+      }
+    })
+
+    orders.forEach((order) => {
+      const id = String(order.zoneId || "").trim()
+      const name = String(order.zoneName || "").trim()
+      if (id && name && !zoneMap.has(id)) {
+        zoneMap.set(id, name)
+      }
+    })
+
+    return [...zoneMap.entries()]
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [orders, zones])
 
   // Apply search and filters
   const filteredOrders = useMemo(() => {
@@ -157,6 +188,18 @@ export function useOrdersManagement(orders, statusKey, title) {
       result = result.filter(order => order.restaurant === filters.restaurant)
     }
 
+    if (filters.zone) {
+      result = result.filter((order) => {
+        const orderZoneId = String(order.zoneId || "").trim()
+        const orderZoneName = String(order.zoneName || "").trim().toLowerCase()
+        const filterZone = String(filters.zone || "").trim()
+        const selectedZone = zoneOptions.find((zone) => zone.id === filterZone)
+        const selectedZoneName = String(selectedZone?.name || filterZone).trim().toLowerCase()
+
+        return orderZoneId === filterZone || (orderZoneName && orderZoneName === selectedZoneName)
+      })
+    }
+
     // Helper function to parse date format "16 JUL 2025"
     const parseOrderDate = (dateStr) => {
       const months = {
@@ -191,7 +234,7 @@ export function useOrdersManagement(orders, statusKey, title) {
     }
 
     return result
-  }, [orders, searchQuery, filters])
+  }, [orders, searchQuery, filters, zoneOptions])
 
   const count = filteredOrders.length
 
@@ -211,7 +254,18 @@ export function useOrdersManagement(orders, statusKey, title) {
   }
 
   const handleExport = (format) => {
-    const filename = title.toLowerCase().replace(/\s+/g, "_")
+    const selectedZoneName = filters.zone
+      ? zoneOptions.find((zone) => zone.id === filters.zone)?.name
+      : ""
+    const filenameParts = [
+      title,
+      selectedZoneName ? `zone_${selectedZoneName}` : "",
+    ].filter(Boolean)
+    const filename = filenameParts
+      .join("_")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
     switch (format) {
       case "csv":
         exportToCSV(filteredOrders, filename)
@@ -545,6 +599,7 @@ export function useOrdersManagement(orders, statusKey, title) {
     count,
     activeFiltersCount,
     restaurants,
+    zones: zoneOptions,
     handleApplyFilters,
     handleResetFilters,
     handleExport,
