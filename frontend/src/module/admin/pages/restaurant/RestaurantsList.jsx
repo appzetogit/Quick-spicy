@@ -50,6 +50,8 @@ export default function RestaurantsList() {
   })
   const [availableZones, setAvailableZones] = useState([])
   const [loadingZones, setLoadingZones] = useState(false)
+  const [inlineZoneDrafts, setInlineZoneDrafts] = useState({})
+  const [savingZoneRestaurantId, setSavingZoneRestaurantId] = useState("")
   const [profileImageFile, setProfileImageFile] = useState(null)
   const [profileImagePreview, setProfileImagePreview] = useState("")
   const [isEditingLocation, setIsEditingLocation] = useState(false)
@@ -114,6 +116,8 @@ export default function RestaurantsList() {
 
     return `REST${lastDigits}`
   }
+
+  const getRestaurantRowId = (restaurant) => String(restaurant?._id || restaurant?.id || "")
 
   // Fetch restaurants from backend API
   useEffect(() => {
@@ -212,6 +216,23 @@ export default function RestaurantsList() {
 
     fetchZones()
   }, [])
+
+  useEffect(() => {
+    if (restaurants.length === 0) {
+      setInlineZoneDrafts({})
+      return
+    }
+
+    setInlineZoneDrafts((prev) => {
+      const next = {}
+      restaurants.forEach((restaurant) => {
+        const rowId = getRestaurantRowId(restaurant)
+        if (!rowId) return
+        next[rowId] = prev[rowId] ?? getRestaurantZoneValue(restaurant.originalData || restaurant)
+      })
+      return next
+    })
+  }, [restaurants, availableZones])
   const [filters, setFilters] = useState({
     all: "All",
     businessModel: "",
@@ -921,6 +942,84 @@ export default function RestaurantsList() {
     }
   }
 
+  const handleInlineZoneChange = (restaurant, nextZoneId) => {
+    const rowId = getRestaurantRowId(restaurant)
+    if (!rowId) return
+    setInlineZoneDrafts((prev) => ({
+      ...prev,
+      [rowId]: nextZoneId,
+    }))
+  }
+
+  const handleInlineZoneSave = async (restaurant) => {
+    const restaurantId = restaurant?._id || restaurant?.id
+    const rowId = getRestaurantRowId(restaurant)
+    if (!restaurantId || !rowId) return
+
+    const nextZoneId = inlineZoneDrafts[rowId] || ""
+
+    try {
+      setSavingZoneRestaurantId(rowId)
+      const response = await adminAPI.updateRestaurant(restaurantId, { zoneId: nextZoneId })
+      const updatedRestaurant = response?.data?.data?.restaurant
+      const selectedZone = availableZones.find((zone) => String(zone?._id || "") === nextZoneId)
+      const fallbackZoneLabel = nextZoneId
+        ? (selectedZone?.name || selectedZone?.zoneName || selectedZone?.serviceLocation || "Assigned")
+        : (updatedRestaurant?.location?.area || updatedRestaurant?.location?.city || "N/A")
+
+      setRestaurants((prev) =>
+        prev.map((item) =>
+          getRestaurantRowId(item) === rowId
+            ? {
+                ...item,
+                zone: updatedRestaurant?.zone || fallbackZoneLabel,
+                originalData: {
+                  ...(item.originalData || {}),
+                  ...(updatedRestaurant || {}),
+                  zoneId: updatedRestaurant?.zoneId ?? nextZoneId,
+                  restaurantZoneId: updatedRestaurant?.restaurantZoneId ?? nextZoneId,
+                  zone: updatedRestaurant?.zone || fallbackZoneLabel,
+                },
+              }
+            : item,
+        ),
+      )
+
+      if (selectedRestaurant && getRestaurantRowId(selectedRestaurant) === rowId) {
+        setSelectedRestaurant((prev) =>
+          prev
+            ? {
+                ...prev,
+                zone: updatedRestaurant?.zone || fallbackZoneLabel,
+                originalData: {
+                  ...(prev.originalData || {}),
+                  ...(updatedRestaurant || {}),
+                },
+              }
+            : prev,
+        )
+      }
+
+      if (restaurantDetails && getRestaurantRowId(restaurantDetails) === rowId) {
+        setRestaurantDetails((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...(updatedRestaurant || {}),
+              }
+            : prev,
+        )
+      }
+
+      alert("Zone updated successfully")
+    } catch (err) {
+      debugError("Error updating zone from list:", err)
+      alert(err?.response?.data?.message || "Failed to update zone")
+    } finally {
+      setSavingZoneRestaurantId("")
+    }
+  }
+
   const closeDetailsModal = () => {
     setIsEditingDetails(false)
     setProfileImageFile(null)
@@ -1292,8 +1391,42 @@ export default function RestaurantsList() {
                             <span className="text-xs text-slate-500">{formatPhone(restaurant.ownerPhone)}</span>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm text-slate-700">{restaurant.zone}</span>
+                        <td className="px-6 py-4">
+                          <div className="flex min-w-[220px] items-center gap-2">
+                            <select
+                              value={inlineZoneDrafts[getRestaurantRowId(restaurant)] ?? ""}
+                              onChange={(e) => handleInlineZoneChange(restaurant, e.target.value)}
+                              disabled={loadingZones || savingZoneRestaurantId === getRestaurantRowId(restaurant)}
+                              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <option value="">
+                                {loadingZones ? "Loading zones..." : "Select zone"}
+                              </option>
+                              {availableZones.map((zone) => (
+                                <option key={zone._id} value={zone._id}>
+                                  {zone.name || zone.zoneName || zone.serviceLocation || "Unnamed Zone"}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => handleInlineZoneSave(restaurant)}
+                              disabled={
+                                savingZoneRestaurantId === getRestaurantRowId(restaurant) ||
+                                (inlineZoneDrafts[getRestaurantRowId(restaurant)] ?? "") === getRestaurantZoneValue(restaurant.originalData || restaurant)
+                              }
+                              className="inline-flex min-w-[72px] items-center justify-center rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                            >
+                              {savingZoneRestaurantId === getRestaurantRowId(restaurant) ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Save"
+                              )}
+                            </button>
+                          </div>
+                          <p className="mt-1 text-[11px] text-slate-500">
+                            Current: {restaurant.zone || "N/A"}
+                          </p>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-slate-700">{formatFoodPreference(restaurant.foodPreference)}</span>
