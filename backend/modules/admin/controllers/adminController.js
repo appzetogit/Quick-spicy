@@ -31,6 +31,32 @@ const logger = winston.createLogger({
   ],
 });
 
+const attachMappedZoneToRestaurant = async (restaurantDoc) => {
+  if (!restaurantDoc?._id) return restaurantDoc;
+
+  const mappedZone = await Zone.findOne({
+    restaurantId: restaurantDoc._id,
+    isActive: true,
+  })
+    .select("_id name zoneName")
+    .lean();
+
+  if (!mappedZone) return restaurantDoc;
+
+  return {
+    ...restaurantDoc,
+    zoneId: mappedZone._id?.toString?.() || String(mappedZone._id),
+    restaurantZoneId: mappedZone._id?.toString?.() || String(mappedZone._id),
+    zone:
+      mappedZone.name ||
+      mappedZone.zoneName ||
+      restaurantDoc.zone ||
+      restaurantDoc.location?.area ||
+      restaurantDoc.location?.city ||
+      "",
+  };
+};
+
 /**
  * Get Admin Dashboard Statistics
  * GET /api/admin/dashboard/stats
@@ -1249,6 +1275,38 @@ export const getRestaurants = asyncHandler(async (req, res) => {
       error: error.stack,
     });
     return errorResponse(res, 500, "Failed to fetch restaurants");
+  }
+});
+
+/**
+ * Get Restaurant By ID (Admin)
+ * GET /api/admin/restaurants/:id
+ */
+export const getRestaurantByIdAdmin = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse(res, 400, "Invalid restaurant ID");
+    }
+
+    const restaurant = await Restaurant.findById(id).select("-password").lean();
+
+    if (!restaurant) {
+      return errorResponse(res, 404, "Restaurant not found");
+    }
+
+    const restaurantWithZone = await attachMappedZoneToRestaurant(restaurant);
+
+    return successResponse(res, 200, "Restaurant retrieved successfully", {
+      restaurant: restaurantWithZone,
+    });
+  } catch (error) {
+    logger.error(`Error fetching restaurant by id: ${error.message}`, {
+      error: error.stack,
+      restaurantId: req.params?.id,
+    });
+    return errorResponse(res, 500, "Failed to fetch restaurant");
   }
 });
 

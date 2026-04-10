@@ -154,7 +154,7 @@ export default function RestaurantsList() {
             name: restaurant.name || "N/A",
             ownerName: restaurant.ownerName || "N/A",
             ownerPhone: restaurant.ownerPhone || restaurant.phone || "N/A",
-            zone: restaurant.location?.area || restaurant.location?.city || restaurant.zone || "N/A",
+            zone: restaurant.zone || restaurant.location?.area || restaurant.location?.city || "N/A",
             cuisine: Array.isArray(restaurant.cuisines) && restaurant.cuisines.length > 0
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),

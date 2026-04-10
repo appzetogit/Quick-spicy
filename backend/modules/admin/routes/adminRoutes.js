@@ -18,6 +18,7 @@ import {
   getUserById,
   updateUserStatus,
   getRestaurants,
+  getRestaurantByIdAdmin,
   getRestaurantMenuByIdAdmin,
   updateRestaurantMenuByIdAdmin,
   createRestaurant,
@@ -297,11 +298,12 @@ router.get("/customer-wallet-report", getCustomerWalletReport);
 
 // Restaurant Management
 router.get("/restaurants", getRestaurants);
+router.get("/restaurants/requests", getRestaurantJoinRequests);
+router.get("/restaurants/:id", getRestaurantByIdAdmin);
 router.get("/restaurants/:id/menu", getRestaurantMenuByIdAdmin);
 router.put("/restaurants/:id/menu", updateRestaurantMenuByIdAdmin);
 router.post("/restaurants", createRestaurant);
 router.put("/restaurants/:id", updateRestaurant);
-router.get("/restaurants/requests", getRestaurantJoinRequests);
 router.get("/restaurant-analytics/:restaurantId", getRestaurantAnalytics);
 router.post("/restaurants/:id/approve", approveRestaurant);
 router.post("/restaurants/:id/reject", rejectRestaurant);
