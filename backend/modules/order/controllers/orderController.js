@@ -111,7 +111,7 @@ async function resolveRestaurantForOrder(restaurantId) {
       };
 
   const restaurant = await Restaurant.findOne(query)
-    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location')
+    .select('name slug profileImage address location phone ownerPhone restaurantId zoneId zoneName onboarding.step1.location')
     .lean();
 
   if (!restaurant) return null;
@@ -132,7 +132,7 @@ async function resolveRestaurantByNameForOrder(restaurantName) {
     name: exactNameRegex
   })
     .sort({ isActive: -1, isAcceptingOrders: -1, updatedAt: -1 })
-    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location isActive isAcceptingOrders')
+    .select('name slug profileImage address location phone ownerPhone restaurantId zoneId zoneName onboarding.step1.location isActive isAcceptingOrders')
     .lean();
 
   if (!restaurant) return null;
@@ -154,7 +154,7 @@ async function resolveActiveRestaurantByNameForOrder(restaurantName) {
     isActive: true
   })
     .sort({ isAcceptingOrders: -1, updatedAt: -1 })
-    .select('name slug profileImage address location phone ownerPhone restaurantId onboarding.step1.location isActive isAcceptingOrders')
+    .select('name slug profileImage address location phone ownerPhone restaurantId zoneId zoneName onboarding.step1.location isActive isAcceptingOrders')
     .lean();
 
   if (!restaurant) return null;
@@ -294,6 +294,15 @@ const findActiveZoneForPoint = (activeZones, lat, lng) => {
 
 const findMappedZoneForRestaurant = (activeZones, restaurant = {}) => {
   if (!Array.isArray(activeZones) || !restaurant) return null;
+
+  const explicitZoneId = restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || '');
+  if (explicitZoneId) {
+    const explicitZone = activeZones.find((zone) => {
+      const zoneId = zone?._id?.toString?.() || String(zone?._id || '');
+      return zoneId && zoneId === explicitZoneId;
+    });
+    if (explicitZone) return explicitZone;
+  }
 
   const restaurantMongoId = restaurant?._id?.toString?.() || String(restaurant?._id || '');
   const restaurantPublicId = restaurant?.restaurantId ? String(restaurant.restaurantId) : null;

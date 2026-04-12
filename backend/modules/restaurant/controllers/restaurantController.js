@@ -182,6 +182,15 @@ function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
 function getExplicitRestaurantZoneId(restaurant, activeZones) {
   if (!restaurant || !Array.isArray(activeZones)) return null;
 
+  const explicitZoneId = restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || '');
+  if (explicitZoneId) {
+    const explicitZone = activeZones.find((zone) => {
+      const zoneId = zone?._id?.toString?.() || String(zone?._id || '');
+      return zoneId && zoneId === explicitZoneId;
+    });
+    if (explicitZone) return explicitZoneId;
+  }
+
   const restaurantMongoId = restaurant?._id?.toString?.() || String(restaurant?._id || '');
   const restaurantPublicId = restaurant?.restaurantId ? String(restaurant.restaurantId) : null;
 

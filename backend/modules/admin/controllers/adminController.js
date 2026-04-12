@@ -34,12 +34,28 @@ const logger = winston.createLogger({
 const attachMappedZoneToRestaurant = async (restaurantDoc) => {
   if (!restaurantDoc?._id) return restaurantDoc;
 
-  const mappedZone = await Zone.findOne({
-    restaurantId: restaurantDoc._id,
-    isActive: true,
-  })
-    .select("_id name zoneName")
-    .lean();
+  const explicitZoneId = restaurantDoc.zoneId
+    ? restaurantDoc.zoneId?.toString?.() || String(restaurantDoc.zoneId)
+    : "";
+
+  let mappedZone = null;
+  if (explicitZoneId && mongoose.Types.ObjectId.isValid(explicitZoneId)) {
+    mappedZone = await Zone.findOne({
+      _id: explicitZoneId,
+      isActive: true,
+    })
+      .select("_id name zoneName")
+      .lean();
+  }
+
+  if (!mappedZone) {
+    mappedZone = await Zone.findOne({
+      restaurantId: restaurantDoc._id,
+      isActive: true,
+    })
+      .select("_id name zoneName")
+      .lean();
+  }
 
   if (!mappedZone) return restaurantDoc;
 
@@ -1227,7 +1243,20 @@ export const getRestaurants = asyncHandler(async (req, res) => {
       .lean();
 
     const restaurantIds = restaurants.map((restaurant) => restaurant?._id).filter(Boolean);
-    const mappedZones = restaurantIds.length > 0
+    const restaurantZoneIds = restaurants
+      .map((restaurant) => restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || ""))
+      .filter((zoneId) => mongoose.Types.ObjectId.isValid(zoneId));
+
+    const zonesById = restaurantZoneIds.length > 0
+      ? await Zone.find({
+          isActive: true,
+          _id: { $in: restaurantZoneIds },
+        })
+          .select("_id name zoneName")
+          .lean()
+      : [];
+
+    const legacyMappedZones = restaurantIds.length > 0
       ? await Zone.find({
           isActive: true,
           restaurantId: { $in: restaurantIds },
@@ -1236,15 +1265,23 @@ export const getRestaurants = asyncHandler(async (req, res) => {
           .lean()
       : [];
 
+    const zoneById = new Map(
+      zonesById.map((zone) => [
+        zone?._id?.toString?.() || String(zone?._id || ""),
+        zone,
+      ]),
+    );
+
     const zoneByRestaurantId = new Map(
-      mappedZones.map((zone) => [
+      legacyMappedZones.map((zone) => [
         zone?.restaurantId?.toString?.() || String(zone?.restaurantId || ""),
         zone,
       ]),
     );
 
     const restaurantsWithZones = restaurants.map((restaurant) => {
-      const mappedZone = zoneByRestaurantId.get(
+      const explicitZoneId = restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || "");
+      const mappedZone = zoneById.get(explicitZoneId) || zoneByRestaurantId.get(
         restaurant?._id?.toString?.() || String(restaurant?._id || ""),
       );
 
@@ -2017,8 +2054,6 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       };
     }
 
-    await restaurant.save();
-
     if (payload.zoneId !== undefined) {
       const zoneId = String(payload.zoneId || "").trim();
 
@@ -2037,10 +2072,15 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
           return errorResponse(res, 404, "Zone not found");
         }
 
-        zone.restaurantId = restaurant._id;
-        await zone.save();
+        restaurant.zoneId = zone._id;
+        restaurant.zoneName = zone.name || zone.zoneName || "";
+      } else {
+        restaurant.zoneId = null;
+        restaurant.zoneName = "";
       }
     }
+
+    await restaurant.save();
 
     // Keep source-of-truth OutletTimings in sync with admin-side opening/closing/openDays edits.
     if (shouldSyncOutletTimings) {
@@ -2132,19 +2172,7 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
       updatedBy: req.user._id,
     });
 
-    const mappedZone = await Zone.findOne({
-      restaurantId: restaurant._id,
-      isActive: true,
-    })
-      .select("_id name zoneName")
-      .lean();
-
-    const restaurantResponse = {
-      ...restaurant.toObject(),
-      zoneId: mappedZone?._id?.toString?.() || "",
-      restaurantZoneId: mappedZone?._id?.toString?.() || "",
-      zone: mappedZone?.name || mappedZone?.zoneName || restaurant.location?.area || restaurant.location?.city || "",
-    };
+    const restaurantResponse = await attachMappedZoneToRestaurant(restaurant.toObject());
 
     return successResponse(res, 200, "Restaurant updated successfully", {
       restaurant: restaurantResponse,

@@ -118,6 +118,16 @@ const restaurantSchema = new mongoose.Schema(
     },
     primaryContactNumber: String,
     location: locationSchema,
+    zoneId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Zone",
+      default: null,
+    },
+    zoneName: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     profileImage: {
       url: String,
       publicId: String,
@@ -315,6 +325,7 @@ const restaurantSchema = new mongoose.Schema(
 restaurantSchema.index({ email: 1 }, { unique: true, sparse: true });
 restaurantSchema.index({ phone: 1 }, { unique: true, sparse: true });
 restaurantSchema.index({ googleId: 1 }, { unique: true, sparse: true });
+restaurantSchema.index({ zoneId: 1 });
 
 // Hash password before saving
 restaurantSchema.pre("save", async function (next) {

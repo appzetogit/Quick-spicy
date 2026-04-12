@@ -159,6 +159,8 @@ export default function RestaurantsList() {
             ownerName: restaurant.ownerName || "N/A",
             ownerPhone: restaurant.ownerPhone || restaurant.phone || "N/A",
             zone: restaurant.zone || restaurant.location?.area || restaurant.location?.city || "N/A",
+            zoneId: restaurant.zoneId || restaurant.restaurantZoneId || "",
+            restaurantZoneId: restaurant.restaurantZoneId || restaurant.zoneId || "",
             cuisine: Array.isArray(restaurant.cuisines) && restaurant.cuisines.length > 0
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),
@@ -919,6 +921,8 @@ export default function RestaurantsList() {
                   : item.cuisine,
                 foodPreference: updatedRestaurant.foodPreference || item.foodPreference,
                 zone: updatedRestaurant.zone || updatedRestaurant.location?.area || updatedRestaurant.location?.city || item.zone,
+                zoneId: updatedRestaurant.zoneId || updatedRestaurant.restaurantZoneId || item.zoneId || "",
+                restaurantZoneId: updatedRestaurant.restaurantZoneId || updatedRestaurant.zoneId || item.restaurantZoneId || "",
                 status: updatedRestaurant.isActive !== false,
                 logo: updatedRestaurant.profileImage?.url || item.logo,
                 originalData: {

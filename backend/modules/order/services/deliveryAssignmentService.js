@@ -88,6 +88,22 @@ async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng)
   // Prefer an explicit zone linked to the restaurant when available.
   if (restaurantId) {
     const restaurantIdStr = restaurantId.toString ? restaurantId.toString() : String(restaurantId);
+    const restaurantLookupQuery = mongoose.Types.ObjectId.isValid(restaurantIdStr)
+      ? { $or: [{ _id: restaurantIdStr }, { restaurantId: restaurantIdStr }] }
+      : { restaurantId: restaurantIdStr };
+    const restaurant = await Restaurant.findOne(restaurantLookupQuery)
+      .select('zoneId')
+      .lean();
+
+    const explicitZoneId = restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || '');
+    if (explicitZoneId && mongoose.Types.ObjectId.isValid(explicitZoneId)) {
+      const explicitZone = await Zone.findOne({
+        _id: explicitZoneId,
+        isActive: true
+      }).lean();
+      if (explicitZone) return explicitZone;
+    }
+
     const restaurantZoneQuery = {
       isActive: true,
       $or: [{ restaurantId: restaurantIdStr }]

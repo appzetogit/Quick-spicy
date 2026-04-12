@@ -377,74 +377,29 @@ const executePushNotification = async ({
     (normalizedTarget === "restaurant" || normalizedTarget === "delivery") &&
     (normalizedPlatform === "mobile" || normalizedPlatform === "all");
 
-  const mobilePayload = normalizedImageUrl
-    ? {
-      notification: {
-        title: normalizedTitle,
-        body: normalizedDescription,
-        imageUrl: normalizedImageUrl,
+  const mobilePayload = {
+    data: {
+      ...baseData,
+      title: normalizedTitle,
+      body: normalizedDescription,
+      ...(normalizedImageUrl ? { image: normalizedImageUrl, imageUrl: normalizedImageUrl } : {}),
+      ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
+    },
+    android: {
+      priority: "high",
+      ttl: 120000,
+    },
+    apns: {
+      headers: {
+        "apns-priority": "5",
       },
-      android: {
-        priority: "high",
-        ttl: 120000,
-        notification: {
-          title: normalizedTitle,
-          body: normalizedDescription,
-          imageUrl: normalizedImageUrl,
-          tag: notificationId,
-          ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-        },
-      },
-      apns: {
-        headers: {
-          "apns-priority": "10",
-        },
-        payload: {
-          aps: {
-            alert: {
-              title: normalizedTitle,
-              body: normalizedDescription,
-            },
-            sound: "default",
-            "mutable-content": 1,
-          },
-        },
-        fcmOptions: {
-          imageUrl: normalizedImageUrl,
+      payload: {
+        aps: {
+          "content-available": 1,
         },
       },
-    }
-    : {
-      data: {
-        ...baseData,
-        title: normalizedTitle,
-        body: normalizedDescription,
-        ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-      },
-      android: {
-        priority: "high",
-        ttl: 120000,
-        notification: {
-          title: normalizedTitle,
-          body: normalizedDescription,
-          ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-        },
-      },
-      apns: {
-        headers: {
-          "apns-priority": "10",
-        },
-        payload: {
-          aps: {
-            alert: {
-              title: normalizedTitle,
-              body: normalizedDescription,
-            },
-            sound: "default",
-          },
-        },
-      },
-    };
+    },
+  };
 
   let sentCount = 0;
   let failedCount = 0;
