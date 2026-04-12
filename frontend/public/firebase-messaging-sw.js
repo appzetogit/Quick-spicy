@@ -96,6 +96,7 @@ self.addEventListener("push", (event) => {
       const body = payload?.notification?.body || payload?.data?.body || "";
       const image =
         payload?.notification?.image ||
+        payload?.notification?.imageUrl ||
         payload?.data?.image ||
         payload?.data?.imageUrl ||
         undefined;

@@ -16,6 +16,7 @@ const notificationImages = {
 
 export default function PushNotification() {
   const fileInputRef = useRef(null)
+  const sendingRef = useRef(false)
   const [scheduledDates, setScheduledDates] = useState([])
   const [editingNotificationId, setEditingNotificationId] = useState(null)
   const [formData, setFormData] = useState({
@@ -102,6 +103,10 @@ export default function PushNotification() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (sendingRef.current) {
+      return
+    }
+
     if (!formData.title.trim() || !formData.description.trim()) {
       toast.error("Title and description are required")
       return
@@ -147,6 +152,7 @@ export default function PushNotification() {
       return
     }
 
+    sendingRef.current = true
     setIsSending(true)
 
     try {
@@ -165,6 +171,7 @@ export default function PushNotification() {
       const isHttpsImageUrl = !normalizedImageUrl || /^https:\/\//i.test(normalizedImageUrl)
       if (!isHttpsImageUrl) {
         toast.error("Notification image URL must start with https://")
+        sendingRef.current = false
         setIsSending(false)
         return
       }
@@ -209,6 +216,7 @@ export default function PushNotification() {
         error?.message ||
         "Failed to send notification"
       toast.error(message)
+      sendingRef.current = false
       setIsSending(false)
       return
     }
@@ -246,6 +254,7 @@ export default function PushNotification() {
 
     setNotifications((prev) => [...newNotificationRows, ...prev])
     handleReset()
+    sendingRef.current = false
     setIsSending(false)
   }
 

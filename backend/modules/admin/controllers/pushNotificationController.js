@@ -7,10 +7,15 @@ import Delivery from "../../delivery/models/Delivery.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 import { extractNotificationTokens } from "../../notification/utils/deviceTokens.js";
+import { normalizePhoneNumber } from "../../../shared/utils/phoneUtils.js";
 
 const BATCH_SIZE = 500;
 const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v2";
 const PARTNER_ANDROID_SOUND = "original";
+const INVALID_FCM_TOKEN_CODES = new Set([
+  "messaging/invalid-argument",
+  "messaging/registration-token-not-registered",
+]);
 
 const normalizeTarget = (target = "customer") => {
   const normalized = String(target || "").trim().toLowerCase();
@@ -64,6 +69,58 @@ const extractTokensByPlatform = (records = [], platform = "all") => {
   };
 };
 
+const extractCustomerTokensByPhone = (records = [], platform = "all") => {
+  const sortedRecords = [...records].sort((a, b) => {
+    const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime() || 0;
+    const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime() || 0;
+    return bTime - aTime;
+  });
+  const grouped = new Map();
+
+  sortedRecords.forEach((record) => {
+    const groupKey = normalizePhoneNumber(record?.phone || "") || String(record?._id || "");
+    if (!grouped.has(groupKey)) {
+      grouped.set(groupKey, { webTokens: [], mobileTokens: [] });
+    }
+
+    const tokenGroups = extractNotificationTokens(record, platform);
+    grouped.get(groupKey).webTokens.push(...(tokenGroups?.webTokens || []));
+    grouped.get(groupKey).mobileTokens.push(...(tokenGroups?.mobileTokens || []));
+  });
+
+  const webTokens = [];
+  const mobileTokens = [];
+
+  grouped.forEach((tokenGroups) => {
+    const uniqueWeb = [...new Set(tokenGroups.webTokens.map((token) => String(token || "").trim()).filter(Boolean))];
+    const uniqueMobile = [...new Set(tokenGroups.mobileTokens.map((token) => String(token || "").trim()).filter(Boolean))];
+
+    if (platform === "web") {
+      if (uniqueWeb[0]) webTokens.push(uniqueWeb[0]);
+      return;
+    }
+
+    if (platform === "mobile") {
+      if (uniqueMobile[0]) mobileTokens.push(uniqueMobile[0]);
+      return;
+    }
+
+    if (uniqueMobile[0]) {
+      mobileTokens.push(uniqueMobile[0]);
+      return;
+    }
+
+    if (uniqueWeb[0]) {
+      webTokens.push(uniqueWeb[0]);
+    }
+  });
+
+  return {
+    webTokens: [...new Set(webTokens)],
+    mobileTokens: [...new Set(mobileTokens)],
+  };
+};
+
 const dedupeCrossChannelTokens = (webTokens = [], mobileTokens = []) => {
   const webSet = new Set((webTokens || []).map((token) => String(token || "").trim()).filter(Boolean));
   const uniqueWeb = [...webSet];
@@ -89,9 +146,9 @@ async function getTargetTokens(target, platform) {
 
   if (target === "customer") {
     const users = await User.find({ role: "user", ...baseFilter })
-      .select("fcmtokenweb fcmtokenmobile notificationDevices")
+      .select("phone fcmtokenweb fcmtokenmobile notificationDevices createdAt updatedAt")
       .lean();
-    return extractTokensByPlatform(users, platform);
+    return extractCustomerTokensByPhone(users, platform);
   }
 
   if (target === "delivery") {
@@ -162,6 +219,51 @@ const sendBatches = async (tokens = [], payload = {}) => {
   }
 
   return { sentCount, failedCount, failedTokens, failureCodeCounts };
+};
+
+const getTargetModels = (target = "customer") => {
+  if (target === "customer") return [User];
+  if (target === "delivery") return [Delivery];
+  if (target === "restaurant") return [Restaurant];
+  return [User, Delivery, Restaurant];
+};
+
+const pruneInvalidFcmTokens = async (target = "customer", failures = []) => {
+  const invalidTokens = [
+    ...new Set(
+      failures
+        .filter((failure) => INVALID_FCM_TOKEN_CODES.has(failure?.code))
+        .map((failure) => String(failure?.token || "").trim())
+        .filter(Boolean),
+    ),
+  ];
+
+  if (invalidTokens.length === 0) return;
+
+  const targetModels = getTargetModels(target);
+
+  await Promise.all(
+    targetModels.flatMap((Model) => [
+      Model.updateMany(
+        { fcmtokenweb: { $in: invalidTokens } },
+        {
+          $set: { fcmtokenweb: null },
+          $pull: { notificationDevices: { token: { $in: invalidTokens } } },
+        },
+      ),
+      Model.updateMany(
+        { fcmtokenmobile: { $in: invalidTokens } },
+        {
+          $set: { fcmtokenmobile: null },
+          $pull: { notificationDevices: { token: { $in: invalidTokens } } },
+        },
+      ),
+      Model.updateMany(
+        { "notificationDevices.token": { $in: invalidTokens } },
+        { $pull: { notificationDevices: { token: { $in: invalidTokens } } } },
+      ),
+    ]),
+  );
 };
 
 const executePushNotification = async ({
@@ -258,6 +360,7 @@ const executePushNotification = async ({
       ...baseData,
       title: normalizedTitle,
       body: normalizedDescription,
+      ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
     },
     webpush: {
       headers: {
@@ -267,11 +370,6 @@ const executePushNotification = async ({
       fcmOptions: {
         link: targetLink,
       },
-      notification: {
-        title: normalizedTitle,
-        body: normalizedDescription,
-        ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
-      },
     },
   };
 
@@ -279,29 +377,74 @@ const executePushNotification = async ({
     (normalizedTarget === "restaurant" || normalizedTarget === "delivery") &&
     (normalizedPlatform === "mobile" || normalizedPlatform === "all");
 
-  const mobilePayload = {
-    data: {
-      ...baseData,
-      title: normalizedTitle,
-      body: normalizedDescription,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
-      ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-    },
-    android: {
-      priority: "high",
-      ttl: 120000,
-    },
-    apns: {
-      headers: {
-        "apns-priority": "5",
+  const mobilePayload = normalizedImageUrl
+    ? {
+      notification: {
+        title: normalizedTitle,
+        body: normalizedDescription,
+        imageUrl: normalizedImageUrl,
       },
-      payload: {
-        aps: {
-          "content-available": 1,
+      android: {
+        priority: "high",
+        ttl: 120000,
+        notification: {
+          title: normalizedTitle,
+          body: normalizedDescription,
+          imageUrl: normalizedImageUrl,
+          tag: notificationId,
+          ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
         },
       },
-    },
-  };
+      apns: {
+        headers: {
+          "apns-priority": "10",
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: normalizedTitle,
+              body: normalizedDescription,
+            },
+            sound: "default",
+            "mutable-content": 1,
+          },
+        },
+        fcmOptions: {
+          imageUrl: normalizedImageUrl,
+        },
+      },
+    }
+    : {
+      data: {
+        ...baseData,
+        title: normalizedTitle,
+        body: normalizedDescription,
+        ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
+      },
+      android: {
+        priority: "high",
+        ttl: 120000,
+        notification: {
+          title: normalizedTitle,
+          body: normalizedDescription,
+          ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
+        },
+      },
+      apns: {
+        headers: {
+          "apns-priority": "10",
+        },
+        payload: {
+          aps: {
+            alert: {
+              title: normalizedTitle,
+              body: normalizedDescription,
+            },
+            sound: "default",
+          },
+        },
+      },
+    };
 
   let sentCount = 0;
   let failedCount = 0;
@@ -327,6 +470,8 @@ const executePushNotification = async ({
       failureCodeCounts[code] = (failureCodeCounts[code] || 0) + count;
     });
   }
+
+  await pruneInvalidFcmTokens(normalizedTarget, failedTokens);
 
   const responseMessage =
     sentCount > 0

@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { userAPI, restaurantAPI, deliveryAPI, adminAPI, authAPI } from "@/lib/api";
+import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
 import fallbackNotificationSound from "@/assets/audio/alert.mp3";
 
@@ -531,6 +531,45 @@ async function registerNativeWebViewFcmToken(moduleName) {
   }
 }
 
+async function showBrowserNotification({ title, body, image, notificationKey }) {
+  if (isFlutterWebView() || typeof Notification === "undefined" || Notification.permission !== "granted") {
+    return;
+  }
+
+  try {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Showing browser notification from page", {
+      title,
+      body,
+      image,
+      notificationKey,
+    });
+
+    if (image && "serviceWorker" in navigator) {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification(title, {
+        body,
+        icon: "/favicon.ico",
+        image,
+        tag: notificationKey || undefined,
+        renotify: false,
+        data: { link: "/" },
+      });
+      return;
+    }
+
+    new Notification(title, {
+      body,
+      icon: "/favicon.ico",
+      image,
+      tag: notificationKey || undefined,
+    });
+  } catch (error) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Browser notification creation failed", {
+      error: error?.message || error,
+    });
+  }
+}
+
 function showForegroundNotification(payload = {}) {
   if (!isRecord(payload)) {
     pushDebugWarn(PUSH_DEBUG_PREFIX, "Ignoring malformed foreground notification payload", { payload });
@@ -560,26 +599,7 @@ function showForegroundNotification(payload = {}) {
 
   playPushSound(payload);
 
-  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-    try {
-      pushDebugLog(PUSH_DEBUG_PREFIX, "Showing browser notification from page", {
-        title,
-        body,
-        image,
-        notificationKey,
-      });
-      new Notification(title, {
-        body,
-        icon: "/favicon.ico",
-        image,
-        tag: notificationKey || undefined,
-      });
-    } catch (error) {
-      pushDebugWarn(PUSH_DEBUG_PREFIX, "Browser notification creation failed", {
-        error: error?.message || error,
-      });
-    }
-  }
+  showBrowserNotification({ title, body, image, notificationKey });
 
   if (body) {
     toast.success(`${title}: ${body}`);
