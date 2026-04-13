@@ -17,6 +17,7 @@ const formatCurrency = (amount) => {
 export default function DeliverymanList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [deliverymen, setDeliverymen] = useState([])
+  const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -24,7 +25,10 @@ export default function DeliverymanList() {
   const [viewDetails, setViewDetails] = useState(null)
   const [editingDeliveryId, setEditingDeliveryId] = useState(null)
   const [editValues, setEditValues] = useState({ pocketBalance: "", cashInHand: "" })
+  const [editingZoneDeliveryId, setEditingZoneDeliveryId] = useState(null)
+  const [zoneEditValue, setZoneEditValue] = useState("")
   const [savingDeliveryId, setSavingDeliveryId] = useState(null)
+  const [savingZoneDeliveryId, setSavingZoneDeliveryId] = useState(null)
   const [deletingDeliveryId, setDeletingDeliveryId] = useState(null)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
@@ -65,6 +69,17 @@ export default function DeliverymanList() {
 
     return allRows
   }
+
+  const getZoneId = (zone) => zone?._id?.toString?.() || zone?.id?.toString?.() || String(zone || "")
+  const getZoneName = (zone) => zone?.name || zone?.zoneName || zone?.serviceLocation || "Unnamed Zone"
+  const getDeliveryZoneId = (deliveryman) => (
+    deliveryman?.zoneIds?.[0] ||
+    deliveryman?.assignedZones?.[0]?._id ||
+    deliveryman?.fullData?.zoneIds?.[0] ||
+    deliveryman?.fullData?.availability?.zones?.[0]?.toString?.() ||
+    deliveryman?.fullData?.availability?.zones?.[0] ||
+    ""
+  )
 
   // Fetch delivery partners from API
   const fetchDeliverymen = async () => {
@@ -143,6 +158,21 @@ availableCashLimit: wallet?.availableCashLimit || 0,
   // Fetch on mount
   useEffect(() => {
     fetchDeliverymen()
+  }, [])
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const response = await adminAPI.getZones({ limit: 1000 })
+        const fetchedZones = response?.data?.data?.zones || response?.data?.zones || []
+        setZones(Array.isArray(fetchedZones) ? fetchedZones.filter((zone) => zone.isActive !== false) : [])
+      } catch (err) {
+        debugError("Error fetching zones:", err)
+        toast.error("Failed to load zones")
+      }
+    }
+
+    fetchZones()
   }, [])
 
   // Debounced search effect
@@ -248,6 +278,77 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
   const cancelEditingWallet = () => {
     setEditingDeliveryId(null)
     setEditValues({ pocketBalance: "", cashInHand: "" })
+  }
+
+  const startEditingZone = (deliveryman) => {
+    setEditingZoneDeliveryId(String(deliveryman._id))
+    setZoneEditValue(getDeliveryZoneId(deliveryman))
+  }
+
+  const cancelEditingZone = () => {
+    setEditingZoneDeliveryId(null)
+    setZoneEditValue("")
+  }
+
+  const saveZoneChanges = async (deliveryman) => {
+    try {
+      setSavingZoneDeliveryId(String(deliveryman._id))
+      const response = await adminAPI.updateDeliveryPartnerZone(deliveryman._id, zoneEditValue)
+
+      if (!response?.data?.success) {
+        toast.error(response?.data?.message || "Failed to update zone")
+        return
+      }
+
+      const updatedDelivery = response.data.data?.delivery || {}
+      const nextZone = updatedDelivery.zone || "Not assigned"
+      const nextZoneIds = updatedDelivery.zoneIds || (zoneEditValue ? [zoneEditValue] : [])
+      const nextAssignedZones = updatedDelivery.assignedZones || zones
+        .filter((zone) => nextZoneIds.includes(getZoneId(zone)))
+        .map((zone) => ({ _id: getZoneId(zone), name: getZoneName(zone), isActive: zone.isActive !== false }))
+
+      setDeliverymen((prev) =>
+        prev.map((item) =>
+          String(item._id) === String(deliveryman._id)
+            ? {
+                ...item,
+                zone: nextZone,
+                zoneIds: nextZoneIds,
+                assignedZones: nextAssignedZones,
+                fullData: {
+                  ...(item.fullData || {}),
+                  ...(updatedDelivery || {}),
+                  zone: nextZone,
+                  zoneIds: nextZoneIds,
+                  assignedZones: nextAssignedZones,
+                },
+              }
+            : item,
+        ),
+      )
+
+      setViewDetails((prev) => {
+        if (!prev || String(prev._id) !== String(deliveryman._id)) {
+          return prev
+        }
+
+        return {
+          ...prev,
+          ...(updatedDelivery || {}),
+          zone: nextZone,
+          zoneIds: nextZoneIds,
+          assignedZones: nextAssignedZones,
+        }
+      })
+
+      toast.success("Zone updated")
+      cancelEditingZone()
+    } catch (err) {
+      debugError("Error updating delivery partner zone:", err)
+      toast.error(err.response?.data?.message || "Failed to update zone")
+    } finally {
+      setSavingZoneDeliveryId(null)
+    }
   }
 
   const updateWalletFieldValue = (field, value) => {
@@ -586,7 +687,52 @@ availableCashLimit: deliveryman.availableCashLimit || 0,
                         )}
                         {visibleColumns.zone && (
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className="text-sm text-slate-700">{dm.zone}</span>
+                            {editingZoneDeliveryId === String(dm._id) ? (
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={zoneEditValue}
+                                  onChange={(e) => setZoneEditValue(e.target.value)}
+                                  className="w-44 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+                                >
+                                  <option value="">Not assigned</option>
+                                  {zones.map((zone) => {
+                                    const zoneId = getZoneId(zone)
+                                    return (
+                                      <option key={zoneId} value={zoneId}>
+                                        {getZoneName(zone)}
+                                      </option>
+                                    )
+                                  })}
+                                </select>
+                                <button
+                                  onClick={() => saveZoneChanges(dm)}
+                                  disabled={savingZoneDeliveryId === String(dm._id)}
+                                  className="p-1.5 rounded bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors disabled:opacity-50"
+                                  title="Save Zone"
+                                >
+                                  {savingZoneDeliveryId === String(dm._id) ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                </button>
+                                <button
+                                  onClick={cancelEditingZone}
+                                  disabled={savingZoneDeliveryId === String(dm._id)}
+                                  className="p-1.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                  title="Cancel Zone Edit"
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-slate-700">{dm.zone || "Not assigned"}</span>
+                                <button
+                                  onClick={() => startEditingZone(dm)}
+                                  className="p-1 rounded bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                                  title="Edit Zone"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            )}
                           </td>
                         )}
                         {visibleColumns.totalOrders && (

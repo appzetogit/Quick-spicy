@@ -1,4 +1,5 @@
 import Delivery from '../../delivery/models/Delivery.js';
+import Zone from '../models/Zone.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
@@ -13,6 +14,58 @@ const logger = winston.createLogger({
     })
   ]
 });
+
+const getZoneIdString = (zone) => zone?._id?.toString?.() || zone?.toString?.() || String(zone || '');
+
+const getZoneDisplayName = (zone) => zone?.name || zone?.zoneName || zone?.serviceLocation || 'Unnamed Zone';
+
+const getAssignedZoneIds = (delivery) => (
+  Array.isArray(delivery?.availability?.zones)
+    ? delivery.availability.zones.map(getZoneIdString).filter(Boolean)
+    : []
+);
+
+const buildZoneMapForDeliveries = async (deliveries = []) => {
+  const zoneIds = [
+    ...new Set(
+      deliveries
+        .flatMap((delivery) => getAssignedZoneIds(delivery))
+        .filter((zoneId) => mongoose.Types.ObjectId.isValid(zoneId))
+    )
+  ];
+
+  if (zoneIds.length === 0) {
+    return new Map();
+  }
+
+  const zones = await Zone.find({ _id: { $in: zoneIds } })
+    .select('_id name zoneName serviceLocation isActive')
+    .lean();
+
+  return new Map(zones.map((zone) => [getZoneIdString(zone), zone]));
+};
+
+const getDeliveryZoneSummary = (delivery, zoneMap) => {
+  const zoneIds = getAssignedZoneIds(delivery);
+  const assignedZones = zoneIds
+    .map((zoneId) => zoneMap.get(zoneId))
+    .filter(Boolean)
+    .map((zone) => ({
+      _id: getZoneIdString(zone),
+      name: getZoneDisplayName(zone),
+      isActive: zone.isActive !== false
+    }));
+
+  return {
+    zoneIds,
+    assignedZones,
+    zone: zoneIds.length === 0
+      ? 'Not assigned'
+      : assignedZones.length > 0
+        ? assignedZones.map((zone) => zone.name).join(', ')
+        : 'Assigned'
+  };
+};
 
 /**
  * Get Delivery Partner Join Requests
@@ -172,8 +225,14 @@ export const getDeliveryPartnerById = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Delivery partner not found');
     }
 
+    const zoneMap = await buildZoneMapForDeliveries([delivery]);
+    const zoneSummary = getDeliveryZoneSummary(delivery, zoneMap);
+
     return successResponse(res, 200, 'Delivery partner retrieved successfully', {
-      delivery
+      delivery: {
+        ...delivery,
+        ...zoneSummary
+      }
     });
   } catch (error) {
     logger.error(`Error fetching delivery partner: ${error.message}`, { error: error.stack });
@@ -386,22 +445,12 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
       };
     });
 
+    const zoneMap = await buildZoneMapForDeliveries(deliveries);
+
     // Format response with order stats and zone info
     const formattedPartners = deliveries.map((delivery, index) => {
       const stats = statsMap[delivery._id.toString()] || { totalOrders: 0, assignedOrders: 0 };
-      
-      // Get zone from location
-      let zone = 'All over the World';
-      if (delivery.location) {
-        const locationParts = [];
-        if (delivery.location.city) locationParts.push(delivery.location.city);
-        if (delivery.location.state) locationParts.push(delivery.location.state);
-        const country = delivery.location.country || 'India';
-        locationParts.push(country);
-        if (locationParts.length > 0) {
-          zone = locationParts.join(', ');
-        }
-      }
+      const zoneSummary = getDeliveryZoneSummary(delivery, zoneMap);
 
       // Get availability status
       const isOnline = delivery.availability?.isOnline || false;
@@ -413,7 +462,9 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
         name: delivery.name || 'N/A',
         email: delivery.email || 'N/A',
         phone: delivery.phone || 'N/A',
-        zone: zone,
+        zone: zoneSummary.zone,
+        zoneIds: zoneSummary.zoneIds,
+        assignedZones: zoneSummary.assignedZones,
         totalOrders: stats.totalOrders,
         assignedOrders: stats.assignedOrders,
         status: availabilityStatus,
@@ -428,7 +479,8 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
         // Include full data
         fullData: {
           ...delivery,
-          _id: delivery._id.toString()
+          _id: delivery._id.toString(),
+          ...zoneSummary
         }
       };
     });
@@ -448,6 +500,80 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
   } catch (error) {
     logger.error(`Error fetching delivery partners: ${error.message}`, { error: error.stack });
     return errorResponse(res, 500, 'Failed to fetch delivery partners');
+  }
+});
+
+/**
+ * Update Delivery Partner Zone
+ * PATCH /api/admin/delivery-partners/:id/zone
+ */
+export const updateDeliveryPartnerZone = asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { zoneId, zoneIds } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return errorResponse(res, 400, 'Invalid delivery partner ID');
+    }
+
+    const nextZoneIds = Array.isArray(zoneIds)
+      ? zoneIds
+      : zoneId
+        ? [zoneId]
+        : [];
+
+    const normalizedZoneIds = [
+      ...new Set(nextZoneIds.map((item) => String(item || '').trim()).filter(Boolean))
+    ];
+
+    if (normalizedZoneIds.length > 10) {
+      return errorResponse(res, 400, 'A delivery partner can be assigned to at most 10 zones');
+    }
+
+    const hasInvalidZoneId = normalizedZoneIds.some((item) => !mongoose.Types.ObjectId.isValid(item));
+    if (hasInvalidZoneId) {
+      return errorResponse(res, 400, 'Invalid zone ID');
+    }
+
+    if (normalizedZoneIds.length > 0) {
+      const activeZoneCount = await Zone.countDocuments({
+        _id: { $in: normalizedZoneIds },
+        isActive: true
+      });
+
+      if (activeZoneCount !== normalizedZoneIds.length) {
+        return errorResponse(res, 400, 'Invalid or inactive zone selected');
+      }
+    }
+
+    const delivery = await Delivery.findByIdAndUpdate(
+      id,
+      { $set: { 'availability.zones': normalizedZoneIds } },
+      { new: true, runValidators: true }
+    ).select('-password -refreshToken').lean();
+
+    if (!delivery) {
+      return errorResponse(res, 404, 'Delivery partner not found');
+    }
+
+    const zoneMap = await buildZoneMapForDeliveries([delivery]);
+    const zoneSummary = getDeliveryZoneSummary(delivery, zoneMap);
+
+    logger.info(`Delivery partner zone updated: ${id}`, {
+      updatedBy: req.user._id,
+      deliveryId: delivery.deliveryId,
+      zoneIds: normalizedZoneIds
+    });
+
+    return successResponse(res, 200, 'Delivery partner zone updated successfully', {
+      delivery: {
+        ...delivery,
+        ...zoneSummary
+      }
+    });
+  } catch (error) {
+    logger.error(`Error updating delivery partner zone: ${error.message}`, { error: error.stack });
+    return errorResponse(res, 500, 'Failed to update delivery partner zone');
   }
 });
 

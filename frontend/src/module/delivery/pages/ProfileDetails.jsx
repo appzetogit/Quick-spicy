@@ -3,10 +3,8 @@ import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Plus, Edit2, ChevronRight, FileText, CheckCircle, XCircle, Eye, X, Loader2, User } from "lucide-react"
 import BottomPopup from "../components/BottomPopup"
 import { toast } from "sonner"
-import { deliveryAPI } from "@/lib/api"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+import { deliveryAPI, zoneAPI } from "@/lib/api"
+const debugError = () => {}
 
 
 export default function ProfileDetails() {
@@ -29,6 +27,15 @@ export default function ProfileDetails() {
   })
   const [bankDetailsErrors, setBankDetailsErrors] = useState({})
   const [isUpdatingBankDetails, setIsUpdatingBankDetails] = useState(false)
+  const [zones, setZones] = useState([])
+  const [showServiceDetailsPopup, setShowServiceDetailsPopup] = useState(false)
+  const [serviceDetails, setServiceDetails] = useState({
+    zoneId: "",
+    city: "",
+    vehicleType: "",
+    vehicleNumber: "",
+  })
+  const [isUpdatingServiceDetails, setIsUpdatingServiceDetails] = useState(false)
 
   // Note: All alternate phone related code has been removed
 
@@ -60,12 +67,23 @@ export default function ProfileDetails() {
       }
     }
 
+    const fetchZones = async () => {
+      try {
+        const response = await zoneAPI.getZones()
+        const activeZones = response?.data?.data?.zones || response?.data?.zones || []
+        setZones(Array.isArray(activeZones) ? activeZones : [])
+      } catch (error) {
+        debugError("Error fetching zones:", error)
+      }
+    }
+
     const fetchProfile = async () => {
       try {
         setLoading(true)
         const [profileResponse] = await Promise.allSettled([
           deliveryAPI.getProfile(),
-          fetchWalletBalance()
+          fetchWalletBalance(),
+          fetchZones()
         ])
 
         if (
@@ -84,6 +102,12 @@ export default function ProfileDetails() {
             ifscCode: profileData?.documents?.bankDetails?.ifscCode || "",
             bankName: profileData?.documents?.bankDetails?.bankName || "",
             panNumber: profileData?.documents?.pan?.number || "",
+          })
+          setServiceDetails({
+            zoneId: profileData?.availability?.zones?.[0]?.toString?.() || profileData?.availability?.zones?.[0] || "",
+            city: profileData?.location?.city || "",
+            vehicleType: profileData?.vehicle?.type || "",
+            vehicleNumber: profileData?.vehicle?.number || "",
           })
         } else {
           throw new Error("Profile fetch failed")
@@ -154,6 +178,33 @@ export default function ProfileDetails() {
 
   const profileImageUrl = profile?.profileImage?.url || profile?.documents?.photo || null
 
+  const getZoneId = (zone) => zone?._id?.toString?.() || zone?.id?.toString?.() || String(zone || "")
+  const getZoneName = (zone) => zone?.name || zone?.zoneName || zone?.serviceLocation || "Unnamed zone"
+  const assignedZoneIds = Array.isArray(profile?.availability?.zones)
+    ? profile.availability.zones.map((zone) => zone?._id?.toString?.() || zone?.toString?.() || String(zone))
+    : []
+  const assignedZoneNames = assignedZoneIds
+    .map((zoneId) => {
+      const zone = zones.find((item) => getZoneId(item) === zoneId)
+      return zone ? getZoneName(zone) : null
+    })
+    .filter(Boolean)
+  const zoneDisplay = assignedZoneIds.length === 0
+    ? "Not assigned"
+    : assignedZoneNames.length > 0
+      ? assignedZoneNames.join(", ")
+      : "Assigned"
+
+  const openServiceDetailsPopup = () => {
+    setServiceDetails({
+      zoneId: assignedZoneIds[0] || "",
+      city: profile?.location?.city || "",
+      vehicleType: profile?.vehicle?.type || "",
+      vehicleNumber: vehicleNumber || "",
+    })
+    setShowServiceDetailsPopup(true)
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
@@ -199,7 +250,16 @@ export default function ProfileDetails() {
       <div className="px-4 py-6 space-y-6">
         {/* Rider Details Section */}
         <div>
-          <h2 className="text-base font-bold text-gray-900 mb-3">Rider details</h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-gray-900">Rider details</h2>
+            <button
+              onClick={openServiceDetailsPopup}
+              className="text-green-600 font-medium text-sm flex items-center gap-1 hover:text-green-700"
+            >
+              <Edit2 className="w-4 h-4" />
+              <span>Edit</span>
+            </button>
+          </div>
           <div className="bg-white rounded-lg shadow-sm divide-y divide-gray-200">
             <div className="p-2 px-3 flex items-center justify-between">
               <p className="text-base text-gray-900">
@@ -210,7 +270,7 @@ export default function ProfileDetails() {
             <div className="p-2 px-3 flex items-center justify-between">
                 <p className="text-sm text-gray-900">Zone</p>
                 <p className="text-base text-gray-900">
-                  {profile?.availability?.zones?.length > 0 ? "Assigned" : "Not assigned"}
+                  {zoneDisplay}
                 </p>
               </div>
             <div className="p-2 px-3 flex items-center justify-between">
@@ -506,6 +566,134 @@ export default function ProfileDetails() {
             className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors"
           >
             {vehicleNumber ? "Update" : "Add"}
+          </button>
+        </div>
+      </BottomPopup>
+
+      {/* Service Details Edit Popup */}
+      <BottomPopup
+        isOpen={showServiceDetailsPopup}
+        onClose={() => setShowServiceDetailsPopup(false)}
+        title="Edit Rider Details"
+        showCloseButton={true}
+        closeOnBackdropClick={true}
+        maxHeight="80vh"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Zone
+            </label>
+            <select
+              value={serviceDetails.zoneId}
+              onChange={(e) => setServiceDetails(prev => ({ ...prev, zoneId: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Not assigned</option>
+              {zones.map((zone) => {
+                const zoneId = getZoneId(zone)
+                return (
+                  <option key={zoneId} value={zoneId}>
+                    {getZoneName(zone)}
+                  </option>
+                )
+              })}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City
+            </label>
+            <input
+              type="text"
+              value={serviceDetails.city}
+              onChange={(e) => setServiceDetails(prev => ({ ...prev, city: e.target.value }))}
+              placeholder="Enter city"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Vehicle type
+            </label>
+            <select
+              value={serviceDetails.vehicleType}
+              onChange={(e) => setServiceDetails(prev => ({ ...prev, vehicleType: e.target.value }))}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">Select vehicle type</option>
+              <option value="bike">Bike</option>
+              <option value="scooter">Scooter</option>
+              <option value="bicycle">Bicycle</option>
+              <option value="car">Car</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Vehicle number
+            </label>
+            <input
+              type="text"
+              value={serviceDetails.vehicleNumber}
+              onChange={(e) => setServiceDetails(prev => ({ ...prev, vehicleNumber: e.target.value.toUpperCase() }))}
+              placeholder="Enter vehicle number"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+          </div>
+
+          <button
+            onClick={async () => {
+              setIsUpdatingServiceDetails(true)
+              try {
+                const payload = {
+                  availability: {
+                    zones: serviceDetails.zoneId ? [serviceDetails.zoneId] : [],
+                  },
+                  location: {
+                    ...profile?.location,
+                    city: serviceDetails.city.trim(),
+                  },
+                  vehicle: {
+                    ...profile?.vehicle,
+                    type: serviceDetails.vehicleType || undefined,
+                    number: serviceDetails.vehicleNumber.trim(),
+                  },
+                }
+
+                const response = await deliveryAPI.updateProfile(payload)
+                const updatedProfile = response?.data?.data?.profile
+                if (updatedProfile) {
+                  setProfile(updatedProfile)
+                  setVehicleNumber(updatedProfile?.vehicle?.number || "")
+                  setVehicleInput(updatedProfile?.vehicle?.number || "")
+                } else {
+                  const profileResponse = await deliveryAPI.getProfile()
+                  if (profileResponse?.data?.success && profileResponse?.data?.data?.profile) {
+                    setProfile(profileResponse.data.data.profile)
+                    setVehicleNumber(profileResponse.data.data.profile?.vehicle?.number || "")
+                    setVehicleInput(profileResponse.data.data.profile?.vehicle?.number || "")
+                  }
+                }
+                setShowServiceDetailsPopup(false)
+                toast.success("Rider details updated successfully")
+              } catch (error) {
+                debugError("Error updating rider details:", error)
+                toast.error(error?.response?.data?.message || "Failed to update rider details")
+              } finally {
+                setIsUpdatingServiceDetails(false)
+              }
+            }}
+            disabled={isUpdatingServiceDetails}
+            className={`w-full py-3 rounded-lg font-medium text-white transition-colors ${
+              isUpdatingServiceDetails
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#00B761] hover:bg-[#00A055]"
+            }`}
+          >
+            {isUpdatingServiceDetails ? "Updating..." : "Save Rider Details"}
           </button>
         </div>
       </BottomPopup>

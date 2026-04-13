@@ -4,6 +4,7 @@ import Delivery from '../models/Delivery.js';
 import DeliveryWallet from '../models/DeliveryWallet.js';
 import DeliveryWithdrawalRequest from '../models/DeliveryWithdrawalRequest.js';
 import DeliverySupportTicket from '../../admin/models/DeliverySupportTicket.js';
+import Zone from '../../admin/models/Zone.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
@@ -72,6 +73,12 @@ const updateProfileSchema = Joi.object({
     url: Joi.string().uri().optional().allow(null, ''),
     publicId: Joi.string().trim().optional().allow(null, '')
   }).optional(),
+  availability: Joi.object({
+    zones: Joi.array()
+      .items(Joi.string().hex().length(24))
+      .max(10)
+      .optional()
+  }).optional(),
   documents: Joi.object({
     pan: Joi.object({
       number: Joi.string()
@@ -138,6 +145,21 @@ export const updateProfile = asyncHandler(async (req, res) => {
         };
       }
       delete setData.documents;
+    }
+    if (updateData.availability) {
+      if (Array.isArray(updateData.availability.zones)) {
+        if (updateData.availability.zones.length > 0) {
+          const activeZoneCount = await Zone.countDocuments({
+            _id: { $in: updateData.availability.zones },
+            isActive: true
+          });
+          if (activeZoneCount !== updateData.availability.zones.length) {
+            return errorResponse(res, 400, 'Invalid or inactive zone selected');
+          }
+        }
+        setData['availability.zones'] = updateData.availability.zones;
+      }
+      delete setData.availability;
     }
 
     // Update profile

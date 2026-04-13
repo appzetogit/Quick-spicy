@@ -335,6 +335,7 @@ export const API_ENDPOINTS = {
     DELIVERY_PARTNER_APPROVE: "/admin/delivery-partners/:id/approve",
     DELIVERY_PARTNER_REJECT: "/admin/delivery-partners/:id/reject",
     DELIVERY_PARTNER_REVERIFY: "/admin/delivery-partners/:id/reverify",
+    DELIVERY_PARTNER_ZONE: "/admin/delivery-partners/:id/zone",
     DELIVERY_PARTNER_STATUS: "/admin/delivery-partners/:id/status",
     DELIVERY_PARTNER_DELETE: "/admin/delivery-partners/:id",
     DELIVERY_PARTNER_BONUS: "/admin/delivery-partners/bonus",

@@ -39,6 +39,12 @@ router.put('/profile', validate(Joi.object({
     url: Joi.string().uri().optional().allow(null, ''),
     publicId: Joi.string().trim().optional().allow(null, '')
   }).optional(),
+  availability: Joi.object({
+    zones: Joi.array()
+      .items(Joi.string().hex().length(24))
+      .max(10)
+      .optional()
+  }).optional(),
   documents: Joi.object({
     pan: Joi.object({
       number: Joi.string()
