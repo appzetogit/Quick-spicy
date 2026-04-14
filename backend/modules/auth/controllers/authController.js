@@ -27,7 +27,7 @@ const logger = winston.createLogger({
 });
 
 const REFERRAL_REWARD_AMOUNT = 50;
-const NEW_USER_WALLET_CREDIT_AMOUNT = 50;
+const NEW_USER_WALLET_CREDIT_AMOUNT = 20;
 const OTP_BYPASS_USER_PHONE = "7223077890";
 const OTP_BYPASS_CODE = "000000";
 

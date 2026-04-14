@@ -17,6 +17,8 @@ const logger = winston.createLogger({
   ]
 });
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Get Wallet Balance
  * GET /api/user/wallet
@@ -289,13 +291,52 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
-    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    let verification = null;
+    const verificationAttempts = 5;
+
+    for (let attempt = 1; attempt <= verificationAttempts; attempt += 1) {
+      verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+      if (verification?.isPaid && verification?.payment) {
+        break;
+      }
+
+      if (attempt < verificationAttempts) {
+        await wait(1500);
+      }
+    }
+
     if (!verification?.isPaid || !verification?.payment) {
+      const cashfreeOrderStatus = verification?.order?.order_status || null;
+      const latestPaymentStatus = verification?.payment?.payment_status || null;
+      const normalizedOrderStatus = String(cashfreeOrderStatus || '').toUpperCase();
+      const normalizedPaymentStatus = String(latestPaymentStatus || '').toUpperCase();
+      const isDefinitelyFailed =
+        normalizedOrderStatus === 'FAILED' ||
+        normalizedPaymentStatus === 'FAILED' ||
+        normalizedPaymentStatus === 'USER_DROPPED' ||
+        normalizedPaymentStatus === 'CANCELLED';
+
       logger.warn('Cashfree payment verification failed for wallet top-up', {
         userId: user._id,
-        cashfreeOrderId
+        cashfreeOrderId,
+        cashfreeOrderStatus,
+        latestPaymentStatus
       });
-      return errorResponse(res, 400, 'Payment verification failed');
+
+      return res.status(isDefinitelyFailed ? 400 : 202).json({
+        success: false,
+        pending: !isDefinitelyFailed,
+        message: isDefinitelyFailed
+          ? 'Online payment failed or was cancelled'
+          : 'Payment confirmation is still pending. Please wait a moment and try again.',
+        data: {
+          cashfree: {
+            orderId: cashfreeOrderId,
+            orderStatus: cashfreeOrderStatus,
+            paymentStatus: latestPaymentStatus
+          }
+        }
+      });
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
@@ -306,7 +347,21 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
     );
 
     if (existingTransaction) {
-      return errorResponse(res, 400, 'Payment already processed');
+      return successResponse(res, 200, 'Money already added to wallet', {
+        transaction: {
+          id: existingTransaction._id,
+          amount: existingTransaction.amount,
+          type: existingTransaction.type,
+          status: existingTransaction.status,
+          description: existingTransaction.description,
+          date: existingTransaction.createdAt
+        },
+        wallet: {
+          balance: wallet.balance,
+          currency: wallet.currency,
+          totalAdded: wallet.totalAdded
+        }
+      });
     }
 
     const transaction = wallet.addTransaction({
@@ -317,7 +372,6 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       paymentMethod: mapCashfreePaymentMethod(verification.payment),
       paymentGateway: 'cashfree',
       paymentId: cashfreePaymentId,
-      orderId: cashfreeOrderId,
       metadata: {
         cashfreeOrderId,
         cashfreePaymentId,

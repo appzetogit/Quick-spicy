@@ -10,6 +10,7 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
   const [amount, setAmount] = useState("")
@@ -92,10 +93,43 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
       })
 
       try {
-        await userAPI.verifyWalletTopupPayment({
-          cashfreeOrderId: cashfree.orderId,
-          amount: amountNum
-        })
+        let verifyResponse = null
+        let lastPendingMessage = ""
+
+        for (let attempt = 1; attempt <= 6; attempt += 1) {
+          try {
+            verifyResponse = await userAPI.verifyWalletTopupPayment({
+              cashfreeOrderId: cashfree.orderId,
+              amount: amountNum
+            })
+          } catch (verifyError) {
+            const isPendingVerification =
+              verifyError?.response?.status === 202 ||
+              verifyError?.response?.data?.pending === true
+
+            if (isPendingVerification && attempt < 6) {
+              lastPendingMessage =
+                verifyError?.response?.data?.message || "Payment confirmation is pending"
+              await wait(1800)
+              continue
+            }
+
+            throw verifyError
+          }
+
+          if (verifyResponse?.data?.success) {
+            break
+          }
+
+          if (attempt < 6) {
+            lastPendingMessage = verifyResponse?.data?.message || "Payment confirmation is pending"
+            await wait(1800)
+          }
+        }
+
+        if (!verifyResponse?.data?.success) {
+          throw new Error(lastPendingMessage || "Payment verification failed")
+        }
 
         toast.success(`₹${amountNum} added to wallet successfully!`)
         setAmount("")
@@ -107,7 +141,22 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         }
       } catch (error) {
         debugError("Payment verification error:", error)
-        toast.error(error?.response?.data?.message || "Payment verification failed. Please contact support.")
+        const pendingVerification =
+          error?.response?.status === 202 ||
+          error?.response?.data?.pending === true
+
+        if (pendingVerification) {
+          toast.success("Payment is processing. Your wallet balance should update shortly.")
+          setAmount("")
+          setProcessing(false)
+
+          if (onSuccess) {
+            onSuccess()
+          }
+          return
+        }
+
+        toast.error(error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support.")
         setProcessing(false)
       }
     } catch (error) {

@@ -494,16 +494,16 @@ export default function OrdersTable({
                                           (order.status === "cancelled" && (order.cancelledBy === "user" || order.cancelledBy === "restaurant"));
                         
                         // Check if payment type is Online or Wallet (not Cash on Delivery)
-                        const paymentMethod = order.payment?.method || order.paymentMethod;
+                        const paymentMethod = String(order.payment?.method || order.paymentMethod || "").toLowerCase();
                         const isOnlinePayment = order.paymentType === "Online" ||
                                               (order.paymentType !== "Cash on Delivery" && 
-                                               order.payment?.method !== "cash" && 
-                                               order.payment?.method !== "cod" &&
-                                               (order.paymentMethod === "razorpay" || 
-                                                order.paymentMethod === "online" || 
-                                                order.payment?.paymentMethod === "razorpay" || 
-                                                order.payment?.method === "razorpay" ||
-                                                order.payment?.method === "online"));
+                                               paymentMethod !== "cash" && 
+                                               paymentMethod !== "cod" &&
+                                               (paymentMethod === "razorpay" || 
+                                                paymentMethod === "cashfree" || 
+                                                paymentMethod === "online" ||
+                                                paymentMethod === "upi" ||
+                                                paymentMethod === "card"));
                         
                         const isWalletPayment = order.paymentType === "Wallet" || paymentMethod === "wallet";
                         
@@ -530,7 +530,9 @@ export default function OrdersTable({
                               }`}
                               title={order.paymentType === "Wallet" || order.payment?.method === "wallet"
                                 ? "Process Wallet Refund (Add to user wallet)"
-                                : "Process Refund via Razorpay"}
+                                : paymentMethod === "cashfree" || paymentMethod === "online"
+                                  ? "Process Refund via Cashfree"
+                                  : "Process Online Refund"}
                             >
                               <span className="text-sm">₹</span>
                               <span>Refund</span>

@@ -788,7 +788,12 @@ export default function OrdersPage({ statusKey = "all" }) {
 
   // Handle refund button click - show modal for wallet payments, confirm dialog for others
   const handleRefund = (order) => {
-    const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
+    const paymentMethod = String(order.payment?.method || order.paymentMethod || "").toLowerCase()
+    const isWalletPayment = order.paymentType === "Wallet" || paymentMethod === "wallet";
+    const isCashfreePayment =
+      paymentMethod === "cashfree" ||
+      paymentMethod === "online" ||
+      order.paymentType === "Online"
     
     if (isWalletPayment) {
       // Show modal for wallet refunds
@@ -796,7 +801,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       setRefundModalOpen(true)
     } else {
       // For non-wallet payments, use the old confirm dialog flow
-      const confirmMessage = `Are you sure you want to process refund for order ${order.orderId}?\n\nThis will initiate a Razorpay refund to the customer's original payment method.`;
+      const confirmMessage = `Are you sure you want to process refund for order ${order.orderId}?\n\nThis will initiate a ${isCashfreePayment ? "Cashfree" : "payment gateway"} refund to the customer's original payment method.`;
       
       if (!confirm(confirmMessage)) {
         return
@@ -845,7 +850,12 @@ export default function OrdersPage({ statusKey = "all" }) {
       const response = await adminAPI.processRefund(orderIdToUse, requestData)
       
       if (response.data?.success) {
-        const isWalletPayment = order.paymentType === "Wallet" || order.payment?.method === "wallet";
+        const paymentMethod = String(order.payment?.method || order.paymentMethod || "").toLowerCase()
+        const isWalletPayment = order.paymentType === "Wallet" || paymentMethod === "wallet";
+        const isCashfreePayment =
+          paymentMethod === "cashfree" ||
+          paymentMethod === "online" ||
+          order.paymentType === "Online"
         toast.success(response.data?.message || (isWalletPayment 
           ? `Wallet refund of ₹${refundAmount || order.totalAmount} processed successfully for order ${order.orderId}`
           : `Refund initiated successfully for order ${order.orderId}`))
@@ -853,7 +863,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         setOrders(prevOrders => 
           prevOrders.map(o => 
             (o.id === order.id || o.orderId === order.orderId)
-              ? { ...o, refundStatus: 'processed' } // Wallet refunds are instant, so mark as processed
+              ? { ...o, refundStatus: isWalletPayment ? 'processed' : 'initiated' }
               : o
           )
         )
