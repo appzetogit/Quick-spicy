@@ -108,6 +108,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
   const [draftFilters, setDraftFilters] = useState(defaultFilters)
   const [visibleColumns, setVisibleColumns] = useState({
     si: true,
+    zone: true,
     orderId: true,
     orderDate: true,
     orderOtp: true,
@@ -330,6 +331,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       const deliveryPartnerPhone = formatDisplayText(
         order.deliveryPartnerPhone || order.deliveryBoyNumber || order.deliveryPartnerId?.phone,
       )
+      const zoneName = formatDisplayText(order.zoneName, "Not assigned")
       const orderStatus = formatDisplayText(order.orderStatus || order.status)
       const paymentStatus = formatDisplayText(
         order.paymentStatus
@@ -429,6 +431,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       ])
       const restaurantCardHeight = drawInfoCard("Restaurant", 76, 53, 58, [
         { label: "Name", value: restaurantName },
+        { label: "Zone", value: zoneName },
         { label: "Delivery", value: deliveryType },
         { label: "Items", value: `${itemCount} item${itemCount === 1 ? "" : "s"}` },
       ], [37, 99, 235])
@@ -568,6 +571,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
   const resetColumns = () => {
     setVisibleColumns({
       si: true,
+      zone: true,
       orderId: true,
       orderDate: true,
       orderOtp: true,
@@ -592,6 +596,8 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
     isViewOrderOpen,
     setIsViewOrderOpen,
     selectedOrder,
+    appliedFilters: filters,
+    setAppliedFilters: setFilters,
     filters: draftFilters,
     setFilters: setDraftFilters,
     visibleColumns,

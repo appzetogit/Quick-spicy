@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
 import PageNavbar from "../components/PageNavbar"
+import LocationPrompt from "../components/LocationPrompt"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -1044,12 +1045,23 @@ export default function Home() {
     useZone(defaultSavedAddressLocation)
 
   const hasSavedAddress = Boolean(defaultSavedAddress && savedAddressText)
-  const shouldShowOutOfZoneHome =
+  const shouldUseLiveZoneStatus =
+    zoneSelection.mode !== "manual" &&
+    hasLiveLocation &&
+    !zoneLoading &&
+    !zoneError
+
+  const shouldUseSavedAddressZoneStatus =
+    zoneSelection.mode !== "manual" &&
+    !shouldUseLiveZoneStatus &&
     hasSavedAddress &&
     Boolean(defaultSavedAddressLocation) &&
     !savedAddressZoneLoading &&
-    !savedAddressZoneError &&
-    isSavedAddressOutOfService
+    !savedAddressZoneError
+
+  const shouldShowOutOfZoneHome =
+    (shouldUseLiveZoneStatus && isOutOfService) ||
+    (shouldUseSavedAddressZoneStatus && isSavedAddressOutOfService)
 
   // Mock points value - replace with actual points from context/store
   const userPoints = 99
@@ -1887,6 +1899,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-16 md:pb-6">
+      <LocationPrompt />
       {shouldShowOutOfZoneHome && (
         <div className="fixed inset-0 z-[90] pointer-events-none">
           <div className="absolute inset-0 bg-slate-300/35 backdrop-blur-[1px]" />

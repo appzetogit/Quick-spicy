@@ -168,14 +168,23 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Zone filter
     if (zone && zone !== 'All Zones') {
-      // Find zone by name
-      const Zone = (await import('../models/Zone.js')).default;
-      const zoneDoc = await Zone.findOne({
-        name: { $regex: zone, $options: 'i' }
-      }).select('_id name').lean();
+      const normalizedZone = String(zone).trim();
 
-      if (zoneDoc) {
-        query['assignmentInfo.zoneId'] = zoneDoc._id?.toString();
+      if (mongoose.Types.ObjectId.isValid(normalizedZone)) {
+        query['assignmentInfo.zoneId'] = normalizedZone;
+      } else {
+        // Find zone by name
+        const Zone = (await import('../models/Zone.js')).default;
+        const zoneDoc = await Zone.findOne({
+          $or: [
+            { name: { $regex: normalizedZone, $options: 'i' } },
+            { zoneName: { $regex: normalizedZone, $options: 'i' } }
+          ]
+        }).select('_id name').lean();
+
+        if (zoneDoc) {
+          query['assignmentInfo.zoneId'] = zoneDoc._id?.toString();
+        }
       }
     }
 

@@ -34,6 +34,8 @@ const generateDropDeliveryOtp = () => {
   return String(Math.floor(1000 + Math.random() * 9000));
 };
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
   const normalized = { ...location };
@@ -1188,58 +1190,171 @@ export const verifyOrderPayment = async (req, res) => {
       });
     }
 
-    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    // Idempotent success path: if this order is already confirmed after Cashfree payment,
+    // return success instead of creating duplicate payment records or flipping status again.
+    if (
+      order.payment?.method === 'cashfree' &&
+      order.payment?.status === 'completed' &&
+      order.status === 'confirmed'
+    ) {
+      const existingPayment = await Payment.findOne({
+        orderId: order._id,
+        method: 'cashfree',
+        status: 'completed'
+      })
+        .sort({ completedAt: -1, createdAt: -1 })
+        .lean();
+
+      return res.json({
+        success: true,
+        data: {
+          order: {
+            id: order._id.toString(),
+            orderId: order.orderId,
+            status: order.status
+          },
+          payment: existingPayment ? {
+            id: existingPayment._id.toString(),
+            paymentId: existingPayment.paymentId,
+            status: existingPayment.status
+          } : {
+            id: null,
+            paymentId: order.payment?.cashfreePaymentId || null,
+            status: order.payment?.status || 'completed'
+          }
+        }
+      });
+    }
+
+    // Cashfree may take a moment to expose the payment as SUCCESS after checkout closes.
+    // Retry briefly before treating it as still pending.
+    let verification = null;
+    const verificationAttempts = 5;
+    for (let attempt = 1; attempt <= verificationAttempts; attempt += 1) {
+      verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+      if (verification?.isPaid && verification?.payment) {
+        break;
+      }
+      if (attempt < verificationAttempts) {
+        await wait(1500);
+      }
+    }
+
     if (!verification?.isPaid || !verification?.payment) {
-      // Update order payment status to failed
-      order.payment.status = 'failed';
+      const cashfreeOrderStatus = verification?.order?.order_status || null;
+      const latestPaymentStatus = verification?.payment?.payment_status || null;
+      const normalizedOrderStatus = String(cashfreeOrderStatus || '').toUpperCase();
+      const normalizedPaymentStatus = String(latestPaymentStatus || '').toUpperCase();
+      const isDefinitelyFailed =
+        normalizedOrderStatus === 'FAILED' ||
+        normalizedPaymentStatus === 'FAILED' ||
+        normalizedPaymentStatus === 'USER_DROPPED' ||
+        normalizedPaymentStatus === 'CANCELLED';
+
+      order.payment.method = 'cashfree';
+      order.payment.cashfreeOrderId = cashfreeOrderId;
+      order.payment.cashfreeOrderStatus = cashfreeOrderStatus;
+      order.payment.cashfreePaymentStatus = latestPaymentStatus;
+      order.payment.status = isDefinitelyFailed ? 'failed' : 'pending';
       await order.save();
 
-      return res.status(400).json({
+      return res.status(isDefinitelyFailed ? 400 : 202).json({
         success: false,
-        message: 'Payment verification failed'
+        pending: !isDefinitelyFailed,
+        message: isDefinitelyFailed
+          ? 'Online payment failed or was cancelled'
+          : 'Payment confirmation is still pending. Please wait a moment and try again.',
+        data: {
+          order: {
+            id: order._id.toString(),
+            orderId: order.orderId,
+            status: order.status,
+            paymentStatus: order.payment.status
+          },
+          cashfree: {
+            orderId: cashfreeOrderId,
+            orderStatus: cashfreeOrderStatus,
+            paymentStatus: latestPaymentStatus
+          }
+        }
       });
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
 
-    // Create payment record
-    const payment = new Payment({
-      paymentId: `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    const existingCompletedPayment = await Payment.findOne({
       orderId: order._id,
-      userId,
-      amount: order.pricing.total,
-      currency: 'INR',
       method: 'cashfree',
-      status: 'completed',
-      cashfree: {
+      $or: [
+        { transactionId: cashfreePaymentId },
+        { 'cashfree.paymentId': cashfreePaymentId },
+        { 'cashfree.orderId': cashfreeOrderId }
+      ]
+    })
+      .sort({ completedAt: -1, createdAt: -1 });
+
+    let payment = existingCompletedPayment;
+
+    if (!payment) {
+      payment = new Payment({
+        paymentId: `PAY-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        orderId: order._id,
+        userId,
+        amount: order.pricing.total,
+        currency: 'INR',
+        method: 'cashfree',
+        status: 'completed',
+        cashfree: {
+          orderId: cashfreeOrderId,
+          paymentId: cashfreePaymentId,
+          paymentSessionId: order.payment?.cashfreePaymentSessionId || null,
+          orderStatus: verification.order?.order_status || null,
+          paymentStatus: verification.payment?.payment_status || null,
+          notes: {
+            orderId: order.orderId
+          }
+        },
+        transactionId: cashfreePaymentId,
+        gatewayResponse: {
+          order: verification.order,
+          payment: verification.payment
+        },
+        completedAt: new Date(),
+        logs: [{
+          action: 'completed',
+          timestamp: new Date(),
+          details: {
+            cashfreeOrderId,
+            cashfreePaymentId
+          },
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent')
+        }]
+      });
+
+      await payment.save();
+    } else {
+      payment.status = 'completed';
+      payment.cashfree = {
+        ...(payment.cashfree || {}),
         orderId: cashfreeOrderId,
         paymentId: cashfreePaymentId,
-        paymentSessionId: order.payment?.cashfreePaymentSessionId || null,
+        paymentSessionId: order.payment?.cashfreePaymentSessionId || payment.cashfree?.paymentSessionId || null,
         orderStatus: verification.order?.order_status || null,
         paymentStatus: verification.payment?.payment_status || null,
         notes: {
+          ...(payment.cashfree?.notes || {}),
           orderId: order.orderId
         }
-      },
-      transactionId: cashfreePaymentId,
-      gatewayResponse: {
+      };
+      payment.transactionId = cashfreePaymentId;
+      payment.gatewayResponse = {
         order: verification.order,
         payment: verification.payment
-      },
-      completedAt: new Date(),
-      logs: [{
-        action: 'completed',
-        timestamp: new Date(),
-        details: {
-          cashfreeOrderId,
-          cashfreePaymentId
-        },
-        ipAddress: req.ip,
-        userAgent: req.get('user-agent')
-      }]
-    });
-
-    await payment.save();
+      };
+      payment.completedAt = payment.completedAt || new Date();
+      await payment.save();
+    }
 
     // Update order status
     order.payment.status = 'completed';

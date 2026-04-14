@@ -332,6 +332,37 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }, [])
 
+  const normalizedOrders = useMemo(() => orders, [orders])
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    isFilterOpen,
+    setIsFilterOpen,
+    isSettingsOpen,
+    setIsSettingsOpen,
+    isViewOrderOpen,
+    setIsViewOrderOpen,
+    selectedOrder,
+    filters,
+    setFilters,
+    appliedFilters,
+    setAppliedFilters,
+    visibleColumns,
+    filteredOrders,
+    count,
+    activeFiltersCount,
+    restaurants,
+    zones: orderZoneOptions,
+    handleApplyFilters,
+    handleResetFilters,
+    handleExport,
+    handleViewOrder,
+    handlePrintOrder,
+    toggleColumn,
+    resetColumns,
+  } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones)
+
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
 
@@ -341,6 +372,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         page: 1,
         limit: 1000,
         _t: Date.now(),
+        zone: appliedFilters.zone || undefined,
         status:
           statusKey === "all"
             ? undefined
@@ -408,7 +440,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       if (!silent) setIsLoading(false)
     }
-  }, [statusKey, playDefaultRing, showBrowserNotification, startAlertLoop])
+  }, [statusKey, appliedFilters.zone, playDefaultRing, showBrowserNotification, startAlertLoop])
 
   useEffect(() => {
     isFirstLoadRef.current = true
@@ -893,35 +925,6 @@ export default function OrdersPage({ statusKey = "all" }) {
     }
   }
 
-  const normalizedOrders = useMemo(() => orders, [orders])
-
-  const {
-    searchQuery,
-    setSearchQuery,
-    isFilterOpen,
-    setIsFilterOpen,
-    isSettingsOpen,
-    setIsSettingsOpen,
-    isViewOrderOpen,
-    setIsViewOrderOpen,
-    selectedOrder,
-    filters,
-    setFilters,
-    visibleColumns,
-    filteredOrders,
-    count,
-    activeFiltersCount,
-    restaurants,
-    zones: orderZoneOptions,
-    handleApplyFilters,
-    handleResetFilters,
-    handleExport,
-    handleViewOrder,
-    handlePrintOrder,
-    toggleColumn,
-    resetColumns,
-  } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones)
-
   if (isLoading) {
     return (
       <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center">
@@ -945,6 +948,32 @@ export default function OrdersPage({ statusKey = "all" }) {
         onExport={handleExport}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
+      <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Zone Filter</p>
+            <p className="text-xs text-slate-500">Choose a zone to show only orders from that area.</p>
+          </div>
+          <div className="w-full sm:w-72">
+            <select
+              value={appliedFilters.zone || ""}
+              onChange={(e) => {
+                const nextZone = e.target.value
+                setAppliedFilters((prev) => ({ ...prev, zone: nextZone }))
+                setFilters((prev) => ({ ...prev, zone: nextZone }))
+              }}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Zones</option>
+              {orderZoneOptions.map((zone) => (
+                <option key={zone.id} value={zone.id}>
+                  {zone.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
       {statusKey === "all" && (
         <div className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-end">

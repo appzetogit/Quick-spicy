@@ -94,6 +94,8 @@ const normalizeFrontendPaymentMethod = (value) => {
   return "cash"
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export default function Cart() {
   const navigate = useNavigate()
   const orderSuccessAudioRef = useRef(null)
@@ -1619,14 +1621,42 @@ export default function Cart() {
       })
 
       try {
-        const verifyResponse = await orderAPI.verifyPayment({
-          orderId: order.id,
-          cashfreeOrderId: cashfree.orderId
-        })
+        let verifyResponse = null
+        let lastPendingMessage = ""
 
-        debugLog("✅ Payment verification response:", verifyResponse.data)
+        for (let attempt = 1; attempt <= 6; attempt += 1) {
+          try {
+            verifyResponse = await orderAPI.verifyPayment({
+              orderId: order.id,
+              cashfreeOrderId: cashfree.orderId
+            })
+          } catch (verifyError) {
+            const isPendingVerification =
+              verifyError?.response?.status === 202 ||
+              verifyError?.response?.data?.pending === true
 
-        if (verifyResponse.data.success) {
+            if (isPendingVerification && attempt < 6) {
+              lastPendingMessage = verifyError?.response?.data?.message || "Payment confirmation is pending"
+              await wait(1800)
+              continue
+            }
+
+            throw verifyError
+          }
+
+          if (verifyResponse?.data?.success) {
+            break
+          }
+
+          if (attempt < 6) {
+            lastPendingMessage = verifyResponse?.data?.message || "Payment confirmation is pending"
+            await wait(1800)
+          }
+        }
+
+        debugLog("✅ Payment verification response:", verifyResponse?.data)
+
+        if (verifyResponse?.data?.success) {
           debugLog("🎉 Order placed successfully:", {
             orderId: order.orderId,
             paymentId: verifyResponse.data.data?.payment?.paymentId
@@ -1636,12 +1666,26 @@ export default function Cart() {
           clearCart()
           setIsPlacingOrder(false)
         } else {
-          throw new Error(verifyResponse.data.message || "Payment verification failed")
+          throw new Error(lastPendingMessage || verifyResponse?.data?.message || "Payment verification failed")
         }
       } catch (error) {
         debugError("❌ Payment verification error:", error)
-        const errorMessage = error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
+        const pendingVerification =
+          error?.response?.status === 202 ||
+          error?.response?.data?.pending === true
+
+        const errorMessage = pendingVerification
+          ? "Payment is processing. Your order has been created and should appear in My Orders shortly."
+          : error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
+
         alert(errorMessage)
+
+        if (pendingVerification) {
+          setPlacedOrderId(order?.orderId || order?.id || null)
+          clearCart()
+          setShowOrderSuccess(true)
+        }
+
         setIsPlacingOrder(false)
       }
     } catch (error) {
