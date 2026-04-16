@@ -1067,6 +1067,9 @@ export const createOrder = async (req, res) => {
             customerEmail: userCustomer.email || 'customer@example.com',
             customerPhone: userCustomer.phone || ''
           },
+          orderMeta: {
+            payment_methods: 'upi,cc,dc,nb,wallet'
+          },
           orderNote: `Order ${order.orderId}`,
           orderTags: {
             orderId: order.orderId,

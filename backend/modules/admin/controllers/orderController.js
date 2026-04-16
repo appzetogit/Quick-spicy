@@ -27,6 +27,43 @@ function normalizeLocation(location) {
   };
 }
 
+function buildRestaurantLookupKeys(restaurant) {
+  if (!restaurant || typeof restaurant !== 'object') return [];
+
+  return [
+    restaurant._id?.toString?.(),
+    restaurant.restaurantId,
+    restaurant.name,
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function getRestaurantFromMaps(order, restaurantMaps) {
+  const restaurantRef = order?.restaurantId;
+  if (restaurantRef && typeof restaurantRef === 'object') {
+    return restaurantRef;
+  }
+
+  const candidates = [
+    restaurantRef,
+    order?.restaurantId,
+    order?.restaurantName,
+  ]
+    .map((value) => String(value || '').trim())
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    const directMatch = restaurantMaps.byKey.get(candidate);
+    if (directMatch) return directMatch;
+
+    const nameMatch = restaurantMaps.byName.get(candidate.toLowerCase());
+    if (nameMatch) return nameMatch;
+  }
+
+  return null;
+}
+
 function buildUnpaidOnlinePlaceholderCondition() {
   return {
     'payment.method': { $in: ONLINE_PAYMENT_METHODS },
@@ -271,7 +308,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Fetch orders with population
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
-      .populate('restaurantId', 'name slug')
+      .populate('restaurantId', 'name slug location address phone restaurantId')
       .populate('deliveryPartnerId', 'name phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
@@ -282,6 +319,71 @@ export const getOrders = asyncHandler(async (req, res) => {
     // This covers cases where realtime event delivery was missed.
     if (!status || status === 'all') {
       void sendAdminOrderSmsAlertsFromOrders(orders);
+    }
+
+    const restaurantMaps = {
+      byKey: new Map(),
+      byName: new Map(),
+    };
+
+    try {
+      const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
+      const restaurantIds = new Set();
+      const restaurantObjectIds = new Set();
+      const restaurantNames = new Set();
+
+      orders.forEach((order) => {
+        const restaurantRef = order?.restaurantId;
+
+        if (restaurantRef && typeof restaurantRef === 'object') {
+          buildRestaurantLookupKeys(restaurantRef).forEach((key) => {
+            restaurantMaps.byKey.set(key, restaurantRef);
+          });
+          if (restaurantRef.name) {
+            restaurantMaps.byName.set(String(restaurantRef.name).trim().toLowerCase(), restaurantRef);
+          }
+          return;
+        }
+
+        const restaurantIdValue = String(restaurantRef || '').trim();
+        if (restaurantIdValue) {
+          restaurantIds.add(restaurantIdValue);
+          if (mongoose.Types.ObjectId.isValid(restaurantIdValue)) {
+            restaurantObjectIds.add(restaurantIdValue);
+          }
+        }
+
+        const restaurantName = String(order?.restaurantName || '').trim();
+        if (restaurantName) restaurantNames.add(restaurantName);
+      });
+
+      const restaurantLookupConditions = [];
+      if (restaurantObjectIds.size > 0) {
+        restaurantLookupConditions.push({ _id: { $in: [...restaurantObjectIds] } });
+      }
+      if (restaurantIds.size > 0) {
+        restaurantLookupConditions.push({ restaurantId: { $in: [...restaurantIds] } });
+      }
+      if (restaurantNames.size > 0) {
+        restaurantLookupConditions.push({ name: { $in: [...restaurantNames] } });
+      }
+
+      if (restaurantLookupConditions.length > 0) {
+        const restaurants = await Restaurant.find({ $or: restaurantLookupConditions })
+          .select('name slug location address phone restaurantId')
+          .lean();
+
+        restaurants.forEach((restaurant) => {
+          buildRestaurantLookupKeys(restaurant).forEach((key) => {
+            restaurantMaps.byKey.set(key, restaurant);
+          });
+          if (restaurant.name) {
+            restaurantMaps.byName.set(String(restaurant.name).trim().toLowerCase(), restaurant);
+          }
+        });
+      }
+    } catch (err) {
+      console.warn('Could not batch fetch restaurant locations for orders:', err.message);
     }
 
     // Get total count
@@ -314,6 +416,7 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Transform orders to match frontend format
     const transformedOrders = orders.map((order, index) => {
+      const restaurantDoc = getRestaurantFromMaps(order, restaurantMaps);
       const orderDate = new Date(order.createdAt);
       const dateStr = orderDate.toLocaleDateString('en-GB', { 
         day: '2-digit', 
@@ -423,13 +526,21 @@ export const getOrders = asyncHandler(async (req, res) => {
         customerName: order.userId?.name || 'Unknown',
         customerPhone: customerPhone,
         customerEmail: order.userId?.email || '',
-        restaurant: order.restaurantName || order.restaurantId?.name || 'Unknown Restaurant',
-        restaurantId: order.restaurantId?.toString() || order.restaurantId || '',
-        restaurantAddress: order.restaurantId?.location?.formattedAddress
+        restaurant: order.restaurantName || restaurantDoc?.name || order.restaurantId?.name || 'Unknown Restaurant',
+        restaurantId: restaurantDoc?._id?.toString?.()
+          || restaurantDoc?.restaurantId
+          || (typeof order.restaurantId === 'object'
+            ? order.restaurantId?._id?.toString?.()
+            : order.restaurantId?.toString?.())
+          || '',
+        restaurantAddress: restaurantDoc?.location?.formattedAddress
+          || restaurantDoc?.location?.address
+          || restaurantDoc?.address
+          || order.restaurantId?.location?.formattedAddress
           || order.restaurantId?.location?.address
           || order.restaurantId?.address
           || '',
-        restaurantLocation: normalizeLocation(order.restaurantId?.location),
+        restaurantLocation: normalizeLocation(restaurantDoc?.location || order.restaurantId?.location),
         // Report-specific fields
         totalItemAmount: totalItemAmount,
         itemDiscount: itemDiscount,

@@ -6,9 +6,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+const debugLog = () => {}
+const debugError = () => {}
 
 const calculateDistanceInKm = (lat1, lng1, lat2, lng2) => {
   const R = 6371
@@ -25,15 +24,22 @@ const calculateDistanceInKm = (lat1, lng1, lat2, lng2) => {
 const extractCoordinates = (location) => {
   if (!location || typeof location !== "object") return null
 
+  if (location.location && typeof location.location === "object") {
+    const nestedCoordinates = extractCoordinates(location.location)
+    if (nestedCoordinates) return nestedCoordinates
+  }
+
   if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
     const [lng, lat] = location.coordinates
-    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)) {
       return { lat: Number(lat), lng: Number(lng) }
     }
   }
 
-  if (Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
-    return { lat: Number(location.latitude), lng: Number(location.longitude) }
+  const lat = location.latitude ?? location.lat
+  const lng = location.longitude ?? location.lng
+  if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)) {
+    return { lat: Number(lat), lng: Number(lng) }
   }
 
   return null

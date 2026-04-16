@@ -4,15 +4,22 @@ import { Eye, Download, ArrowUpDown, Loader2, Check, X, Trash2 } from "lucide-re
 const extractCoordinates = (location) => {
   if (!location || typeof location !== "object") return null
 
+  if (location.location && typeof location.location === "object") {
+    const nestedCoordinates = extractCoordinates(location.location)
+    if (nestedCoordinates) return nestedCoordinates
+  }
+
   if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
     const [lng, lat] = location.coordinates
-    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)) {
       return { lat: Number(lat), lng: Number(lng) }
     }
   }
 
-  if (Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
-    return { lat: Number(location.latitude), lng: Number(location.longitude) }
+  const lat = location.latitude ?? location.lat
+  const lng = location.longitude ?? location.lng
+  if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng)) && !(Number(lat) === 0 && Number(lng) === 0)) {
+    return { lat: Number(lat), lng: Number(lng) }
   }
 
   return null
@@ -128,7 +135,8 @@ export default function OrdersTable({
   
   // Reset to page 1 when orders change
   useEffect(() => {
-    setCurrentPage(1)
+    const resetPageTimer = window.setTimeout(() => setCurrentPage(1), 0)
+    return () => window.clearTimeout(resetPageTimer)
   }, [orders.length])
   
   const paginatedOrders = useMemo(() => {
@@ -145,7 +153,9 @@ export default function OrdersTable({
   const getOrderDistance = (order) => {
     const restaurantCoords = extractCoordinates(order.restaurantLocation)
     const customerCoords = extractCoordinates(order.address?.location)
-    if (!restaurantCoords || !customerCoords) return "--"
+    if (!restaurantCoords || !customerCoords) {
+      return order.distance || order.deliveryDistance || "--"
+    }
 
     return formatDistance(
       calculateDistanceInKm(
@@ -219,6 +229,14 @@ export default function OrdersTable({
                   </div>
                 </th>
               )}
+              {visibleColumns.distance && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span>Distance</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                  </div>
+                </th>
+              )}
               {visibleColumns.customer && (
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
@@ -231,14 +249,6 @@ export default function OrdersTable({
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Restaurant</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
-                  </div>
-                </th>
-              )}
-              {visibleColumns.distance && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">
-                  <div className="flex items-center gap-2">
-                    <span>Distance</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
                   </div>
                 </th>
@@ -330,6 +340,11 @@ export default function OrdersTable({
                     </span>
                   </td>
                 )}
+                {visibleColumns.distance && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-medium text-slate-700">{getOrderDistance(order)}</span>
+                  </td>
+                )}
                 {visibleColumns.customer && (
                   <td className="px-6 py-4">
                     <div className="flex flex-col">
@@ -341,11 +356,6 @@ export default function OrdersTable({
                 {visibleColumns.restaurant && (
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-medium text-slate-700">{formatRestaurantName(order.restaurant)}</span>
-                  </td>
-                )}
-                {visibleColumns.distance && (
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm font-medium text-slate-700">{getOrderDistance(order)}</span>
                   </td>
                 )}
                 {visibleColumns.foodItems && (
@@ -593,7 +603,7 @@ export default function OrdersTable({
                               }`}
                               title={order.paymentType === "Wallet" || order.payment?.method === "wallet"
                                 ? "Process Wallet Refund (Add to user wallet)"
-                                : paymentMethod === "cashfree" || paymentMethod === "online"
+                                : ["cashfree", "online"].includes(String(order.payment?.method || order.paymentMethod || "").toLowerCase())
                                   ? "Process Refund via Cashfree"
                                   : "Process Online Refund"}
                             >
