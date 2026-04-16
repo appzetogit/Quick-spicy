@@ -31,6 +31,22 @@ const logger = winston.createLogger({
   ],
 });
 
+const normalizeSpecialDishes = (value) => {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((dish) => ({
+      name: String(dish?.name || "").trim(),
+      price: Number(dish?.price),
+    }))
+    .filter(
+      (dish) =>
+        dish.name &&
+        Number.isFinite(dish.price) &&
+        dish.price > 0,
+    );
+};
+
 const attachMappedZoneToRestaurant = async (restaurantDoc) => {
   if (!restaurantDoc?._id) return restaurantDoc;
 
@@ -1967,16 +1983,56 @@ export const updateRestaurant = asyncHandler(async (req, res) => {
         restaurant.estimatedDeliveryTime;
     }
 
+    if (payload.specialDishes !== undefined) {
+      const specialDishes = normalizeSpecialDishes(payload.specialDishes);
+      restaurant.specialDishes = specialDishes;
+      ensureOnboarding();
+      restaurant.onboarding.step4.specialDishes = specialDishes;
+
+      const primaryDish = specialDishes[0];
+      restaurant.featuredDish = primaryDish?.name || "";
+      restaurant.featuredPrice = primaryDish?.price || 249;
+      restaurant.onboarding.step4.featuredDish = restaurant.featuredDish;
+      restaurant.onboarding.step4.featuredPrice = restaurant.featuredPrice;
+    }
+
     if (payload.featuredDish !== undefined) {
       restaurant.featuredDish = String(payload.featuredDish || "").trim();
       ensureOnboarding();
       restaurant.onboarding.step4.featuredDish = restaurant.featuredDish;
+      if (payload.specialDishes === undefined) {
+        const existingSpecialDishes = Array.isArray(restaurant.specialDishes)
+          ? [...restaurant.specialDishes]
+          : [];
+        const firstPrice =
+          Number.isFinite(Number(existingSpecialDishes[0]?.price))
+            ? Number(existingSpecialDishes[0].price)
+            : Number.isFinite(Number(restaurant.featuredPrice))
+              ? Number(restaurant.featuredPrice)
+              : 249;
+
+        restaurant.specialDishes = restaurant.featuredDish
+          ? [{ name: restaurant.featuredDish, price: firstPrice }, ...existingSpecialDishes.slice(1)]
+          : [];
+        restaurant.onboarding.step4.specialDishes = restaurant.specialDishes;
+      }
     }
 
     if (payload.featuredPrice !== undefined) {
       const featuredPrice = Number(payload.featuredPrice);
       if (Number.isFinite(featuredPrice)) {
         restaurant.featuredPrice = featuredPrice;
+        if (payload.specialDishes === undefined && restaurant.featuredDish) {
+          const existingSpecialDishes = Array.isArray(restaurant.specialDishes)
+            ? [...restaurant.specialDishes]
+            : [];
+          restaurant.specialDishes = [
+            { name: restaurant.featuredDish, price: featuredPrice },
+            ...existingSpecialDishes.slice(1),
+          ];
+          ensureOnboarding();
+          restaurant.onboarding.step4.specialDishes = restaurant.specialDishes;
+        }
       }
     }
 
@@ -2830,6 +2886,7 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       accountType,
       // Step 4: Display Info
       estimatedDeliveryTime,
+      specialDishes,
       featuredDish,
       featuredPrice,
       offer,
@@ -3006,6 +3063,13 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       }
     }
 
+    const normalizedSpecialDishes = normalizeSpecialDishes(specialDishes);
+    const primarySpecialDish = normalizedSpecialDishes[0] || null;
+    const resolvedFeaturedDish =
+      primarySpecialDish?.name || featuredDish || "";
+    const resolvedFeaturedPrice =
+      primarySpecialDish?.price || featuredPrice || 249;
+
     // Create restaurant data
     const restaurantData = {
       name: restaurantName,
@@ -3027,8 +3091,9 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       },
       openDays: openDays || ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
       estimatedDeliveryTime: estimatedDeliveryTime || "25-30 mins",
-      featuredDish: featuredDish || "",
-      featuredPrice: featuredPrice || 249,
+      featuredDish: resolvedFeaturedDish,
+      specialDishes: normalizedSpecialDishes,
+      featuredPrice: resolvedFeaturedPrice,
       offer: offer || "",
       signupMethod,
       // Admin created restaurants are active by default
@@ -3099,8 +3164,9 @@ export const createRestaurant = asyncHandler(async (req, res) => {
       },
       step4: {
         estimatedDeliveryTime: estimatedDeliveryTime || "25-30 mins",
-        featuredDish: featuredDish || "",
-        featuredPrice: featuredPrice || 249,
+        featuredDish: resolvedFeaturedDish,
+        specialDishes: normalizedSpecialDishes,
+        featuredPrice: resolvedFeaturedPrice,
         offer: offer || "",
       },
       completedSteps: 4,

@@ -1,6 +1,41 @@
 import { useState, useEffect, useMemo } from "react"
 import { Eye, Download, ArrowUpDown, Loader2, Check, X, Trash2 } from "lucide-react"
 
+const extractCoordinates = (location) => {
+  if (!location || typeof location !== "object") return null
+
+  if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    const [lng, lat] = location.coordinates
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+      return { lat: Number(lat), lng: Number(lng) }
+    }
+  }
+
+  if (Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
+    return { lat: Number(location.latitude), lng: Number(location.longitude) }
+  }
+
+  return null
+}
+
+const calculateDistanceInKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+const formatDistance = (distanceInKm) => {
+  if (!Number.isFinite(distanceInKm)) return "--"
+  if (distanceInKm >= 1) return `${distanceInKm.toFixed(2)} km`
+  return `${Math.round(distanceInKm * 1000)} m`
+}
+
 const getStatusColor = (orderStatus) => {
   const colors = {
     "Delivered": "bg-emerald-100 text-emerald-700",
@@ -107,6 +142,21 @@ export default function OrdersTable({
     return name
   }
 
+  const getOrderDistance = (order) => {
+    const restaurantCoords = extractCoordinates(order.restaurantLocation)
+    const customerCoords = extractCoordinates(order.address?.location)
+    if (!restaurantCoords || !customerCoords) return "--"
+
+    return formatDistance(
+      calculateDistanceInKm(
+        restaurantCoords.lat,
+        restaurantCoords.lng,
+        customerCoords.lat,
+        customerCoords.lng,
+      ),
+    )
+  }
+
   if (orders.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
@@ -181,6 +231,14 @@ export default function OrdersTable({
                 <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   <div className="flex items-center gap-2">
                     <span>Restaurant</span>
+                    <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
+                  </div>
+                </th>
+              )}
+              {visibleColumns.distance && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <span>Distance</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-400 cursor-pointer hover:text-slate-600" />
                   </div>
                 </th>
@@ -283,6 +341,11 @@ export default function OrdersTable({
                 {visibleColumns.restaurant && (
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="text-sm font-medium text-slate-700">{formatRestaurantName(order.restaurant)}</span>
+                  </td>
+                )}
+                {visibleColumns.distance && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="text-sm font-medium text-slate-700">{getOrderDistance(order)}</span>
                   </td>
                 )}
                 {visibleColumns.foodItems && (

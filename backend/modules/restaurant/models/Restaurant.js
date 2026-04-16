@@ -182,6 +182,22 @@ const restaurantSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    specialDishes: {
+      type: [
+        {
+          name: {
+            type: String,
+            trim: true,
+            default: "",
+          },
+          price: {
+            type: Number,
+            default: 0,
+          },
+        },
+      ],
+      default: [],
+    },
     featuredPrice: {
       type: Number,
       default: 249,
@@ -265,6 +281,12 @@ const restaurantSchema = new mongoose.Schema(
         distance: String,
         priceRange: String,
         featuredDish: String,
+        specialDishes: [
+          {
+            name: String,
+            price: Number,
+          },
+        ],
         featuredPrice: Number,
         offer: String,
       },

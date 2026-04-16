@@ -10,6 +10,41 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const calculateDistanceInKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371
+  const dLat = ((lat2 - lat1) * Math.PI) / 180
+  const dLng = ((lng2 - lng1) * Math.PI) / 180
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  return R * c
+}
+
+const extractCoordinates = (location) => {
+  if (!location || typeof location !== "object") return null
+
+  if (Array.isArray(location.coordinates) && location.coordinates.length >= 2) {
+    const [lng, lat] = location.coordinates
+    if (Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+      return { lat: Number(lat), lng: Number(lng) }
+    }
+  }
+
+  if (Number.isFinite(Number(location.latitude)) && Number.isFinite(Number(location.longitude))) {
+    return { lat: Number(location.latitude), lng: Number(location.longitude) }
+  }
+
+  return null
+}
+
+const formatDistance = (distanceInKm) => {
+  if (!Number.isFinite(distanceInKm)) return "N/A"
+  if (distanceInKm >= 1) return `${distanceInKm.toFixed(2)} km`
+  return `${Math.round(distanceInKm * 1000)} m`
+}
+
 
 const getStatusColor = (orderStatus) => {
   const colors = {
@@ -97,6 +132,18 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
     }
     return null
   }
+
+  const restaurantCoords = extractCoordinates(order.restaurantLocation)
+  const customerCoords = extractCoordinates(order.address?.location)
+  const restaurantToCustomerDistance =
+    restaurantCoords && customerCoords
+      ? calculateDistanceInKm(
+          restaurantCoords.lat,
+          restaurantCoords.lng,
+          customerCoords.lat,
+          customerCoords.lng,
+        )
+      : null
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -250,12 +297,49 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
           {order.restaurant && (
             <div className="border-t border-slate-200 pt-4">
               <h3 className="text-sm font-semibold text-slate-700 mb-4">Restaurant Information</h3>
-              <div className="space-y-1">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Restaurant Name</p>
-                <p className="text-sm font-medium text-slate-900">{order.restaurant}</p>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Restaurant Name</p>
+                  <p className="text-sm font-medium text-slate-900">{order.restaurant}</p>
+                </div>
+                {order.restaurantAddress && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Restaurant Address</p>
+                    <p className="text-sm text-slate-700">{order.restaurantAddress}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
+
+          <div className="border-t border-slate-200 pt-4">
+            <h3 className="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Restaurant to Customer Distance
+            </h3>
+            <div className="p-4 bg-orange-50 border border-orange-100 rounded-lg space-y-2">
+              <p className="text-2xl font-semibold text-orange-700">
+                {restaurantToCustomerDistance !== null
+                  ? formatDistance(restaurantToCustomerDistance)
+                  : "Distance not available"}
+              </p>
+              <p className="text-sm text-slate-600">
+                Straight-line distance between the restaurant location and the customer delivery address.
+              </p>
+              {restaurantCoords && customerCoords && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  <p className="text-xs text-slate-500">
+                    <span className="font-medium text-slate-700">Restaurant:</span>{" "}
+                    {restaurantCoords.lat.toFixed(6)}, {restaurantCoords.lng.toFixed(6)}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    <span className="font-medium text-slate-700">Customer:</span>{" "}
+                    {customerCoords.lat.toFixed(6)}, {customerCoords.lng.toFixed(6)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Order Items */}
           {order.items && Array.isArray(order.items) && order.items.length > 0 && (

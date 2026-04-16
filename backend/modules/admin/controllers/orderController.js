@@ -12,6 +12,21 @@ import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../de
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
 const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
 
+function normalizeLocation(location) {
+  if (!location || typeof location !== 'object') return null;
+
+  const coordinates = Array.isArray(location.coordinates) && location.coordinates.length >= 2
+    ? [Number(location.coordinates[0]), Number(location.coordinates[1])]
+    : null;
+
+  return {
+    ...location,
+    coordinates: coordinates && coordinates.every((value) => Number.isFinite(value))
+      ? coordinates
+      : location.coordinates,
+  };
+}
+
 function buildUnpaidOnlinePlaceholderCondition() {
   return {
     'payment.method': { $in: ONLINE_PAYMENT_METHODS },
@@ -410,6 +425,11 @@ export const getOrders = asyncHandler(async (req, res) => {
         customerEmail: order.userId?.email || '',
         restaurant: order.restaurantName || order.restaurantId?.name || 'Unknown Restaurant',
         restaurantId: order.restaurantId?.toString() || order.restaurantId || '',
+        restaurantAddress: order.restaurantId?.location?.formattedAddress
+          || order.restaurantId?.location?.address
+          || order.restaurantId?.address
+          || '',
+        restaurantLocation: normalizeLocation(order.restaurantId?.location),
         // Report-specific fields
         totalItemAmount: totalItemAmount,
         itemDiscount: itemDiscount,

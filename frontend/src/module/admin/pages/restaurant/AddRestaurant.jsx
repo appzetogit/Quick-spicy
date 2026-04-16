@@ -1,6 +1,6 @@
 ﻿import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2 } from "lucide-react"
+import { Building2, Info, Tag, Upload, Calendar, FileText, MapPin, CheckCircle2, X, Image as ImageIcon, Clock, Loader2, Plus, Trash2 } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -41,6 +41,8 @@ const sanitizeGst = (value = "") => value.toUpperCase().replace(/[^A-Z0-9]/g, ""
 const normalizeName = (value = "") => value.replace(/\s+/g, " ").trimStart()
 const hasLetters = (value = "") => /[A-Za-z]/.test(value)
 const getTodayLocalYMD = () => new Date().toISOString().split("T")[0]
+const createEmptySpecialDish = () => ({ name: "", price: "" })
+const sanitizeSpecialDishName = (value = "") => value.replace(/[^A-Za-z ]/g, "").replace(/\s+/g, " ").trimStart()
 const getStoredFileLabel = (value) => {
   if (!value) return ""
   if (value instanceof File) return value.name
@@ -114,8 +116,7 @@ export default function AddRestaurant() {
   // Step 4: Display Info
   const [step4, setStep4] = useState({
     estimatedDeliveryTime: "25-30 mins",
-    featuredDish: "",
-    featuredPrice: "249",
+    specialDishes: [createEmptySpecialDish()],
     offer: "",
     diningSettings: {
       isEnabled: false,
@@ -237,11 +238,15 @@ export default function AddRestaurant() {
   const validateStep4 = () => {
     const errors = []
     if (!step4.estimatedDeliveryTime?.trim()) errors.push("Estimated delivery time is required")
-    if (!step4.featuredDish?.trim()) errors.push("Featured dish name is required")
-    if (step4.featuredDish?.trim() && !FEATURED_DISH_NAME_REGEX.test(step4.featuredDish.trim())) errors.push("Featured dish name must contain only letters")
-    if (!step4.featuredPrice || !/^\d+$/.test(String(step4.featuredPrice)) || Number(step4.featuredPrice) <= 0) {
-      errors.push("Featured dish price is required and must be greater than 0")
-    }
+    const validSpecialDishes = (step4.specialDishes || []).filter((dish) => dish.name?.trim() || dish.price?.trim())
+    if (validSpecialDishes.length === 0) errors.push("At least one special dish is required")
+    validSpecialDishes.forEach((dish, index) => {
+      if (!dish.name?.trim()) errors.push(`Special dish ${index + 1} name is required`)
+      if (dish.name?.trim() && !FEATURED_DISH_NAME_REGEX.test(dish.name.trim())) errors.push(`Special dish ${index + 1} name must contain only letters`)
+      if (!dish.price || !/^\d+$/.test(String(dish.price)) || Number(dish.price) <= 0) {
+        errors.push(`Special dish ${index + 1} price must be greater than 0`)
+      }
+    })
     if (!step4.offer?.trim()) errors.push("Special offer/promotion is required")
     return errors
   }
@@ -362,8 +367,14 @@ export default function AddRestaurant() {
         accountType: step3.accountType,
         // Step 4
         estimatedDeliveryTime: step4.estimatedDeliveryTime,
-        featuredDish: step4.featuredDish,
-        featuredPrice: parseFloat(step4.featuredPrice) || 249,
+        specialDishes: (step4.specialDishes || [])
+          .map((dish) => ({
+            name: dish.name.trim(),
+            price: parseFloat(dish.price) || 0,
+          }))
+          .filter((dish) => dish.name && dish.price > 0),
+        featuredDish: step4.specialDishes?.[0]?.name?.trim() || "",
+        featuredPrice: parseFloat(step4.specialDishes?.[0]?.price) || 249,
         offer: step4.offer,
         // Auth
         email: auth.email || null,
@@ -804,13 +815,71 @@ export default function AddRestaurant() {
           <Label className="text-xs text-gray-700">Estimated Delivery Time*</Label>
           <Input value={step4.estimatedDeliveryTime || ""} onChange={(e) => setStep4({ ...step4, estimatedDeliveryTime: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., 25-30 mins" />
         </div>
-        <div>
-          <Label className="text-xs text-gray-700">Featured Dish Name*</Label>
-          <Input value={step4.featuredDish || ""} onChange={(e) => setStep4({ ...step4, featuredDish: e.target.value.replace(/[^A-Za-z ]/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., Butter Chicken Special" />
-        </div>
-        <div>
-          <Label className="text-xs text-gray-700">Featured Dish Price (₹)*</Label>
-          <Input type="text" inputMode="numeric" value={step4.featuredPrice || ""} onChange={(e) => setStep4({ ...step4, featuredPrice: e.target.value.replace(/\D/g, "") })} className="mt-1 bg-white text-sm" placeholder="e.g., 249" />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <Label className="text-xs text-gray-700">Special Dishes*</Label>
+              <p className="text-xs text-gray-500 mt-1">Add as many dishes as you want. The first one will be used as the main featured dish.</p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={() => setStep4({
+                ...step4,
+                specialDishes: [...(step4.specialDishes || []), createEmptySpecialDish()],
+              })}
+            >
+              <Plus className="w-4 h-4" />
+              Add Dish
+            </Button>
+          </div>
+          <div className="space-y-3">
+            {(step4.specialDishes || []).map((dish, index) => (
+              <div key={index} className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_140px_auto] gap-3 items-end rounded-md border border-gray-200 p-3">
+                <div>
+                  <Label className="text-xs text-gray-700">{index === 0 ? "Primary Featured Dish" : `Special Dish ${index + 1}`}</Label>
+                  <Input
+                    value={dish.name || ""}
+                    onChange={(e) => {
+                      const nextSpecialDishes = [...(step4.specialDishes || [])]
+                      nextSpecialDishes[index] = { ...dish, name: sanitizeSpecialDishName(e.target.value) }
+                      setStep4({ ...step4, specialDishes: nextSpecialDishes })
+                    }}
+                    className="mt-1 bg-white text-sm"
+                    placeholder="e.g., Butter Chicken Special"
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs text-gray-700">Price (₹)</Label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    value={dish.price || ""}
+                    onChange={(e) => {
+                      const nextSpecialDishes = [...(step4.specialDishes || [])]
+                      nextSpecialDishes[index] = { ...dish, price: e.target.value.replace(/\D/g, "") }
+                      setStep4({ ...step4, specialDishes: nextSpecialDishes })
+                    }}
+                    className="mt-1 bg-white text-sm"
+                    placeholder="249"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={(step4.specialDishes || []).length === 1}
+                  onClick={() => setStep4({
+                    ...step4,
+                    specialDishes: (step4.specialDishes || []).filter((_, dishIndex) => dishIndex !== index),
+                  })}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
         <div>
           <Label className="text-xs text-gray-700">Special Offer/Promotion*</Label>
