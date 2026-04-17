@@ -20,9 +20,14 @@ export default function ZoneSetup() {
   const fetchZones = async () => {
     try {
       setLoading(true)
-      const response = await adminAPI.getZones()
+      const response = await adminAPI.getZones({
+        limit: 500,
+        summary: "true",
+      })
       if (response.data?.success && response.data.data?.zones) {
         setZones(response.data.data.zones)
+      } else {
+        setZones([])
       }
     } catch (error) {
       debugError("Error fetching zones:", error)

@@ -14,7 +14,8 @@ export const getZones = asyncHandler(async (req, res) => {
       limit = 50,
       search,
       restaurantId,
-      isActive
+      isActive,
+      summary
     } = req.query;
 
     // Build query
@@ -37,21 +38,29 @@ export const getZones = asyncHandler(async (req, res) => {
       query.isActive = isActive === 'true';
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const parsedPage = Math.max(parseInt(page, 10) || 1, 1);
+    const parsedLimit = Math.max(parseInt(limit, 10) || 50, 1);
+    const skip = (parsedPage - 1) * parsedLimit;
+    const isSummaryMode = ['1', 'true', 'filters', 'dropdown'].includes(String(summary || '').toLowerCase());
 
-    // Fetch zones with restaurant details (if restaurantId exists)
-    const zones = await Zone.find(query)
-      .populate({
-        path: 'restaurantId',
-        select: 'name email phone',
-        match: { _id: { $exists: true } }
-      })
-      .populate('createdBy', 'name email')
+    let zonesQuery = Zone.find(query)
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(skip)
-      .lean();
+      .limit(parsedLimit)
+      .skip(skip);
+
+    if (isSummaryMode) {
+      zonesQuery = zonesQuery.select('_id name zoneName serviceLocation country isActive unit');
+    } else {
+      zonesQuery = zonesQuery
+        .populate({
+          path: 'restaurantId',
+          select: 'name email phone',
+          match: { _id: { $exists: true } }
+        })
+        .populate('createdBy', 'name email');
+    }
+
+    const zones = await zonesQuery.lean();
 
     // Get total count
     const total = await Zone.countDocuments(query);
@@ -59,10 +68,10 @@ export const getZones = asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Zones retrieved successfully', {
       zones,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / parsedLimit)
       }
     });
   } catch (error) {

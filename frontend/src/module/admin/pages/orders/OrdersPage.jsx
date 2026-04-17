@@ -462,10 +462,20 @@ export default function OrdersPage({ statusKey = "all" }) {
 
     const fetchZones = async () => {
       try {
-        const response = await adminAPI.getZones({ limit: 1000 })
+        const response = await adminAPI.getZones({
+          limit: 200,
+          isActive: true,
+          summary: "filters",
+        })
         const nextZones = response?.data?.data?.zones || response?.data?.zones || []
         if (mounted) {
-          setZones(Array.isArray(nextZones) ? nextZones : [])
+          const normalizedZones = Array.isArray(nextZones)
+            ? nextZones.map((zone) => ({
+                id: zone?._id || zone?.id || "",
+                name: zone?.name || zone?.zoneName || zone?.serviceLocation || "Unnamed Zone",
+              })).filter((zone) => zone.id && zone.name)
+            : []
+          setZones(normalizedZones)
         }
       } catch (error) {
         debugWarn("Failed to load order zone filters:", error)
