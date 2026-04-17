@@ -40,6 +40,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [orders, setOrders] = useState([])
   const [zones, setZones] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [loadError, setLoadError] = useState("")
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
   const [markingReadyOrderId, setMarkingReadyOrderId] = useState(null)
@@ -368,6 +369,7 @@ export default function OrdersPage({ statusKey = "all" }) {
 
     try {
       if (!silent) setIsLoading(true)
+      if (!silent) setLoadError("")
       const params = {
         page: 1,
         limit: 1000,
@@ -428,15 +430,21 @@ export default function OrdersPage({ statusKey = "all" }) {
         setOrders(nextOrders)
       } else {
         debugError("Failed to fetch orders:", response.data)
-        if (!silent) toast.error("Failed to fetch orders")
-        setOrders([])
+        const message = response.data?.message || "Failed to fetch orders"
+        if (!silent) {
+          setLoadError(message)
+          toast.error(message)
+          setOrders([])
+        }
       }
     } catch (error) {
       debugError("Error fetching orders:", error)
+      const message = error.response?.data?.message || "Failed to fetch orders"
       if (!silent) {
-        toast.error(error.response?.data?.message || "Failed to fetch orders")
+        setLoadError(message)
+        toast.error(message)
+        setOrders([])
       }
-      setOrders([])
     } finally {
       if (!silent) setIsLoading(false)
     }
@@ -524,7 +532,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   }
 
   useEffect(() => {
-    const pollIntervalMs = statusKey === "all" ? 1200 : 5000
+    const pollIntervalMs = statusKey === "all" ? 15000 : 30000
 
     const pollId = setInterval(() => {
       fetchOrders({ silent: true, withRingCheck: statusKey === "all" })
@@ -543,8 +551,8 @@ export default function OrdersPage({ statusKey = "all" }) {
 
     const socket = io(backendUrl, {
       path: "/socket.io/",
-      transports: ["polling", "websocket"],
-      upgrade: true,
+      transports: ["polling"],
+      upgrade: false,
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -941,6 +949,24 @@ export default function OrdersPage({ statusKey = "all" }) {
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
           <p className="text-gray-600">Loading orders...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center">
+        <div className="max-w-md rounded-xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+          <p className="text-lg font-semibold text-slate-900">Could not load orders</p>
+          <p className="mt-2 text-sm text-slate-600">{loadError}</p>
+          <button
+            type="button"
+            onClick={() => fetchOrders({ silent: false, withRingCheck: false })}
+            className="mt-4 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-800"
+          >
+            Retry
+          </button>
         </div>
       </div>
     )
