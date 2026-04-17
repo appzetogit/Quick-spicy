@@ -372,7 +372,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       if (!silent) setLoadError("")
       const params = {
         page: 1,
-        limit: 1000,
+        limit: 50,
         _t: Date.now(),
         zone: appliedFilters.zone || undefined,
         status:
