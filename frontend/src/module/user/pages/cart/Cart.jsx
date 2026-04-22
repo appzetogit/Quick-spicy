@@ -219,8 +219,8 @@ export default function Cart() {
   // Fee settings from database (used for platform fee and GST fallback only)
   const [feeSettings, setFeeSettings] = useState({
     deliveryFee: 25,
-    deliveryFeeRanges: [],
-    freeDeliveryThreshold: 149,
+    deliveryBaseDistanceKm: 2.5,
+    deliveryFeePerKm: 6,
     platformFee: 5,
     gstRate: 5,
   })
@@ -877,8 +877,8 @@ export default function Cart() {
         if (response.data.success && response.data.data.feeSettings) {
           setFeeSettings({
             deliveryFee: response.data.data.feeSettings.deliveryFee || 25,
-            deliveryFeeRanges: response.data.data.feeSettings.deliveryFeeRanges || [],
-            freeDeliveryThreshold: response.data.data.feeSettings.freeDeliveryThreshold || 149,
+            deliveryBaseDistanceKm: response.data.data.feeSettings.deliveryBaseDistanceKm || 2.5,
+            deliveryFeePerKm: response.data.data.feeSettings.deliveryFeePerKm || 6,
             platformFee: response.data.data.feeSettings.platformFee || 5,
             gstRate: response.data.data.feeSettings.gstRate || 5,
           })
@@ -910,39 +910,32 @@ export default function Cart() {
       return Number(feeSettings.deliveryFee || 0)
     }
 
-    const ranges = Array.isArray(feeSettings.deliveryFeeRanges) ? [...feeSettings.deliveryFeeRanges] : []
-    if (ranges.length > 0) {
-      const sortedRanges = ranges.sort((a, b) => Number(a.min) - Number(b.min))
-      for (let i = 0; i < sortedRanges.length; i += 1) {
-        const range = sortedRanges[i]
-        const min = Number(range.min)
-        const max = Number(range.max)
-        const fee = Number(range.fee)
-        const isLastRange = i === sortedRanges.length - 1
-        const inRange = isLastRange
-          ? subtotal >= min && subtotal <= max
-          : subtotal >= min && subtotal < max
-
-        if (inRange) return fee
-      }
-
-      return 0
-    }
-
-    if (subtotal >= feeSettings.freeDeliveryThreshold) {
-      return 0
-    }
-
     return Number(feeSettings.deliveryFee || 0)
   })()
   const deliveryFee = pricing?.deliveryFee ?? fallbackDeliveryFee
   const deliveryFeeBreakdown = pricing?.deliveryFeeBreakdown || null
+  const breakdownBaseDistanceKm = Number(
+    deliveryFeeBreakdown?.baseDistanceKm ?? feeSettings.deliveryBaseDistanceKm ?? 2.5
+  )
+  const breakdownBaseFee = Number(
+    deliveryFeeBreakdown?.basePayout ?? feeSettings.deliveryFee ?? 0
+  )
+  const breakdownPerKmFee = Number(
+    deliveryFeeBreakdown?.commissionPerKm ?? feeSettings.deliveryFeePerKm ?? 0
+  )
   const hasDistanceDeliveryBreakdown =
     deliveryFeeBreakdown?.source === "distance" &&
     Number.isFinite(Number(deliveryFeeBreakdown?.distanceKm))
+  const isBaseOnlyDeliveryBreakdown =
+    (deliveryFeeBreakdown?.source === "distance" || deliveryFeeBreakdown?.source === "base") &&
+    !hasDistanceDeliveryBreakdown
   const deliveryFeeBreakdownText = hasDistanceDeliveryBreakdown
-    ? `Distance ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ${RUPEE_SYMBOL}${Number(deliveryFeeBreakdown.basePayout || 0).toFixed(0)} base + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km x ${RUPEE_SYMBOL}${Number(deliveryFeeBreakdown.commissionPerKm || 0).toFixed(0)}`
-    : null
+    ? Number(deliveryFeeBreakdown.extraDistanceKm || 0) > 0
+      ? `Delivery charge for ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} for first ${breakdownBaseDistanceKm.toFixed(1)} km + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km x ${RUPEE_SYMBOL}${breakdownPerKmFee.toFixed(0)}`
+      : `Delivery charge for ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: fixed ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} up to ${breakdownBaseDistanceKm.toFixed(1)} km`
+    : isBaseOnlyDeliveryBreakdown
+      ? `Delivery charge: fixed ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} up to ${breakdownBaseDistanceKm.toFixed(1)} km, then ${RUPEE_SYMBOL}${breakdownPerKmFee.toFixed(0)} per extra km`
+      : `Delivery charge: fixed ${RUPEE_SYMBOL}${Number(feeSettings.deliveryFee || 0).toFixed(0)} up to ${Number(feeSettings.deliveryBaseDistanceKm || 2.5).toFixed(1)} km, then ${RUPEE_SYMBOL}${Number(feeSettings.deliveryFeePerKm || 0).toFixed(0)} per extra km`
   const platformFee = pricing?.platformFee || feeSettings.platformFee
   const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
   const tip = pricing?.tip ?? tipAmount
@@ -2360,7 +2353,7 @@ export default function Cart() {
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery partner fee</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery Charges</span>
                       <span className={deliveryFee === 0 ? "font-semibold text-[#EB590E] dark:text-[#EB590E]" : "font-semibold text-[#d9534f] dark:text-red-400"}>
                         {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${Number(deliveryFee).toFixed(2)}`}
                       </span>
@@ -2411,7 +2404,7 @@ export default function Cart() {
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery partner fee</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">Delivery Charges</span>
                       <span className={deliveryFee === 0 ? "font-semibold text-[#EB590E] dark:text-[#EB590E]" : "font-semibold text-[#d9534f] dark:text-red-400"}>
                         {deliveryFee === 0 ? "FREE" : `${RUPEE_SYMBOL}${Number(deliveryFee).toFixed(2)}`}
                       </span>

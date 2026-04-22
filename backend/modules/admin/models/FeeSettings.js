@@ -1,41 +1,30 @@
 import mongoose from 'mongoose';
 
-const deliveryFeeRangeSchema = new mongoose.Schema({
-  min: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  max: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-  fee: {
-    type: Number,
-    required: true,
-    min: 0,
-  },
-}, { _id: false });
-
 const feeSettingsSchema = new mongoose.Schema(
   {
     deliveryFee: {
       type: Number,
       default: 25,
       min: 0,
-      comment: 'Default delivery fee (used if no range matches)'
+      comment: 'Fixed delivery fee for the first 2.5 KM'
     },
-    deliveryFeeRanges: {
-      type: [deliveryFeeRangeSchema],
-      default: [],
-      comment: 'Delivery fee based on order value ranges'
+    deliveryBaseDistanceKm: {
+      type: Number,
+      default: 2.5,
+      min: 0,
+      comment: 'Distance covered by the fixed delivery fee'
+    },
+    deliveryFeePerKm: {
+      type: Number,
+      default: 6,
+      min: 0,
+      comment: 'Additional delivery fee charged per KM beyond the base distance'
     },
     freeDeliveryThreshold: {
       type: Number,
       default: 149,
       min: 0,
-      comment: 'Free delivery if order value is above this amount'
+      comment: 'Legacy field retained for backward compatibility'
     },
     platformFee: {
       type: Number,
@@ -46,7 +35,7 @@ const feeSettingsSchema = new mongoose.Schema(
     gstRate: {
       type: Number,
       required: [true, 'GST rate is required'],
-      default: 5, // 5% GST
+      default: 5,
       min: 0,
       max: 100,
       comment: 'GST rate in percentage (e.g., 5 for 5%)'
@@ -69,11 +58,9 @@ const feeSettingsSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
 feeSettingsSchema.index({ isActive: 1 });
 feeSettingsSchema.index({ createdAt: -1 });
 
 const FeeSettings = mongoose.model('FeeSettings', feeSettingsSchema);
 
 export default FeeSettings;
-

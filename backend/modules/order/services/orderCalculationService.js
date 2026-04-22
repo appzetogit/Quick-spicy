@@ -20,7 +20,8 @@ const getFeeSettings = async () => {
     // Return default values if no active settings found
     return {
       deliveryFee: 25,
-      freeDeliveryThreshold: 149,
+      deliveryBaseDistanceKm: 2.5,
+      deliveryFeePerKm: 6,
       platformFee: 5,
       gstRate: 5,
     };
@@ -29,7 +30,8 @@ const getFeeSettings = async () => {
     // Return default values on error
     return {
       deliveryFee: 25,
-      freeDeliveryThreshold: 149,
+      deliveryBaseDistanceKm: 2.5,
+      deliveryFeePerKm: 6,
       platformFee: 5,
       gstRate: 5,
     };
@@ -37,80 +39,49 @@ const getFeeSettings = async () => {
 };
 
 /**
- * Calculate delivery fee based on order value, distance, and restaurant settings
+ * Calculate delivery fee based on distance and fee settings
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
   const round2 = (value) => Math.round(Number(value || 0) * 100) / 100;
   const feeSettings = await getFeeSettings();
+  const baseDeliveryFee = Number(feeSettings.deliveryFee ?? 25);
+  const baseDistanceKm = Number(feeSettings.deliveryBaseDistanceKm ?? 2.5);
+  const additionalFeePerKm = Number(feeSettings.deliveryFeePerKm ?? 6);
+  const restaurantCoordinates = restaurant?.location?.coordinates;
+  const deliveryCoordinates = deliveryAddress?.location?.coordinates;
 
-  if (feeSettings.deliveryFeeRanges && Array.isArray(feeSettings.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0) {
-    const sortedRanges = [...feeSettings.deliveryFeeRanges].sort((a, b) => a.min - b.min);
+  if (
+    Array.isArray(restaurantCoordinates) &&
+    restaurantCoordinates.length >= 2 &&
+    Array.isArray(deliveryCoordinates) &&
+    deliveryCoordinates.length >= 2
+  ) {
+    const distanceKm = Math.max(0, calculateDistance(restaurantCoordinates, deliveryCoordinates));
+    const extraDistanceKm = Math.max(0, distanceKm - baseDistanceKm);
+    const additionalFee = extraDistanceKm * additionalFeePerKm;
+    const totalFee = baseDeliveryFee + additionalFee;
 
-    for (let i = 0; i < sortedRanges.length; i++) {
-      const range = sortedRanges[i];
-      const isLastRange = i === sortedRanges.length - 1;
-
-      if (isLastRange) {
-        if (orderValue >= range.min && orderValue <= range.max) {
-          return {
-            fee: round2(range.fee),
-            breakdown: {
-              source: 'range',
-              min: Number(range.min),
-              max: Number(range.max),
-              total: round2(range.fee)
-            }
-          };
-        }
-      } else if (orderValue >= range.min && orderValue < range.max) {
-        return {
-          fee: round2(range.fee),
-          breakdown: {
-            source: 'range',
-            min: Number(range.min),
-            max: Number(range.max),
-            total: round2(range.fee)
-          }
-        };
-      }
-    }
-
-    const baseDeliveryFee = feeSettings.deliveryFee || 25;
     return {
-      fee: round2(baseDeliveryFee),
+      fee: round2(totalFee),
       breakdown: {
-        source: 'base',
-        total: round2(baseDeliveryFee)
+        source: 'distance',
+        distanceKm: round2(distanceKm),
+        baseDistanceKm: round2(baseDistanceKm),
+        extraDistanceKm: round2(extraDistanceKm),
+        basePayout: round2(baseDeliveryFee),
+        commissionPerKm: round2(additionalFeePerKm),
+        total: round2(totalFee)
       }
     };
   }
 
-  if (restaurant?.freeDeliveryAbove && orderValue >= restaurant.freeDeliveryAbove) {
-    return {
-      fee: 0,
-      breakdown: {
-        source: 'threshold',
-        total: 0
-      }
-    };
-  }
-
-  const freeDeliveryThreshold = feeSettings.freeDeliveryThreshold || 149;
-  if (orderValue >= freeDeliveryThreshold) {
-    return {
-      fee: 0,
-      breakdown: {
-        source: 'threshold',
-        total: 0
-      }
-    };
-  }
-
-  const baseDeliveryFee = feeSettings.deliveryFee || 25;
   return {
     fee: round2(baseDeliveryFee),
     breakdown: {
       source: 'base',
+      baseDistanceKm: round2(baseDistanceKm),
+      basePayout: round2(baseDeliveryFee),
+      commissionPerKm: round2(additionalFeePerKm),
       total: round2(baseDeliveryFee)
     }
   };

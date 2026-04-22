@@ -24,6 +24,7 @@ export default function FoodsList() {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRestaurant, setSelectedRestaurant] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState("all")
+  const [selectedStockStatus, setSelectedStockStatus] = useState("all")
   const [foods, setFoods] = useState([])
   const [restaurantsForFilter, setRestaurantsForFilter] = useState([])
   const [loading, setLoading] = useState(true)
@@ -239,9 +240,17 @@ export default function FoodsList() {
       result = result.filter((food) => String(food.sectionName || "").trim().toLowerCase() === normalizedCategory)
     }
 
+    if (selectedStockStatus === "in-stock") {
+      result = result.filter((food) => food.status === true)
+    }
+
+    if (selectedStockStatus === "out-of-stock") {
+      result = result.filter((food) => food.status !== true)
+    }
+
     result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
     return result
-  }, [foods, searchQuery, selectedRestaurant, selectedCategory])
+  }, [foods, searchQuery, selectedRestaurant, selectedCategory, selectedStockStatus])
 
   const totalPages = useMemo(() => {
     if (filteredFoods.length === 0) return 1
@@ -255,7 +264,7 @@ export default function FoodsList() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedRestaurant, selectedCategory, pageSize])
+  }, [searchQuery, selectedRestaurant, selectedCategory, selectedStockStatus, pageSize])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -680,6 +689,15 @@ export default function FoodsList() {
                 </option>
               ))}
             </select>
+            <select
+              value={selectedStockStatus}
+              onChange={(e) => setSelectedStockStatus(e.target.value)}
+              className="px-4 py-2.5 min-w-[190px] text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+            >
+              <option value="all">All Stock Status</option>
+              <option value="in-stock">In Stock</option>
+              <option value="out-of-stock">Out of Stock</option>
+            </select>
           </div>
         </div>
       </div>
@@ -725,7 +743,7 @@ export default function FoodsList() {
                   <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
                       <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
-                      <p className="text-sm text-slate-500">No food items match your search, restaurant, or category filter</p>
+                      <p className="text-sm text-slate-500">No food items match your search, restaurant, category, or stock-status filter</p>
                     </div>
                   </td>
                 </tr>
@@ -755,6 +773,9 @@ export default function FoodsList() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex flex-col">
                         <span className="text-sm font-medium text-slate-900">{food.name}</span>
+                        <span className={`text-xs font-medium ${food.status ? "text-emerald-600" : "text-rose-600"}`}>
+                          {food.status ? "In Stock" : "Out of Stock"}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -886,6 +907,7 @@ export default function FoodsList() {
                 <p><span className="font-semibold text-slate-700">Category:</span> <span className="text-slate-900">{selectedFood.sectionName || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Food Type:</span> <span className="text-slate-900">{selectedFood.foodType || "-"}</span></p>
                 <p><span className="font-semibold text-slate-700">Approval:</span> <span className="text-slate-900 capitalize">{selectedFood.approvalStatus || "-"}</span></p>
+                <p><span className="font-semibold text-slate-700">Stock Status:</span> <span className={`font-medium ${selectedFood.status ? "text-emerald-600" : "text-rose-600"}`}>{selectedFood.status ? "In Stock" : "Out of Stock"}</span></p>
               </div>
               {selectedFood.originalItem?.description && (
                 <p className="text-sm text-slate-700 leading-relaxed">

@@ -13,24 +13,58 @@ const logger = winston.createLogger({
   ]
 });
 
+const DEFAULT_FEE_SETTINGS = {
+  deliveryFee: 25,
+  deliveryBaseDistanceKm: 2.5,
+  deliveryFeePerKm: 6,
+  freeDeliveryThreshold: 149,
+  platformFee: 5,
+  gstRate: 5,
+};
+
+const validateFeeSettingsPayload = ({
+  deliveryFee,
+  deliveryBaseDistanceKm,
+  deliveryFeePerKm,
+  platformFee,
+  gstRate,
+}) => {
+  if (deliveryFee !== undefined && Number(deliveryFee) < 0) {
+    return 'Delivery fee must be a positive number';
+  }
+
+  if (deliveryBaseDistanceKm !== undefined && Number(deliveryBaseDistanceKm) < 0) {
+    return 'Base delivery distance must be a positive number';
+  }
+
+  if (deliveryFeePerKm !== undefined && Number(deliveryFeePerKm) < 0) {
+    return 'Additional delivery fee per KM must be a positive number';
+  }
+
+  if (platformFee === undefined || Number(platformFee) < 0) {
+    return 'Platform fee must be a positive number';
+  }
+
+  if (gstRate === undefined || Number(gstRate) < 0 || Number(gstRate) > 100) {
+    return 'GST rate must be between 0 and 100';
+  }
+
+  return null;
+};
+
 /**
  * Get current fee settings
  * GET /api/admin/fee-settings
  */
 export const getFeeSettings = asyncHandler(async (req, res) => {
   try {
-    // Get the most recent active fee settings
     let feeSettings = await FeeSettings.findOne({ isActive: true })
       .sort({ createdAt: -1 })
       .lean();
 
-    // If no active settings exist, create default ones
     if (!feeSettings) {
       const defaultSettings = new FeeSettings({
-        deliveryFee: 25,
-        freeDeliveryThreshold: 149,
-        platformFee: 5,
-        gstRate: 5,
+        ...DEFAULT_FEE_SETTINGS,
         isActive: true,
         createdBy: req.admin?._id || null,
       });
@@ -54,36 +88,28 @@ export const getFeeSettings = asyncHandler(async (req, res) => {
  */
 export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
   try {
-    const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive } = req.body;
+    const {
+      deliveryFee,
+      deliveryBaseDistanceKm,
+      deliveryFeePerKm,
+      freeDeliveryThreshold,
+      platformFee,
+      gstRate,
+      isActive
+    } = req.body;
 
-    // Validate platform fee
-    if (platformFee === undefined || platformFee < 0) {
-      return errorResponse(res, 400, 'Platform fee must be a positive number');
+    const validationError = validateFeeSettingsPayload({
+      deliveryFee,
+      deliveryBaseDistanceKm,
+      deliveryFeePerKm,
+      platformFee,
+      gstRate,
+    });
+
+    if (validationError) {
+      return errorResponse(res, 400, validationError);
     }
 
-    if (gstRate === undefined || gstRate < 0 || gstRate > 100) {
-      return errorResponse(res, 400, 'GST rate must be between 0 and 100');
-    }
-
-    // Validate delivery fee ranges if provided
-    if (deliveryFeeRanges && Array.isArray(deliveryFeeRanges)) {
-      for (const range of deliveryFeeRanges) {
-        if (range.min === undefined || range.min < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid min value (≥ 0)');
-        }
-        if (range.max === undefined || range.max < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid max value (≥ 0)');
-        }
-        if (range.min >= range.max) {
-          return errorResponse(res, 400, 'Range min value must be less than max value');
-        }
-        if (range.fee === undefined || range.fee < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid fee value (≥ 0)');
-        }
-      }
-    }
-
-    // Deactivate all existing settings if this is being set as active
     if (isActive !== false) {
       await FeeSettings.updateMany(
         { isActive: true },
@@ -91,27 +117,23 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
       );
     }
 
-    // Create new fee settings
-    const feeSettingsData = {
-      deliveryFee: deliveryFee !== undefined ? Number(deliveryFee) : 25,
-      freeDeliveryThreshold: freeDeliveryThreshold ? Number(freeDeliveryThreshold) : 149,
+    const feeSettings = new FeeSettings({
+      deliveryFee: deliveryFee !== undefined ? Number(deliveryFee) : DEFAULT_FEE_SETTINGS.deliveryFee,
+      deliveryBaseDistanceKm: deliveryBaseDistanceKm !== undefined
+        ? Number(deliveryBaseDistanceKm)
+        : DEFAULT_FEE_SETTINGS.deliveryBaseDistanceKm,
+      deliveryFeePerKm: deliveryFeePerKm !== undefined
+        ? Number(deliveryFeePerKm)
+        : DEFAULT_FEE_SETTINGS.deliveryFeePerKm,
+      freeDeliveryThreshold: freeDeliveryThreshold !== undefined
+        ? Number(freeDeliveryThreshold)
+        : DEFAULT_FEE_SETTINGS.freeDeliveryThreshold,
       platformFee: Number(platformFee),
       gstRate: Number(gstRate),
       isActive: isActive !== false,
       createdBy: req.admin?._id || null,
       updatedBy: req.admin?._id || null,
-    };
-
-    // Add delivery fee ranges if provided
-    if (deliveryFeeRanges && Array.isArray(deliveryFeeRanges)) {
-      feeSettingsData.deliveryFeeRanges = deliveryFeeRanges.map(range => ({
-        min: Number(range.min),
-        max: Number(range.max),
-        fee: Number(range.fee),
-      }));
-    }
-
-    const feeSettings = new FeeSettings(feeSettingsData);
+    });
 
     await feeSettings.save();
 
@@ -131,7 +153,15 @@ export const createOrUpdateFeeSettings = asyncHandler(async (req, res) => {
 export const updateFeeSettings = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { deliveryFee, deliveryFeeRanges, freeDeliveryThreshold, platformFee, gstRate, isActive } = req.body;
+    const {
+      deliveryFee,
+      deliveryBaseDistanceKm,
+      deliveryFeePerKm,
+      freeDeliveryThreshold,
+      platformFee,
+      gstRate,
+      isActive
+    } = req.body;
 
     const feeSettings = await FeeSettings.findById(id);
 
@@ -139,7 +169,18 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Fee settings not found');
     }
 
-    // If setting as active, deactivate others
+    const validationError = validateFeeSettingsPayload({
+      deliveryFee: deliveryFee ?? feeSettings.deliveryFee,
+      deliveryBaseDistanceKm: deliveryBaseDistanceKm ?? feeSettings.deliveryBaseDistanceKm,
+      deliveryFeePerKm: deliveryFeePerKm ?? feeSettings.deliveryFeePerKm,
+      platformFee: platformFee ?? feeSettings.platformFee,
+      gstRate: gstRate ?? feeSettings.gstRate,
+    });
+
+    if (validationError) {
+      return errorResponse(res, 400, validationError);
+    }
+
     if (isActive === true && !feeSettings.isActive) {
       await FeeSettings.updateMany(
         { _id: { $ne: id }, isActive: true },
@@ -147,35 +188,16 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
       );
     }
 
-    // Update fields
     if (deliveryFee !== undefined) {
-      if (deliveryFee < 0) {
-        return errorResponse(res, 400, 'Delivery fee must be a positive number');
-      }
       feeSettings.deliveryFee = Number(deliveryFee);
     }
 
-    if (deliveryFeeRanges !== undefined && Array.isArray(deliveryFeeRanges)) {
-      // Validate delivery fee ranges
-      for (const range of deliveryFeeRanges) {
-        if (range.min === undefined || range.min < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid min value (≥ 0)');
-        }
-        if (range.max === undefined || range.max < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid max value (≥ 0)');
-        }
-        if (range.min >= range.max) {
-          return errorResponse(res, 400, 'Range min value must be less than max value');
-        }
-        if (range.fee === undefined || range.fee < 0) {
-          return errorResponse(res, 400, 'Each range must have a valid fee value (≥ 0)');
-        }
-      }
-      feeSettings.deliveryFeeRanges = deliveryFeeRanges.map(range => ({
-        min: Number(range.min),
-        max: Number(range.max),
-        fee: Number(range.fee),
-      }));
+    if (deliveryBaseDistanceKm !== undefined) {
+      feeSettings.deliveryBaseDistanceKm = Number(deliveryBaseDistanceKm);
+    }
+
+    if (deliveryFeePerKm !== undefined) {
+      feeSettings.deliveryFeePerKm = Number(deliveryFeePerKm);
     }
 
     if (freeDeliveryThreshold !== undefined) {
@@ -183,16 +205,10 @@ export const updateFeeSettings = asyncHandler(async (req, res) => {
     }
 
     if (platformFee !== undefined) {
-      if (platformFee < 0) {
-        return errorResponse(res, 400, 'Platform fee must be a positive number');
-      }
       feeSettings.platformFee = Number(platformFee);
     }
 
     if (gstRate !== undefined) {
-      if (gstRate < 0 || gstRate > 100) {
-        return errorResponse(res, 400, 'GST rate must be between 0 and 100');
-      }
       feeSettings.gstRate = Number(gstRate);
     }
 
@@ -223,8 +239,8 @@ export const getFeeSettingsHistory = asyncHandler(async (req, res) => {
 
     const feeSettings = await FeeSettings.find()
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
-      .skip(parseInt(offset))
+      .limit(parseInt(limit, 10))
+      .skip(parseInt(offset, 10))
       .lean();
 
     const total = await FeeSettings.countDocuments();
@@ -232,8 +248,8 @@ export const getFeeSettingsHistory = asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Fee settings history retrieved successfully', {
       feeSettings,
       total,
-      limit: parseInt(limit),
-      offset: parseInt(offset),
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
     });
   } catch (error) {
     logger.error(`Error fetching fee settings history: ${error.message}`);
@@ -249,19 +265,12 @@ export const getPublicFeeSettings = asyncHandler(async (req, res) => {
   try {
     const feeSettings = await FeeSettings.findOne({ isActive: true })
       .sort({ createdAt: -1 })
-      .select('deliveryFee deliveryFeeRanges freeDeliveryThreshold platformFee gstRate')
+      .select('deliveryFee deliveryBaseDistanceKm deliveryFeePerKm freeDeliveryThreshold platformFee gstRate')
       .lean();
 
-    // If no active settings, return default values
     if (!feeSettings) {
       return successResponse(res, 200, 'Fee settings retrieved successfully', {
-        feeSettings: {
-          deliveryFee: 25,
-          deliveryFeeRanges: [],
-          freeDeliveryThreshold: 149,
-          platformFee: 5,
-          gstRate: 5,
-        },
+        feeSettings: DEFAULT_FEE_SETTINGS,
       });
     }
 
@@ -273,4 +282,3 @@ export const getPublicFeeSettings = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to fetch fee settings');
   }
 });
-

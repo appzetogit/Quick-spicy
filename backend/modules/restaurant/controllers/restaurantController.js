@@ -348,10 +348,9 @@ export const getRestaurants = async (req, res) => {
     
     // Resolve delivery fee metadata for customer cards
     const feeSettings = await FeeSettings.findOne({ isActive: true })
-      .select('deliveryFee deliveryFeeRanges')
+      .select('deliveryFee')
       .lean();
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
-    const hasDeliveryFeeRanges = Array.isArray(feeSettings?.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
     const userZoneId = zoneId ? String(zoneId) : null;
     let activeZones = [];
@@ -405,9 +404,7 @@ export const getRestaurants = async (req, res) => {
         ? Number(restaurant.deliveryFee)
         : defaultDeliveryFee;
       const noDeliveryFeeConfigured = resolvedDeliveryFee === null || Number.isNaN(resolvedDeliveryFee);
-      const isFreeDelivery = hasDeliveryFeeRanges
-        ? false
-        : (restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured);
+      const isFreeDelivery = restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured;
       const { lat, lng } = extractRestaurantCoordinates(restaurant);
       if (lat === null || lng === null) {
         return null;
@@ -1111,10 +1108,9 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
 
     // Resolve delivery fee metadata for customer cards
     const feeSettings = await FeeSettings.findOne({ isActive: true })
-      .select('deliveryFee deliveryFeeRanges')
+      .select('deliveryFee')
       .lean();
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
-    const hasDeliveryFeeRanges = Array.isArray(feeSettings?.deliveryFeeRanges) && feeSettings.deliveryFeeRanges.length > 0;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
 
     // Helper function to process a single restaurant
@@ -1172,9 +1168,7 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
             ? Number(restaurant.deliveryFee)
             : defaultDeliveryFee;
           const noDeliveryFeeConfigured = resolvedDeliveryFee === null || Number.isNaN(resolvedDeliveryFee);
-          const isFreeDelivery = hasDeliveryFeeRanges
-            ? false
-            : (restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured);
+          const isFreeDelivery = restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured;
 
           return {
             id: restaurant._id.toString(),
