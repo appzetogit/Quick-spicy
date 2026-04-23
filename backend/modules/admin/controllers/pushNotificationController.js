@@ -360,12 +360,22 @@ const executePushNotification = async ({
       ...baseData,
       title: normalizedTitle,
       body: normalizedDescription,
-      ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
+      ...(normalizedImageUrl ? { image: normalizedImageUrl, imageUrl: normalizedImageUrl } : {}),
+    },
+    notification: {
+      title: normalizedTitle,
+      body: normalizedDescription,
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
     },
     webpush: {
       headers: {
         Urgency: "high",
         TTL: "120",
+      },
+      notification: {
+        title: normalizedTitle,
+        body: normalizedDescription,
+        ...(normalizedImageUrl ? { image: normalizedImageUrl } : {}),
       },
       fcmOptions: {
         link: targetLink,
@@ -385,13 +395,25 @@ const executePushNotification = async ({
       ...(normalizedImageUrl ? { image: normalizedImageUrl, imageUrl: normalizedImageUrl } : {}),
       ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
     },
+    notification: {
+      title: normalizedTitle,
+      body: normalizedDescription,
+      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+    },
     android: {
       priority: "high",
       ttl: 120000,
+      notification: {
+        ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
+        ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
+      },
     },
     apns: {
       headers: {
         "apns-priority": "5",
+      },
+      fcmOptions: {
+        ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
       },
       payload: {
         aps: {

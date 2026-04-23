@@ -895,6 +895,12 @@ export default function ItemDetailsPage() {
 
       // Prepare nutrition data as strings (as per menu model)
       const nutritionStrings = []
+      const editedItemApprovalStatus = isNewItem
+        ? itemData?.approvalStatus || "pending"
+        : "approved"
+      const editedItemApprovedAt = isNewItem
+        ? itemData?.approvedAt
+        : new Date().toISOString()
 
       // Prepare item data according to menu model
       const itemDataToSave = {
@@ -931,6 +937,10 @@ export default function ItemDetailsPage() {
         itemSizeQuantity: "",
         itemSizeUnit: "piece",
         gst: parseFloat(gst) || 0,
+        approvalStatus: editedItemApprovalStatus,
+        rejectionReason: editedItemApprovalStatus === "approved" ? "" : itemData?.rejectionReason || "",
+        requestedAt: itemData?.requestedAt,
+        approvedAt: editedItemApprovedAt,
       }
 
       // Add or update item in target section
