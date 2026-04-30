@@ -747,12 +747,13 @@ export default function Cart() {
                   code: coupon.couponCode,
                   discount: coupon.originalPrice - coupon.discountedPrice,
                   discountPercentage: coupon.discountPercentage,
+                  maxDiscount: coupon.maxDiscount ?? null,
                   discountDisplay: coupon.discountType === "percentage"
-                    ? `${coupon.discountPercentage}% OFF`
+                    ? `${coupon.discountPercentage}% OFF${coupon.maxDiscount ? ` up to ${RUPEE_SYMBOL}${coupon.maxDiscount}` : ""}`
                     : `${RUPEE_SYMBOL}${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} OFF`,
                   minOrder: coupon.minOrderValue || 0,
                   description: coupon.discountType === "percentage"
-                    ? `${coupon.discountPercentage}% OFF with '${coupon.couponCode}'`
+                    ? `${coupon.discountPercentage}% OFF${coupon.maxDiscount ? ` up to ${RUPEE_SYMBOL}${coupon.maxDiscount}` : ""} with '${coupon.couponCode}'`
                     : `Save ${RUPEE_SYMBOL}${Math.max(0, (coupon.originalPrice || 0) - (coupon.discountedPrice || 0))} with '${coupon.couponCode}'`,
                   originalPrice: coupon.originalPrice,
                   discountedPrice: coupon.discountedPrice,
@@ -876,11 +877,11 @@ export default function Cart() {
         const response = await adminAPI.getPublicFeeSettings()
         if (response.data.success && response.data.data.feeSettings) {
           setFeeSettings({
-            deliveryFee: response.data.data.feeSettings.deliveryFee || 25,
-            deliveryBaseDistanceKm: response.data.data.feeSettings.deliveryBaseDistanceKm || 2.5,
-            deliveryFeePerKm: response.data.data.feeSettings.deliveryFeePerKm || 6,
-            platformFee: response.data.data.feeSettings.platformFee || 5,
-            gstRate: response.data.data.feeSettings.gstRate || 5,
+            deliveryFee: response.data.data.feeSettings.deliveryFee ?? 25,
+            deliveryBaseDistanceKm: response.data.data.feeSettings.deliveryBaseDistanceKm ?? 2.5,
+            deliveryFeePerKm: response.data.data.feeSettings.deliveryFeePerKm ?? 6,
+            platformFee: response.data.data.feeSettings.platformFee ?? 5,
+            gstRate: response.data.data.feeSettings.gstRate ?? 5,
           })
         }
       } catch (error) {

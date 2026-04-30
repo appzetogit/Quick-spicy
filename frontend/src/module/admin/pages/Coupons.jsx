@@ -22,6 +22,7 @@ export default function Coupons() {
     couponCode: "",
     discountType: "percentage",
     discountValue: "",
+    maxDiscount: "",
     customerScope: "all",
     restaurantScope: "all",
     restaurantId: "",
@@ -81,6 +82,7 @@ export default function Coupons() {
       couponCode: "",
       discountType: "percentage",
       discountValue: "",
+      maxDiscount: "",
       customerScope: "all",
       restaurantScope: "all",
       restaurantId: "",
@@ -104,6 +106,13 @@ export default function Coupons() {
       return
     }
 
+    const hasMaxDiscountValue = String(formData.maxDiscount).trim() !== ""
+    const parsedMaxDiscount = hasMaxDiscountValue ? Number(formData.maxDiscount) : null
+    if (hasMaxDiscountValue && (!Number.isFinite(parsedMaxDiscount) || parsedMaxDiscount <= 0)) {
+      setSubmitError("Max discount must be greater than 0")
+      return
+    }
+
     if (formData.restaurantScope === "selected" && !formData.restaurantId) {
       setSubmitError("Please select a restaurant")
       return
@@ -120,6 +129,7 @@ export default function Coupons() {
         couponCode: formData.couponCode.trim(),
         discountType: formData.discountType,
         discountValue: parsedDiscountValue,
+        maxDiscount: formData.discountType === "percentage" ? parsedMaxDiscount : undefined,
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
         restaurantId: formData.restaurantScope === "selected" ? formData.restaurantId : undefined,
@@ -234,6 +244,22 @@ export default function Coupons() {
                     onChange={(e) => handleFormChange("discountValue", e.target.value)}
                     placeholder={formData.discountType === "percentage" ? "e.g. 20" : "e.g. 100"}
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Max Discount {formData.discountType === "percentage" ? "(Optional)" : "(Ignored for flat)"}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={formData.maxDiscount}
+                    onChange={(e) => handleFormChange("maxDiscount", e.target.value)}
+                    placeholder={formData.discountType === "percentage" ? "e.g. 150" : "Not needed for flat"}
+                    disabled={formData.discountType !== "percentage"}
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   />
                 </div>
 
@@ -397,7 +423,7 @@ export default function Coupons() {
                         <span className="text-sm text-slate-700">
                           {offer.discountType === 'flat-price' 
                             ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
-                            : `${offer.discountPercentage}% OFF`}
+                            : `${offer.discountPercentage}% OFF${offer.maxDiscount ? ` up to ₹${offer.maxDiscount}` : ""}`}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

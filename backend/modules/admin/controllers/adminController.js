@@ -3377,6 +3377,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             discountType: offer.discountType || "percentage",
             customerGroup: offer.customerGroup || "all",
             discountPercentage: item.discountPercentage || 0,
+            maxDiscount: offer.maxLimit ?? null,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
             showInCart: item.showInCart !== false,
@@ -3427,6 +3428,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       couponCode,
       discountType = "percentage",
       discountValue,
+      maxDiscount,
       customerScope = "all",
       restaurantScope = "all",
       restaurantId,
@@ -3454,6 +3456,18 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
     const parsedDiscountValue = Number(discountValue);
     if (!Number.isFinite(parsedDiscountValue) || parsedDiscountValue <= 0) {
       return errorResponse(res, 400, "discountValue must be greater than 0");
+    }
+
+    let parsedMaxDiscount = null;
+    if (
+      maxDiscount !== undefined &&
+      maxDiscount !== null &&
+      String(maxDiscount).trim() !== ""
+    ) {
+      parsedMaxDiscount = Number(maxDiscount);
+      if (!Number.isFinite(parsedMaxDiscount) || parsedMaxDiscount <= 0) {
+        return errorResponse(res, 400, "maxDiscount must be greater than 0");
+      }
     }
 
     if (!["all", "first-time"].includes(customerScope)) {
@@ -3527,6 +3541,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         endDate: parsedEndDate || undefined,
         targetMealtime: "all",
         minOrderValue: Number(minOrderValue) || 0,
+        maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
         status: "active",
         items: [
           {

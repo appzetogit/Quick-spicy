@@ -30,6 +30,16 @@ export default function OrderInvoice() {
     )
   }
 
+  const pricing = order.pricing || {}
+  const formatMoney = (amount) => `₹${Number(amount || 0).toFixed(2)}`
+  const subtotal = Number(pricing.subtotal ?? order.subtotal ?? 0)
+  const deliveryFee = Number(pricing.deliveryFee ?? order.deliveryFee ?? 0)
+  const platformFee = Number(pricing.platformFee ?? order.platformFee ?? 0)
+  const gstAmount = Number(pricing.tax ?? order.tax ?? 0)
+  const couponDiscount = Number(pricing.discount ?? 0)
+  const total = Number(pricing.total ?? order.total ?? 0)
+  const couponCode = pricing.couponCode || pricing.appliedCoupon?.code || null
+
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('en-US', {
@@ -230,14 +240,14 @@ export default function OrderInvoice() {
                               <div className="min-w-0 flex-1">
                                 <span className="font-medium block">{item.name}</span>
                                 <span className="text-muted-foreground sm:hidden text-xs">
-                                  Qty: {item.quantity} × ${item.price.toFixed(2)}
+                                  {`Qty: ${item.quantity} x ${formatMoney(item.price)}`}
                                 </span>
                               </div>
                             </div>
                           </td>
                           <td className="px-2 sm:px-3 py-2 sm:py-3 text-center hidden sm:table-cell">{item.quantity}</td>
-                          <td className="px-2 sm:px-3 py-2 sm:py-3 text-right hidden md:table-cell">${item.price.toFixed(2)}</td>
-                          <td className="px-2 sm:px-3 py-2 sm:py-3 text-right font-medium">${(item.price * item.quantity).toFixed(2)}</td>
+                          <td className="px-2 sm:px-3 py-2 sm:py-3 text-right hidden md:table-cell">{formatMoney(item.price)}</td>
+                          <td className="px-2 sm:px-3 py-2 sm:py-3 text-right font-medium">{formatMoney(item.price * item.quantity)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -249,19 +259,31 @@ export default function OrderInvoice() {
               <div className="total-section mt-4 sm:mt-6">
                 <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
                   <span>Subtotal:</span>
-                  <span>${order.subtotal.toFixed(2)}</span>
+                  <span>{formatMoney(subtotal)}</span>
                 </div>
                 <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
                   <span>Delivery Fee:</span>
-                  <span>${order.deliveryFee.toFixed(2)}</span>
+                  <span>{formatMoney(deliveryFee)}</span>
                 </div>
+                {platformFee > 0 && (
+                  <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
+                    <span>Platform Fee:</span>
+                    <span>{formatMoney(platformFee)}</span>
+                  </div>
+                )}
+                {couponDiscount > 0 && (
+                  <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2 text-green-600">
+                    <span>Coupon Discount{couponCode ? ` (${couponCode})` : ""}:</span>
+                    <span>-{formatMoney(couponDiscount)}</span>
+                  </div>
+                )}
                 <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
-                  <span>Tax:</span>
-                  <span>${order.tax.toFixed(2)}</span>
+                  <span>GST:</span>
+                  <span>{formatMoney(gstAmount)}</span>
                 </div>
                 <div className="grand-total flex justify-between text-base sm:text-lg md:text-xl md:text-2xl pt-2 sm:pt-3 mt-2 sm:mt-3 border-t-2 border-[#EB590E]">
                   <span>Total:</span>
-                  <span>${order.total.toFixed(2)}</span>
+                  <span>{formatMoney(total)}</span>
                 </div>
               </div>
 

@@ -7,6 +7,14 @@ import { toast } from "sonner"
 const debugError = (...args) => {}
 
 export default function FeeSettings() {
+  const normalizeFeeSettings = (settings = {}) => ({
+    deliveryFee: settings.deliveryFee ?? 25,
+    deliveryBaseDistanceKm: settings.deliveryBaseDistanceKm ?? 2.5,
+    deliveryFeePerKm: settings.deliveryFeePerKm ?? 6,
+    platformFee: settings.platformFee ?? 5,
+    gstRate: settings.gstRate ?? 5,
+  })
+
   const [feeSettings, setFeeSettings] = useState({
     deliveryFee: 25,
     deliveryBaseDistanceKm: 2.5,
@@ -22,13 +30,7 @@ export default function FeeSettings() {
       setLoadingFeeSettings(true)
       const response = await adminAPI.getFeeSettings()
       if (response.data.success && response.data.data.feeSettings) {
-        setFeeSettings({
-          deliveryFee: response.data.data.feeSettings.deliveryFee || 25,
-          deliveryBaseDistanceKm: response.data.data.feeSettings.deliveryBaseDistanceKm || 2.5,
-          deliveryFeePerKm: response.data.data.feeSettings.deliveryFeePerKm || 6,
-          platformFee: response.data.data.feeSettings.platformFee || 5,
-          gstRate: response.data.data.feeSettings.gstRate || 5,
-        })
+        setFeeSettings(normalizeFeeSettings(response.data.data.feeSettings))
       }
     } catch (error) {
       debugError('Error fetching fee settings:', error)

@@ -92,7 +92,7 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
  */
 export const calculatePlatformFee = async () => {
   const feeSettings = await getFeeSettings();
-  return feeSettings.platformFee || 5;
+  return Number(feeSettings.platformFee ?? 5);
 };
 
 /**
@@ -102,7 +102,7 @@ export const calculatePlatformFee = async () => {
 export const calculateGST = async (subtotal, discount = 0) => {
   const taxableAmount = subtotal - discount;
   const feeSettings = await getFeeSettings();
-  const gstRate = (feeSettings.gstRate || 5) / 100; // Convert percentage to decimal
+  const gstRate = Number(feeSettings.gstRate ?? 5) / 100; // Convert percentage to decimal
   return Math.round(taxableAmount * gstRate);
 };
 
@@ -239,6 +239,9 @@ export const calculateOrderPricing = async ({
                   // Global coupon applies on order subtotal
                   if (offer.discountType === 'percentage') {
                     discount = Math.round(subtotal * ((couponItem.discountPercentage || 0) / 100));
+                    if (Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
+                      discount = Math.min(discount, offer.maxLimit);
+                    }
                   } else {
                     const flatDiscount = (couponItem.originalPrice || 0) - (couponItem.discountedPrice || 0);
                     discount = Math.round(flatDiscount);
@@ -266,6 +269,7 @@ export const calculateOrderPricing = async ({
                   code: couponCode,
                   discount: discount,
                   discountPercentage: couponItem.discountPercentage,
+                  maxDiscount: offer.maxLimit ?? null,
                   minOrder: offer.minOrderValue || 0,
                   type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
                   itemId: couponItem.itemId,

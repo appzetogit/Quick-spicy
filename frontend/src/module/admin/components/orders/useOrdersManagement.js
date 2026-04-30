@@ -522,7 +522,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
         body: [
           ["Subtotal", formatMoney(subtotal)],
           ["Delivery Fee", formatMoney(deliveryFee)],
-          ["Tax", formatMoney(taxAmount)],
+          ["GST", formatMoney(taxAmount)],
           ["Discount", `- ${formatMoney(discountAmount)}`],
           ["Grand Total", formatMoney(totalAmount)],
         ],

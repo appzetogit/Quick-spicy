@@ -211,7 +211,7 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
       },
     },
   })
-    .select('items discountType minOrderValue startDate endDate status customerGroup')
+    .select('items discountType minOrderValue maxLimit startDate endDate status customerGroup')
     .lean();
 
   console.log(`[COUPONS] Found ${allOffers.length} active offers with itemId ${itemId}`);
@@ -379,6 +379,7 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
         coupons.push({
           couponCode: item.couponCode,
           discountPercentage: item.discountPercentage,
+          maxDiscount: offer.maxLimit ?? null,
           originalPrice: item.originalPrice,
           discountedPrice: item.discountedPrice,
           minOrderValue: offer.minOrderValue || 0,

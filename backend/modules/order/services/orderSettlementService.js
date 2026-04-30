@@ -23,8 +23,8 @@ export const calculateOrderSettlement = async (orderId) => {
       .sort({ createdAt: -1 })
       .lean();
     
-    const platformFee = feeSettings?.platformFee || 5;
-    const gstRate = (feeSettings?.gstRate || 5) / 100;
+    const platformFee = Number(feeSettings?.platformFee ?? 5);
+    const gstRate = Number(feeSettings?.gstRate ?? 5) / 100;
 
     // Get restaurant details
     let restaurant = null;
@@ -49,7 +49,7 @@ export const calculateOrderSettlement = async (orderId) => {
       subtotal: order.pricing.subtotal || 0,
       discount: order.pricing.discount || 0,
       deliveryFee: order.pricing.deliveryFee || 0,
-      platformFee: order.pricing.platformFee || platformFee,
+      platformFee: order.pricing.platformFee ?? platformFee,
       gst: order.pricing.tax || 0,
       packagingFee: 0, // Can be added later if needed
       tip: order.pricing.tip || 0,
