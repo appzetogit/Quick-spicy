@@ -47,11 +47,13 @@ export default function RestaurantsList() {
     closingTime: "",
     zoneId: "",
     isActive: true,
+    isAcceptingOrders: true,
   })
   const [availableZones, setAvailableZones] = useState([])
   const [loadingZones, setLoadingZones] = useState(false)
   const [inlineZoneDrafts, setInlineZoneDrafts] = useState({})
   const [savingZoneRestaurantId, setSavingZoneRestaurantId] = useState("")
+  const [savingAcceptingRestaurantId, setSavingAcceptingRestaurantId] = useState("")
   const [profileImageFile, setProfileImageFile] = useState(null)
   const [profileImagePreview, setProfileImagePreview] = useState("")
   const [isEditingLocation, setIsEditingLocation] = useState(false)
@@ -165,6 +167,7 @@ export default function RestaurantsList() {
               ? restaurant.cuisines[0]
               : (restaurant.cuisine || "N/A"),
             foodPreference: restaurant.foodPreference || restaurant.onboarding?.step2?.foodPreference || "both",
+            isAcceptingOrders: restaurant.isAcceptingOrders !== false,
             status:
               restaurant.isActive === false ||
               String(restaurant.status || "").trim().toLowerCase() === "inactive" ||
@@ -778,6 +781,7 @@ export default function RestaurantsList() {
         closingTime: "",
         zoneId: "",
         isActive: true,
+        isAcceptingOrders: true,
       }
     }
 
@@ -800,6 +804,7 @@ export default function RestaurantsList() {
       closingTime: restaurant.deliveryTimings?.closingTime || "",
       zoneId: getRestaurantZoneValue(restaurant),
       isActive: restaurant.isActive !== false,
+      isAcceptingOrders: restaurant.isAcceptingOrders !== false,
     }
   }
 
@@ -897,6 +902,7 @@ export default function RestaurantsList() {
         closingTime: detailsForm.closingTime.trim(),
         zoneId: detailsForm.zoneId || "",
         isActive: detailsForm.isActive,
+        isAcceptingOrders: detailsForm.isAcceptingOrders,
       }
 
       if (profileImage) {
@@ -924,6 +930,7 @@ export default function RestaurantsList() {
                 zoneId: updatedRestaurant.zoneId || updatedRestaurant.restaurantZoneId || item.zoneId || "",
                 restaurantZoneId: updatedRestaurant.restaurantZoneId || updatedRestaurant.zoneId || item.restaurantZoneId || "",
                 status: updatedRestaurant.isActive !== false,
+                isAcceptingOrders: updatedRestaurant.isAcceptingOrders !== false,
                 logo: updatedRestaurant.profileImage?.url || item.logo,
                 originalData: {
                   ...(item.originalData || {}),
@@ -1021,6 +1028,70 @@ export default function RestaurantsList() {
       alert(err?.response?.data?.message || "Failed to update zone")
     } finally {
       setSavingZoneRestaurantId("")
+    }
+  }
+
+  const handleInlineAcceptingOrdersSave = async (restaurant, nextValue) => {
+    const restaurantId = restaurant?._id || restaurant?.id
+    const rowId = getRestaurantRowId(restaurant)
+    if (!restaurantId || !rowId) return
+
+    try {
+      setSavingAcceptingRestaurantId(rowId)
+      const response = await adminAPI.updateRestaurant(restaurantId, {
+        isAcceptingOrders: nextValue,
+      })
+      const updatedRestaurant = response?.data?.data?.restaurant
+      const resolvedValue = updatedRestaurant?.isAcceptingOrders !== false
+
+      setRestaurants((prev) =>
+        prev.map((item) =>
+          getRestaurantRowId(item) === rowId
+            ? {
+                ...item,
+                isAcceptingOrders: resolvedValue,
+                originalData: {
+                  ...(item.originalData || {}),
+                  ...(updatedRestaurant || {}),
+                  isAcceptingOrders: resolvedValue,
+                },
+              }
+            : item,
+        ),
+      )
+
+      if (selectedRestaurant && getRestaurantRowId(selectedRestaurant) === rowId) {
+        setSelectedRestaurant((prev) =>
+          prev
+            ? {
+                ...prev,
+                isAcceptingOrders: resolvedValue,
+                originalData: {
+                  ...(prev.originalData || {}),
+                  ...(updatedRestaurant || {}),
+                  isAcceptingOrders: resolvedValue,
+                },
+              }
+            : prev,
+        )
+      }
+
+      if (restaurantDetails && getRestaurantRowId(restaurantDetails) === rowId) {
+        setRestaurantDetails((prev) =>
+          prev
+            ? {
+                ...prev,
+                ...(updatedRestaurant || {}),
+                isAcceptingOrders: resolvedValue,
+              }
+            : prev,
+        )
+      }
+    } catch (err) {
+      debugError("Error updating accepting orders status:", err)
+      alert(err?.response?.data?.message || "Failed to update accepting orders status")
+    } finally {
+      setSavingAcceptingRestaurantId("")
     }
   }
 
@@ -1348,13 +1419,14 @@ export default function RestaurantsList() {
                         <ArrowUpDown className={`w-3 h-3 ${sortConfig.key === 'availability' ? 'text-blue-600' : 'text-slate-400'}`} />
                       </div>
                     </th>
+                    <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">Accepting Orders</th>
                     <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">Action</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {filteredRestaurants.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-20 text-center">
+                      <td colSpan={9} className="px-6 py-20 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <p className="text-lg font-semibold text-slate-700 mb-1">No Data Found</p>
                           <p className="text-sm text-slate-500">No restaurants match your search</p>
@@ -1472,6 +1544,25 @@ export default function RestaurantsList() {
                                 No timings
                               </span>
                             )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${restaurant.isAcceptingOrders ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                              {restaurant.isAcceptingOrders ? "Yes" : "No"}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleInlineAcceptingOrdersSave(restaurant, !restaurant.isAcceptingOrders)}
+                              disabled={savingAcceptingRestaurantId === getRestaurantRowId(restaurant)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${restaurant.isAcceptingOrders ? "bg-emerald-500" : "bg-slate-300"} ${savingAcceptingRestaurantId === getRestaurantRowId(restaurant) ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}
+                              title={restaurant.isAcceptingOrders ? "Disable accepting orders" : "Enable accepting orders"}
+                              aria-label={restaurant.isAcceptingOrders ? "Disable accepting orders" : "Enable accepting orders"}
+                            >
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${restaurant.isAcceptingOrders ? "translate-x-6" : "translate-x-1"}`}
+                              />
+                            </button>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
@@ -1700,6 +1791,18 @@ export default function RestaurantsList() {
                         Restaurant is active
                       </label>
                     </div>
+                    <div className="md:col-span-2 flex items-center gap-3">
+                      <input
+                        id="restaurant-status-accepting-orders"
+                        type="checkbox"
+                        checked={detailsForm.isAcceptingOrders}
+                        onChange={(e) => setDetailsForm((prev) => ({ ...prev, isAcceptingOrders: e.target.checked }))}
+                        className="h-4 w-4 rounded border-slate-300 text-blue-600"
+                      />
+                      <label htmlFor="restaurant-status-accepting-orders" className="text-sm text-slate-700">
+                        Restaurant is accepting orders
+                      </label>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1725,6 +1828,9 @@ export default function RestaurantsList() {
                         <div className="flex items-center justify-center md:justify-start gap-2">
                           <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${restaurantDetails?.isActive !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                             {restaurantDetails?.isActive !== false ? 'Active' : 'Inactive'}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider ${restaurantDetails?.isAcceptingOrders !== false ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {restaurantDetails?.isAcceptingOrders !== false ? 'Accepting Orders' : 'Not Accepting Orders'}
                           </span>
                         </div>
                       </div>

@@ -214,6 +214,20 @@ function resolveRestaurantZoneId(restaurant, restaurantLat, restaurantLng, activ
   return getRestaurantZoneId(restaurantLat, restaurantLng, activeZones);
 }
 
+function resolveRestaurantZoneInfo(restaurant, activeZones) {
+  const { lat, lng } = extractRestaurantCoordinates(restaurant);
+  const restaurantZoneId = activeZones.length > 0
+    ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
+    : null;
+
+  return {
+    lat,
+    lng,
+    restaurantZoneId,
+    hasCoordinates: lat !== null && lng !== null,
+  };
+}
+
 function extractRestaurantCoordinates(locationOrRestaurant = {}) {
   const location = locationOrRestaurant?.location || locationOrRestaurant?.onboarding?.step1?.location || locationOrRestaurant || {};
   const lat = location?.latitude
@@ -405,13 +419,13 @@ export const getRestaurants = async (req, res) => {
         : defaultDeliveryFee;
       const noDeliveryFeeConfigured = resolvedDeliveryFee === null || Number.isNaN(resolvedDeliveryFee);
       const isFreeDelivery = restaurant.freeDelivery === true || resolvedDeliveryFee === 0 || noDeliveryFeeConfigured;
-      const { lat, lng } = extractRestaurantCoordinates(restaurant);
-      if (lat === null || lng === null) {
+      const { restaurantZoneId, hasCoordinates } = resolveRestaurantZoneInfo(
+        restaurant,
+        activeZones,
+      );
+      if (!hasCoordinates && !restaurantZoneId) {
         return null;
       }
-      const restaurantZoneId = activeZones.length > 0
-        ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
-        : null;
       const isInUserZone = userZoneId
         ? restaurantZoneId === userZoneId
         : null;
@@ -496,17 +510,16 @@ export const getRestaurantById = async (req, res) => {
     if (!restaurantDoc) {
       return errorResponse(res, 404, 'Restaurant not found');
     }
-    const { lat, lng } = extractRestaurantCoordinates(restaurantDoc);
-    if (lat === null || lng === null) {
-      return errorResponse(res, 404, 'Restaurant not found');
-    }
-
     const activeZones = await Zone.find({ isActive: true })
       .select('_id coordinates boundary restaurantId')
       .lean();
-    const restaurantZoneId = activeZones.length > 0
-      ? resolveRestaurantZoneId(restaurantDoc, lat, lng, activeZones)
-      : null;
+    const { restaurantZoneId, hasCoordinates } = resolveRestaurantZoneInfo(
+      restaurantDoc,
+      activeZones,
+    );
+    if (!hasCoordinates && !restaurantZoneId) {
+      return errorResponse(res, 404, 'Restaurant not found');
+    }
     const restaurant = {
       ...normalizeRestaurantImageFields(restaurantDoc),
       restaurantZoneId,
@@ -1152,13 +1165,13 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
 
         // Only include restaurant if it has at least one dish under ₹250
         if (dishesUnder250.length > 0) {
-          const { lat, lng } = extractRestaurantCoordinates(restaurant);
-          if (lat === null || lng === null) {
+          const { restaurantZoneId, hasCoordinates } = resolveRestaurantZoneInfo(
+            restaurant,
+            activeZones,
+          );
+          if (!hasCoordinates && !restaurantZoneId) {
             return null;
           }
-          const restaurantZoneId = activeZones.length > 0
-            ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
-            : null;
 
           if (userZoneId && restaurantZoneId !== userZoneId) {
             return null;
