@@ -816,6 +816,10 @@ export default function Cart() {
             if (coupon) {
               setAppliedCoupon(coupon)
             }
+          } else if (!response.data.data.pricing.appliedCoupon && (appliedCoupon?.code || couponCode)) {
+            setAppliedCoupon(null)
+            setCouponCode("")
+            setManualCouponCode("")
           }
         }
       } catch (error) {
@@ -1033,40 +1037,43 @@ export default function Cart() {
       return
     }
 
-    if (subtotal >= coupon.minOrder) {
-      setAppliedCoupon(coupon)
-      setCouponCode(coupon.code)
-      setManualCouponCode(coupon.code)
-      setShowCoupons(false)
+    if (subtotal < coupon.minOrder) {
+      toast.error(`Minimum order of ${RUPEE_SYMBOL}${coupon.minOrder} is required for this coupon`)
+      return
+    }
 
-      // Recalculate pricing with new coupon
-      if (cart.length > 0 && hasSavedAddress) {
-        try {
-          const items = cart.map(item => ({
-            itemId: item.id,
-            name: item.name,
-            price: item.price,
-            quantity: item.quantity || 1,
-            image: item.image,
-            description: item.description,
-            isVeg: item.isVeg !== false
-          }))
+    setAppliedCoupon(coupon)
+    setCouponCode(coupon.code)
+    setManualCouponCode(coupon.code)
+    setShowCoupons(false)
 
-          const response = await orderAPI.calculateOrder({
-            items,
-            restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
-            deliveryAddress: defaultAddress,
-            couponCode: coupon.code,
-            deliveryFleet: deliveryFleet || 'standard',
-            tipAmount
-          })
+    // Recalculate pricing with new coupon
+    if (cart.length > 0 && hasSavedAddress) {
+      try {
+        const items = cart.map(item => ({
+          itemId: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity || 1,
+          image: item.image,
+          description: item.description,
+          isVeg: item.isVeg !== false
+        }))
 
-          if (response?.data?.success && response?.data?.data?.pricing) {
-            setPricing(response.data.data.pricing)
-          }
-        } catch (error) {
-          debugError("Error recalculating pricing:", error)
+        const response = await orderAPI.calculateOrder({
+          items,
+          restaurantId: restaurantData?.restaurantId || restaurantData?._id || restaurantId || null,
+          deliveryAddress: defaultAddress,
+          couponCode: coupon.code,
+          deliveryFleet: deliveryFleet || 'standard',
+          tipAmount
+        })
+
+        if (response?.data?.success && response?.data?.data?.pricing) {
+          setPricing(response.data.data.pricing)
         }
+      } catch (error) {
+        debugError("Error recalculating pricing:", error)
       }
     }
   }
@@ -1090,6 +1097,11 @@ export default function Cart() {
     // If we know this is first-time only and user already ordered, block early.
     if (matchedCoupon?.customerGroup === "new" && userOrderCount > 0) {
       toast.error("This coupon is only for first-time users")
+      return
+    }
+
+    if (matchedCoupon && subtotal < matchedCoupon.minOrder) {
+      toast.error(`Minimum order of ${RUPEE_SYMBOL}${matchedCoupon.minOrder} is required for this coupon`)
       return
     }
 
@@ -2045,6 +2057,11 @@ export default function Cart() {
                           {availableCoupons[0].customerGroup === "new" && (
                             <p className="text-[11px] md:text-xs text-orange-600 dark:text-orange-400">First-time users only</p>
                           )}
+                          {availableCoupons[0].minOrder > 0 && (
+                            <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400">
+                              Valid on orders above {RUPEE_SYMBOL}{availableCoupons[0].minOrder}
+                            </p>
+                          )}
                           {availableCoupons.length > 1 && (
                             <button onClick={() => setShowCoupons(!showCoupons)} className="text-xs md:text-sm text-blue-600 dark:text-blue-400 font-medium">
                               View all coupons →
@@ -2084,6 +2101,11 @@ export default function Cart() {
                           <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400">{coupon.description}</p>
                           {coupon.customerGroup === "new" && (
                             <p className="text-[11px] md:text-xs text-orange-600 dark:text-orange-400">First-time users only</p>
+                          )}
+                          {coupon.minOrder > 0 && (
+                            <p className="text-[11px] md:text-xs text-gray-500 dark:text-gray-400">
+                              Valid on orders above {RUPEE_SYMBOL}{coupon.minOrder}
+                            </p>
                           )}
                         </div>
                         <Button

@@ -3378,6 +3378,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             customerGroup: offer.customerGroup || "all",
             discountPercentage: item.discountPercentage || 0,
             maxDiscount: offer.maxLimit ?? null,
+            minOrderValue: offer.minOrderValue || 0,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
             showInCart: item.showInCart !== false,
@@ -3470,6 +3471,11 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       }
     }
 
+    const parsedMinOrderValue = Number(minOrderValue ?? 0);
+    if (!Number.isFinite(parsedMinOrderValue) || parsedMinOrderValue < 0) {
+      return errorResponse(res, 400, "minOrderValue cannot be negative");
+    }
+
     if (!["all", "first-time"].includes(customerScope)) {
       return errorResponse(res, 400, "customerScope must be all or first-time");
     }
@@ -3540,7 +3546,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         startDate: now,
         endDate: parsedEndDate || undefined,
         targetMealtime: "all",
-        minOrderValue: Number(minOrderValue) || 0,
+        minOrderValue: parsedMinOrderValue,
         maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
         status: "active",
         items: [

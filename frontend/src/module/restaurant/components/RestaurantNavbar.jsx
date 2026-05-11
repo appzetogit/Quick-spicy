@@ -187,41 +187,33 @@ export default function RestaurantNavbar({
     }
   }, [restaurantData, propLocation])
 
-  // Load status from localStorage on mount and listen for changes
+  // Load status from backend and listen for in-app status changes
   useEffect(() => {
-    const updateStatus = () => {
+    const updateStatusFromBackend = async () => {
       try {
-        const savedStatus = localStorage.getItem('restaurant_online_status')
-        if (savedStatus !== null) {
-          const isOnline = JSON.parse(savedStatus)
-          setStatus(isOnline ? "Online" : "Offline")
-        } else {
-          // Default to Offline if not set
-          setStatus("Offline")
-        }
+        const response = await restaurantAPI.getCurrentRestaurant()
+        const restaurant = response?.data?.data?.restaurant || response?.data?.restaurant
+        const isOnline = restaurant?.isAcceptingOrders === true
+        setStatus(isOnline ? "Online" : "Offline")
       } catch (error) {
-        debugError("Error loading restaurant status:", error)
+        if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
+          debugError("Error loading restaurant status:", error)
+        }
         setStatus("Offline")
       }
     }
 
-    // Load initial status
-    updateStatus()
+    updateStatusFromBackend()
 
-    // Listen for status changes from RestaurantStatus page
-  const handleStatusChange = (event) => {
+    const handleStatusChange = (event) => {
       const isOnline = event.detail?.isOnline || false
       setStatus(isOnline ? "Online" : "Offline")
-  }
+    }
 
     window.addEventListener('restaurantStatusChanged', handleStatusChange)
-    
-    // Also check localStorage periodically to catch direct changes
-    const interval = setInterval(updateStatus, 1000)
-    
+
     return () => {
       window.removeEventListener('restaurantStatusChanged', handleStatusChange)
-      clearInterval(interval)
     }
   }, [])
 

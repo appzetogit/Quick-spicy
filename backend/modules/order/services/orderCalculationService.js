@@ -331,7 +331,8 @@ export const calculateOrderPricing = async ({
       appliedCoupon: appliedCoupon ? {
         code: appliedCoupon.code,
         discount: discount,
-        freeDelivery: appliedCoupon.freeDelivery || false
+        freeDelivery: appliedCoupon.freeDelivery || false,
+        minOrder: appliedCoupon.minOrder || 0
       } : null,
       deliveryFeeBreakdown,
       breakdown: {

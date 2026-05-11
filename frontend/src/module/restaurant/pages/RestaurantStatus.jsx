@@ -169,66 +169,25 @@ export default function RestaurantStatus() {
   // We don't automatically set it based on timings anymore
   // The isWithinTimings is only used to show warning messages
 
-  // Load delivery status from backend and sync with localStorage
+  // Load delivery status from backend
   useEffect(() => {
     const loadDeliveryStatus = async () => {
       try {
-        // First try to get from backend
         const response = await restaurantAPI.getCurrentRestaurant()
         const restaurant = response?.data?.data?.restaurant || response?.data?.restaurant
-        if (restaurant?.isAcceptingOrders !== undefined) {
-          setDeliveryStatus(restaurant.isAcceptingOrders)
-          // Sync localStorage with backend
-          localStorage.setItem('restaurant_online_status', JSON.stringify(restaurant.isAcceptingOrders))
-          // Dispatch event to update navbar
-          window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-            detail: { isOnline: restaurant.isAcceptingOrders } 
-          }))
-        } else {
-          // Fallback to localStorage
-          const savedStatus = localStorage.getItem('restaurant_online_status')
-          if (savedStatus !== null) {
-            const status = JSON.parse(savedStatus)
-            setDeliveryStatus(status)
-            // Dispatch event to update navbar
-            window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-              detail: { isOnline: status } 
-            }))
-          } else {
-            // Default to false if not set
-            setDeliveryStatus(false)
-            // Dispatch event to update navbar
-            window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-              detail: { isOnline: false } 
-            }))
-          }
-        }
+        const nextStatus = restaurant?.isAcceptingOrders === true
+        setDeliveryStatus(nextStatus)
+        window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
+          detail: { isOnline: nextStatus } 
+        }))
       } catch (error) {
-        // Only log error if it's not a network/timeout error (backend might be down/slow)
         if (error.code !== 'ERR_NETWORK' && error.code !== 'ECONNABORTED' && !error.message?.includes('timeout')) {
           debugError("Error loading delivery status:", error)
         }
-        // Fallback to localStorage
-        try {
-          const savedStatus = localStorage.getItem('restaurant_online_status')
-          if (savedStatus !== null) {
-            const status = JSON.parse(savedStatus)
-            setDeliveryStatus(status)
-            window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-              detail: { isOnline: status } 
-            }))
-          } else {
-            setDeliveryStatus(false)
-            window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-              detail: { isOnline: false } 
-            }))
-          }
-        } catch (localError) {
-          setDeliveryStatus(false)
-          window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
-            detail: { isOnline: false } 
-          }))
-        }
+        setDeliveryStatus(false)
+        window.dispatchEvent(new CustomEvent('restaurantStatusChanged', { 
+          detail: { isOnline: false } 
+        }))
       }
     }
 
@@ -251,9 +210,6 @@ export default function RestaurantStatus() {
     
     setDeliveryStatus(checked)
     try {
-      // Save to localStorage
-      localStorage.setItem('restaurant_online_status', JSON.stringify(checked))
-      
       // Update backend
       try {
         await restaurantAPI.updateDeliveryStatus(checked)

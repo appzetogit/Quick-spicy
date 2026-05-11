@@ -22,6 +22,7 @@ export default function Coupons() {
     couponCode: "",
     discountType: "percentage",
     discountValue: "",
+    minOrderValue: "",
     maxDiscount: "",
     customerScope: "all",
     restaurantScope: "all",
@@ -82,6 +83,7 @@ export default function Coupons() {
       couponCode: "",
       discountType: "percentage",
       discountValue: "",
+      minOrderValue: "",
       maxDiscount: "",
       customerScope: "all",
       restaurantScope: "all",
@@ -103,6 +105,13 @@ export default function Coupons() {
     const parsedDiscountValue = Number(formData.discountValue)
     if (!Number.isFinite(parsedDiscountValue) || parsedDiscountValue <= 0) {
       setSubmitError("Discount value must be greater than 0")
+      return
+    }
+
+    const hasMinOrderValue = String(formData.minOrderValue).trim() !== ""
+    const parsedMinOrderValue = hasMinOrderValue ? Number(formData.minOrderValue) : 0
+    if (!Number.isFinite(parsedMinOrderValue) || parsedMinOrderValue < 0) {
+      setSubmitError("Minimum order value cannot be negative")
       return
     }
 
@@ -129,6 +138,7 @@ export default function Coupons() {
         couponCode: formData.couponCode.trim(),
         discountType: formData.discountType,
         discountValue: parsedDiscountValue,
+        minOrderValue: parsedMinOrderValue,
         maxDiscount: formData.discountType === "percentage" ? parsedMaxDiscount : undefined,
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
@@ -264,6 +274,21 @@ export default function Coupons() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Minimum Order Value
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.minOrderValue}
+                    onChange={(e) => handleFormChange("minOrderValue", e.target.value)}
+                    placeholder="e.g. 1000"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Customer Scope</label>
                   <select
                     value={formData.customerScope}
@@ -387,6 +412,7 @@ export default function Coupons() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Coupon Code</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Customer Scope</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Discount</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Min Order</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Price</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Show In Cart</th>
@@ -424,6 +450,11 @@ export default function Coupons() {
                           {offer.discountType === 'flat-price' 
                             ? `₹${offer.originalPrice - offer.discountedPrice} OFF`
                             : `${offer.discountPercentage}% OFF${offer.maxDiscount ? ` up to ₹${offer.maxDiscount}` : ""}`}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-slate-700">
+                          {offer.minOrderValue > 0 ? `Above ₹${offer.minOrderValue}` : "No minimum"}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

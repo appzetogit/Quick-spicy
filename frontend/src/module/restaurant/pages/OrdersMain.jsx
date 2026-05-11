@@ -17,8 +17,6 @@ const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
-const STORAGE_KEY = "restaurant_online_status"
-
 // Top filter tabs
 const filterTabs = [
   { id: "preparing", label: "Preparing" },
