@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { BarChart3, ChevronDown, Info, FileText, FileSpreadsheet, Code, Loader2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { exportTransactionReportToCSV, exportTransactionReportToExcel, exportTransactionReportToPDF, exportTransactionReportToJSON } from "../../components/reports/reportsExportUtils"
@@ -26,6 +26,7 @@ export default function TransactionReport() {
   const [loading, setLoading] = useState(true)
   const [summary, setSummary] = useState({
     completedTransaction: 0,
+    completedCount: 0,
     refundedTransaction: 0,
     adminEarning: 0,
     restaurantEarning: 0,
@@ -36,26 +37,14 @@ export default function TransactionReport() {
     restaurant: "All restaurants",
     time: "All Time",
   })
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    pages: 1
+  })
   const [zones, setZones] = useState([])
   const [restaurants, setRestaurants] = useState([])
-
-  const derivedSummary = useMemo(() => {
-    const transactionRows = Array.isArray(transactions) ? transactions : []
-
-    return {
-      completedTransaction: transactionRows.length,
-      deliverymanEarning: transactionRows.reduce(
-        (total, transaction) =>
-          total + Number(
-            transaction.deliverymanEarning ??
-            transaction.deliveryPartnerEarning ??
-            transaction.deliveryCharge ??
-            0,
-          ),
-        0,
-      ),
-    }
-  }, [transactions])
 
   // Fetch zones and restaurants for filters
   useEffect(() => {
@@ -108,7 +97,9 @@ export default function TransactionReport() {
           restaurant: filters.restaurant !== "All restaurants" ? filters.restaurant : undefined,
           fromDate: fromDate ? fromDate.toISOString() : undefined,
           toDate: toDate ? toDate.toISOString() : undefined,
-          limit: 1000
+          search: searchQuery || undefined,
+          page: pagination.page,
+          limit: pagination.limit
         }
 
         const response = await adminAPI.getTransactionReport(params)
@@ -117,10 +108,17 @@ export default function TransactionReport() {
           setTransactions(response.data.data.transactions || [])
           setSummary(response.data.data.summary || {
             completedTransaction: 0,
+            completedCount: 0,
             refundedTransaction: 0,
             adminEarning: 0,
             restaurantEarning: 0,
             deliverymanEarning: 0
+          })
+          setPagination(response.data.data.pagination || {
+            page: 1,
+            limit: 50,
+            total: 0,
+            pages: 1
           })
         } else {
           setTransactions([])
@@ -138,19 +136,9 @@ export default function TransactionReport() {
     }
 
     fetchTransactionReport()
-  }, [filters])
+  }, [filters, pagination.page, searchQuery])
 
-  const filteredTransactions = useMemo(() => {
-    const normalizedSearch = String(searchQuery || "").trim().toLowerCase()
-
-    if (!normalizedSearch) {
-      return transactions
-    }
-
-    return transactions.filter((transaction) =>
-      String(transaction.orderId || "").toLowerCase().includes(normalizedSearch)
-    )
-  }, [transactions, searchQuery])
+  const filteredTransactions = transactions
 
   const handleExport = (format) => {
     if (filteredTransactions.length === 0) {
@@ -165,23 +153,36 @@ export default function TransactionReport() {
     }
   }
 
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }))
+    setPagination((prev) => ({ ...prev, page: 1 }))
+  }
+
   const handleResetFilters = () => {
     setFilters({
       zone: "All Zones",
       restaurant: "All restaurants",
       time: "All Time",
     })
+    setPagination((prev) => ({ ...prev, page: 1 }))
+  }
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > pagination.pages) return
+    setPagination((prev) => ({ ...prev, page: newPage }))
   }
 
   const formatCurrency = (amount) => {
-    if (amount >= 1000) {
-      return `₹ ${(amount / 1000).toFixed(2)}K`
+    const val = Number(amount || 0)
+    if (val >= 1000) {
+      return `₹ ${(val / 1000).toFixed(2)}K`
     }
-    return `₹ ${amount.toFixed(2)}`
+    return `₹ ${val.toFixed(2)}`
   }
 
   const formatFullCurrency = (amount) => {
-    return `₹ ${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    const val = Number(amount || 0)
+    return `₹ ${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
   }
 
   if (loading) {
@@ -214,7 +215,7 @@ export default function TransactionReport() {
             <div className="relative flex-1 min-w-0">
               <select
                 value={filters.zone}
-                onChange={(e) => setFilters(prev => ({ ...prev, zone: e.target.value }))}
+                onChange={(e) => handleFilterChange("zone", e.target.value)}
                 className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
                 <option value="All Zones" className="text-slate-900 bg-white">All Zones</option>
@@ -228,7 +229,7 @@ export default function TransactionReport() {
             <div className="relative flex-1 min-w-0">
               <select
                 value={filters.restaurant}
-                onChange={(e) => setFilters(prev => ({ ...prev, restaurant: e.target.value }))}
+                onChange={(e) => handleFilterChange("restaurant", e.target.value)}
                 className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
                 <option value="All restaurants" className="text-slate-900 bg-white">All restaurants</option>
@@ -242,7 +243,7 @@ export default function TransactionReport() {
             <div className="relative flex-1 min-w-0">
               <select
                 value={filters.time}
-                onChange={(e) => setFilters(prev => ({ ...prev, time: e.target.value }))}
+                onChange={(e) => handleFilterChange("time", e.target.value)}
                 className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
                 <option value="All Time" className="text-slate-900 bg-white">All Time</option>
@@ -277,7 +278,7 @@ export default function TransactionReport() {
                 </div>
               </div>
               <div className="text-center">
-                <p className="text-xl font-bold text-green-600 mb-1">{derivedSummary.completedTransaction.toLocaleString("en-IN")}</p>
+                <p className="text-xl font-bold text-green-600 mb-1">{(summary.completedCount || 0).toLocaleString("en-IN")}</p>
                 <p className="text-sm text-slate-600 leading-tight">Completed Transaction</p>
               </div>
             </div>
@@ -351,7 +352,7 @@ export default function TransactionReport() {
                     </div>
                   </div>
                 </div>
-                <p className="text-base font-bold text-orange-600">{formatCurrency(derivedSummary.deliverymanEarning || summary.deliverymanEarning || 0)}</p>
+                <p className="text-base font-bold text-orange-600">{formatCurrency(summary.deliverymanEarning || 0)}</p>
               </div>
             </div>
           </div>
@@ -360,7 +361,7 @@ export default function TransactionReport() {
         {/* Order Transactions Section */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-            <h2 className="text-base font-bold text-slate-900">Order Transactions {filteredTransactions.length}</h2>
+            <h2 className="text-base font-bold text-slate-900">Order Transactions {pagination.total}</h2>
 
             <div className="flex items-center gap-2">
               <div className="relative flex-1 sm:flex-initial min-w-[180px]">
@@ -368,7 +369,10 @@ export default function TransactionReport() {
                   type="text"
                   placeholder="Search by Order ID"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value)
+                    setPagination(prev => ({ ...prev, page: 1 }))
+                  }}
                   className="pl-7 pr-2 py-1.5 w-full text-[11px] rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
                 <img src={searchIcon} alt="Search" className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3" />
@@ -442,7 +446,7 @@ export default function TransactionReport() {
                       className="hover:bg-slate-50 transition-colors"
                     >
                       <td className="px-1.5 py-1">
-                        <span className="text-[10px] font-medium text-slate-700">{index + 1}</span>
+                        <span className="text-[10px] font-medium text-slate-700">{(pagination.page - 1) * pagination.limit + index + 1}</span>
                       </td>
                       <td className="px-2 py-1">
                         <span className="text-[10px] text-slate-700 whitespace-nowrap">{transaction.orderId}</span>
@@ -494,6 +498,74 @@ export default function TransactionReport() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mt-3 pt-3 border-t border-slate-100">
+              <p className="text-[10px] text-slate-500">
+                Showing{" "}
+                <span className="font-semibold text-slate-700">
+                  {transactions.length === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1} -{" "}
+                  {Math.min((pagination.page - 1) * pagination.limit + transactions.length, pagination.total)}
+                </span>{" "}
+                of <span className="font-semibold text-slate-700">{pagination.total}</span> transactions
+              </p>
+
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handlePageChange(pagination.page - 1)}
+                  disabled={pagination.page === 1}
+                  className="px-2.5 py-1 text-[10px] rounded border border-slate-300 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 bg-white transition-all font-medium"
+                >
+                  Prev
+                </button>
+                {Array.from({ length: pagination.pages }).map((_, idx) => {
+                  const pageNum = idx + 1;
+                  // Premium pagination logic: show first, last, current, and page before/after current
+                  if (
+                    pageNum === 1 ||
+                    pageNum === pagination.pages ||
+                    (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => handlePageChange(pageNum)}
+                        className={`w-6 h-6 text-[10px] rounded border transition-all font-semibold ${
+                          pagination.page === pageNum
+                            ? "bg-blue-600 border-blue-600 text-white shadow-sm shadow-blue-100"
+                            : "border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                  
+                  // Render ellipses
+                  if (
+                    (pageNum === 2 && pagination.page > 3) ||
+                    (pageNum === pagination.pages - 1 && pagination.page < pagination.pages - 2)
+                  ) {
+                    return (
+                      <span key={`ellipsis-${pageNum}`} className="px-1 text-slate-400 text-[10px] select-none">
+                        ...
+                      </span>
+                    );
+                  }
+                  
+                  return null;
+                })}
+                <button
+                  onClick={() => handlePageChange(pagination.page + 1)}
+                  disabled={pagination.page === pagination.pages}
+                  className="px-2.5 py-1 text-[10px] rounded border border-slate-300 text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 bg-white transition-all font-medium"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

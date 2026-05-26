@@ -560,7 +560,7 @@ apiClient.interceptors.response.use(
 
           // Show helpful error message (only once per minute)
           toast.error(
-            `Backend not connected! Start server: cd appzetofood/backend && npm run dev`,
+            `Backend not connected! Start server: cd backend && npm run dev`,
             {
               duration: 10000,
               id: "network-error-toast", // Use ID to prevent duplicate toasts

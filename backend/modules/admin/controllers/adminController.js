@@ -125,87 +125,92 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       last30DaysRevenue: 0,
     };
 
-    // Get all settlements for delivered orders only (to match with revenue calculation)
-    // First get delivered order IDs
-    const deliveredOrderIds = await Order.find({ status: "delivered" })
-      .select("_id")
-      .lean();
-    const deliveredOrderIdArray = deliveredOrderIds.map((o) => o._id);
-
-    // Get settlements only for delivered orders
-    const allSettlements = await OrderSettlement.find({
-      orderId: { $in: deliveredOrderIdArray },
-    }).lean();
-
-    console.log(
-      `📊 Dashboard Stats - Total settlements found: ${allSettlements.length}`,
-    );
-
-    // Debug: Log first settlement to see actual structure
-    if (allSettlements.length > 0) {
-      const firstSettlement = allSettlements[0];
-      console.log("🔍 First settlement sample:", {
-        orderNumber: firstSettlement.orderNumber,
-        adminEarning: firstSettlement.adminEarning,
-        userPayment: firstSettlement.userPayment,
-      });
-    }
-
-    // Calculate totals from all settlements - use adminEarning fields
-    let totalCommission = 0;
-    let totalPlatformFee = 0;
-    let totalDeliveryFee = 0;
-    let totalGST = 0;
-
-    allSettlements.forEach((s, index) => {
-      const commission = s.adminEarning?.commission || 0;
-      const platformFee = s.adminEarning?.platformFee || 0;
-      const deliveryFee = s.adminEarning?.deliveryFee || 0;
-      const gst = s.adminEarning?.gst || 0;
-
-      totalCommission += commission;
-      totalPlatformFee += platformFee;
-      totalDeliveryFee += deliveryFee;
-      totalGST += gst;
-
-      // Log each settlement for debugging
-      if (index < 5) {
-        // Log first 5 settlements
-        console.log(
-          `📦 Settlement ${index + 1} (${s.orderNumber}): Commission: ₹${commission}, Platform: ₹${platformFee}, Delivery: ₹${deliveryFee}, GST: ₹${gst}`,
-        );
+    // Use highly optimized aggregation to calculate settlement statistics in a single query
+    const settlementStats = await OrderSettlement.aggregate([
+      {
+        $lookup: {
+          from: "orders",
+          localField: "orderId",
+          foreignField: "_id",
+          as: "order"
+        }
+      },
+      {
+        $unwind: "$order"
+      },
+      {
+        $match: {
+          "order.status": "delivered"
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalCommission: { $sum: "$adminEarning.commission" },
+          totalPlatformFee: { $sum: "$adminEarning.platformFee" },
+          totalDeliveryFee: { $sum: "$adminEarning.deliveryFee" },
+          totalGST: { $sum: "$adminEarning.gst" },
+          
+          last30DaysCommission: {
+            $sum: {
+              $cond: [
+                { $gte: ["$createdAt", last30Days] },
+                "$adminEarning.commission",
+                0
+              ]
+            }
+          },
+          last30DaysPlatformFee: {
+            $sum: {
+              $cond: [
+                { $gte: ["$createdAt", last30Days] },
+                "$adminEarning.platformFee",
+                0
+              ]
+            }
+          },
+          last30DaysDeliveryFee: {
+            $sum: {
+              $cond: [
+                { $gte: ["$createdAt", last30Days] },
+                "$adminEarning.deliveryFee",
+                0
+              ]
+            }
+          },
+          last30DaysGST: {
+            $sum: {
+              $cond: [
+                { $gte: ["$createdAt", last30Days] },
+                "$adminEarning.gst",
+                0
+              ]
+            }
+          }
+        }
       }
-    });
+    ]);
 
-    totalCommission = Math.round(totalCommission * 100) / 100;
-    totalPlatformFee = Math.round(totalPlatformFee * 100) / 100;
-    totalDeliveryFee = Math.round(totalDeliveryFee * 100) / 100;
-    totalGST = Math.round(totalGST * 100) / 100;
+    const settlementData = settlementStats[0] || {
+      totalCommission: 0,
+      totalPlatformFee: 0,
+      totalDeliveryFee: 0,
+      totalGST: 0,
+      last30DaysCommission: 0,
+      last30DaysPlatformFee: 0,
+      last30DaysDeliveryFee: 0,
+      last30DaysGST: 0
+    };
 
-    console.log(
-      `💰 Final calculated totals - Commission: ₹${totalCommission}, Platform Fee: ₹${totalPlatformFee}, Delivery Fee: ₹${totalDeliveryFee}, GST: ₹${totalGST}`,
-    );
+    let totalCommission = Math.round((settlementData.totalCommission || 0) * 100) / 100;
+    let totalPlatformFee = Math.round((settlementData.totalPlatformFee || 0) * 100) / 100;
+    let totalDeliveryFee = Math.round((settlementData.totalDeliveryFee || 0) * 100) / 100;
+    let totalGST = Math.round((settlementData.totalGST || 0) * 100) / 100;
 
-    // Get last 30 days data from OrderSettlement
-    const last30DaysSettlements = await OrderSettlement.find({
-      createdAt: { $gte: last30Days, $lte: now },
-    }).lean();
-    const last30DaysCommission = last30DaysSettlements.reduce(
-      (sum, s) => sum + (s.adminEarning?.commission || 0),
-      0,
-    );
-    const last30DaysPlatformFee = last30DaysSettlements.reduce(
-      (sum, s) => sum + (s.adminEarning?.platformFee || 0),
-      0,
-    );
-    const last30DaysDeliveryFee = last30DaysSettlements.reduce(
-      (sum, s) => sum + (s.adminEarning?.deliveryFee || 0),
-      0,
-    );
-    const last30DaysGST = last30DaysSettlements.reduce(
-      (sum, s) => sum + (s.adminEarning?.gst || 0),
-      0,
-    );
+    const last30DaysCommission = settlementData.last30DaysCommission || 0;
+    const last30DaysPlatformFee = settlementData.last30DaysPlatformFee || 0;
+    const last30DaysDeliveryFee = settlementData.last30DaysDeliveryFee || 0;
+    const last30DaysGST = settlementData.last30DaysGST || 0;
 
     // Get order statistics
     const orderStats = await Order.aggregate([
@@ -380,84 +385,88 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       isActive: true,
     });
 
-    // Get monthly data for last 12 months
-    // Use aggregation to match orders with settlements by orderId and use order's deliveredAt
-    const monthlyData = [];
+    // Get monthly data for last 12 months using a single highly optimized aggregation query
+    const yearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    yearAgo.setHours(0, 0, 0, 0);
+
+    const monthlyStats = await Order.aggregate([
+      {
+        $match: {
+          status: "delivered",
+          deliveredAt: { $gte: yearAgo, $lte: now }
+        }
+      },
+      {
+        $lookup: {
+          from: "ordersettlements",
+          localField: "_id",
+          foreignField: "orderId",
+          as: "settlement"
+        }
+      },
+      {
+        $unwind: {
+          path: "$settlement",
+          preserveNullAndEmptyArrays: true
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: "$deliveredAt" },
+            month: { $month: "$deliveredAt" }
+          },
+          revenue: { $sum: { $ifNull: ["$pricing.total", 0] } },
+          commission: { $sum: { $ifNull: ["$settlement.adminEarning.commission", 0] } },
+          orders: { $sum: 1 }
+        }
+      },
+      {
+        $sort: {
+          "_id.year": 1,
+          "_id.month": 1
+        }
+      }
+    ]);
+
     const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
+      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
     ];
 
+    const monthlyDataMap = new Map();
+    monthlyStats.forEach(stat => {
+      if (stat._id && stat._id.month) {
+        const monthIndex = stat._id.month - 1; // MongoDB months are 1-indexed
+        const monthName = monthNames[monthIndex];
+        const key = `${stat._id.year}-${stat._id.month}`;
+        monthlyDataMap.set(key, {
+          month: monthName,
+          revenue: Math.round(stat.revenue * 100) / 100,
+          commission: Math.round(stat.commission * 100) / 100,
+          orders: stat.orders
+        });
+      }
+    });
+
+    const monthlyData = [];
     for (let i = 11; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthEnd = new Date(
-        now.getFullYear(),
-        now.getMonth() - i + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      );
-
-      // Get orders delivered in this month
-      const monthOrders = await Order.find({
-        status: "delivered",
-        deliveredAt: { $gte: monthStart, $lte: monthEnd },
-      })
-        .select("_id pricing deliveredAt")
-        .lean();
-
-      // Get order IDs for this month
-      const monthOrderIds = monthOrders.map((o) => o._id);
-
-      // Get settlements for these orders (match by orderId, not by createdAt)
-      const monthSettlements = await OrderSettlement.find({
-        orderId: { $in: monthOrderIds },
-      })
-        .select("orderId adminEarning")
-        .lean();
-
-      // Create a map of orderId to settlement for quick lookup
-      const settlementMap = new Map();
-      monthSettlements.forEach((s) => {
-        settlementMap.set(s.orderId.toString(), s);
-      });
-
-      // Calculate revenue and commission from orders and their settlements
-      let monthRevenue = 0;
-      let monthCommission = 0;
-
-      monthOrders.forEach((order) => {
-        // Add revenue from order
-        monthRevenue += order.pricing?.total || 0;
-
-        // Get commission from matching settlement
-        const settlement = settlementMap.get(order._id.toString());
-        if (settlement && settlement.adminEarning) {
-          // Only add commission (restaurant commission), not totalEarning
-          monthCommission += settlement.adminEarning.commission || 0;
-        }
-      });
-
-      const monthOrdersCount = monthOrders.length;
-
-      monthlyData.push({
-        month: monthNames[monthStart.getMonth()],
-        revenue: Math.round(monthRevenue * 100) / 100,
-        commission: Math.round(monthCommission * 100) / 100,
-        orders: monthOrdersCount,
-      });
+      const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = targetDate.getFullYear();
+      const month = targetDate.getMonth() + 1;
+      const key = `${year}-${month}`;
+      
+      const existing = monthlyDataMap.get(key);
+      if (existing) {
+        monthlyData.push(existing);
+      } else {
+        monthlyData.push({
+          month: monthNames[targetDate.getMonth()],
+          revenue: 0,
+          commission: 0,
+          orders: 0
+        });
+      }
     }
 
     return successResponse(res, 200, "Dashboard stats retrieved successfully", {
@@ -1396,6 +1405,27 @@ export const getRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
       restaurantId: req.params?.id,
     });
     return errorResponse(res, 500, "Failed to fetch restaurant menu");
+  }
+});
+
+/**
+ * Get All Restaurant Menus (Admin, populated with restaurant names)
+ * GET /api/admin/menu/all-menus
+ */
+export const getAllMenusAdmin = asyncHandler(async (req, res) => {
+  try {
+    const menus = await Menu.find({ isActive: true })
+      .populate("restaurant", "name")
+      .lean();
+
+    return successResponse(res, 200, "All restaurant menus retrieved successfully", {
+      menus: menus || [],
+    });
+  } catch (error) {
+    logger.error(`Error fetching all menus: ${error.message}`, {
+      error: error.stack,
+    });
+    return errorResponse(res, 500, "Failed to fetch all restaurant menus");
   }
 });
 

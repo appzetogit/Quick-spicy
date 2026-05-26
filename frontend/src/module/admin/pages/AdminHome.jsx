@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -210,27 +210,9 @@ export default function AdminHome() {
         const mergedRestaurants = Array.from(restaurantMap.values())
         setAllRestaurants(mergedRestaurants)
 
-        const addonEntries = await Promise.all(
-          activeRestaurants.map(async (restaurant) => {
-            const restaurantId = String(restaurant?._id || restaurant?.id || "")
-            if (!restaurantId) return [restaurantId, 0]
-
-            try {
-              const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
-              const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu || {}
-              const eligibleAddons = Array.isArray(menu.addons)
-                ? menu.addons.filter((addon) => {
-                  const status = String(addon?.approvalStatus || "").toLowerCase()
-                  return status === "approved" || status === "rejected"
-                })
-                : []
-              return [restaurantId, eligibleAddons.length]
-            } catch {
-              return [restaurantId, 0]
-            }
-          }),
-        )
-        setAddonsCountByRestaurant(Object.fromEntries(addonEntries))
+        // Menus are not loaded here to prevent heavy network overhead and server timeouts.
+        // We utilize the pre-calculated addons count from the dashboard statistics instead.
+        setAddonsCountByRestaurant({})
         setAddonsLoaded(true)
       } catch (error) {
         debugError('❌ Error fetching dashboard stats:', error)

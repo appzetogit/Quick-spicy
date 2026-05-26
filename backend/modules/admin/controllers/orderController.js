@@ -1550,6 +1550,7 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
     }
 
     // Zone filter
+    let zoneDocId = null;
     if (zone && zone !== 'All Zones') {
       const Zone = (await import('../models/Zone.js')).default;
       const zoneDoc = await Zone.findOne({
@@ -1558,6 +1559,7 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
 
       if (zoneDoc) {
         query['assignmentInfo.zoneId'] = zoneDoc._id?.toString();
+        zoneDocId = zoneDoc._id?.toString();
       }
     }
 
@@ -1613,54 +1615,92 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
       }).select('_id restaurantId').lean();
 
       if (restaurantDoc) {
-        summaryRestaurantQuery.restaurantId = restaurantDoc._id || restaurantDoc.restaurantId;
+        summaryRestaurantQuery.restaurantId = new mongoose.Types.ObjectId(restaurantDoc._id);
       }
     }
 
-    // Get all orders for summary calculation (without pagination)
-    const summaryQuery = { ...query };
-    const allOrdersForSummary = await Order.find(summaryQuery)
-      .populate('userId', 'name')
-      .populate('restaurantId', 'name')
-      .lean();
+    // Get completed transactions and deliveryman earnings using MongoDB aggregation
+    const completedStats = await Order.aggregate([
+      { $match: { ...query, status: 'delivered', 'payment.status': 'completed' } },
+      {
+        $group: {
+          _id: null,
+          completedTransaction: { $sum: { $ifNull: ['$pricing.total', 0] } },
+          completedCount: { $sum: 1 },
+          deliverymanEarning: { $sum: { $multiply: [{ $ifNull: ['$pricing.deliveryFee', 0] }, 0.8] } }
+        }
+      }
+    ]);
 
-    // Calculate completed transactions (delivered orders)
-    const completedOrders = allOrdersForSummary.filter(order => 
-      order.status === 'delivered' && order.payment?.status === 'completed'
-    );
-    const completedTransaction = completedOrders.reduce((sum, order) => 
-      sum + (order.pricing?.total || 0), 0
-    );
+    const completedTransaction = completedStats[0]?.completedTransaction || 0;
+    const completedCount = completedStats[0]?.completedCount || 0;
+    const deliverymanEarning = completedStats[0]?.deliverymanEarning || 0;
 
-    // Calculate refunded transactions
-    const refundedOrders = allOrdersForSummary.filter(order => 
-      order.payment?.status === 'refunded' || order.status === 'cancelled'
-    );
-    const refundedTransaction = refundedOrders.reduce((sum, order) => 
-      sum + (order.pricing?.total || 0), 0
-    );
+    // Get refunded and cancelled transactions using MongoDB aggregation
+    const refundedStats = await Order.aggregate([
+      {
+        $match: {
+          ...query,
+          $or: [
+            { 'payment.status': 'refunded' },
+            { status: 'cancelled' }
+          ]
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          refundedTransaction: { $sum: { $ifNull: ['$pricing.total', 0] } }
+        }
+      }
+    ]);
 
-    // Get admin earning from AdminCommission
+    const refundedTransaction = refundedStats[0]?.refundedTransaction || 0;
+
+    // Get admin and restaurant earnings using MongoDB aggregation
     const adminCommissionQuery = {
       status: 'completed',
       ...summaryDateQuery,
       ...summaryRestaurantQuery
     };
-    const adminCommissions = await AdminCommission.find(adminCommissionQuery).lean();
-    const adminEarning = adminCommissions.reduce((sum, comm) => sum + (comm.commissionAmount || 0), 0);
 
-    // Calculate restaurant earning (order total - admin commission - delivery commission)
-    // For simplicity, we'll use restaurantEarning from AdminCommission if available
-    const restaurantEarning = adminCommissions.reduce((sum, comm) => sum + (comm.restaurantEarning || 0), 0);
+    const commissionPipeline = [];
+    
+    // If zone filter is active, join orders to filter by zone
+    if (zoneDocId) {
+      commissionPipeline.push(
+        {
+          $lookup: {
+            from: 'orders',
+            localField: 'orderId',
+            foreignField: '_id',
+            as: 'orderInfo'
+          }
+        },
+        { $unwind: '$orderInfo' },
+        {
+          $match: {
+            ...adminCommissionQuery,
+            'orderInfo.assignmentInfo.zoneId': zoneDocId
+          }
+        }
+      );
+    } else {
+      commissionPipeline.push({ $match: adminCommissionQuery });
+    }
 
-    // Calculate deliveryman earning (from delivery commissions)
-    // This would need to be calculated from delivery wallet transactions or order assignment info
-    // For now, we'll estimate based on delivery fee or use a placeholder
-    const deliverymanEarning = completedOrders.reduce((sum, order) => {
-      // Delivery commission is typically calculated from distance
-      // For now, we'll use a simple estimate or fetch from delivery wallet
-      return sum + (order.pricing?.deliveryFee || 0) * 0.8; // Estimate 80% of delivery fee goes to deliveryman
-    }, 0);
+    commissionPipeline.push({
+      $group: {
+        _id: null,
+        adminEarning: { $sum: { $ifNull: ['$commissionAmount', 0] } },
+        restaurantEarning: { $sum: { $ifNull: ['$restaurantEarning', 0] } }
+      }
+    });
+
+    const commissionStats = await AdminCommission.aggregate(commissionPipeline);
+
+    const adminEarning = commissionStats[0]?.adminEarning || 0;
+    const restaurantEarning = commissionStats[0]?.restaurantEarning || 0;
 
     // Transform orders to match frontend format
     const transformedTransactions = orders.map((order, index) => {
@@ -1706,6 +1746,7 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
     return successResponse(res, 200, 'Transaction report retrieved successfully', {
       summary: {
         completedTransaction,
+        completedCount,
         refundedTransaction,
         adminEarning,
         restaurantEarning,
