@@ -112,6 +112,7 @@ const AISetup = lazy(() => import("../pages/system/AISetup"));
 const AppWebSettings = lazy(() => import("../pages/system/AppWebSettings"));
 const NotificationChannels = lazy(() => import("../pages/system/NotificationChannels"));
 const LandingPageSettings = lazy(() => import("../pages/system/LandingPageSettings"));
+const UiPopupSettings = lazy(() => import("../pages/system/UiPopupSettings"));
 const PageMetaData = lazy(() => import("../pages/system/PageMetaData"));
 const ReactSite = lazy(() => import("../pages/system/ReactSite"));
 const CleanDatabase = lazy(() => import("../pages/system/CleanDatabase"));
@@ -306,6 +307,7 @@ export default function AdminRouter() {
           <Route path="system-addons" element={<SystemAddons />} />
           {/* HERO BANNER MANAGEMENT */}
           <Route path="hero-banner-management" element={<LandingPageManagement />} />
+          <Route path="ui-popup-settings" element={<UiPopupSettings />} />
         </Route>
 
         {/* Redirect /admin to /admin/ */}

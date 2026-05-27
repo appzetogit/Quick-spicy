@@ -341,6 +341,10 @@ export const getLandingConfig = async (req, res) => {
       exploreMore,
       settings: {
         exploreMoreHeading: settings.exploreMoreHeading,
+        homePopup: {
+          enabled: Boolean(settings.homePopup?.enabled),
+          message: settings.homePopup?.message || '',
+        },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
           _id: restaurant._id,
@@ -752,6 +756,10 @@ export const getLandingSettings = async (req, res) => {
     return successResponse(res, 200, 'Landing settings retrieved successfully', {
       settings: {
         exploreMoreHeading: settings.exploreMoreHeading,
+        homePopup: {
+          enabled: Boolean(settings.homePopup?.enabled),
+          message: settings.homePopup?.message || '',
+        },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
           _id: restaurant._id,
@@ -777,12 +785,29 @@ export const getLandingSettings = async (req, res) => {
  */
 export const updateLandingSettings = async (req, res) => {
   try {
-    const { exploreMoreHeading, recommendedRestaurantIds } = req.body;
+    const { exploreMoreHeading, recommendedRestaurantIds, homePopup } = req.body;
 
     const settings = await LandingPageSettings.getSettings();
 
     if (typeof exploreMoreHeading === 'string') {
       settings.exploreMoreHeading = exploreMoreHeading;
+    }
+
+    if (homePopup && typeof homePopup === 'object') {
+      const nextHomePopup = {
+        enabled: Boolean(settings.homePopup?.enabled),
+        message: settings.homePopup?.message || '',
+      };
+
+      if (typeof homePopup.enabled === 'boolean') {
+        nextHomePopup.enabled = homePopup.enabled;
+      }
+
+      if (typeof homePopup.message === 'string') {
+        nextHomePopup.message = homePopup.message.trim().slice(0, 500);
+      }
+
+      settings.homePopup = nextHomePopup;
     }
 
     if (Array.isArray(recommendedRestaurantIds)) {
@@ -809,6 +834,10 @@ export const updateLandingSettings = async (req, res) => {
     return successResponse(res, 200, 'Landing settings updated successfully', {
       settings: {
         exploreMoreHeading: settings.exploreMoreHeading,
+        homePopup: {
+          enabled: Boolean(settings.homePopup?.enabled),
+          message: settings.homePopup?.message || '',
+        },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id || restaurant)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
           _id: restaurant._id,

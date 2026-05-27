@@ -228,8 +228,9 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
   const ignoreOperationalStatus = options?.ignoreOperationalStatus === true
   const isActive = restaurant.isActive !== false
   const isAcceptingOrders = restaurant.isAcceptingOrders !== false
+  const canOperate = ignoreOperationalStatus ? true : isActive
 
-  if (!ignoreOperationalStatus && !isActive) {
+  if (!canOperate) {
     return {
       isOpen: false,
       isActive,
@@ -272,8 +273,10 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
     ? { minutesUntilOpen: 0, nextOpeningTime: openingTime }
     : getMinutesUntilNextOpening(restaurant, now, openingTime)
 
+  const isOpen = canOperate && isAcceptingOrders
+
   return {
-    isOpen: isWithinTimings,
+    isOpen,
     isActive,
     isAcceptingOrders,
     isWithinTimings,
@@ -281,14 +284,16 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
     closingTime,
     minutesUntilClose,
     minutesUntilOpen: nextOpening.minutesUntilOpen,
-    closingCountdownLabel: isWithinTimings
+    closingCountdownLabel: isOpen && isWithinTimings
       ? formatClosingCountdown(minutesUntilClose, closingTime)
       : null,
     openingCountdownLabel: isWithinTimings
       ? null
       : formatOpeningCountdown(nextOpening.minutesUntilOpen, nextOpening.nextOpeningTime),
-    reason: isWithinTimings
-      ? (isAcceptingOrders ? "open" : "open-by-timings")
-      : (hasExplicitWindow ? "outside-hours" : "no-timings"),
+    reason: !isAcceptingOrders
+      ? "manual-offline"
+      : (isWithinTimings
+        ? "open"
+        : (hasExplicitWindow ? "outside-hours-online" : "online-no-timings")),
   }
 }

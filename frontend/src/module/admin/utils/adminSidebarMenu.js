@@ -210,6 +210,7 @@ export const adminSidebarMenu = [
     label: "BANNER SETTINGS",
     items: [
       { type: "link", label: "Landing Page Management", path: "/admin/hero-banner-management", icon: "Image" },
+      { type: "link", label: "UI Popup", path: "/admin/ui-popup-settings", icon: "Bell" },
     ],
   },
 ];

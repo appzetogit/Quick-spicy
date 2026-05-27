@@ -333,6 +333,8 @@ export default function Home() {
   const [exploreMoreHeading, setExploreMoreHeading] = useState("Explore More")
   const [recommendedRestaurantIds, setRecommendedRestaurantIds] = useState([])
   const [recommendedRestaurantsFromSettings, setRecommendedRestaurantsFromSettings] = useState([])
+  const [homePopupConfig, setHomePopupConfig] = useState({ enabled: false, message: "" })
+  const [showHomePopup, setShowHomePopup] = useState(false)
   const [loadingLandingConfig, setLoadingLandingConfig] = useState(true)
   const [restaurantsData, setRestaurantsData] = useState([])
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
@@ -775,6 +777,10 @@ export default function Home() {
                 .sort((a, b) => (a.order || 0) - (b.order || 0))
           )
           setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
+          setHomePopupConfig({
+            enabled: Boolean(response.data.data.settings?.homePopup?.enabled),
+            message: response.data.data.settings?.homePopup?.message || "",
+          })
           setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
             ? response.data.data.settings.recommendedRestaurantIds
             : [])
@@ -788,6 +794,7 @@ export default function Home() {
         setLandingCategories([])
         setLandingExploreMore([])
         setExploreMoreHeading("Explore More")
+        setHomePopupConfig({ enabled: false, message: "" })
         setRecommendedRestaurantIds([])
         setRecommendedRestaurantsFromSettings([])
       } finally {
@@ -1021,6 +1028,15 @@ export default function Home() {
       window.removeEventListener("storage", syncLocationPreference)
     }
   }, [])
+
+  useEffect(() => {
+    const message = homePopupConfig.message.trim()
+    if (!homePopupConfig.enabled || !message) {
+      setShowHomePopup(false)
+      return
+    }
+    setShowHomePopup(true)
+  }, [homePopupConfig])
 
   const cityName = selectedLocation?.city || "Select"
   const stateName = selectedLocation?.state || "Location"
@@ -2780,7 +2796,7 @@ export default function Home() {
                   >
                     <div className="h-full group">
                       <Link to={`/user/restaurants/${restaurantSlug}`} className="h-full flex">
-                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] border-background transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${isOutOfService || !availability.isOpen ? 'grayscale opacity-75' : ''
+                        <Card className={`overflow-hidden gap-0 cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] border-background transition-all duration-500 py-0 rounded-md flex flex-col h-full w-full relative ${!availability.isOpen ? 'grayscale opacity-75' : ''
                           }`}>
                           {/* Image Section with Carousel */}
                           <div className="relative">
@@ -2827,7 +2843,11 @@ export default function Home() {
                                     {restaurant.name}
                                   </h3>
                                   <span className={`inline-flex mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                                    {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
+                                    {availability.isOpen
+                                      ? "Open now"
+                                      : (availability.isWithinTimings
+                                        ? "Offline"
+                                        : (availability.openingCountdownLabel || "Offline"))}
                                   </span>
                                   {availability.isOpen && availability.closingCountdownLabel && (
                                     <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 line-clamp-1">
@@ -2835,7 +2855,7 @@ export default function Home() {
                                       <span className="truncate">{availability.closingCountdownLabel}</span>
                                     </div>
                                   )}
-                                  {!availability.isOpen && availability.openingTime && (
+                                  {!availability.isOpen && !availability.isWithinTimings && availability.openingTime && (
                                     <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-700 dark:text-rose-300 line-clamp-1">
                                       <Timer className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.8} />
                                       <span className="truncate">
@@ -3788,6 +3808,46 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {typeof window !== "undefined" &&
+        createPortal(
+          <AnimatePresence>
+            {showHomePopup && (
+              <>
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[10001] bg-black/45 backdrop-blur-sm"
+                />
+                <motion.div
+                  initial={{ opacity: 0, y: 24, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                  className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
+                >
+                  <div className="w-full max-w-md overflow-hidden rounded-[28px] bg-white shadow-2xl">
+                    <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 px-5 py-4 text-white">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/85">Announcement</p>
+                          <h3 className="mt-1 text-xl font-bold">Quick update</h3>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="px-5 py-5">
+                      <p className="text-sm leading-6 text-slate-700">
+                        {homePopupConfig.message}
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
 
       {/* Toast Notification - Fixed to viewport bottom */}
       {typeof window !== "undefined" &&

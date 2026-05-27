@@ -6,6 +6,18 @@ const landingPageSettingsSchema = new mongoose.Schema({
     default: 'Explore More',
     trim: true
   },
+  homePopup: {
+    enabled: {
+      type: Boolean,
+      default: false,
+    },
+    message: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 500,
+    },
+  },
   recommendedRestaurants: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Restaurant',
@@ -24,6 +36,10 @@ landingPageSettingsSchema.statics.getSettings = async function() {
   if (!settings) {
     settings = new this({
       exploreMoreHeading: 'Explore More',
+      homePopup: {
+        enabled: false,
+        message: '',
+      },
       recommendedRestaurants: [],
     });
     await settings.save();
