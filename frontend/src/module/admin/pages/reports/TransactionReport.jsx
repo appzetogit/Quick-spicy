@@ -33,8 +33,8 @@ export default function TransactionReport() {
     deliverymanEarning: 0
   })
   const [filters, setFilters] = useState({
-    zone: "All Zones",
-    restaurant: "All restaurants",
+    zone: "all",
+    restaurant: "all",
     time: "All Time",
   })
   const [pagination, setPagination] = useState({
@@ -93,8 +93,8 @@ export default function TransactionReport() {
         }
 
         const params = {
-          zone: filters.zone !== "All Zones" ? filters.zone : undefined,
-          restaurant: filters.restaurant !== "All restaurants" ? filters.restaurant : undefined,
+          zone: filters.zone !== "all" ? filters.zone : undefined,
+          restaurant: filters.restaurant !== "all" ? filters.restaurant : undefined,
           fromDate: fromDate ? fromDate.toISOString() : undefined,
           toDate: toDate ? toDate.toISOString() : undefined,
           search: searchQuery || undefined,
@@ -160,8 +160,8 @@ export default function TransactionReport() {
 
   const handleResetFilters = () => {
     setFilters({
-      zone: "All Zones",
-      restaurant: "All restaurants",
+      zone: "all",
+      restaurant: "all",
       time: "All Time",
     })
     setPagination((prev) => ({ ...prev, page: 1 }))
@@ -218,9 +218,9 @@ export default function TransactionReport() {
                 onChange={(e) => handleFilterChange("zone", e.target.value)}
                 className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option value="All Zones" className="text-slate-900 bg-white">All Zones</option>
+                <option value="all" className="text-slate-900 bg-white">All Zones</option>
                 {zones.map(zone => (
-                  <option key={zone._id} value={zone.name} className="text-slate-900 bg-white">{zone.name}</option>
+                  <option key={zone._id} value={zone._id} className="text-slate-900 bg-white">{zone.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />
@@ -232,9 +232,9 @@ export default function TransactionReport() {
                 onChange={(e) => handleFilterChange("restaurant", e.target.value)}
                 className="w-full px-2.5 py-1.5 pr-5 border border-slate-300 rounded-lg bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs appearance-none cursor-pointer"
               >
-                <option value="All restaurants" className="text-slate-900 bg-white">All restaurants</option>
+                <option value="all" className="text-slate-900 bg-white">All restaurants</option>
                 {restaurants.map(restaurant => (
-                  <option key={restaurant._id} value={restaurant.name} className="text-slate-900 bg-white">{restaurant.name}</option>
+                  <option key={restaurant._id} value={restaurant._id} className="text-slate-900 bg-white">{restaurant.name}</option>
                 ))}
               </select>
               <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500 pointer-events-none" />

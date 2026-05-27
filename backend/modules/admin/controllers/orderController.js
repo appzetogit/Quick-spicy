@@ -1515,46 +1515,59 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
     
     console.log('📋 Query params:', { page, limit, search, zone, restaurant, fromDate, toDate });
 
+    const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
+    const Zone = (await import('../models/Zone.js')).default;
+    const OrderSettlement = (await import('../../order/models/OrderSettlement.js')).default;
+
     // Build query for orders
     const query = {};
+    const settlementQuery = {};
+    const parsedPage = parseInt(page, 10) || 1;
+    const parsedLimit = parseInt(limit, 10) || 50;
+    let restaurantDoc = null;
+    let zoneDocId = null;
 
     // Date range filter
     if (fromDate || toDate) {
       query.createdAt = {};
+      settlementQuery.createdAt = {};
       if (fromDate) {
         const startDate = new Date(fromDate);
         startDate.setHours(0, 0, 0, 0);
         query.createdAt.$gte = startDate;
+        settlementQuery.createdAt.$gte = startDate;
       }
       if (toDate) {
         const endDate = new Date(toDate);
         endDate.setHours(23, 59, 59, 999);
         query.createdAt.$lte = endDate;
+        settlementQuery.createdAt.$lte = endDate;
       }
     }
 
     // Restaurant filter
     if (restaurant && restaurant !== 'All restaurants') {
-      const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
-      const restaurantDoc = await Restaurant.findOne({
+      restaurantDoc = await Restaurant.findOne({
         $or: [
           { name: { $regex: restaurant, $options: 'i' } },
           { _id: mongoose.Types.ObjectId.isValid(restaurant) ? restaurant : null },
           { restaurantId: restaurant }
         ]
-      }).select('_id restaurantId').lean();
+      }).select('_id restaurantId name').lean();
 
       if (restaurantDoc) {
-        query.restaurantId = restaurantDoc._id?.toString() || restaurantDoc.restaurantId;
+        query.restaurantId = restaurantDoc._id;
+        settlementQuery.restaurantId = restaurantDoc._id;
       }
     }
 
     // Zone filter
-    let zoneDocId = null;
     if (zone && zone !== 'All Zones') {
-      const Zone = (await import('../models/Zone.js')).default;
       const zoneDoc = await Zone.findOne({
-        name: { $regex: zone, $options: 'i' }
+        $or: [
+          { _id: mongoose.Types.ObjectId.isValid(zone) ? zone : null },
+          { name: { $regex: zone, $options: 'i' } }
+        ]
       }).select('_id name').lean();
 
       if (zoneDoc) {
@@ -1569,106 +1582,32 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
     }
 
     // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const skip = (parsedPage - 1) * parsedLimit;
 
     // Fetch orders with population
     const orders = await Order.find(query)
       .populate('userId', 'name email phone')
       .populate('restaurantId', 'name slug')
       .sort({ createdAt: -1 })
-      .limit(parseInt(limit))
+      .limit(parsedLimit)
       .skip(skip)
       .lean();
 
     // Get total count
     const total = await Order.countDocuments(query);
 
-    // Calculate summary statistics
-    const AdminCommission = (await import('../models/AdminCommission.js')).default;
-    
-    // Build date query for summary stats
-    const summaryDateQuery = {};
-    if (fromDate || toDate) {
-      summaryDateQuery.orderDate = {};
-      if (fromDate) {
-        const startDate = new Date(fromDate);
-        startDate.setHours(0, 0, 0, 0);
-        summaryDateQuery.orderDate.$gte = startDate;
-      }
-      if (toDate) {
-        const endDate = new Date(toDate);
-        endDate.setHours(23, 59, 59, 999);
-        summaryDateQuery.orderDate.$lte = endDate;
-      }
-    }
+    const orderIds = orders.map((order) => order._id).filter(Boolean);
+    const settlementsForPage = orderIds.length > 0
+      ? await OrderSettlement.find({ orderId: { $in: orderIds } }).lean()
+      : [];
+    const settlementByOrderId = new Map(
+      settlementsForPage.map((settlement) => [String(settlement.orderId), settlement])
+    );
 
-    // Build restaurant filter for summary
-    let summaryRestaurantQuery = {};
-    if (restaurant && restaurant !== 'All restaurants') {
-      const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
-      const restaurantDoc = await Restaurant.findOne({
-        $or: [
-          { name: { $regex: restaurant, $options: 'i' } },
-          { _id: mongoose.Types.ObjectId.isValid(restaurant) ? restaurant : null },
-          { restaurantId: restaurant }
-        ]
-      }).select('_id restaurantId').lean();
+    const settlementPipeline = [{ $match: settlementQuery }];
 
-      if (restaurantDoc) {
-        summaryRestaurantQuery.restaurantId = new mongoose.Types.ObjectId(restaurantDoc._id);
-      }
-    }
-
-    // Get completed transactions and deliveryman earnings using MongoDB aggregation
-    const completedStats = await Order.aggregate([
-      { $match: { ...query, status: 'delivered', 'payment.status': 'completed' } },
-      {
-        $group: {
-          _id: null,
-          completedTransaction: { $sum: { $ifNull: ['$pricing.total', 0] } },
-          completedCount: { $sum: 1 },
-          deliverymanEarning: { $sum: { $multiply: [{ $ifNull: ['$pricing.deliveryFee', 0] }, 0.8] } }
-        }
-      }
-    ]);
-
-    const completedTransaction = completedStats[0]?.completedTransaction || 0;
-    const completedCount = completedStats[0]?.completedCount || 0;
-    const deliverymanEarning = completedStats[0]?.deliverymanEarning || 0;
-
-    // Get refunded and cancelled transactions using MongoDB aggregation
-    const refundedStats = await Order.aggregate([
-      {
-        $match: {
-          ...query,
-          $or: [
-            { 'payment.status': 'refunded' },
-            { status: 'cancelled' }
-          ]
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          refundedTransaction: { $sum: { $ifNull: ['$pricing.total', 0] } }
-        }
-      }
-    ]);
-
-    const refundedTransaction = refundedStats[0]?.refundedTransaction || 0;
-
-    // Get admin and restaurant earnings using MongoDB aggregation
-    const adminCommissionQuery = {
-      status: 'completed',
-      ...summaryDateQuery,
-      ...summaryRestaurantQuery
-    };
-
-    const commissionPipeline = [];
-    
-    // If zone filter is active, join orders to filter by zone
-    if (zoneDocId) {
-      commissionPipeline.push(
+    if (zoneDocId || search) {
+      settlementPipeline.push(
         {
           $lookup: {
             from: 'orders',
@@ -1677,38 +1616,126 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
             as: 'orderInfo'
           }
         },
-        { $unwind: '$orderInfo' },
         {
-          $match: {
-            ...adminCommissionQuery,
-            'orderInfo.assignmentInfo.zoneId': zoneDocId
+          $unwind: {
+            path: '$orderInfo',
+            preserveNullAndEmptyArrays: true
           }
         }
       );
-    } else {
-      commissionPipeline.push({ $match: adminCommissionQuery });
+
+      if (zoneDocId) {
+        settlementPipeline.push({
+          $match: {
+            'orderInfo.assignmentInfo.zoneId': zoneDocId
+          }
+        });
+      }
+
+      if (search) {
+        settlementPipeline.push({
+          $match: {
+            $or: [
+              { orderNumber: { $regex: search, $options: 'i' } },
+              { 'orderInfo.orderId': { $regex: search, $options: 'i' } }
+            ]
+          }
+        });
+      }
     }
 
-    commissionPipeline.push({
+    settlementPipeline.push({
       $group: {
         _id: null,
-        adminEarning: { $sum: { $ifNull: ['$commissionAmount', 0] } },
-        restaurantEarning: { $sum: { $ifNull: ['$restaurantEarning', 0] } }
+        completedTransaction: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$cancellationDetails.cancelled', false] },
+                  { $eq: ['$escrowStatus', 'released'] }
+                ]
+              },
+              { $ifNull: ['$userPayment.total', 0] },
+              0
+            ]
+          }
+        },
+        completedCount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $eq: ['$cancellationDetails.cancelled', false] },
+                  { $eq: ['$escrowStatus', 'released'] }
+                ]
+              },
+              1,
+              0
+            ]
+          }
+        },
+        refundedTransaction: {
+          $sum: {
+            $cond: [
+              {
+                $or: [
+                  { $eq: ['$cancellationDetails.cancelled', true] },
+                  { $eq: ['$escrowStatus', 'refunded'] }
+                ]
+              },
+              {
+                $cond: [
+                  { $gt: [{ $ifNull: ['$cancellationDetails.refundAmount', 0] }, 0] },
+                  { $ifNull: ['$cancellationDetails.refundAmount', 0] },
+                  { $ifNull: ['$userPayment.total', 0] }
+                ]
+              },
+              0
+            ]
+          }
+        },
+        adminEarning: {
+          $sum: {
+            $cond: [
+              { $eq: ['$cancellationDetails.cancelled', false] },
+              { $ifNull: ['$adminEarning.totalEarning', 0] },
+              0
+            ]
+          }
+        },
+        restaurantEarning: {
+          $sum: {
+            $cond: [
+              { $eq: ['$cancellationDetails.cancelled', false] },
+              { $ifNull: ['$restaurantEarning.netEarning', 0] },
+              0
+            ]
+          }
+        },
+        deliverymanEarning: {
+          $sum: {
+            $cond: [
+              { $eq: ['$cancellationDetails.cancelled', false] },
+              { $ifNull: ['$deliveryPartnerEarning.totalEarning', 0] },
+              0
+            ]
+          }
+        }
       }
     });
 
-    const commissionStats = await AdminCommission.aggregate(commissionPipeline);
-
-    const adminEarning = commissionStats[0]?.adminEarning || 0;
-    const restaurantEarning = commissionStats[0]?.restaurantEarning || 0;
+    const settlementSummary = await OrderSettlement.aggregate(settlementPipeline);
+    const summary = settlementSummary[0] || {};
 
     // Transform orders to match frontend format
-    const transformedTransactions = orders.map((order, index) => {
-      const subtotal = order.pricing?.subtotal || 0;
-      const discount = order.pricing?.discount || 0;
-      const deliveryFee = order.pricing?.deliveryFee || 0;
-      const tax = order.pricing?.tax || 0;
-      const couponCode = order.pricing?.couponCode || null;
+    const transformedTransactions = orders.map((order) => {
+      const settlement = settlementByOrderId.get(String(order._id));
+      const subtotal = settlement?.userPayment?.subtotal ?? order.pricing?.subtotal ?? 0;
+      const discount = settlement?.userPayment?.discount ?? order.pricing?.discount ?? 0;
+      const deliveryFee = settlement?.userPayment?.deliveryFee ?? order.pricing?.deliveryFee ?? 0;
+      const tax = settlement?.userPayment?.gst ?? order.pricing?.tax ?? order.pricing?.gst ?? 0;
+      const couponCode = order.pricing?.couponCode || order.couponCode || null;
       
       // For report: itemDiscount is the discount applied to items
       const itemDiscount = discount;
@@ -1725,12 +1752,12 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
       // Total item amount (subtotal before discounts)
       const totalItemAmount = subtotal;
       // Order amount (final total)
-      const orderAmount = order.pricing?.total || 0;
+      const orderAmount = settlement?.userPayment?.total ?? order.pricing?.total ?? 0;
 
       return {
         id: order._id.toString(),
         orderId: order.orderId,
-        restaurant: order.restaurantName || order.restaurantId?.name || 'Unknown Restaurant',
+        restaurant: settlement?.restaurantName || order.restaurantName || order.restaurantId?.name || restaurantDoc?.name || 'Unknown Restaurant',
         customerName: order.userId?.name || 'Invalid Customer Data',
         totalItemAmount: totalItemAmount,
         itemDiscount: itemDiscount,
@@ -1745,19 +1772,19 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
 
     return successResponse(res, 200, 'Transaction report retrieved successfully', {
       summary: {
-        completedTransaction,
-        completedCount,
-        refundedTransaction,
-        adminEarning,
-        restaurantEarning,
-        deliverymanEarning
+        completedTransaction: summary.completedTransaction || 0,
+        completedCount: summary.completedCount || 0,
+        refundedTransaction: summary.refundedTransaction || 0,
+        adminEarning: summary.adminEarning || 0,
+        restaurantEarning: summary.restaurantEarning || 0,
+        deliverymanEarning: summary.deliverymanEarning || 0
       },
       transactions: transformedTransactions,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
+        page: parsedPage,
+        limit: parsedLimit,
         total,
-        pages: Math.ceil(total / parseInt(limit))
+        pages: Math.ceil(total / parsedLimit)
       }
     });
   } catch (error) {

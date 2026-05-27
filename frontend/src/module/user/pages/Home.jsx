@@ -67,6 +67,10 @@ const placeholders = [
 const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
 const USER_ZONE_SELECTION_KEY = "userZoneSelection"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+const BLOCKED_CLOUDINARY_HOSTS = [/^https?:\/\/res\.cloudinary\.com\/dbubwu3lf(?:\/|$)/i]
 
 // Restaurant Image Carousel Component
 const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, backendOrigin = "" }) => {
@@ -334,6 +338,13 @@ export default function Home() {
   const [loadingRestaurants, setLoadingRestaurants] = useState(true)
   const [availableZones, setAvailableZones] = useState([])
   const [loadingAvailableZones, setLoadingAvailableZones] = useState(false)
+  const [locationPreference, setLocationPreference] = useState(() => {
+    try {
+      return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+    } catch {
+      return "live"
+    }
+  })
   const [zoneSelection, setZoneSelection] = useState(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(USER_ZONE_SELECTION_KEY) || "{}")
@@ -379,6 +390,9 @@ export default function Home() {
     if (/^(https?:)?\/\//i.test(normalizedInput)) {
       try {
         const parsed = new URL(normalizedInput, window.location.origin)
+        if (BLOCKED_CLOUDINARY_HOSTS.some((pattern) => pattern.test(parsed.toString()))) {
+          return ""
+        }
 
         // In mobile production, localhost/127.0.0.1 inside image URLs is unreachable.
         // Use BACKEND_ORIGIN (API server) for image host, not frontend host—uploads are served by the backend.
@@ -406,6 +420,9 @@ export default function Home() {
         }
 
         const finalUrl = parsed.toString()
+        if (BLOCKED_CLOUDINARY_HOSTS.some((pattern) => pattern.test(finalUrl))) {
+          return ""
+        }
         // Do not encode signed URLs (S3/Cloudfront/Cloudinary); encoding query params can break signatures.
         const hasSignedParams = /[?&](X-Amz-|Signature=|Expires=|AWSAccessKeyId=|GoogleAccessId=|token=|sig=|se=|sp=|sv=)/i.test(finalUrl)
         return hasSignedParams ? finalUrl : encodeURI(finalUrl)
@@ -964,6 +981,16 @@ export default function Home() {
   const { addFavorite, removeFavorite, isFavorite, getFavorites, getDefaultAddress } = profileContext
   const { addToCart, cart } = useCart()
   const { location, loading, requestLocation } = useLocation()
+  const selectedLocation = useMemo(() => {
+    if (locationPreference !== "manual") return location
+    try {
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+      const parsed = stored ? JSON.parse(stored) : null
+      return parsed || location
+    } catch {
+      return location
+    }
+  }, [location, locationPreference])
   const { zoneId, zone, zoneStatus, isInService, isOutOfService, loading: zoneLoading, error: zoneError } = useZone(location)
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
@@ -978,10 +1005,27 @@ export default function Home() {
     [cart]
   )
 
-  const cityName = location?.city || "Select"
-  const stateName = location?.state || "Location"
+  useEffect(() => {
+    const syncLocationPreference = () => {
+      try {
+        setLocationPreference(localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live")
+      } catch {
+        setLocationPreference("live")
+      }
+    }
+
+    window.addEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+    window.addEventListener("storage", syncLocationPreference)
+    return () => {
+      window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+      window.removeEventListener("storage", syncLocationPreference)
+    }
+  }, [])
+
+  const cityName = selectedLocation?.city || "Select"
+  const stateName = selectedLocation?.state || "Location"
   const hasLiveLocation = useMemo(() => {
-    if (!location) return false
+    if (!selectedLocation) return false
 
     const isPlaceholder = (value) => {
       if (!value) return true
@@ -989,11 +1033,11 @@ export default function Home() {
       return !normalized || normalized === "select location" || normalized === "current location"
     }
 
-    const hasAddressText = !isPlaceholder(location.formattedAddress) || !isPlaceholder(location.address)
-    const hasCityState = !isPlaceholder(location.city) || !isPlaceholder(location.state)
+    const hasAddressText = !isPlaceholder(selectedLocation.formattedAddress) || !isPlaceholder(selectedLocation.address)
+    const hasCityState = !isPlaceholder(selectedLocation.city) || !isPlaceholder(selectedLocation.state)
 
     return hasAddressText || hasCityState
-  }, [location])
+  }, [selectedLocation])
 
   const formatSavedAddress = useCallback((address) => {
     if (!address) return ""
@@ -2783,12 +2827,20 @@ export default function Home() {
                                     {restaurant.name}
                                   </h3>
                                   <span className={`inline-flex mt-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                                    {availability.isOpen ? "Open now" : "Offline"}
+                                    {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
                                   </span>
                                   {availability.isOpen && availability.closingCountdownLabel && (
                                     <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-300 line-clamp-1">
                                       <Timer className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.8} />
                                       <span className="truncate">{availability.closingCountdownLabel}</span>
+                                    </div>
+                                  )}
+                                  {!availability.isOpen && availability.openingTime && (
+                                    <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-rose-700 dark:text-rose-300 line-clamp-1">
+                                      <Timer className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.8} />
+                                      <span className="truncate">
+                                        {availability.openingCountdownLabel || "Opening soon"}
+                                      </span>
                                     </div>
                                   )}
                                 </div>

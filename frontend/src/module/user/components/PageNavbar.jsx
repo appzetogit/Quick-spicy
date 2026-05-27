@@ -10,6 +10,8 @@ import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSet
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
 
 export default function PageNavbar({
   textColor = "white",
@@ -23,6 +25,13 @@ export default function PageNavbar({
   const cartCount = getCartCount()
   const [logoUrl, setLogoUrl] = useState(null)
   const [companyName, setCompanyName] = useState(null)
+  const [locationPreference, setLocationPreference] = useState(() => {
+    try {
+      return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+    } catch {
+      return "live"
+    }
+  })
   const autoLocationAttemptedRef = useRef(false)
   const requestLocationRef = useRef(requestLocation)
   const enableLocationDebugLogs = false
@@ -36,6 +45,35 @@ export default function PageNavbar({
     requestLocationRef.current = requestLocation
   }, [requestLocation])
 
+  useEffect(() => {
+    const syncLocationPreference = () => {
+      try {
+        setLocationPreference(localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live")
+      } catch {
+        setLocationPreference("live")
+      }
+    }
+
+    window.addEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+    window.addEventListener("storage", syncLocationPreference)
+    return () => {
+      window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+      window.removeEventListener("storage", syncLocationPreference)
+    }
+  }, [])
+
+  const displayLocation = useMemo(() => {
+    if (locationPreference !== "manual") return location
+
+    try {
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+      const parsed = stored ? JSON.parse(stored) : null
+      return parsed || location
+    } catch {
+      return location
+    }
+  }, [location, locationPreference])
+
   // Auto-trigger location fetch once when location is missing/placeholder and permission is already granted.
   useEffect(() => {
     if (autoLocationAttemptedRef.current || loading || !requestLocationRef.current) return
@@ -48,8 +86,8 @@ export default function PageNavbar({
 
     const hasMissingOrPlaceholderLocation =
       !location ||
-      location.formattedAddress === "Select location" ||
-      location.city === "Current Location"
+      displayLocation.formattedAddress === "Select location" ||
+      displayLocation.city === "Current Location"
 
     if (!hasMissingOrPlaceholderLocation) return
     // Reserve a single background attempt to avoid repeated checks on re-renders.
@@ -89,16 +127,16 @@ export default function PageNavbar({
       cancelled = true
       clearTimeout(timeoutId)
     }
-  }, [location, loading])
+  }, [displayLocation, loading])
 
   // Reset one-time auto-attempt if location becomes valid, so future invalid states can retry.
   useEffect(() => {
-    if (location &&
-      location.formattedAddress !== "Select location" &&
-      location.city !== "Current Location") {
+    if (displayLocation &&
+      displayLocation.formattedAddress !== "Select location" &&
+      displayLocation.city !== "Current Location") {
       autoLocationAttemptedRef.current = false
     }
-  }, [location])
+  }, [displayLocation])
 
   // Load business settings logo
   useEffect(() => {
@@ -210,11 +248,11 @@ export default function PageNavbar({
     // Debug: Log the entire location object
     debugLog("🔍 PageNavbar - Full Location Object:", {
       location,
-      address: location?.address,
-      formattedAddress: location?.formattedAddress,
-      area: location?.area,
-      city: location?.city,
-      state: location?.state
+      address: displayLocation?.address,
+      formattedAddress: displayLocation?.formattedAddress,
+      area: displayLocation?.area,
+      city: displayLocation?.city,
+      state: displayLocation?.state
     })
 
     // Get main location - prioritize area name over coordinates
@@ -226,17 +264,17 @@ export default function PageNavbar({
       return coordPattern.test(str.trim())
     }
 
-    const hasManualSavedAddress = Boolean(location?.label && String(location.label).trim())
+    const hasManualSavedAddress = Boolean(displayLocation?.label && String(displayLocation.label).trim())
 
     // For manually chosen/saved addresses, prefer the actual street/address line
     // instead of internal details like "Corporate House" becoming the main title.
     if (
       hasManualSavedAddress &&
-      location?.address &&
-      !isCoordinates(location.address) &&
-      location.address !== "Select location"
+      displayLocation?.address &&
+      !isCoordinates(displayLocation.address) &&
+      displayLocation.address !== "Select location"
     ) {
-      mainLocation = String(location.address)
+      mainLocation = String(displayLocation.address)
         .split(",")
         .map((part) => part.trim())
         .filter(Boolean)
@@ -247,13 +285,13 @@ export default function PageNavbar({
     // Priority 0: Use mainTitle (ZOMATO-STYLE) - Exact building/cafe name
     // This is the most accurate - directly from Google Maps components
     // If mainTitle is available, show it with area if area is different
-    if (!mainLocation && location?.mainTitle && location.mainTitle.trim() !== "" && location.mainTitle !== "Location Found") {
-      mainLocation = location.mainTitle;
+    if (!mainLocation && displayLocation?.mainTitle && displayLocation.mainTitle.trim() !== "" && displayLocation.mainTitle !== "Location Found") {
+      mainLocation = displayLocation.mainTitle;
       // If area is available and different from mainTitle, append it
-      if (location?.area && location.area.trim() !== "" &&
-        location.area.toLowerCase() !== location.mainTitle.toLowerCase() &&
-        location.area.toLowerCase() !== location?.city?.toLowerCase()) {
-        mainLocation = `${location.mainTitle}, ${location.area}`;
+      if (displayLocation?.area && displayLocation.area.trim() !== "" &&
+        displayLocation.area.toLowerCase() !== displayLocation.mainTitle.toLowerCase() &&
+        displayLocation.area.toLowerCase() !== displayLocation?.city?.toLowerCase()) {
+        mainLocation = `${displayLocation.mainTitle}, ${displayLocation.area}`;
       }
       debugLog("✅✅✅ ZOMATO-STYLE: Using mainTitle for display:", mainLocation);
     }
@@ -963,23 +1001,23 @@ export default function PageNavbar({
       main: mainLocation,
       sub: subLocation
     }
-  }, [location])
+  }, [displayLocation, location])
 
   const mainLocationName = locationDisplay.main
   const subLocationName = locationDisplay.sub
   const savedAddressLabel = useMemo(() => {
-    if (location?.label && String(location.label).trim()) {
-      return String(location.label).trim()
+    if (displayLocation?.label && String(displayLocation.label).trim()) {
+      return String(displayLocation.label).trim()
     }
     try {
-      const stored = localStorage.getItem("userLocation")
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
       if (!stored) return ""
       const parsed = JSON.parse(stored)
       return parsed?.label && String(parsed.label).trim() ? String(parsed.label).trim() : ""
     } catch {
       return ""
     }
-  }, [location?.label])
+  }, [displayLocation?.label])
   const locationSubText = savedAddressLabel ? `Delivering to ${savedAddressLabel}` : subLocationName
 
   const handleLocationClick = () => {

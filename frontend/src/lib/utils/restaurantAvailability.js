@@ -68,6 +68,23 @@ const getTodayTiming = (restaurant, dayName) => {
   return null
 }
 
+const isDayAvailable = (restaurant, dayName, timingForDay) => {
+  const openDays = Array.isArray(restaurant?.openDays) ? restaurant.openDays : []
+
+  if (timingForDay?.isOpen === false) {
+    return false
+  }
+
+  if (!timingForDay && openDays.length > 0) {
+    const normalizedOpenDays = new Set(openDays.map((day) => normalizeDay(day)).filter(Boolean))
+    if (normalizedOpenDays.size > 0 && !normalizedOpenDays.has(dayName)) {
+      return false
+    }
+  }
+
+  return true
+}
+
 const isWithinTimeWindow = (nowMinutes, openingMinutes, closingMinutes) => {
   if (openingMinutes === null || closingMinutes === null) return true
   if (openingMinutes === closingMinutes) return true
@@ -128,6 +145,75 @@ const formatClosingCountdown = (minutesUntilClose, closingTime) => {
   return `Closing in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} ${minutes === 1 ? "min" : "mins"}`
 }
 
+const formatOpeningCountdown = (minutesUntilOpen, openingTime) => {
+  if (minutesUntilOpen === null || minutesUntilOpen === undefined) return null
+
+  if (minutesUntilOpen <= 0) {
+    return "Opens now"
+  }
+
+  if (minutesUntilOpen < 60) {
+    return `Opens in ${minutesUntilOpen} mins`
+  }
+
+  const hours = Math.floor(minutesUntilOpen / 60)
+  const minutes = minutesUntilOpen % 60
+
+  if (hours >= 24) {
+    const openingLabel = formatTimeLabel(openingTime)
+    return openingLabel ? `Opens at ${openingLabel}` : "Opens later"
+  }
+
+  if (minutes === 0) {
+    return `Opens in ${hours} ${hours === 1 ? "hour" : "hours"}`
+  }
+
+  return `Opens in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} ${minutes === 1 ? "min" : "mins"}`
+}
+
+const getMinutesUntilNextOpening = (restaurant, now, fallbackOpeningTime) => {
+  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const candidateDate = new Date(now)
+    candidateDate.setDate(now.getDate() + offset)
+    const dayName = DAY_NAMES[candidateDate.getDay()]
+    const timingForDay = getTodayTiming(restaurant, dayName)
+
+    if (!isDayAvailable(restaurant, dayName, timingForDay)) {
+      continue
+    }
+
+    const openingTime = timingForDay?.openingTime || restaurant?.deliveryTimings?.openingTime || fallbackOpeningTime || null
+    const closingTime = timingForDay?.closingTime || restaurant?.deliveryTimings?.closingTime || null
+    const openingMinutes = parseTimeToMinutes(openingTime)
+    const closingMinutes = parseTimeToMinutes(closingTime)
+
+    if (openingMinutes === null) {
+      continue
+    }
+
+    if (offset === 0) {
+      if (closingMinutes !== null && closingMinutes > openingMinutes && nowMinutes < openingMinutes) {
+        return { minutesUntilOpen: openingMinutes - nowMinutes, nextOpeningTime: openingTime }
+      }
+
+      if (closingMinutes !== null && closingMinutes < openingMinutes && nowMinutes > closingMinutes && nowMinutes < openingMinutes) {
+        return { minutesUntilOpen: openingMinutes - nowMinutes, nextOpeningTime: openingTime }
+      }
+
+      continue
+    }
+
+    const minutesUntilOpen = offset * 24 * 60 - nowMinutes + openingMinutes
+    if (minutesUntilOpen >= 0) {
+      return { minutesUntilOpen, nextOpeningTime: openingTime }
+    }
+  }
+
+  return { minutesUntilOpen: null, nextOpeningTime: fallbackOpeningTime || null }
+}
+
 export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), options = {}) => {
   if (!restaurant) {
     return {
@@ -157,27 +243,13 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
   const todayTiming = getTodayTiming(restaurant, dayName)
 
   // Legacy openDays can get stale; enforce only when no explicit outlet timing exists for today.
-  const openDays = Array.isArray(restaurant.openDays) ? restaurant.openDays : []
-  if (!todayTiming && openDays.length > 0) {
-    const normalizedOpenDays = new Set(openDays.map((day) => normalizeDay(day)).filter(Boolean))
-    if (normalizedOpenDays.size > 0 && !normalizedOpenDays.has(dayName)) {
-      return {
-        isOpen: false,
-        isActive,
-        isAcceptingOrders,
-        isWithinTimings: false,
-        reason: "closed-day",
-      }
-    }
-  }
-
-  if (todayTiming?.isOpen === false) {
+  if (!isDayAvailable(restaurant, dayName, todayTiming)) {
     return {
       isOpen: false,
       isActive,
       isAcceptingOrders,
       isWithinTimings: false,
-      reason: "day-closed",
+      reason: todayTiming?.isOpen === false ? "day-closed" : "closed-day",
     }
   }
 
@@ -196,6 +268,9 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
   const minutesUntilClose = isWithinTimings
     ? getMinutesUntilClosing(nowMinutes, openingMinutes, closingMinutes)
     : null
+  const nextOpening = isWithinTimings
+    ? { minutesUntilOpen: 0, nextOpeningTime: openingTime }
+    : getMinutesUntilNextOpening(restaurant, now, openingTime)
 
   return {
     isOpen: isWithinTimings,
@@ -205,9 +280,13 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
     openingTime,
     closingTime,
     minutesUntilClose,
+    minutesUntilOpen: nextOpening.minutesUntilOpen,
     closingCountdownLabel: isWithinTimings
       ? formatClosingCountdown(minutesUntilClose, closingTime)
       : null,
+    openingCountdownLabel: isWithinTimings
+      ? null
+      : formatOpeningCountdown(nextOpening.minutesUntilOpen, nextOpening.nextOpeningTime),
     reason: isWithinTimings
       ? (isAcceptingOrders ? "open" : "open-by-timings")
       : (hasExplicitWindow ? "outside-hours" : "no-timings"),

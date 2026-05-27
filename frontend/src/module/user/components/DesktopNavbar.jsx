@@ -17,6 +17,9 @@ const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
 
 export default function DesktopNavbar() {
     const location = useLocation()
@@ -29,16 +32,50 @@ export default function DesktopNavbar() {
     const [heroSearch, setHeroSearch] = useState("")
     const [logoUrl, setLogoUrl] = useState(null)
     const [companyName, setCompanyName] = useState(null)
+    const [locationPreference, setLocationPreference] = useState(() => {
+        try {
+            return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+        } catch {
+            return "live"
+        }
+    })
     const [hasScrolledPastBanner, setHasScrolledPastBanner] = useState(false)
     const navRef = useRef(null)
     const cartCount = getCartCount()
 
+    useEffect(() => {
+        const syncLocationPreference = () => {
+            try {
+                setLocationPreference(localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live")
+            } catch {
+                setLocationPreference("live")
+            }
+        }
+
+        window.addEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+        window.addEventListener("storage", syncLocationPreference)
+        return () => {
+            window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+            window.removeEventListener("storage", syncLocationPreference)
+        }
+    }, [])
+
+    const displayLocation = (() => {
+        if (locationPreference !== "manual") return userLocation
+        try {
+            const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+            const parsed = stored ? JSON.parse(stored) : null
+            return parsed || userLocation
+        } catch {
+            return userLocation
+        }
+    })()
 
     // Show area if available, otherwise show city
     // Priority: area > city > "Select"
-    const areaName = userLocation?.area && userLocation?.area.trim() ? userLocation.area.trim() : null
-    const cityName = userLocation?.city || null
-    const stateName = userLocation?.state || null
+    const areaName = displayLocation?.area && displayLocation?.area.trim() ? displayLocation.area.trim() : null
+    const cityName = displayLocation?.city || null
+    const stateName = displayLocation?.state || null
     // Main location name: Show area if available, otherwise show city, otherwise "Select"
     const mainLocationName = areaName || cityName || "Select"
     // Secondary location: Show only city when area is available (as per design image)

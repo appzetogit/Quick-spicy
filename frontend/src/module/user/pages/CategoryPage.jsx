@@ -28,6 +28,7 @@ const filterOptions = [
   { id: 'under-250', label: 'Under ₹250' },
   { id: 'rating-4-plus', label: 'Rating 4.0+' },
 ]
+const BLOCKED_CLOUDINARY_HOSTS = [/^https?:\/\/res\.cloudinary\.com\/dbubwu3lf(?:\/|$)/i]
 
 // Mock data removed - using backend data only
 
@@ -103,6 +104,9 @@ export default function CategoryPage() {
     if (/^https?:\/\//i.test(normalized)) {
       try {
         const parsed = new URL(normalized, window.location.origin)
+        if (BLOCKED_CLOUDINARY_HOSTS.some((pattern) => pattern.test(parsed.toString()))) {
+          return ""
+        }
         if (
           appHost &&
           appHost !== "localhost" &&
@@ -124,6 +128,9 @@ export default function CategoryPage() {
           parsed.protocol = "https:"
         }
         const finalUrl = parsed.toString()
+        if (BLOCKED_CLOUDINARY_HOSTS.some((pattern) => pattern.test(finalUrl))) {
+          return ""
+        }
         return hasSignedParams(finalUrl) ? finalUrl : encodeURI(finalUrl)
       } catch {
         return normalized

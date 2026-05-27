@@ -14,11 +14,15 @@ import { restaurantAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 
 const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "")
+const BLOCKED_CLOUDINARY_HOSTS = [/^https?:\/\/res\.cloudinary\.com\/dbubwu3lf(?:\/|$)/i]
 
 const normalizeImageUrl = (imageUrl) => {
   if (typeof imageUrl !== "string" || !imageUrl.trim()) return ""
   const trimmed = imageUrl.trim()
   if (/^(https?:)?\/\//i.test(trimmed) || /^data:/i.test(trimmed) || /^blob:/i.test(trimmed)) {
+    if (BLOCKED_CLOUDINARY_HOSTS.some((pattern) => pattern.test(trimmed))) {
+      return ""
+    }
     return trimmed
   }
   return trimmed.startsWith("/")
