@@ -17,6 +17,18 @@ const landingPageSettingsSchema = new mongoose.Schema({
       trim: true,
       maxlength: 500,
     },
+    imageUrl: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 1000,
+    },
+    cloudinaryPublicId: {
+      type: String,
+      default: '',
+      trim: true,
+      maxlength: 1000,
+    },
   },
   recommendedRestaurants: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -39,6 +51,8 @@ landingPageSettingsSchema.statics.getSettings = async function() {
       homePopup: {
         enabled: false,
         message: '',
+        imageUrl: '',
+        cloudinaryPublicId: '',
       },
       recommendedRestaurants: [],
     });

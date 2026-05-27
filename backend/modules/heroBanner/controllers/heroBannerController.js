@@ -344,6 +344,7 @@ export const getLandingConfig = async (req, res) => {
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
+          imageUrl: settings.homePopup?.imageUrl || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
@@ -759,6 +760,7 @@ export const getLandingSettings = async (req, res) => {
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
+          imageUrl: settings.homePopup?.imageUrl || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
@@ -785,7 +787,25 @@ export const getLandingSettings = async (req, res) => {
  */
 export const updateLandingSettings = async (req, res) => {
   try {
-    const { exploreMoreHeading, recommendedRestaurantIds, homePopup } = req.body;
+    const requestBody = req.body || {};
+    const normalizedHomePopup = requestBody.homePopup && typeof requestBody.homePopup === 'object'
+      ? requestBody.homePopup
+      : {
+          enabled: requestBody['homePopup[enabled]'],
+          message: requestBody['homePopup[message]'],
+          imageUrl: requestBody['homePopup[imageUrl]'],
+          removeImage: requestBody['homePopup[removeImage]'],
+        };
+    const normalizedRecommendedRestaurantIds = Array.isArray(requestBody.recommendedRestaurantIds)
+      ? requestBody.recommendedRestaurantIds
+      : Array.isArray(requestBody['recommendedRestaurantIds[]'])
+        ? requestBody['recommendedRestaurantIds[]']
+        : requestBody.recommendedRestaurantIds
+          ? [requestBody.recommendedRestaurantIds]
+          : [];
+    const { exploreMoreHeading } = requestBody;
+    const homePopup = normalizedHomePopup;
+    const recommendedRestaurantIds = normalizedRecommendedRestaurantIds;
 
     const settings = await LandingPageSettings.getSettings();
 
@@ -797,6 +817,8 @@ export const updateLandingSettings = async (req, res) => {
       const nextHomePopup = {
         enabled: Boolean(settings.homePopup?.enabled),
         message: settings.homePopup?.message || '',
+        imageUrl: settings.homePopup?.imageUrl || '',
+        cloudinaryPublicId: settings.homePopup?.cloudinaryPublicId || '',
       };
 
       if (typeof homePopup.enabled === 'boolean') {
@@ -807,7 +829,46 @@ export const updateLandingSettings = async (req, res) => {
         nextHomePopup.message = homePopup.message.trim().slice(0, 500);
       }
 
+      if (typeof homePopup.imageUrl === 'string') {
+        nextHomePopup.imageUrl = homePopup.imageUrl.trim().slice(0, 1000);
+      }
+
+      if (typeof homePopup.removeImage === 'boolean' ? homePopup.removeImage : homePopup.removeImage === 'true') {
+        if (nextHomePopup.cloudinaryPublicId) {
+          try {
+            await cloudinary.uploader.destroy(nextHomePopup.cloudinaryPublicId);
+          } catch (error) {
+            console.error('Error deleting home popup image from Cloudinary:', error);
+          }
+        }
+        nextHomePopup.imageUrl = '';
+        nextHomePopup.cloudinaryPublicId = '';
+      }
+
       settings.homePopup = nextHomePopup;
+    }
+
+    if (req.file) {
+      const folder = 'appzeto/landing/home-popup';
+      const result = await uploadToCloudinary(req.file.buffer, {
+        folder,
+        resource_type: 'image'
+      });
+
+      if (settings.homePopup?.cloudinaryPublicId) {
+        try {
+          await cloudinary.uploader.destroy(settings.homePopup.cloudinaryPublicId);
+        } catch (error) {
+          console.error('Error deleting previous home popup image from Cloudinary:', error);
+        }
+      }
+
+      settings.homePopup = {
+        enabled: Boolean(settings.homePopup?.enabled),
+        message: settings.homePopup?.message || '',
+        imageUrl: result.secure_url,
+        cloudinaryPublicId: result.public_id,
+      };
     }
 
     if (Array.isArray(recommendedRestaurantIds)) {
@@ -837,6 +898,7 @@ export const updateLandingSettings = async (req, res) => {
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
+          imageUrl: settings.homePopup?.imageUrl || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id || restaurant)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({

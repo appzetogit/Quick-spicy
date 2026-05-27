@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
-import { BellRing, Loader2, Save, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { BellRing, Loader2, Save, Sparkles, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 
-const debugError = (...args) => {};
+const debugError = () => {};
 
 export default function UiPopupSettings() {
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     enabled: false,
     message: "",
+    imageFile: null,
+    imagePreviewUrl: "",
+    existingImageUrl: "",
+    removeImage: false,
   });
 
   useEffect(() => {
@@ -22,6 +27,10 @@ export default function UiPopupSettings() {
         setFormData({
           enabled: Boolean(settings?.homePopup?.enabled),
           message: settings?.homePopup?.message || "",
+          imageFile: null,
+          imagePreviewUrl: "",
+          existingImageUrl: settings?.homePopup?.imageUrl || "",
+          removeImage: false,
         });
       } catch (error) {
         debugError("Failed to fetch UI popup settings:", error);
@@ -34,26 +43,91 @@ export default function UiPopupSettings() {
     fetchSettings();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (formData.imagePreviewUrl) {
+        URL.revokeObjectURL(formData.imagePreviewUrl);
+      }
+    };
+  }, [formData.imagePreviewUrl]);
+
+  const currentPreviewImage = formData.removeImage
+    ? ""
+    : formData.imagePreviewUrl || formData.existingImageUrl;
+
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (formData.imagePreviewUrl) {
+      URL.revokeObjectURL(formData.imagePreviewUrl);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setFormData((prev) => ({
+      ...prev,
+      imageFile: file,
+      imagePreviewUrl: previewUrl,
+      removeImage: false,
+    }));
+  };
+
+  const handleRemoveImage = () => {
+    if (formData.imagePreviewUrl) {
+      URL.revokeObjectURL(formData.imagePreviewUrl);
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      imageFile: null,
+      imagePreviewUrl: "",
+      removeImage: true,
+    }));
+  };
+
   const handleSave = async () => {
     const trimmedMessage = formData.message.trim();
+    const hasImage = Boolean(currentPreviewImage || formData.imageFile);
 
-    if (formData.enabled && !trimmedMessage) {
-      toast.error("Enter a popup message before enabling it");
+    if (formData.enabled && !trimmedMessage && !hasImage) {
+      toast.error("Add a popup message or image before enabling it");
       return;
     }
 
     try {
       setSaving(true);
-      await api.patch("/hero-banners/landing/settings", {
-        homePopup: {
-          enabled: formData.enabled,
-          message: trimmedMessage,
+      const payload = new FormData();
+      payload.append("homePopup[enabled]", String(formData.enabled));
+      payload.append("homePopup[message]", trimmedMessage);
+      payload.append("homePopup[removeImage]", String(formData.removeImage));
+
+      if (formData.imageFile) {
+        payload.append("image", formData.imageFile);
+      }
+
+      const response = await api.patch("/hero-banners/landing/settings", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
         },
       });
+
+      const savedPopup = response?.data?.data?.settings?.homePopup || {};
+
       setFormData((prev) => ({
         ...prev,
         message: trimmedMessage,
+        imageFile: null,
+        existingImageUrl: savedPopup.imageUrl || "",
+        imagePreviewUrl: "",
+        removeImage: false,
       }));
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       toast.success("UI popup settings saved");
     } catch (error) {
       debugError("Failed to save UI popup settings:", error);
@@ -136,14 +210,67 @@ export default function UiPopupSettings() {
               </div>
             </div>
 
+            <div>
+              <label htmlFor="ui-popup-image" className="mb-2 block text-sm font-semibold text-slate-800">
+                Popup image
+              </label>
+              <div className="space-y-3">
+                <input
+                  ref={fileInputRef}
+                  id="ui-popup-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 px-4 py-3 text-sm font-medium text-slate-700 transition hover:border-orange-400 hover:bg-orange-50"
+                >
+                  <Upload className="h-4 w-4" />
+                  {currentPreviewImage ? "Replace image" : "Upload image"}
+                </button>
+                <p className="text-xs text-slate-500">
+                  Optional. Upload an image and it will show inside the popup above the message.
+                </p>
+                {currentPreviewImage ? (
+                  <div className="space-y-3 rounded-2xl border border-slate-200 p-3">
+                    <img
+                      src={currentPreviewImage}
+                      alt="Popup upload preview"
+                      className="h-44 w-full rounded-2xl object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove image
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
               <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
                 <Sparkles className="h-4 w-4 text-orange-500" />
                 Preview
               </div>
-              <p className="text-sm text-slate-600">
-                {formData.message.trim() || "Your popup message preview will appear here."}
-              </p>
+              <div className="space-y-3">
+                {currentPreviewImage ? (
+                  <img
+                    src={currentPreviewImage}
+                    alt="Popup preview"
+                    className="h-44 w-full rounded-2xl object-cover"
+                  />
+                ) : null}
+                <p className="text-sm text-slate-600">
+                  {formData.message.trim() || "Your popup message preview will appear here."}
+                </p>
+              </div>
             </div>
 
             <div className="flex justify-end">

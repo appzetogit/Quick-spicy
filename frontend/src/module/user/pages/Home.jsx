@@ -333,7 +333,7 @@ export default function Home() {
   const [exploreMoreHeading, setExploreMoreHeading] = useState("Explore More")
   const [recommendedRestaurantIds, setRecommendedRestaurantIds] = useState([])
   const [recommendedRestaurantsFromSettings, setRecommendedRestaurantsFromSettings] = useState([])
-  const [homePopupConfig, setHomePopupConfig] = useState({ enabled: false, message: "" })
+  const [homePopupConfig, setHomePopupConfig] = useState({ enabled: false, message: "", imageUrl: "" })
   const [showHomePopup, setShowHomePopup] = useState(false)
   const [loadingLandingConfig, setLoadingLandingConfig] = useState(true)
   const [restaurantsData, setRestaurantsData] = useState([])
@@ -780,6 +780,7 @@ export default function Home() {
           setHomePopupConfig({
             enabled: Boolean(response.data.data.settings?.homePopup?.enabled),
             message: response.data.data.settings?.homePopup?.message || "",
+            imageUrl: normalizeImageUrl(response.data.data.settings?.homePopup?.imageUrl || ""),
           })
           setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
             ? response.data.data.settings.recommendedRestaurantIds
@@ -794,7 +795,7 @@ export default function Home() {
         setLandingCategories([])
         setLandingExploreMore([])
         setExploreMoreHeading("Explore More")
-        setHomePopupConfig({ enabled: false, message: "" })
+        setHomePopupConfig({ enabled: false, message: "", imageUrl: "" })
         setRecommendedRestaurantIds([])
         setRecommendedRestaurantsFromSettings([])
       } finally {
@@ -1031,7 +1032,8 @@ export default function Home() {
 
   useEffect(() => {
     const message = homePopupConfig.message.trim()
-    if (!homePopupConfig.enabled || !message) {
+    const imageUrl = homePopupConfig.imageUrl.trim()
+    if (!homePopupConfig.enabled || (!message && !imageUrl)) {
       setShowHomePopup(false)
       return
     }
@@ -3837,9 +3839,22 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="px-5 py-5">
-                      <p className="text-sm leading-6 text-slate-700">
-                        {homePopupConfig.message}
-                      </p>
+                      <div className="space-y-4">
+                        {homePopupConfig.imageUrl ? (
+                          <img
+                            src={homePopupConfig.imageUrl}
+                            alt="Announcement"
+                            className="h-auto max-h-[320px] w-full rounded-2xl object-cover"
+                            loading="eager"
+                            decoding="async"
+                          />
+                        ) : null}
+                        {homePopupConfig.message ? (
+                          <p className="text-sm leading-6 text-slate-700">
+                            {homePopupConfig.message}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
