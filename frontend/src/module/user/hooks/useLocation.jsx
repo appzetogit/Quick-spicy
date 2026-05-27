@@ -5,6 +5,10 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+
 export function useLocation() {
   const [location, setLocation] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -24,6 +28,7 @@ export function useLocation() {
   const lastDbLocationRef = useRef(null)
   const lastDbUpdateAtRef = useRef(0)
   const lastDbUpdatedCoordsRef = useRef({ latitude: null, longitude: null })
+  const manualSelectionActiveRef = useRef(false)
 
   const GEOCODE_REUSE_DISTANCE_METERS = 120
   const GEOCODE_REUSE_TIME_MS = 10 * 60 * 1000
@@ -53,6 +58,25 @@ export function useLocation() {
 
   const getGeocodeCacheKey = (latitude, longitude) =>
     `${Number(latitude).toFixed(4)},${Number(longitude).toFixed(4)}`
+
+  const getStoredLocationPreference = () => {
+    try {
+      return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+    } catch {
+      return "live"
+    }
+  }
+
+  const isManualSelectionActive = () => getStoredLocationPreference() === "manual"
+
+  const readStoredLocation = () => {
+    try {
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  }
 
   const getCachedGeocode = (latitude, longitude) => {
     const key = getGeocodeCacheKey(latitude, longitude)
@@ -1543,6 +1567,16 @@ export function useLocation() {
 
   /* ===================== MAIN LOCATION ===================== */
   const getLocation = async (updateDB = true, forceFresh = false, showLoading = false) => {
+    if (manualSelectionActiveRef.current && !forceFresh) {
+      const manualLocation = readStoredLocation()
+      if (manualLocation) {
+        setLocation(manualLocation)
+        setPermissionGranted(true)
+        if (showLoading) setLoading(false)
+        return manualLocation
+      }
+    }
+
     // If not forcing fresh, try DB first (faster)
     let dbLocation = !forceFresh ? await fetchLocationFromDB() : null
     if (dbLocation && !forceFresh) {
@@ -1701,7 +1735,7 @@ export function useLocation() {
               }
 
               debugLog("💾 Saving location:", finalLoc)
-              localStorage.setItem("userLocation", JSON.stringify(finalLoc))
+              localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(finalLoc))
               setLocation(finalLoc)
               setPermissionGranted(true)
               if (showLoading) setLoading(false)
@@ -1735,7 +1769,7 @@ export function useLocation() {
                     accuracy: pos.coords.accuracy || null
                   }
                   debugLog("✅ Last resort geocoding succeeded:", lastResortLoc)
-                  localStorage.setItem("userLocation", JSON.stringify(lastResortLoc))
+                  localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(lastResortLoc))
                   setLocation(lastResortLoc)
                   setPermissionGranted(true)
                   if (showLoading) setLoading(false)
@@ -1799,7 +1833,7 @@ export function useLocation() {
 
               // Strategy 2: Use cached location from localStorage
               if (!fallback) {
-                const stored = localStorage.getItem("userLocation")
+                const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
                 if (stored) {
                   try {
                     fallback = JSON.parse(stored)
@@ -1880,6 +1914,11 @@ export function useLocation() {
       watchIdRef.current = navigator.geolocation.watchPosition(
         async (pos) => {
           try {
+            if (manualSelectionActiveRef.current || isManualSelectionActive()) {
+              manualSelectionActiveRef.current = true
+              return
+            }
+
             const { latitude, longitude, accuracy } = pos.coords
             debugLog("🔄 Location updated:", { latitude, longitude, accuracy: `${accuracy}m` })
 
@@ -2076,7 +2115,7 @@ export function useLocation() {
               Math.abs(prevLocationCoordsRef.current.longitude - loc.longitude) > coordThreshold
             let persistedLocation = loc
             try {
-              const storedRaw = localStorage.getItem("userLocation")
+              const storedRaw = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
               const storedLocation = storedRaw ? JSON.parse(storedRaw) : null
               const savedLabel = loc?.label || storedLocation?.label
               if (savedLabel && String(savedLabel).trim()) {
@@ -2090,14 +2129,14 @@ export function useLocation() {
             if (coordsChanged) {
               prevLocationCoordsRef.current = { latitude: loc.latitude, longitude: loc.longitude }
               debugLog("💾 Updating live location:", loc)
-              localStorage.setItem("userLocation", JSON.stringify(persistedLocation))
+              localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(persistedLocation))
               setLocation(persistedLocation)
               setPermissionGranted(true)
               setError(null)
             } else {
               // Coordinates haven't changed significantly, skip state update to prevent re-renders
               // Still update localStorage silently for persistence
-              localStorage.setItem("userLocation", JSON.stringify(persistedLocation))
+              localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(persistedLocation))
             }
 
             // Debounce DB updates - only update every 5 seconds
@@ -2199,8 +2238,30 @@ export function useLocation() {
 
   /* ===================== INIT ===================== */
   useEffect(() => {
+    manualSelectionActiveRef.current = isManualSelectionActive()
+
+    const handleLocationPreferenceChange = (event) => {
+      const nextPreference = event?.detail?.preference || getStoredLocationPreference()
+      manualSelectionActiveRef.current = nextPreference === "manual"
+
+      if (manualSelectionActiveRef.current) {
+        const storedLocation = readStoredLocation()
+        if (storedLocation) {
+          setLocation(storedLocation)
+          setLoading(false)
+          setPermissionGranted(true)
+        }
+        stopWatchingLocation()
+        return
+      }
+
+      startWatchingLocation()
+    }
+
+    window.addEventListener(USER_LOCATION_PREFERENCE_EVENT, handleLocationPreferenceChange)
+
     // Load stored location first for IMMEDIATE display (no loading state)
-    const stored = localStorage.getItem("userLocation")
+    const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
     let shouldForceRefresh = false
     let hasInitialLocation = false
 
@@ -2306,6 +2367,11 @@ export function useLocation() {
     // This prevents "Requests geolocation permission on page load" warning
     const checkPermissionAndStart = async () => {
       try {
+        if (manualSelectionActiveRef.current) {
+          setLoading(false)
+          return
+        }
+
         let permissionGranted = false;
 
         if (navigator.permissions && navigator.permissions.query) {
@@ -2409,6 +2475,7 @@ export function useLocation() {
 
     // Cleanup timeout and watcher
     return () => {
+      window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, handleLocationPreferenceChange)
       clearTimeout(loadingTimeout)
       debugLog("🧹 Cleaning up location watcher")
       stopWatchingLocation()
@@ -2422,7 +2489,7 @@ export function useLocation() {
 
     try {
       // Clear cached location to force fresh fetch
-      localStorage.removeItem("userLocation")
+      localStorage.removeItem(USER_LOCATION_STORAGE_KEY)
       debugLog("🗑️ Cleared cached location from localStorage")
 
       // Show loading, so pass showLoading = true

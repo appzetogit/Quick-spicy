@@ -9,6 +9,8 @@ import { FaLocationDot } from "react-icons/fa6"
 import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSettings"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+
 export default function PageNavbar({
   textColor = "white",
   zIndex = 20,
@@ -37,6 +39,12 @@ export default function PageNavbar({
   // Auto-trigger location fetch once when location is missing/placeholder and permission is already granted.
   useEffect(() => {
     if (autoLocationAttemptedRef.current || loading || !requestLocationRef.current) return
+
+    try {
+      if (localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) === "manual") {
+        return
+      }
+    } catch {}
 
     const hasMissingOrPlaceholderLocation =
       !location ||
@@ -218,10 +226,28 @@ export default function PageNavbar({
       return coordPattern.test(str.trim())
     }
 
+    const hasManualSavedAddress = Boolean(location?.label && String(location.label).trim())
+
+    // For manually chosen/saved addresses, prefer the actual street/address line
+    // instead of internal details like "Corporate House" becoming the main title.
+    if (
+      hasManualSavedAddress &&
+      location?.address &&
+      !isCoordinates(location.address) &&
+      location.address !== "Select location"
+    ) {
+      mainLocation = String(location.address)
+        .split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .slice(0, 2)
+        .join(", ")
+    }
+
     // Priority 0: Use mainTitle (ZOMATO-STYLE) - Exact building/cafe name
     // This is the most accurate - directly from Google Maps components
     // If mainTitle is available, show it with area if area is different
-    if (location?.mainTitle && location.mainTitle.trim() !== "" && location.mainTitle !== "Location Found") {
+    if (!mainLocation && location?.mainTitle && location.mainTitle.trim() !== "" && location.mainTitle !== "Location Found") {
       mainLocation = location.mainTitle;
       // If area is available and different from mainTitle, append it
       if (location?.area && location.area.trim() !== "" &&

@@ -13,6 +13,10 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+
 
 // Google Maps implementation - Leaflet components removed
 
@@ -95,6 +99,20 @@ const ADDRESS_TYPE_OPTIONS = [
   { value: "Office", label: "Office" },
   { value: "Other", label: "Others" },
 ]
+
+const setUserLocationPreference = (preference) => {
+  try {
+    localStorage.setItem(USER_LOCATION_PREFERENCE_KEY, preference)
+  } catch {}
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(USER_LOCATION_PREFERENCE_EVENT, {
+        detail: { preference },
+      })
+    )
+  }
+}
 
 export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const inputRef = useRef(null)
@@ -775,6 +793,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
   const handleUseCurrentLocation = async () => {
     try {
+      setUserLocationPreference("live")
+
       // Check if geolocation is supported
       if (!navigator.geolocation) {
         toast.error("Location services are not supported in your browser", {
@@ -811,7 +831,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         debugWarn("⚠️ Location request failed or timed out:", raceError.message)
 
         // If timeout or error, try to use cached location as fallback
-        const stored = localStorage.getItem("userLocation")
+        const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
         if (stored) {
           try {
             const cachedLocation = JSON.parse(stored)
@@ -1692,7 +1712,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
             // Try to get cached location from localStorage
             try {
-              const cachedLocation = localStorage.getItem("userLocation")
+              const cachedLocation = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
               if (cachedLocation) {
                 const location = JSON.parse(cachedLocation)
                 if (location.latitude && location.longitude) {
@@ -2132,6 +2152,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
   const handleUseCurrentLocationForAddress = async () => {
     try {
+      setUserLocationPreference("live")
+
       if (!navigator.geolocation) {
         toast.error("Location services are not supported")
         return
@@ -2259,7 +2281,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       if (error.message && (error.message.includes("timeout") || error.message.includes("Timeout"))) {
         // Try to use cached location from localStorage
         try {
-          const stored = localStorage.getItem("userLocation")
+          const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
           if (stored) {
             const cachedLocation = JSON.parse(stored)
             if (cachedLocation?.latitude && cachedLocation?.longitude) {
@@ -2386,6 +2408,26 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         setDefaultAddress(savedAddressId)
       }
 
+      const manualLocationData = {
+        label: normalizedLabel,
+        city: trimmedCity,
+        state: trimmedState,
+        address: trimmedStreet,
+        area: (addressFormData.additionalDetails || "").trim(),
+        zipCode: (addressFormData.zipCode || "").trim(),
+        latitude: mapPosition[0],
+        longitude: mapPosition[1],
+        formattedAddress: [
+          (addressFormData.additionalDetails || "").trim(),
+          trimmedStreet,
+          trimmedCity,
+          trimmedState,
+          (addressFormData.zipCode || "").trim(),
+        ].filter(Boolean).join(", "),
+      }
+      localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(manualLocationData))
+      setUserLocationPreference("manual")
+
       // Reset form
       setAddressFormData({
         recipientName: "",
@@ -2472,7 +2514,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         longitude,
         formattedAddress: `${address.street}, ${address.city}, ${address.state}`
       }
-      localStorage.setItem("userLocation", JSON.stringify(locationData))
+      localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(locationData))
+      setUserLocationPreference("manual")
 
       // Update map position to show selected address
       setMapPosition([latitude, longitude])
