@@ -108,7 +108,12 @@ router.patch('/landing/explore-more/:id/status', authenticateAdmin, toggleLandin
 
 // Admin routes - Landing Page Settings
 router.get('/landing/settings', authenticateAdmin, getLandingSettings);
-router.patch('/landing/settings', authenticateAdmin, updateLandingSettings);
+router.patch(
+  '/landing/settings',
+  authenticateAdmin,
+  uploadMiddleware.single('image'),
+  updateLandingSettings
+);
 
 // Admin routes - Under 250 Banners
 router.get('/under-250', authenticateAdmin, getAllUnder250Banners);
