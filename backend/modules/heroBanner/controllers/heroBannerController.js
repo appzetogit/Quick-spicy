@@ -796,7 +796,6 @@ export const updateLandingSettings = async (req, res) => {
       }
       return undefined;
     };
-
     const requestBody = req.body || {};
     const normalizedHomePopup = requestBody.homePopup && typeof requestBody.homePopup === 'object'
       ? requestBody.homePopup
