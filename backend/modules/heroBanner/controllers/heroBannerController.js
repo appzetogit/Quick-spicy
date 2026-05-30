@@ -787,6 +787,16 @@ export const getLandingSettings = async (req, res) => {
  */
 export const updateLandingSettings = async (req, res) => {
   try {
+    const parseBooleanField = (value) => {
+      if (typeof value === 'boolean') return value;
+      if (typeof value === 'string') {
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+      }
+      return undefined;
+    };
+
     const requestBody = req.body || {};
     const normalizedHomePopup = requestBody.homePopup && typeof requestBody.homePopup === 'object'
       ? requestBody.homePopup
@@ -821,8 +831,9 @@ export const updateLandingSettings = async (req, res) => {
         cloudinaryPublicId: settings.homePopup?.cloudinaryPublicId || '',
       };
 
-      if (typeof homePopup.enabled === 'boolean') {
-        nextHomePopup.enabled = homePopup.enabled;
+      const parsedEnabled = parseBooleanField(homePopup.enabled);
+      if (typeof parsedEnabled === 'boolean') {
+        nextHomePopup.enabled = parsedEnabled;
       }
 
       if (typeof homePopup.message === 'string') {
@@ -833,7 +844,8 @@ export const updateLandingSettings = async (req, res) => {
         nextHomePopup.imageUrl = homePopup.imageUrl.trim().slice(0, 1000);
       }
 
-      if (typeof homePopup.removeImage === 'boolean' ? homePopup.removeImage : homePopup.removeImage === 'true') {
+      const shouldRemoveImage = parseBooleanField(homePopup.removeImage);
+      if (shouldRemoveImage === true) {
         if (nextHomePopup.cloudinaryPublicId) {
           try {
             await cloudinary.uploader.destroy(nextHomePopup.cloudinaryPublicId);
