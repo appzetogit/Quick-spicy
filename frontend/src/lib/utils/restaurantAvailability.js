@@ -273,7 +273,7 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
     ? { minutesUntilOpen: 0, nextOpeningTime: openingTime }
     : getMinutesUntilNextOpening(restaurant, now, openingTime)
 
-  const isOpen = canOperate && isAcceptingOrders
+  const isOpen = canOperate && isAcceptingOrders && isWithinTimings
 
   return {
     isOpen,
@@ -292,8 +292,8 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
       : formatOpeningCountdown(nextOpening.minutesUntilOpen, nextOpening.nextOpeningTime),
     reason: !isAcceptingOrders
       ? "manual-offline"
-      : (isWithinTimings
-        ? "open"
-        : (hasExplicitWindow ? "outside-hours-online" : "online-no-timings")),
+      : (!isWithinTimings
+        ? (hasExplicitWindow ? "outside-hours" : "offline-no-timings")
+        : "open"),
   }
 }

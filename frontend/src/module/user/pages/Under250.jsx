@@ -10,6 +10,7 @@ import { useLocationSelector } from "../components/UserLayout"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { useCart } from "../context/CartContext"
+import { useProfile } from "../context/ProfileContext"
 import PageNavbar from "../components/PageNavbar"
 import { foodImages } from "@/constants/images"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
@@ -17,17 +18,203 @@ import offerImage from "@/assets/offerimage.png"
 import AddToCartAnimation from "../components/AddToCartAnimation"
 import OptimizedImage from "@/components/OptimizedImage"
 import api from "@/lib/api"
-import { restaurantAPI } from "@/lib/api"
+import { restaurantAPI, zoneAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 const RUPEE_SYMBOL = "\u20B9"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+const USER_ZONE_SELECTION_KEY = "userZoneSelection"
+const USER_LOCATION_UPDATED_EVENT = "user-location-updated"
+const USER_ZONE_SELECTION_UPDATED_EVENT = "user-zone-selection-updated"
+const UNDER_250_MAX_PRICE = 250
+const MAX_UNDER_250_ITEMS_PER_RESTAURANT = 12
+
+const normalizeZoneMatchValue = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+
+const getFinalUnder250ItemPrice = (item) => {
+  const baseOriginalPrice = Number(item?.originalPrice || item?.price || 0)
+  const discountAmount = Number(item?.discountAmount || 0)
+  const discountType = item?.discountType
+
+  if (baseOriginalPrice > 0 && discountAmount > 0) {
+    if (discountType === "Percent") {
+      return Math.max(0, baseOriginalPrice - (baseOriginalPrice * discountAmount / 100))
+    }
+    if (discountType === "Fixed") {
+      return Math.max(0, baseOriginalPrice - discountAmount)
+    }
+  }
+
+  return Math.max(0, Number(item?.price || 0))
+}
+
+const extractUnder250ItemsFromMenu = (menu) => {
+  const sections = Array.isArray(menu?.sections) ? menu.sections : []
+  const extractedItems = []
+
+  const pushEligibleItems = (items = [], sectionName = "", subsectionName = "") => {
+    items.forEach((item) => {
+      if (!item || item.isAvailable === false) return
+
+      const finalPrice = getFinalUnder250ItemPrice(item)
+      const discountAmount = Number(item?.discountAmount || 0)
+      if (finalPrice > UNDER_250_MAX_PRICE) return
+
+      extractedItems.push({
+        ...item,
+        price: finalPrice,
+        originalPrice: Number(item?.originalPrice || item?.price || 0),
+        image: item?.image || (Array.isArray(item?.images) ? item.images[0] : ""),
+        isVeg: item?.foodType === "Veg",
+        bestPrice: discountAmount > 0 || (Number(item?.originalPrice || 0) > finalPrice),
+        description: item?.description || "",
+        category: item?.category || subsectionName || sectionName || "",
+      })
+    })
+  }
+
+  sections.forEach((section) => {
+    if (section?.isEnabled === false) return
+
+    pushEligibleItems(section?.items || [], section?.name || "")
+
+    ;(section?.subsections || []).forEach((subsection) => {
+      pushEligibleItems(subsection?.items || [], section?.name || "", subsection?.name || "")
+    })
+  })
+
+  return extractedItems
+}
 
 
 export default function Under250() {
   const { location } = useLocation()
-  const { zoneId, zoneStatus, isInService, isOutOfService } = useZone(location)
+  const { getDefaultAddress } = useProfile()
+  const [storedManualLocation, setStoredManualLocation] = useState(() => {
+    try {
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
+  const [locationPreference, setLocationPreference] = useState(() => {
+    try {
+      return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+    } catch {
+      return "live"
+    }
+  })
+  const selectedLocation = useMemo(() => {
+    if (locationPreference !== "manual") return location
+    return storedManualLocation || location
+  }, [location, locationPreference, storedManualLocation])
+  const defaultSavedAddress = useMemo(() => getDefaultAddress?.() || null, [getDefaultAddress])
+  const zoneLookupLocation = useMemo(() => {
+    const coords = selectedLocation?.location?.coordinates
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lng = Number(coords[0])
+      const lat = Number(coords[1])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { latitude: lat, longitude: lng }
+      }
+    }
+
+    const latitude = Number(
+      selectedLocation?.latitude ??
+      selectedLocation?.lat ??
+      selectedLocation?.location?.latitude
+    )
+    const longitude = Number(
+      selectedLocation?.longitude ??
+      selectedLocation?.lng ??
+      selectedLocation?.location?.longitude
+    )
+
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return { latitude, longitude }
+    }
+
+    const savedCoords = defaultSavedAddress?.location?.coordinates
+    if (Array.isArray(savedCoords) && savedCoords.length >= 2) {
+      const savedLng = Number(savedCoords[0])
+      const savedLat = Number(savedCoords[1])
+      if (Number.isFinite(savedLat) && Number.isFinite(savedLng)) {
+        return { latitude: savedLat, longitude: savedLng }
+      }
+    }
+
+    const savedLatitude = Number(defaultSavedAddress?.latitude ?? defaultSavedAddress?.lat ?? defaultSavedAddress?.location?.latitude)
+    const savedLongitude = Number(defaultSavedAddress?.longitude ?? defaultSavedAddress?.lng ?? defaultSavedAddress?.location?.longitude)
+    if (Number.isFinite(savedLatitude) && Number.isFinite(savedLongitude)) {
+      return { latitude: savedLatitude, longitude: savedLongitude }
+    }
+
+    return location
+  }, [selectedLocation, defaultSavedAddress, location])
+  const { zoneId, zoneStatus, isInService, isOutOfService } = useZone(zoneLookupLocation)
+  const [zoneSelection, setZoneSelection] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(USER_ZONE_SELECTION_KEY) || "{}")
+      if (saved?.mode === "manual" && saved?.zoneId) {
+        return { mode: "manual", zoneId: String(saved.zoneId) }
+      }
+    } catch {}
+
+    return { mode: "auto", zoneId: "" }
+  })
+  const [availableZones, setAvailableZones] = useState([])
+  const addressZoneFallbackId = useMemo(() => {
+    const textCandidates = [
+      selectedLocation?.city,
+      selectedLocation?.area,
+      selectedLocation?.state,
+      selectedLocation?.formattedAddress,
+      selectedLocation?.address,
+      defaultSavedAddress?.city,
+      defaultSavedAddress?.area,
+      defaultSavedAddress?.state,
+      defaultSavedAddress?.formattedAddress,
+      defaultSavedAddress?.address,
+      defaultSavedAddress?.additionalDetails,
+    ]
+      .map(normalizeZoneMatchValue)
+      .filter(Boolean)
+
+    if (textCandidates.length === 0 || availableZones.length === 0) return null
+
+    const matchedZone = availableZones.find((zone) => {
+      const zoneValues = [
+        zone?.name,
+        zone?.zoneName,
+        zone?.serviceLocation,
+      ]
+        .map(normalizeZoneMatchValue)
+        .filter(Boolean)
+
+      return textCandidates.some((candidate) =>
+        zoneValues.some((zoneValue) =>
+          zoneValue.includes(candidate) || candidate.includes(zoneValue)
+        )
+      )
+    })
+
+    return matchedZone?._id ? String(matchedZone._id) : null
+  }, [availableZones, defaultSavedAddress, selectedLocation])
+  const effectiveZoneId = zoneSelection.mode === "manual" && zoneSelection.zoneId
+    ? zoneSelection.zoneId
+    : (zoneId || addressZoneFallbackId)
   const navigate = useNavigate()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
   const [activeCategory, setActiveCategory] = useState(null)
@@ -49,6 +236,82 @@ export default function Under250() {
   const [hasScrolledPastBanner, setHasScrolledPastBanner] = useState(false)
   const bannerShellRef = useRef(null)
   const stickyHeaderRef = useRef(null)
+
+  useEffect(() => {
+    const syncLocationPreference = () => {
+      try {
+        setLocationPreference(localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live")
+      } catch {
+        setLocationPreference("live")
+      }
+    }
+
+    const syncStoredManualLocation = (event) => {
+      const nextLocation = event?.detail?.location
+      if (nextLocation && typeof nextLocation === "object") {
+        setStoredManualLocation(nextLocation)
+        return
+      }
+
+      try {
+        const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+        setStoredManualLocation(stored ? JSON.parse(stored) : null)
+      } catch {
+        setStoredManualLocation(null)
+      }
+    }
+
+    const syncZoneSelection = () => {
+      try {
+        const saved = JSON.parse(localStorage.getItem(USER_ZONE_SELECTION_KEY) || "{}")
+        if (saved?.mode === "manual" && saved?.zoneId) {
+          setZoneSelection({ mode: "manual", zoneId: String(saved.zoneId) })
+          return
+        }
+      } catch {}
+
+      setZoneSelection({ mode: "auto", zoneId: "" })
+    }
+
+    window.addEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+    window.addEventListener("storage", syncLocationPreference)
+    window.addEventListener(USER_LOCATION_UPDATED_EVENT, syncStoredManualLocation)
+    window.addEventListener("storage", syncStoredManualLocation)
+    window.addEventListener(USER_ZONE_SELECTION_UPDATED_EVENT, syncZoneSelection)
+    window.addEventListener("storage", syncZoneSelection)
+    return () => {
+      window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, syncLocationPreference)
+      window.removeEventListener("storage", syncLocationPreference)
+      window.removeEventListener(USER_LOCATION_UPDATED_EVENT, syncStoredManualLocation)
+      window.removeEventListener("storage", syncStoredManualLocation)
+      window.removeEventListener(USER_ZONE_SELECTION_UPDATED_EVENT, syncZoneSelection)
+      window.removeEventListener("storage", syncZoneSelection)
+    }
+  }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    const fetchAvailableZones = async () => {
+      try {
+        const response = await zoneAPI.getZones()
+        const zones = response?.data?.data?.zones || []
+        if (mounted) {
+          setAvailableZones(Array.isArray(zones) ? zones : [])
+        }
+      } catch (_) {
+        if (mounted) {
+          setAvailableZones([])
+        }
+      }
+    }
+
+    fetchAvailableZones()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
 
   const getItemKey = (itemId, restaurantId) => `${String(restaurantId || "unknown")}::${String(itemId || "unknown")}`
 
@@ -96,6 +359,13 @@ export default function Under250() {
       slug: getSafeRestaurantSlug(restaurant),
       rating: Number(restaurant.rating || 0),
       totalRatings: Number(restaurant.totalRatings || 0),
+      restaurantZoneId:
+        restaurant?.restaurantZoneId ||
+        restaurant?.zoneId ||
+        restaurant?.zone?._id ||
+        restaurant?.zone?.id ||
+        null,
+      isInUserZone: typeof restaurant?.isInUserZone === "boolean" ? restaurant.isInUserZone : null,
       deliveryTime:
         typeof restaurant.deliveryTime === "string" && restaurant.deliveryTime.trim()
           ? restaurant.deliveryTime
@@ -158,23 +428,8 @@ export default function Under250() {
     return 999
   }
 
-  // Sort and filter restaurants based on selected sort and filters
-  const sameZoneUnder250Restaurants = useMemo(() => {
-    if (!zoneId) return []
-    const zoneKey = String(zoneId)
-
-    return under250Restaurants.filter((restaurant) => {
-      if (typeof restaurant?.isInUserZone === "boolean") {
-        return restaurant.isInUserZone
-      }
-
-      const candidateZoneId = restaurant?.restaurantZoneId || restaurant?.zoneId || restaurant?.zone?._id || restaurant?.zone?.id
-      return candidateZoneId ? String(candidateZoneId) === zoneKey : false
-    })
-  }, [under250Restaurants, zoneId])
-
   const sortedAndFilteredRestaurants = useMemo(() => {
-    let filtered = [...sameZoneUnder250Restaurants]
+    let filtered = [...under250Restaurants]
 
     // Apply "Under 30 mins" filter
     if (under30MinsFilter) {
@@ -221,7 +476,7 @@ export default function Under250() {
     }
 
     return filtered
-  }, [sameZoneUnder250Restaurants, selectedSort, under30MinsFilter])
+  }, [under250Restaurants, selectedSort, under30MinsFilter])
 
   // Fetch under 250 banners from API
   useEffect(() => {
@@ -248,19 +503,92 @@ export default function Under250() {
 
   // Fetch restaurants with dishes under ₹250 from backend
   useEffect(() => {
+    if (!effectiveZoneId && zoneStatus === 'loading') {
+      setLoadingRestaurants(true)
+      return
+    }
+
+    if (!effectiveZoneId) {
+      setUnder250Restaurants([])
+      setLoadingRestaurants(false)
+      return
+    }
+
     const fetchRestaurantsUnder250 = async () => {
       try {
         setLoadingRestaurants(true)
-        // Pass zoneId so backend can return only restaurants from the user's current zone.
-        const response = await restaurantAPI.getRestaurantsUnder250(zoneId)
-        if (response.data.success && response.data.data.restaurants) {
-          const normalizedRestaurants = response.data.data.restaurants
+        const restaurantsResponse = await restaurantAPI.getRestaurants(
+          { zoneId: effectiveZoneId, _ts: Date.now() },
+          { noCache: true },
+        )
+        const restaurantsArray = restaurantsResponse?.data?.data?.restaurants || restaurantsResponse?.data?.restaurants || []
+
+        if (!Array.isArray(restaurantsArray) || restaurantsArray.length === 0) {
+          setUnder250Restaurants([])
+          return
+        }
+
+        const [under250Response, fallbackRestaurantMenus] = await Promise.all([
+          restaurantAPI.getRestaurantsUnder250(effectiveZoneId).catch(() => null),
+          Promise.all(
+            restaurantsArray.map(async (restaurant, index) => {
+              try {
+                const publicRestaurantLookupId =
+                  restaurant?.restaurantId ||
+                  restaurant?.slug ||
+                  restaurant?._id
+                if (!publicRestaurantLookupId) return null
+
+                const menuResponse = await restaurantAPI.getMenuByRestaurantId(publicRestaurantLookupId, { noCache: true })
+                const menu = menuResponse?.data?.data?.menu || null
+                const menuItems = extractUnder250ItemsFromMenu(menu).slice(0, MAX_UNDER_250_ITEMS_PER_RESTAURANT)
+
+                if (menuItems.length === 0) return null
+
+                return normalizeUnder250Restaurant({
+                  ...restaurant,
+                  id: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
+                  restaurantId: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
+                  deliveryTime: restaurant?.estimatedDeliveryTime || restaurant?.deliveryTime,
+                  cuisine: Array.isArray(restaurant?.cuisines) ? restaurant.cuisines.join(" | ") : restaurant?.cuisine,
+                  image:
+                    restaurant?.profileImage?.url ||
+                    restaurant?.profileImage ||
+                    restaurant?.coverImage?.url ||
+                    restaurant?.coverImage ||
+                    (Array.isArray(restaurant?.coverImages) ? restaurant.coverImages[0]?.url || restaurant.coverImages[0] : "") ||
+                    (Array.isArray(restaurant?.menuImages) ? restaurant.menuImages[0]?.url || restaurant.menuImages[0] : ""),
+                  restaurantZoneId:
+                    restaurant?.restaurantZoneId ||
+                    restaurant?.zoneId ||
+                    restaurant?.zone?._id ||
+                    restaurant?.zone?.id ||
+                    effectiveZoneId,
+                  isInUserZone: true,
+                  menuItems,
+                }, index)
+              } catch (_) {
+                return null
+              }
+            })
+          ),
+        ])
+
+        const normalizedFallbackRestaurants = fallbackRestaurantMenus.filter(Boolean)
+        const under250ApiRestaurants = under250Response?.data?.data?.restaurants
+
+        if (under250Response?.data?.success && Array.isArray(under250ApiRestaurants) && under250ApiRestaurants.length > 0) {
+          const normalizedRestaurants = under250ApiRestaurants
             .map((restaurant, index) => normalizeUnder250Restaurant(restaurant, index))
             .filter(Boolean)
-          setUnder250Restaurants(normalizedRestaurants)
-        } else {
-          setUnder250Restaurants([])
+
+          setUnder250Restaurants(
+            normalizedRestaurants.length > 0 ? normalizedRestaurants : normalizedFallbackRestaurants
+          )
+          return
         }
+
+        setUnder250Restaurants(normalizedFallbackRestaurants)
       } catch (error) {
         debugError('Error fetching restaurants under 250:', error)
         setUnder250Restaurants([])
@@ -270,7 +598,7 @@ export default function Under250() {
     }
 
     fetchRestaurantsUnder250()
-  }, [zoneId, isOutOfService])
+  }, [addressZoneFallbackId, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
 
   // Fetch categories from admin API
   useEffect(() => {
@@ -550,12 +878,27 @@ export default function Under250() {
     }
   }
 
-  // Check if should show grayscale (only when user is out of service)
-  const shouldShowGrayscale = isOutOfService
+  const selectedItemRestaurantAvailability = useMemo(() => {
+    if (!selectedItem) return { isOpen: true }
+
+    const selectedItemRestaurant = under250Restaurants.find((restaurant) => {
+      const restaurantIds = [
+        restaurant?.id,
+        restaurant?._id,
+        restaurant?.restaurantId,
+      ].map((value) => String(value || ""))
+
+      return restaurantIds.includes(String(selectedItem.restaurantId || ""))
+    })
+
+    return selectedItemRestaurant
+      ? getRestaurantAvailabilityStatus(selectedItemRestaurant)
+      : { isOpen: true }
+  }, [selectedItem, under250Restaurants])
 
   return (
 
-    <div className={`relative min-h-screen bg-white dark:bg-[#0a0a0a] ${shouldShowGrayscale ? 'grayscale opacity-75' : ''}`}>
+    <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a]">
       <div
         ref={stickyHeaderRef}
         className={`fixed top-0 left-0 right-0 z-40 w-full md:hidden transition-all duration-300 ${hasScrolledPastBanner
@@ -698,7 +1041,7 @@ export default function Under250() {
         ) : sortedAndFilteredRestaurants.length === 0 ? (
           <div className="flex justify-center items-center py-12">
             <div className="text-gray-500 dark:text-gray-400">
-              {sameZoneUnder250Restaurants.length === 0
+              {under250Restaurants.length === 0
                 ? `No restaurants with dishes under ${RUPEE_SYMBOL}250 found.`
                 : "No restaurants match the selected filters."}
             </div>
@@ -706,8 +1049,13 @@ export default function Under250() {
         ) : (
           sortedAndFilteredRestaurants.map((restaurant) => {
             const restaurantSlug = getSafeRestaurantSlug(restaurant)
+            const availability = getRestaurantAvailabilityStatus(restaurant)
+            const isRestaurantOffline = !availability.isOpen
             return (
-              <section key={restaurant.id} className="pt-4 sm:pt-6 md:pt-8 lg:pt-10">
+              <section
+                key={restaurant.id}
+                className={`pt-4 sm:pt-6 md:pt-8 lg:pt-10 ${isRestaurantOffline ? "grayscale opacity-70" : ""}`}
+              >
                 {/* Restaurant Header */}
                 <div className="flex items-start justify-between mb-3 md:mb-4 lg:mb-6">
                   <div className="flex-1">
@@ -717,6 +1065,9 @@ export default function Under250() {
                     <div className="flex items-center gap-2 text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400">
                       <Clock className="h-4 w-4 md:h-5 md:w-5 lg:h-6 lg:w-6" strokeWidth={1.5} />
                       <span className="font-medium">{restaurant.deliveryTime}</span>
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
+                        {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
+                      </span>
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
@@ -772,7 +1123,6 @@ export default function Under250() {
                                   objectFit="cover"
                                   sizes="(max-width: 640px) 200px, (max-width: 768px) 220px, 100vw"
                                   placeholder="blur"
-                                  priority={itemIndex < 4}
                                 />
                               </motion.div>
                               {/* Gradient Overlay on Hover */}
@@ -829,14 +1179,14 @@ export default function Under250() {
                                   <Button
                                     variant={"outline"}
                                     size="sm"
-                                    disabled={shouldShowGrayscale}
-                                    className={`h-7 md:h-8 lg:h-9 px-3 md:px-4 lg:px-5 text-xs md:text-sm lg:text-base ${shouldShowGrayscale
+                                    disabled={isRestaurantOffline}
+                                    className={`h-7 md:h-8 lg:h-9 px-3 md:px-4 lg:px-5 text-xs md:text-sm lg:text-base ${isRestaurantOffline
                                       ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 border-gray-300 dark:border-gray-700 cursor-not-allowed opacity-50'
                                       : 'bg-[#FFF2EB] text-[#EB590E] border-[#EB590E] hover:bg-[#EB590E] hover:text-white'
                                       }`}
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      if (!shouldShowGrayscale) {
+                                      if (!isRestaurantOffline) {
                                         handleItemClick(item, restaurant)
                                       }
                                     }}
@@ -1101,13 +1451,13 @@ export default function Under250() {
               <div className="border-t dark:border-gray-800 border-gray-200 px-4 md:px-6 lg:px-8 xl:px-10 py-4 md:py-5 lg:py-6 bg-white dark:bg-[#1a1a1a]">
                 <div className="flex items-center gap-4 md:gap-5 lg:gap-6">
                   {/* Quantity Selector */}
-                  <div className={`flex items-center gap-3 md:gap-4 lg:gap-5 border-2 rounded-lg md:rounded-xl px-3 md:px-4 lg:px-5 h-[44px] md:h-[50px] lg:h-[56px] ${shouldShowGrayscale
+                  <div className={`flex items-center gap-3 md:gap-4 lg:gap-5 border-2 rounded-lg md:rounded-xl px-3 md:px-4 lg:px-5 h-[44px] md:h-[50px] lg:h-[56px] ${!selectedItemRestaurantAvailability.isOpen
                     ? 'border-gray-300 dark:border-gray-700 opacity-50'
                     : 'border-gray-300 dark:border-gray-700'
                     }`}>
                     <button
                       onClick={(e) => {
-                        if (!shouldShowGrayscale) {
+                        if (selectedItemRestaurantAvailability.isOpen) {
                           updateItemQuantity(
                             selectedItem,
                             Math.max(0, (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) - 1),
@@ -1115,15 +1465,15 @@ export default function Under250() {
                           )
                         }
                       }}
-                      disabled={(quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) === 0 || shouldShowGrayscale}
-                      className={`${shouldShowGrayscale
+                      disabled={(quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) === 0 || !selectedItemRestaurantAvailability.isOpen}
+                      className={`${!selectedItemRestaurantAvailability.isOpen
                         ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:text-gray-300 dark:disabled:text-gray-600 disabled:cursor-not-allowed'
                         }`}
                     >
                       <Minus className="h-5 w-5 md:h-6 md:w-6 lg:h-7 lg:w-7" />
                     </button>
-                    <span className={`text-lg md:text-xl lg:text-2xl font-semibold min-w-[2rem] md:min-w-[2.5rem] lg:min-w-[3rem] text-center ${shouldShowGrayscale
+                    <span className={`text-lg md:text-xl lg:text-2xl font-semibold min-w-[2rem] md:min-w-[2.5rem] lg:min-w-[3rem] text-center ${!selectedItemRestaurantAvailability.isOpen
                       ? 'text-gray-400 dark:text-gray-600'
                       : 'text-gray-900 dark:text-white'
                       }`}>
@@ -1131,7 +1481,7 @@ export default function Under250() {
                     </span>
                     <button
                       onClick={(e) => {
-                        if (!shouldShowGrayscale) {
+                        if (selectedItemRestaurantAvailability.isOpen) {
                           updateItemQuantity(
                             selectedItem,
                             (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) + 1,
@@ -1139,8 +1489,8 @@ export default function Under250() {
                           )
                         }
                       }}
-                      disabled={shouldShowGrayscale}
-                      className={shouldShowGrayscale
+                      disabled={!selectedItemRestaurantAvailability.isOpen}
+                      className={!selectedItemRestaurantAvailability.isOpen
                         ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed'
                         : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                       }
@@ -1151,12 +1501,12 @@ export default function Under250() {
 
                   {/* Add Item Button */}
                   <Button
-                    className={`flex-1 h-[44px] md:h-[50px] lg:h-[56px] rounded-lg md:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm md:text-base lg:text-lg ${shouldShowGrayscale
+                    className={`flex-1 h-[44px] md:h-[50px] lg:h-[56px] rounded-lg md:rounded-xl font-semibold flex items-center justify-center gap-2 text-sm md:text-base lg:text-lg ${!selectedItemRestaurantAvailability.isOpen
                       ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-600 cursor-not-allowed opacity-50'
                       : 'bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white'
                       }`}
                     onClick={(e) => {
-                      if (!shouldShowGrayscale) {
+                      if (selectedItemRestaurantAvailability.isOpen) {
                         updateItemQuantity(
                           selectedItem,
                           (quantities[getItemKey(selectedItem.id, selectedItem.restaurantId)] || 0) + 1,
@@ -1165,7 +1515,7 @@ export default function Under250() {
                         setShowItemDetail(false)
                       }
                     }}
-                    disabled={shouldShowGrayscale}
+                    disabled={!selectedItemRestaurantAvailability.isOpen}
                   >
                     <span>Add item</span>
                     <div className="flex items-center gap-1 md:gap-2">

@@ -2443,11 +2443,7 @@ export default function Home() {
                 </div>
               </div>
             </motion.div>
-            {loadingRealCategories || loadingMenuCategories ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
-              </div>
-            ) : displayCategories.length > 0 ? (
+            {displayCategories.length > 0 ? (
               <>
                 {/* Show only first 10 categories */}
                 {displayCategories.slice(0, 10).map((category, index) => (
@@ -2507,6 +2503,10 @@ export default function Home() {
                   </motion.div>
                 )}
               </>
+            ) : loadingRealCategories || loadingMenuCategories ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              </div>
             ) : (
               // No categories available from API
               <div className="flex items-center justify-center py-4 text-gray-500 text-sm">

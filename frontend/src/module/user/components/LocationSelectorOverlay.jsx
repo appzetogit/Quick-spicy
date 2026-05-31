@@ -16,6 +16,7 @@ const debugError = (...args) => {}
 const USER_LOCATION_STORAGE_KEY = "userLocation"
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
 const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+const USER_LOCATION_UPDATED_EVENT = "user-location-updated"
 
 
 // Google Maps implementation - Leaflet components removed
@@ -112,6 +113,39 @@ const setUserLocationPreference = (preference) => {
       })
     )
   }
+}
+
+const setStoredUserLocation = (locationData) => {
+  try {
+    localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(locationData))
+  } catch {}
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent(USER_LOCATION_UPDATED_EVENT, {
+        detail: { location: locationData },
+      })
+    )
+  }
+}
+
+const getAddressCoordinates = (address) => {
+  const coordinates = address?.location?.coordinates
+  if (Array.isArray(coordinates) && coordinates.length >= 2) {
+    const longitude = Number(coordinates[0])
+    const latitude = Number(coordinates[1])
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return { latitude, longitude }
+    }
+  }
+
+  const latitude = Number(address?.latitude ?? address?.lat ?? address?.location?.latitude)
+  const longitude = Number(address?.longitude ?? address?.lng ?? address?.location?.longitude)
+  if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+    return { latitude, longitude }
+  }
+
+  return { latitude: null, longitude: null }
 }
 
 export default function LocationSelectorOverlay({ isOpen, onClose }) {
@@ -2425,7 +2459,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           (addressFormData.zipCode || "").trim(),
         ].filter(Boolean).join(", "),
       }
-      localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(manualLocationData))
+      setStoredUserLocation(manualLocationData)
       setUserLocationPreference("manual")
 
       // Reset form
@@ -2484,10 +2518,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
   const handleSelectSavedAddress = async (address) => {
     try {
-      // Get coordinates from address location
-      const coordinates = address.location?.coordinates || []
-      const longitude = coordinates[0]
-      const latitude = coordinates[1]
+      const { latitude, longitude } = getAddressCoordinates(address)
 
       if (latitude && longitude) {
         // Update location in backend
@@ -2514,7 +2545,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         longitude,
         formattedAddress: `${address.street}, ${address.city}, ${address.state}`
       }
-      localStorage.setItem(USER_LOCATION_STORAGE_KEY, JSON.stringify(locationData))
+      setStoredUserLocation(locationData)
       setUserLocationPreference("manual")
 
       // Update map position to show selected address
@@ -2575,9 +2606,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const getAddressDistance = (address) => {
     if (!location?.latitude || !location?.longitude) return "0 m"
 
-    const coordinates = address.location?.coordinates || []
-    const addressLng = coordinates[0]
-    const addressLat = coordinates[1]
+    const { latitude: addressLat, longitude: addressLng } = getAddressCoordinates(address)
 
     if (!addressLat || !addressLng) return "0 m"
 

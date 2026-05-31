@@ -12,6 +12,7 @@ import { useZone } from "../../hooks/useZone"
 import { useLocation } from "../../hooks/useLocation"
 import { restaurantAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 
 const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "")
 const BLOCKED_CLOUDINARY_HOSTS = [/^https?:\/\/res\.cloudinary\.com\/dbubwu3lf(?:\/|$)/i]
@@ -87,6 +88,11 @@ export default function Restaurants() {
             distance: restaurant?.distance || "1.2 km",
             priceRange: restaurant?.priceRange || "$$",
             image: pickRestaurantImage(restaurant),
+            isActive: restaurant?.isActive !== false,
+            isAcceptingOrders: restaurant?.isAcceptingOrders !== false,
+            openDays: Array.isArray(restaurant?.openDays) ? restaurant.openDays : [],
+            deliveryTimings: restaurant?.deliveryTimings || null,
+            outletTimings: restaurant?.outletTimings || null,
           }
         })
 
@@ -138,6 +144,7 @@ export default function Restaurants() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-5 xl:gap-6 pt-2 sm:pt-3 lg:pt-4">
             {restaurants.map((restaurant, index) => {
               const favorite = isFavorite(restaurant.slug)
+              const availability = getRestaurantAvailabilityStatus(restaurant)
 
               const handleToggleFavorite = (e) => {
                 e.preventDefault()
@@ -161,7 +168,7 @@ export default function Restaurants() {
               return (
                 <ScrollReveal key={restaurant.id} delay={index * 0.05}>
                   <Link to={`/restaurants/${restaurant.slug}`} className="h-full flex">
-                    <Card className="overflow-hidden cursor-pointer border border-gray-200 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] hover:shadow-lg dark:hover:shadow-xl dark:hover:shadow-gray-900/50 pb-1 sm:pb-2 lg:pb-3 flex flex-col h-full w-full transition-all duration-300">
+                    <Card className={`overflow-hidden cursor-pointer border border-gray-200 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] pb-1 sm:pb-2 lg:pb-3 flex flex-col h-full w-full transition-all duration-300 ${availability.isOpen ? "hover:shadow-lg dark:hover:shadow-xl dark:hover:shadow-gray-900/50" : "grayscale opacity-70"}`}>
                       <div className="flex flex-row min-h-[120px] sm:min-h-[140px] md:min-h-[160px] lg:min-h-[180px] flex-1">
                         <CardContent className="flex-1 flex flex-col justify-between p-3 sm:p-4 md:p-5 lg:p-6 min-w-0 overflow-hidden">
                           <div className="flex-1 flex flex-col justify-between gap-2">
@@ -174,6 +181,9 @@ export default function Restaurants() {
                                   <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-medium mb-2 line-clamp-1">
                                     {restaurant.cuisine}
                                   </p>
+                                  <span className={`inline-flex mb-2 rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
+                                    {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
+                                  </span>
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <div className="flex items-center gap-1 bg-yellow-50 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded-full">
                                       <Star className="h-3 w-3 sm:h-3.5 sm:w-3.5 fill-yellow-400 text-yellow-400" />
