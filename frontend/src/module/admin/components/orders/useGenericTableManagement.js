@@ -4,6 +4,91 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const toNumber = (value) => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const firstFiniteNumber = (...values) => {
+  for (const value of values) {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return 0
+}
+
+const formatMoney = (value) => `₹${toNumber(value).toFixed(2)}`
+
+const resolveInvoicePricing = (order, items = []) => {
+  const pricing = order?.pricing || {}
+  const settlementPayment = order?.userPayment || order?.settlement?.userPayment || {}
+  const itemsSubtotal = items.reduce((sum, item) => {
+    const qty = toNumber(item?.quantity || 1)
+    const unitPrice = toNumber(item?.price)
+    return sum + (qty * unitPrice)
+  }, 0)
+
+  const discountAmount = firstFiniteNumber(
+    order?.itemDiscount,
+    order?.couponDiscount,
+    order?.discountAmount,
+    order?.discount,
+    pricing?.discount,
+    settlementPayment?.discount,
+  )
+
+  const subtotal = firstFiniteNumber(
+    order?.totalItemAmount,
+    order?.subtotal,
+    pricing?.subtotal,
+    settlementPayment?.subtotal,
+    itemsSubtotal > 0 ? itemsSubtotal : undefined,
+    order?.discountedAmount ? toNumber(order.discountedAmount) + discountAmount : undefined,
+  )
+
+  const deliveryFee = firstFiniteNumber(
+    order?.deliveryCharge,
+    order?.deliveryFee,
+    order?.delivery?.fee,
+    pricing?.deliveryFee,
+    settlementPayment?.deliveryFee,
+  )
+
+  const platformFee = firstFiniteNumber(
+    order?.platformFee,
+    pricing?.platformFee,
+    settlementPayment?.platformFee,
+  )
+
+  const taxAmount = firstFiniteNumber(
+    order?.vatTax,
+    order?.taxAmount,
+    order?.tax,
+    order?.gst,
+    pricing?.tax,
+    pricing?.gst,
+    settlementPayment?.gst,
+  )
+
+  const computedTotal = subtotal + deliveryFee + platformFee + taxAmount - discountAmount
+  const totalAmount = firstFiniteNumber(
+    order?.totalAmount,
+    order?.orderAmount,
+    pricing?.total,
+    settlementPayment?.total,
+    computedTotal,
+  )
+
+  return {
+    subtotal,
+    discountAmount,
+    deliveryFee,
+    platformFee,
+    taxAmount,
+    totalAmount,
+    couponCode: order?.couponCode || pricing?.couponCode || settlementPayment?.couponCode || "",
+  }
+}
 
 export function useGenericTableManagement(data, title, searchFields = []) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -166,13 +251,24 @@ export function useGenericTableManagement(data, title, searchFields = []) {
         startY += 10
       }
       
+      const items = Array.isArray(order.items) ? order.items : []
+      const {
+        subtotal,
+        discountAmount,
+        deliveryFee,
+        platformFee,
+        taxAmount,
+        totalAmount,
+        couponCode,
+      } = resolveInvoicePricing(order, items)
+
       // Order Items Table
-      if (order.items && Array.isArray(order.items) && order.items.length > 0) {
-        const tableData = order.items.map((item) => [
+      if (items.length > 0) {
+        const tableData = items.map((item) => [
           item.quantity || 1,
           item.name || item.itemName || item.title || 'Unknown Item',
-          `₹${(item.price || 0).toFixed(2)}`,
-          `₹${((item.quantity || 1) * (item.price || 0)).toFixed(2)}`
+          formatMoney(item.price || 0),
+          formatMoney((item.quantity || 1) * (item.price || 0))
         ])
         
         autoTable(doc, {
@@ -209,16 +305,46 @@ export function useGenericTableManagement(data, title, searchFields = []) {
         
         startY = doc.lastAutoTable.finalY + 10
       }
-      
-      // Total Amount
-      if (order.totalAmount) {
-        doc.setFontSize(14)
-        doc.setTextColor(30, 30, 30)
-        doc.setFont(undefined, 'bold')
-        const totalAmount = typeof order.totalAmount === 'number' ? order.totalAmount.toFixed(2) : order.totalAmount
-        doc.text(`Total Amount: ₹${totalAmount}`, 14, startY)
-        startY += 8
+
+      const summaryRows = [
+        ['Subtotal', formatMoney(subtotal)],
+        ['Delivery Fee', formatMoney(deliveryFee)],
+      ]
+      if (platformFee > 0) {
+        summaryRows.push(['Platform Fee', formatMoney(platformFee)])
       }
+      summaryRows.push(['GST', formatMoney(taxAmount)])
+      if (discountAmount > 0) {
+        summaryRows.push([
+          couponCode ? `Discount (${couponCode})` : 'Discount',
+          `- ${formatMoney(discountAmount)}`,
+        ])
+      }
+      summaryRows.push(['Total Amount', formatMoney(totalAmount)])
+
+      autoTable(doc, {
+        startY,
+        body: summaryRows,
+        theme: 'plain',
+        styles: {
+          fontSize: 10,
+          textColor: [30, 30, 30],
+          cellPadding: 1.8,
+        },
+        columnStyles: {
+          0: { cellWidth: 46, fontStyle: 'bold' },
+          1: { cellWidth: 32, halign: 'right' },
+        },
+        margin: { left: 128, right: 14 },
+        didParseCell: (hookData) => {
+          if (hookData.row.index === summaryRows.length - 1) {
+            hookData.cell.styles.fontStyle = 'bold'
+            hookData.cell.styles.fontSize = 11
+          }
+        },
+      })
+
+      startY = (doc.lastAutoTable?.finalY || startY) + 8
       
       // Payment Status
       if (order.paymentStatus) {

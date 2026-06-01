@@ -11,6 +11,7 @@ export default function Coupons() {
   const [searchQuery, setSearchQuery] = useState("")
   const [offers, setOffers] = useState([])
   const [restaurants, setRestaurants] = useState([])
+  const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -27,6 +28,7 @@ export default function Coupons() {
     customerScope: "all",
     restaurantScope: "all",
     restaurantId: "",
+    zoneId: "",
     endDate: "",
   })
 
@@ -52,6 +54,21 @@ export default function Coupons() {
   useEffect(() => {
     fetchOffers()
   }, [fetchOffers])
+
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const response = await adminAPI.getZones({ page: 1, limit: 500, isActive: true, summary: "dropdown" })
+        if (response?.data?.success) {
+          setZones(response.data.data.zones || [])
+        }
+      } catch (err) {
+        debugError("Error fetching zones:", err)
+      }
+    }
+
+    fetchZones()
+  }, [])
 
   useEffect(() => {
     const fetchRestaurants = async () => {
@@ -88,9 +105,21 @@ export default function Coupons() {
       customerScope: "all",
       restaurantScope: "all",
       restaurantId: "",
+      zoneId: "",
       endDate: "",
     })
   }
+
+  const filteredRestaurants = useMemo(() => {
+    if (!formData.zoneId) return restaurants
+    return restaurants.filter((restaurant) => {
+      const restaurantZoneId = restaurant?.zoneId?._id
+        || restaurant?.zoneId
+        || restaurant?.restaurantZoneId
+        || ""
+      return String(restaurantZoneId) === String(formData.zoneId)
+    })
+  }, [formData.zoneId, restaurants])
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault()
@@ -127,6 +156,15 @@ export default function Coupons() {
       return
     }
 
+    if (
+      formData.restaurantScope === "selected" &&
+      formData.zoneId &&
+      !filteredRestaurants.some((restaurant) => String(restaurant._id) === String(formData.restaurantId))
+    ) {
+      setSubmitError("Selected restaurant is not available in the chosen zone")
+      return
+    }
+
     if (formData.endDate && formData.endDate < today) {
       setSubmitError("Expiry date cannot be in the past")
       return
@@ -143,6 +181,7 @@ export default function Coupons() {
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
         restaurantId: formData.restaurantScope === "selected" ? formData.restaurantId : undefined,
+        zoneId: formData.zoneId || undefined,
         endDate: formData.endDate || undefined,
       })
 
@@ -313,6 +352,43 @@ export default function Coupons() {
                 </div>
 
                 <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Zone (Optional)</label>
+                  <select
+                    value={formData.zoneId}
+                    onChange={(e) => {
+                      const nextZoneId = e.target.value
+                      setFormData((prev) => ({
+                        ...prev,
+                        zoneId: nextZoneId,
+                        restaurantId:
+                          prev.restaurantScope === "selected" &&
+                          nextZoneId &&
+                          !restaurants.some((restaurant) => {
+                            const restaurantZoneId = restaurant?.zoneId?._id
+                              || restaurant?.zoneId
+                              || restaurant?.restaurantZoneId
+                              || ""
+                            return String(restaurant._id) === String(prev.restaurantId)
+                              && String(restaurantZoneId) === String(nextZoneId)
+                          })
+                            ? ""
+                            : prev.restaurantId,
+                      }))
+                      if (submitError) setSubmitError("")
+                      if (submitSuccess) setSubmitSuccess("")
+                    }}
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All Zones</option>
+                    {zones.map((zone) => (
+                      <option key={zone._id} value={zone._id}>
+                        {zone.name || zone.zoneName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Expiry Date (Optional)</label>
                   <input
                     type="date"
@@ -332,7 +408,7 @@ export default function Coupons() {
                       className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">Choose a restaurant</option>
-                      {restaurants.map((restaurant) => (
+                      {filteredRestaurants.map((restaurant) => (
                         <option key={restaurant._id} value={restaurant._id}>
                           {restaurant.name}
                         </option>
@@ -408,6 +484,7 @@ export default function Coupons() {
                   <tr>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">SI</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Restaurant</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Zone</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Dish</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Coupon Code</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Customer Scope</th>
@@ -427,6 +504,9 @@ export default function Coupons() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm font-medium text-slate-900">{offer.restaurantName}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-slate-700">{offer.zoneName || "All Zones"}</span>
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-slate-700">{offer.dishName}</span>
