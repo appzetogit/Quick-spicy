@@ -3366,7 +3366,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
 
     // Fetch offers with restaurant details
     const offers = await Offer.find(query)
-      .populate("restaurant", "name restaurantId")
+      .populate("restaurant", "name restaurantId zoneId zoneName")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
@@ -3401,6 +3401,8 @@ export const getAllOffers = asyncHandler(async (req, res) => {
               offer.restaurant?.restaurantId ||
               offer.restaurant?._id?.toString() ||
               "N/A",
+            zoneId: offer.restaurant?.zoneId?.toString?.() || String(offer.restaurant?.zoneId || ""),
+            zoneName: offer.restaurant?.zoneName || "All Zones",
             dishName: item.itemName || "Unknown Dish",
             dishId: item.itemId || "N/A",
             couponCode: item.couponCode || "N/A",
@@ -3463,6 +3465,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       customerScope = "all",
       restaurantScope = "all",
       restaurantId,
+      zoneId,
       endDate,
       minOrderValue = 0,
     } = req.body;
@@ -3526,21 +3529,58 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       );
     }
 
+    let selectedZone = null;
+    if (zoneId !== undefined && zoneId !== null && String(zoneId).trim() !== "") {
+      if (!mongoose.Types.ObjectId.isValid(zoneId)) {
+        return errorResponse(res, 400, "Invalid zoneId");
+      }
+
+      selectedZone = await Zone.findOne({
+        _id: zoneId,
+        isActive: true,
+      }).select("_id name zoneName");
+
+      if (!selectedZone) {
+        return errorResponse(res, 404, "Zone not found");
+      }
+    }
+
     let restaurants = [];
     if (restaurantScope === "all") {
-      restaurants = await Restaurant.find({ isActive: true }).select("_id name");
+      const restaurantQuery = { isActive: true };
+      if (selectedZone?._id) {
+        restaurantQuery.zoneId = selectedZone._id;
+      }
+
+      restaurants = await Restaurant.find(restaurantQuery).select("_id name zoneId zoneName");
       if (!restaurants.length) {
-        return errorResponse(res, 404, "No active restaurants found");
+        return errorResponse(
+          res,
+          404,
+          selectedZone
+            ? "No active restaurants found in the selected zone"
+            : "No active restaurants found",
+        );
       }
     } else {
       if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
         return errorResponse(res, 400, "Invalid restaurantId");
       }
       const selectedRestaurant = await Restaurant.findById(restaurantId).select(
-        "_id name",
+        "_id name zoneId zoneName",
       );
       if (!selectedRestaurant) {
         return errorResponse(res, 404, "Restaurant not found");
+      }
+      if (
+        selectedZone?._id &&
+        String(selectedRestaurant.zoneId || "") !== String(selectedZone._id)
+      ) {
+        return errorResponse(
+          res,
+          400,
+          "Selected restaurant does not belong to the chosen zone",
+        );
       }
       restaurants = [selectedRestaurant];
     }
@@ -3598,6 +3638,14 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         id: offer._id,
         restaurantId: restaurant._id,
         restaurantName: restaurant.name,
+        zoneId:
+          restaurant.zoneId?.toString?.() ||
+          String(restaurant.zoneId || selectedZone?._id || ""),
+        zoneName:
+          restaurant.zoneName ||
+          selectedZone?.name ||
+          selectedZone?.zoneName ||
+          "",
       });
     }
 
@@ -3605,6 +3653,8 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       createdCount: createdOffers.length,
       customerScope,
       restaurantScope,
+      zoneId: selectedZone?._id?.toString?.() || null,
+      zoneName: selectedZone?.name || selectedZone?.zoneName || null,
       offers: createdOffers,
     });
   } catch (error) {

@@ -10,6 +10,14 @@ const toNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : 0
 }
 
+const firstFiniteNumber = (...values) => {
+  for (const value of values) {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return 0
+}
+
 const formatMoney = (value) => `INR ${toNumber(value).toFixed(2)}`
 const formatDisplayText = (value, fallback = "N/A") => {
   if (value === null || value === undefined) return fallback
@@ -88,6 +96,78 @@ const getZoneDisplayName = (zone) =>
 
 const getZoneIdentifier = (zone) =>
   String(zone?._id || zone?.id || zone?.zoneId || getZoneDisplayName(zone)).trim()
+
+const resolveInvoicePricing = (order, items = []) => {
+  const pricing = order?.pricing || {}
+  const settlementPayment = order?.userPayment || order?.settlement?.userPayment || {}
+  const itemsSubtotal = items.reduce((sum, item) => {
+    const qty = toNumber(item?.quantity || 1)
+    const unitPrice = toNumber(item?.price)
+    return sum + (qty * unitPrice)
+  }, 0)
+
+  const discountAmount = firstFiniteNumber(
+    order?.itemDiscount,
+    order?.couponDiscount,
+    order?.discountAmount,
+    order?.discount,
+    pricing?.discount,
+    settlementPayment?.discount,
+  )
+
+  const subtotal = firstFiniteNumber(
+    order?.totalItemAmount,
+    order?.subtotal,
+    pricing?.subtotal,
+    settlementPayment?.subtotal,
+    itemsSubtotal > 0 ? itemsSubtotal : undefined,
+    order?.discountedAmount ? toNumber(order.discountedAmount) + discountAmount : undefined,
+  )
+
+  const deliveryFee = firstFiniteNumber(
+    order?.deliveryCharge,
+    order?.deliveryFee,
+    order?.deliveryChargeAmount,
+    order?.delivery?.fee,
+    pricing?.deliveryFee,
+    settlementPayment?.deliveryFee,
+  )
+
+  const platformFee = firstFiniteNumber(
+    order?.platformFee,
+    pricing?.platformFee,
+    settlementPayment?.platformFee,
+  )
+
+  const taxAmount = firstFiniteNumber(
+    order?.vatTax,
+    order?.taxAmount,
+    order?.tax,
+    order?.gst,
+    pricing?.tax,
+    pricing?.gst,
+    settlementPayment?.gst,
+  )
+
+  const computedTotal = subtotal + deliveryFee + platformFee + taxAmount - discountAmount
+  const totalAmount = firstFiniteNumber(
+    order?.totalAmount,
+    order?.orderAmount,
+    pricing?.total,
+    settlementPayment?.total,
+    computedTotal,
+  )
+
+  return {
+    subtotal,
+    discountAmount,
+    deliveryFee,
+    platformFee,
+    taxAmount,
+    totalAmount,
+    couponCode: order?.couponCode || pricing?.couponCode || settlementPayment?.couponCode || "",
+  }
+}
 
 export function useOrdersManagement(orders, statusKey, title, zones = []) {
   const [searchQuery, setSearchQuery] = useState("")
@@ -314,17 +394,15 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       const logoDataUrl = await imageUrlToDataUrl(logoUrl)
 
       const items = Array.isArray(order.items) ? order.items : []
-      const itemsSubtotal = items.reduce((sum, item) => {
-        const qty = toNumber(item?.quantity || 1)
-        const unitPrice = toNumber(item?.price)
-        return sum + (qty * unitPrice)
-      }, 0)
-      const subtotal = itemsSubtotal > 0 ? itemsSubtotal : toNumber(order.subtotal || order.totalAmount)
-      const deliveryFee = toNumber(order.deliveryFee || order.deliveryCharge || order.delivery?.fee)
-      const taxAmount = toNumber(order.taxAmount || order.tax || order.gst)
-      const discountAmount = toNumber(order.discountAmount || order.discount)
-      const computedTotal = subtotal + deliveryFee + taxAmount - discountAmount
-      const totalAmount = toNumber(order.totalAmount || computedTotal)
+      const {
+        subtotal,
+        discountAmount,
+        deliveryFee,
+        platformFee,
+        taxAmount,
+        totalAmount,
+        couponCode,
+      } = resolveInvoicePricing(order, items)
       const paymentType = order.paymentType || order.payment?.method || order.paymentMethod || "N/A"
       const deliveryPartnerName = formatDisplayText(
         order.deliveryPartnerName || order.deliveryBoyName || order.deliveryPartnerId?.name,
@@ -516,16 +594,27 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       const summaryStartY = (doc.lastAutoTable?.finalY || 130) + 10
       doc.setDrawColor(226, 232, 240)
       doc.setFillColor(248, 250, 252)
-      doc.roundedRect(pageWidth - 92, summaryStartY - 5, 78, 35, 2, 2, "FD")
+      const summaryRows = [
+        ["Subtotal", formatMoney(subtotal)],
+        ["Delivery Fee", formatMoney(deliveryFee)],
+      ]
+      if (platformFee > 0) {
+        summaryRows.push(["Platform Fee", formatMoney(platformFee)])
+      }
+      summaryRows.push(["GST", formatMoney(taxAmount)])
+      if (discountAmount > 0) {
+        summaryRows.push([
+          couponCode ? `Discount (${couponCode})` : "Discount",
+          `- ${formatMoney(discountAmount)}`,
+        ])
+      }
+      summaryRows.push(["Grand Total", formatMoney(totalAmount)])
+
+      const summaryHeight = 12 + (summaryRows.length * 6)
+      doc.roundedRect(pageWidth - 92, summaryStartY - 5, 78, summaryHeight, 2, 2, "FD")
       autoTable(doc, {
         startY: summaryStartY,
-        body: [
-          ["Subtotal", formatMoney(subtotal)],
-          ["Delivery Fee", formatMoney(deliveryFee)],
-          ["GST", formatMoney(taxAmount)],
-          ["Discount", `- ${formatMoney(discountAmount)}`],
-          ["Grand Total", formatMoney(totalAmount)],
-        ],
+        body: summaryRows,
         theme: "plain",
         styles: {
           fontSize: 10,
@@ -538,7 +627,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
         },
         margin: { left: pageWidth - 88 },
         didParseCell: (hookData) => {
-          if (hookData.row.index === 4) {
+          if (hookData.row.index === summaryRows.length - 1) {
             hookData.cell.styles.fontStyle = "bold"
             hookData.cell.styles.fontSize = 11
             hookData.cell.styles.textColor = [15, 118, 110]
