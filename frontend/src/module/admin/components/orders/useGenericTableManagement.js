@@ -33,26 +33,29 @@ const resolveInvoicePricing = (order, items = []) => {
     return sum + (qty * unitPrice)
   }, 0)
   const itemsLevelDiscount = Math.max(0, itemsOriginalSubtotal - itemsSubtotal)
-
-  const discountAmount = firstFiniteNumber(
+  const recordedDiscountAmount = firstFiniteNumber(
     order?.itemDiscount,
     order?.couponDiscount,
     order?.discountAmount,
     order?.discount,
     pricing?.discount,
     settlementPayment?.discount,
-    itemsLevelDiscount > 0 ? itemsLevelDiscount : undefined,
   )
+  const hasRecordedDiscount = recordedDiscountAmount > 0
+  const discountAmount = hasRecordedDiscount ? recordedDiscountAmount : itemsLevelDiscount
 
-  const subtotal = firstFiniteNumber(
+  const recordedSubtotal = firstFiniteNumber(
     order?.totalItemAmount,
     order?.subtotal,
     pricing?.subtotal,
     settlementPayment?.subtotal,
-    itemsOriginalSubtotal > 0 ? itemsOriginalSubtotal : undefined,
     itemsSubtotal > 0 ? itemsSubtotal : undefined,
     order?.discountedAmount ? toNumber(order.discountedAmount) + discountAmount : undefined,
   )
+  const subtotal =
+    !hasRecordedDiscount && itemsLevelDiscount > 0
+      ? Math.max(recordedSubtotal, itemsOriginalSubtotal)
+      : recordedSubtotal
 
   const deliveryFee = firstFiniteNumber(
     order?.deliveryCharge,
