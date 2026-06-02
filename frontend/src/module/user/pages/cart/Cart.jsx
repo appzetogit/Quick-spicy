@@ -1222,6 +1222,14 @@ export default function Cart() {
       debugLog("💰 Applied coupon:", appliedCoupon?.code || "None")
       debugLog("📍 Delivery address:", defaultAddress?.label || defaultAddress?.city)
 
+      const normalizedManualCouponCode = manualCouponCode.trim().toUpperCase()
+      const resolvedCouponCode =
+        pricing?.appliedCoupon?.code ||
+        appliedCoupon?.code ||
+        couponCode ||
+        normalizedManualCouponCode ||
+        null
+
       // Ensure couponCode is included in pricing
       const orderPricing = pricing || {
         subtotal,
@@ -1231,12 +1239,19 @@ export default function Cart() {
         tip,
         discount,
         total,
-        couponCode: appliedCoupon?.code || null
+        couponCode: resolvedCouponCode
       };
 
-      // Add couponCode if not present but coupon is applied
-      if (!orderPricing.couponCode && appliedCoupon?.code) {
-        orderPricing.couponCode = appliedCoupon.code;
+      // Add coupon metadata if it was lost from pricing state before submit.
+      if (!orderPricing.couponCode && resolvedCouponCode) {
+        orderPricing.couponCode = resolvedCouponCode;
+      }
+      if (!orderPricing.appliedCoupon && resolvedCouponCode) {
+        orderPricing.appliedCoupon = {
+          ...(pricing?.appliedCoupon || {}),
+          code: resolvedCouponCode,
+          discount: Number(orderPricing.discount ?? discount ?? 0) || 0,
+        };
       }
       orderPricing.tip = Number(orderPricing.tip ?? tip ?? 0) || 0;
 
@@ -1246,6 +1261,12 @@ export default function Cart() {
         itemId: item.id,
         name: item.name,
         price: item.price,
+        originalPrice: Number(item.originalPrice ?? item.price ?? 0) || 0,
+        discountAmount: Math.max(
+          0,
+          (Number(item.originalPrice ?? item.price ?? 0) || 0) - (Number(item.price) || 0),
+        ),
+        discountType: item.discountType || (item.originalPrice && Number(item.originalPrice) > Number(item.price) ? "menu-offer" : ""),
         quantity: item.quantity || 1,
         image: item.image || "",
         description: item.description || "",
@@ -1532,6 +1553,7 @@ export default function Cart() {
         restaurantId: finalRestaurantId,
         restaurantName: finalRestaurantName,
         pricing: orderPricing,
+        couponCode: resolvedCouponCode,
         deliveryFleet: deliveryFleet || 'standard',
         tipAmount,
         note: note || "",

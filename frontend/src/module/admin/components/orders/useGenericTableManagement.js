@@ -27,6 +27,12 @@ const resolveInvoicePricing = (order, items = []) => {
     const unitPrice = toNumber(item?.price)
     return sum + (qty * unitPrice)
   }, 0)
+  const itemsOriginalSubtotal = items.reduce((sum, item) => {
+    const qty = toNumber(item?.quantity || 1)
+    const unitPrice = firstFiniteNumber(item?.originalPrice, item?.price)
+    return sum + (qty * unitPrice)
+  }, 0)
+  const itemsLevelDiscount = Math.max(0, itemsOriginalSubtotal - itemsSubtotal)
 
   const discountAmount = firstFiniteNumber(
     order?.itemDiscount,
@@ -35,6 +41,7 @@ const resolveInvoicePricing = (order, items = []) => {
     order?.discount,
     pricing?.discount,
     settlementPayment?.discount,
+    itemsLevelDiscount > 0 ? itemsLevelDiscount : undefined,
   )
 
   const subtotal = firstFiniteNumber(
@@ -42,6 +49,7 @@ const resolveInvoicePricing = (order, items = []) => {
     order?.subtotal,
     pricing?.subtotal,
     settlementPayment?.subtotal,
+    itemsOriginalSubtotal > 0 ? itemsOriginalSubtotal : undefined,
     itemsSubtotal > 0 ? itemsSubtotal : undefined,
     order?.discountedAmount ? toNumber(order.discountedAmount) + discountAmount : undefined,
   )
@@ -86,7 +94,12 @@ const resolveInvoicePricing = (order, items = []) => {
     platformFee,
     taxAmount,
     totalAmount,
-    couponCode: order?.couponCode || pricing?.couponCode || settlementPayment?.couponCode || "",
+    couponCode:
+      order?.couponCode ||
+      pricing?.couponCode ||
+      pricing?.appliedCoupon?.code ||
+      settlementPayment?.couponCode ||
+      "",
   }
 }
 

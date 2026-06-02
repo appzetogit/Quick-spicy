@@ -659,7 +659,11 @@ export const createOrder = async (req, res) => {
     const generatedDropOtp = generateDropDeliveryOtp();
     const dropOtpExpiresAt = new Date(Date.now() + (12 * 60 * 60 * 1000)); // 12 hours
 
-    const couponCode = pricing?.couponCode || pricing?.appliedCoupon?.code || null;
+    const couponCode =
+      req.body?.couponCode ||
+      pricing?.couponCode ||
+      pricing?.appliedCoupon?.code ||
+      null;
     const tipAmount = Math.max(
       0,
       Number(bodyTipAmount ?? pricing?.tipAmount ?? pricing?.tip ?? 0) || 0

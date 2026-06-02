@@ -389,21 +389,21 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Get total count
     const total = await Order.countDocuments(query);
 
-    // Batch fetch settlements for platform fee and refund status (more efficient than individual queries)
-    let settlementMap = new Map();
+    // Batch fetch settlements for pricing fallbacks and refund status.
+    let settlementPaymentMap = new Map();
     let refundStatusMap = new Map();
     try {
       const OrderSettlement = (await import('../../order/models/OrderSettlement.js')).default;
       const orderIds = orders.map(o => o._id);
       const settlements = await OrderSettlement.find({ orderId: { $in: orderIds } })
-        .select('orderId userPayment.platformFee cancellationDetails.refundStatus')
+        .select('orderId userPayment cancellationDetails.refundStatus')
         .lean();
       
       // Create maps for quick lookup
       settlements.forEach(s => {
         if (s.orderId) {
-          if (s.userPayment?.platformFee !== undefined) {
-            settlementMap.set(s.orderId.toString(), s.userPayment.platformFee);
+          if (s.userPayment) {
+            settlementPaymentMap.set(s.orderId.toString(), s.userPayment);
           }
           if (s.cancellationDetails?.refundStatus) {
             refundStatusMap.set(s.orderId.toString(), s.cancellationDetails.refundStatus);
@@ -417,6 +417,7 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Transform orders to match frontend format
     const transformedOrders = orders.map((order, index) => {
       const restaurantDoc = getRestaurantFromMaps(order, restaurantMaps);
+      const settlementPayment = settlementPaymentMap.get(order._id.toString()) || null;
       const orderDate = new Date(order.createdAt);
       const dateStr = orderDate.toLocaleDateString('en-GB', { 
         day: '2-digit', 
@@ -478,22 +479,23 @@ export const getOrders = asyncHandler(async (req, res) => {
         (order.deliveryFleet === 'fast' ? 'Fast Delivery' : 'Home Delivery');
 
       // Calculate report-specific fields
-      const subtotal = order.pricing?.subtotal || 0;
-      const discount = order.pricing?.discount || 0;
-      const deliveryFee = order.pricing?.deliveryFee || 0;
-      const tax = order.pricing?.tax || 0;
-      const couponCode = order.pricing?.couponCode || null;
+      const subtotal = settlementPayment?.subtotal ?? order.pricing?.subtotal ?? 0;
+      const discount = settlementPayment?.discount ?? order.pricing?.discount ?? 0;
+      const deliveryFee = settlementPayment?.deliveryFee ?? order.pricing?.deliveryFee ?? 0;
+      const tax = settlementPayment?.gst ?? order.pricing?.tax ?? order.pricing?.gst ?? 0;
+      const couponCode =
+        settlementPayment?.couponCode
+        || order.pricing?.couponCode
+        || order.couponCode
+        || null;
       
       // Get platform fee - check if it exists in pricing, otherwise get from settlement map
-      let platformFee = order.pricing?.platformFee;
+      let platformFee = order.pricing?.platformFee ?? settlementPayment?.platformFee;
       if (platformFee === undefined || platformFee === null) {
-        // Get from settlement map (batch fetched above)
-        platformFee = settlementMap.get(order._id.toString());
-        
         // If still not found, calculate from total (fallback for old orders)
         if (platformFee === undefined || platformFee === null) {
-          const calculatedTotal = (order.pricing?.subtotal || 0) - (order.pricing?.discount || 0) + (order.pricing?.deliveryFee || 0) + (order.pricing?.tax || 0);
-          const actualTotal = order.pricing?.total || 0;
+          const calculatedTotal = subtotal - discount + deliveryFee + tax;
+          const actualTotal = settlementPayment?.total ?? order.pricing?.total ?? 0;
           const difference = actualTotal - calculatedTotal;
           // If difference is positive and reasonable (between 0 and 50), assume it's platform fee
           platformFee = (difference > 0 && difference <= 50) ? difference : 0;
@@ -515,7 +517,7 @@ export const getOrders = asyncHandler(async (req, res) => {
       // Total item amount (subtotal before discounts)
       const totalItemAmount = subtotal;
       // Order amount (final total)
-      const orderAmount = order.pricing?.total || 0;
+      const orderAmount = settlementPayment?.total ?? order.pricing?.total ?? 0;
 
       return {
         sl: skip + index + 1,
@@ -546,6 +548,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         itemDiscount: itemDiscount,
         discountedAmount: discountedAmount,
         couponDiscount: couponDiscount,
+        couponCode: couponCode,
         referralDiscount: referralDiscount,
         vatTax: vatTax,
         deliveryCharge: deliveryCharge,
@@ -582,6 +585,18 @@ export const getOrders = asyncHandler(async (req, res) => {
         deliveryState: order.deliveryState || {},
         orderOtp: order.deliveryVerification?.dropOtp?.code || null,
         billImageUrl: order.billImageUrl || null, // Bill image captured by delivery boy
+        pricing: {
+          ...(order.pricing || {}),
+          subtotal,
+          discount,
+          deliveryFee,
+          platformFee,
+          tax,
+          gst: tax,
+          total: orderAmount,
+          ...(couponCode ? { couponCode } : {}),
+        },
+        userPayment: settlementPayment || undefined,
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         // Zone info from assignmentInfo

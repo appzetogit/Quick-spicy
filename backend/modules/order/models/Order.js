@@ -13,6 +13,18 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  originalPrice: {
+    type: Number,
+    min: 0
+  },
+  discountAmount: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  discountType: {
+    type: String
+  },
   quantity: {
     type: Number,
     required: true,
@@ -122,6 +134,25 @@ const orderSchema = new mongoose.Schema({
     },
     couponCode: {
       type: String
+    },
+    appliedCoupon: {
+      code: {
+        type: String
+      },
+      discount: {
+        type: Number,
+        default: 0,
+        min: 0
+      },
+      freeDelivery: {
+        type: Boolean,
+        default: false
+      },
+      minOrder: {
+        type: Number,
+        default: 0,
+        min: 0
+      }
     }
   },
   payment: {
