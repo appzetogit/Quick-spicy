@@ -86,6 +86,78 @@ const extractStreetLine = (fullAddress = "", fallback = "") => {
   return stripIndiaSuffix(fallback || "")
 }
 
+const extractAddressComponents = (addressComponents = []) => {
+  let city = ""
+  let state = ""
+  let area = ""
+  let street = ""
+  let streetNumber = ""
+  let postalCode = ""
+  let pointOfInterest = ""
+  let premise = ""
+
+  for (const component of addressComponents) {
+    const types = component.types || []
+    if (types.includes("point_of_interest") && !pointOfInterest) pointOfInterest = component.long_name
+    if (types.includes("premise") && !premise) premise = component.long_name
+    if (types.includes("street_number") && !streetNumber) streetNumber = component.long_name
+    if (types.includes("route") && !street) street = component.long_name
+    if (
+      (types.includes("sublocality") ||
+        types.includes("sublocality_level_1") ||
+        types.includes("neighborhood")) &&
+      !area
+    ) {
+      area = component.long_name
+    }
+    if (types.includes("locality") && !city) city = component.long_name
+    if (types.includes("administrative_area_level_2") && !city) city = component.long_name
+    if (types.includes("administrative_area_level_1") && !state) state = component.long_name
+    if (types.includes("postal_code") && !postalCode) postalCode = component.long_name
+  }
+
+  const streetLine = [streetNumber, street].filter(Boolean).join(" ").trim()
+  const bestStreet = streetLine || premise || pointOfInterest || area || city
+
+  return {
+    city,
+    state,
+    area,
+    street: bestStreet,
+    postalCode,
+    pointOfInterest,
+    premise,
+  }
+}
+
+const buildAddressPayloadFromPlace = (place) => {
+  const formattedAddress = stripIndiaSuffix(
+    place?.formatted_address ||
+    place?.name ||
+    ""
+  )
+  const components = extractAddressComponents(place?.address_components || [])
+  const fallbackLine = extractStreetLine(formattedAddress, components.street)
+
+  return {
+    formattedAddress,
+    street: fallbackLine,
+    city: components.city,
+    state: components.state,
+    zipCode: components.postalCode,
+    additionalDetails: pickBestAddressText(
+      formattedAddress,
+      [
+        components.street,
+        components.area,
+        components.city,
+        components.state,
+        components.postalCode,
+      ].filter(Boolean).join(", ")
+    ),
+  }
+}
+
 // Get icon based on address type/label
 const getAddressIcon = (address) => {
   const label = (address.label || address.additionalDetails || "").toLowerCase()
@@ -151,6 +223,9 @@ const getAddressCoordinates = (address) => {
 export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const inputRef = useRef(null)
   const [searchValue, setSearchValue] = useState("")
+  const [searchSuggestions, setSearchSuggestions] = useState([])
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false)
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1)
   const { location, loading, requestLocation } = useGeoLocation()
   const { addresses = [], addAddress, updateAddress, setDefaultAddress, userProfile } = useProfile()
   const [showAddressForm, setShowAddressForm] = useState(false)
@@ -195,6 +270,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const lastReverseGeocodeCoordsRef = useRef(null) // Track last coordinates to avoid duplicate calls
   const activePinLookupIdRef = useRef(0) // Ignore stale reverse-geocode responses from older pin moves
   const searchCacheRef = useRef(new Map())
+  const autocompleteCacheRef = useRef(new Map())
+  const autocompleteServiceRef = useRef(null)
+  const placesServiceRef = useRef(null)
+  const searchDebounceTimeoutRef = useRef(null)
+  const activeAutocompleteRequestRef = useRef(0)
+  const searchSessionTokenRef = useRef(null)
   const lastSearchQueryRef = useRef("")
   const lastSearchAtRef = useRef(0)
 
@@ -224,6 +305,63 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     }))
   }
 
+  const ensureSearchSessionToken = () => {
+    if (!window.google?.maps?.places?.AutocompleteSessionToken) return null
+    if (!searchSessionTokenRef.current) {
+      searchSessionTokenRef.current = new window.google.maps.places.AutocompleteSessionToken()
+    }
+    return searchSessionTokenRef.current
+  }
+
+  const resetSearchSessionToken = () => {
+    searchSessionTokenRef.current = null
+  }
+
+  const getSearchCenter = () =>
+    Array.isArray(mapPosition) &&
+    Number.isFinite(mapPosition[0]) &&
+    Number.isFinite(mapPosition[1])
+      ? { lat: mapPosition[0], lng: mapPosition[1] }
+      : location?.latitude && location?.longitude
+        ? { lat: location.latitude, lng: location.longitude }
+        : { lat: 22.7196, lng: 75.8577 }
+
+  const updateLocationFromResolvedPlace = async ({
+    lat,
+    lng,
+    formattedAddress,
+    street,
+    city,
+    state,
+    zipCode,
+    additionalDetails,
+  }) => {
+    prepareForFreshPinLookup()
+    setMapPosition([lat, lng])
+    setShowAddressForm(true)
+    setCurrentAddress(formattedAddress || additionalDetails || "")
+    setLoadingAddress(false)
+    setAddressFormData((prev) => ({
+      ...prev,
+      street: street || prev.street,
+      city: city || prev.city,
+      state: state || prev.state,
+      zipCode: zipCode || prev.zipCode,
+      additionalDetails: additionalDetails || formattedAddress || prev.additionalDetails,
+      recipientName: prev.recipientName || userProfile?.name || "",
+      phone: prev.phone || userProfile?.phone || "",
+    }))
+
+    if (googleMapRef.current) {
+      googleMapRef.current.panTo({ lat, lng })
+      googleMapRef.current.setZoom(17)
+    }
+
+    if (greenMarkerRef.current?.setPosition) {
+      greenMarkerRef.current.setPosition({ lat, lng })
+    }
+  }
+
   // Debug: Log API key status (only first few characters for security)
   useEffect(() => {
     if (GOOGLE_MAPS_API_KEY) {
@@ -232,6 +370,84 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       debugWarn("⚠️ Google Maps API Key NOT found! Please set it in ENV Setup.")
     }
   }, [GOOGLE_MAPS_API_KEY])
+
+  useEffect(() => {
+    if (!showAddressForm) {
+      setSearchSuggestions([])
+      setShowSearchSuggestions(false)
+      setActiveSuggestionIndex(-1)
+      resetSearchSessionToken()
+      if (searchDebounceTimeoutRef.current) {
+        clearTimeout(searchDebounceTimeoutRef.current)
+      }
+      return
+    }
+
+    const query = (searchValue || "").trim()
+    if (query.length < 3) {
+      setSearchSuggestions([])
+      setShowSearchSuggestions(false)
+      setActiveSuggestionIndex(-1)
+      return
+    }
+
+    if (!window.google?.maps?.places || !autocompleteServiceRef.current) {
+      return
+    }
+
+    const normalizedQuery = query.toLowerCase()
+    const cached = autocompleteCacheRef.current.get(normalizedQuery)
+    if (cached) {
+      setSearchSuggestions(cached)
+      setShowSearchSuggestions(cached.length > 0)
+      setActiveSuggestionIndex(-1)
+      return
+    }
+
+    if (searchDebounceTimeoutRef.current) {
+      clearTimeout(searchDebounceTimeoutRef.current)
+    }
+
+    const requestId = ++activeAutocompleteRequestRef.current
+    searchDebounceTimeoutRef.current = setTimeout(() => {
+      const searchCenter = getSearchCenter()
+      const sessionToken = ensureSearchSessionToken()
+
+      autocompleteServiceRef.current.getPlacePredictions(
+        {
+          input: query,
+          componentRestrictions: { country: "in" },
+          sessionToken: sessionToken || undefined,
+          locationBias: {
+            center: searchCenter,
+            radius: 25000,
+          },
+        },
+        (predictions, status) => {
+          if (requestId !== activeAutocompleteRequestRef.current) return
+
+          const isOk =
+            status === window.google.maps.places.PlacesServiceStatus.OK
+          const nextSuggestions = isOk ? (predictions || []).slice(0, 5) : []
+          autocompleteCacheRef.current.set(normalizedQuery, nextSuggestions)
+          if (autocompleteCacheRef.current.size > 50) {
+            const oldestKey = autocompleteCacheRef.current.keys().next().value
+            autocompleteCacheRef.current.delete(oldestKey)
+          }
+
+          setSearchSuggestions(nextSuggestions)
+          setShowSearchSuggestions(nextSuggestions.length > 0)
+          setActiveSuggestionIndex(-1)
+        }
+      )
+    }, 220)
+
+    return () => {
+      if (searchDebounceTimeoutRef.current) {
+        clearTimeout(searchDebounceTimeoutRef.current)
+      }
+    }
+  }, [searchValue, showAddressForm, mapPosition, location?.latitude, location?.longitude])
 
   // Current location display - Show complete formatted address (SAVED ADDRESSES FORMAT)
   // Format should match saved addresses: "B2/4, Gandhi Park Colony, Anand Nagar, Indore, Madhya Pradesh, 452001"
@@ -539,7 +755,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       try {
         const loader = new Loader({
           apiKey: GOOGLE_MAPS_API_KEY,
-          version: "weekly"
+          version: "weekly",
+          libraries: ["places"],
         })
 
         const google = await loader.load()
@@ -568,6 +785,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         })
 
         googleMapRef.current = map
+        if (google.maps.places?.AutocompleteService) {
+          autocompleteServiceRef.current = new google.maps.places.AutocompleteService()
+          placesServiceRef.current = new google.maps.places.PlacesService(map)
+        }
 
         // Create Green Marker (draggable for address selection)
         const greenMarker = new google.maps.Marker({
@@ -1159,8 +1380,78 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     })
   }
 
-  const handleSearchLocation = async () => {
-    const query = (searchValue || "").trim()
+  const handleSearchInputChange = (event) => {
+    setSearchValue(event.target.value)
+    setShowSearchSuggestions(true)
+    setActiveSuggestionIndex(-1)
+  }
+
+  const handleSelectSearchSuggestion = async (suggestion) => {
+    if (!suggestion?.place_id) return
+    if (!placesServiceRef.current || !window.google?.maps?.places) {
+      await handleSearchLocation(suggestion.description || searchValue)
+      return
+    }
+
+    setSearchingLocation(true)
+    setSearchValue(suggestion.description || searchValue)
+    setShowSearchSuggestions(false)
+    setSearchSuggestions([])
+
+    try {
+      const sessionToken = ensureSearchSessionToken()
+
+      const placeDetails = await new Promise((resolve, reject) => {
+        placesServiceRef.current.getDetails(
+          {
+            placeId: suggestion.place_id,
+            fields: ["geometry", "formatted_address", "address_components", "name"],
+            sessionToken: sessionToken || undefined,
+          },
+          (place, status) => {
+            if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
+              resolve(place)
+              return
+            }
+            reject(new Error(`Place details failed: ${status}`))
+          }
+        )
+      })
+
+      const placeLocation = placeDetails?.geometry?.location
+      if (!placeLocation) {
+        throw new Error("Selected place has no coordinates")
+      }
+
+      const lat = placeLocation.lat()
+      const lng = placeLocation.lng()
+      const parsedPlace = buildAddressPayloadFromPlace(placeDetails)
+
+      searchCacheRef.current.set((suggestion.description || searchValue).trim().toLowerCase(), {
+        lat,
+        lng,
+        formattedAddress: parsedPlace.formattedAddress || suggestion.description || searchValue,
+      })
+
+      await updateLocationFromResolvedPlace({
+        lat,
+        lng,
+        ...parsedPlace,
+      })
+
+      resetSearchSessionToken()
+      toast.success(`Location found: ${stripIndiaSuffix(parsedPlace.formattedAddress || suggestion.description || searchValue)}`)
+    } catch (error) {
+      debugError("Error selecting search suggestion:", error)
+      resetSearchSessionToken()
+      await handleSearchLocation(suggestion.description || searchValue)
+    } finally {
+      setSearchingLocation(false)
+    }
+  }
+
+  const handleSearchLocation = async (incomingQuery) => {
+    const query = ((incomingQuery ?? searchValue) || "").trim()
     const normalizedQuery = query.toLowerCase()
 
     if (query.length < 3) {
@@ -1184,20 +1475,18 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     const cachedResult = searchCacheRef.current.get(normalizedQuery)
     if (cachedResult) {
       const { lat, lng, formattedAddress } = cachedResult
-      prepareForFreshPinLookup()
-      setMapPosition([lat, lng])
-      setShowAddressForm(true)
-
-      if (googleMapRef.current) {
-        googleMapRef.current.panTo({ lat, lng })
-        googleMapRef.current.setZoom(17)
-      }
-
-      if (greenMarkerRef.current?.setPosition) {
-        greenMarkerRef.current.setPosition({ lat, lng })
-      }
-
-      await handleMapMoveEnd(lat, lng)
+      setShowSearchSuggestions(false)
+      setSearchSuggestions([])
+      await updateLocationFromResolvedPlace({
+        lat,
+        lng,
+        formattedAddress: stripIndiaSuffix(formattedAddress || query),
+        street: extractStreetLine(formattedAddress || query, ""),
+        city: addressFormData.city || location?.city || "",
+        state: addressFormData.state || location?.state || "",
+        zipCode: addressFormData.zipCode || location?.postalCode || "",
+        additionalDetails: stripIndiaSuffix(formattedAddress || query),
+      })
       toast.success(`Location found: ${stripIndiaSuffix(formattedAddress || query)}`)
       return
     }
@@ -1205,17 +1494,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     lastSearchQueryRef.current = normalizedQuery
     lastSearchAtRef.current = now
     setSearchingLocation(true)
+    setShowSearchSuggestions(false)
+    setSearchSuggestions([])
 
     try {
       const geocoder = new window.google.maps.Geocoder()
-      const searchCenter =
-        Array.isArray(mapPosition) &&
-        Number.isFinite(mapPosition[0]) &&
-        Number.isFinite(mapPosition[1])
-          ? { lat: mapPosition[0], lng: mapPosition[1] }
-          : location?.latitude && location?.longitude
-            ? { lat: location.latitude, lng: location.longitude }
-            : { lat: 22.7196, lng: 75.8577 }
+      const searchCenter = getSearchCenter()
 
       const biasBounds = {
         north: searchCenter.lat + 0.18,
@@ -1224,14 +1508,49 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         west: searchCenter.lng - 0.18,
       }
 
-      const geocodeResult = await geocoder.geocode({
-        address: `${query}, Indore, Madhya Pradesh, India`,
-        componentRestrictions: { country: "IN" },
-        bounds: biasBounds,
-      })
+      const localCity =
+        addressFormData.city ||
+        location?.city ||
+        "Indore"
+      const localState =
+        addressFormData.state ||
+        location?.state ||
+        "Madhya Pradesh"
+      const hasExplicitLocationHint =
+        /,/.test(query) ||
+        /\b(india|madhya pradesh|indore|bhopal)\b/i.test(query)
 
-      const results = geocodeResult?.results || []
-      const bestResult = results[0]
+      const geocodeRequests = [
+        {
+          address: query,
+          componentRestrictions: { country: "IN" },
+        },
+        {
+          address: query,
+          componentRestrictions: { country: "IN" },
+          bounds: biasBounds,
+        },
+      ]
+
+      if (!hasExplicitLocationHint) {
+        geocodeRequests.push({
+          address: `${query}, ${localCity}, ${localState}, India`,
+          componentRestrictions: { country: "IN" },
+          bounds: biasBounds,
+        })
+      }
+
+      let bestResult = null
+
+      for (const request of geocodeRequests) {
+        const geocodeResult = await geocoder.geocode(request)
+        const results = geocodeResult?.results || []
+        if (results.length > 0) {
+          bestResult = results[0]
+          break
+        }
+      }
+
       const placeLocation = bestResult?.geometry?.location
 
       if (!bestResult || !placeLocation) {
@@ -1241,33 +1560,26 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
       const lat = placeLocation.lat()
       const lng = placeLocation.lng()
+      const parsedPlace = buildAddressPayloadFromPlace(bestResult)
 
       searchCacheRef.current.set(normalizedQuery, {
         lat,
         lng,
-        formattedAddress: bestResult.formatted_address || query,
+        formattedAddress: parsedPlace.formattedAddress || bestResult.formatted_address || query,
       })
       if (searchCacheRef.current.size > 20) {
         const oldestKey = searchCacheRef.current.keys().next().value
         searchCacheRef.current.delete(oldestKey)
       }
 
-      prepareForFreshPinLookup()
-      setMapPosition([lat, lng])
-      setShowAddressForm(true)
+      await updateLocationFromResolvedPlace({
+        lat,
+        lng,
+        ...parsedPlace,
+      })
 
-      if (googleMapRef.current) {
-        googleMapRef.current.panTo({ lat, lng })
-        googleMapRef.current.setZoom(17)
-      }
-
-      if (greenMarkerRef.current?.setPosition) {
-        greenMarkerRef.current.setPosition({ lat, lng })
-      }
-
-      await handleMapMoveEnd(lat, lng)
-
-      toast.success(`Location found: ${stripIndiaSuffix(bestResult.formatted_address || query)}`)
+      resetSearchSessionToken()
+      toast.success(`Location found: ${stripIndiaSuffix(parsedPlace.formattedAddress || bestResult.formatted_address || query)}`)
     } catch (error) {
       debugError("Error searching location:", error)
       toast.error("Location search failed. Please try another area or landmark.")
@@ -1277,8 +1589,43 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   }
 
   const handleSearchInputKeyDown = async (event) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault()
+      if (!searchSuggestions.length) return
+      setShowSearchSuggestions(true)
+      setActiveSuggestionIndex((prev) =>
+        prev < searchSuggestions.length - 1 ? prev + 1 : 0
+      )
+      return
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault()
+      if (!searchSuggestions.length) return
+      setActiveSuggestionIndex((prev) =>
+        prev > 0 ? prev - 1 : searchSuggestions.length - 1
+      )
+      return
+    }
+
+    if (event.key === "Escape") {
+      setShowSearchSuggestions(false)
+      return
+    }
+
     if (event.key !== "Enter") return
+
     event.preventDefault()
+
+    if (
+      showSearchSuggestions &&
+      activeSuggestionIndex >= 0 &&
+      searchSuggestions[activeSuggestionIndex]
+    ) {
+      await handleSelectSearchSuggestion(searchSuggestions[activeSuggestionIndex])
+      return
+    }
+
     await handleSearchLocation()
   }
 
@@ -2652,10 +2999,17 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-green-600 z-10" />
             <Input
+              ref={inputRef}
               value={searchValue}
-              onChange={(e) => setSearchValue(e.target.value)}
+              onChange={handleSearchInputChange}
               onKeyDown={handleSearchInputKeyDown}
+              onFocus={() => {
+                if (searchSuggestions.length > 0) {
+                  setShowSearchSuggestions(true)
+                }
+              }}
               placeholder="Search for area, street name..."
+              autoComplete="off"
               className="pl-12 pr-4 h-12 w-full bg-gray-50 dark:bg-[#2a2a2a] border-gray-200 dark:border-gray-700 focus:border-green-600 dark:focus:border-green-600 rounded-xl"
             />
             <Button
@@ -2668,6 +3022,33 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             >
               {searchingLocation ? "..." : "Search"}
             </Button>
+
+            {showSearchSuggestions && searchSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#1a1a1a]">
+                {searchSuggestions.map((suggestion, index) => (
+                  <button
+                    key={suggestion.place_id}
+                    type="button"
+                    onClick={() => handleSelectSearchSuggestion(suggestion)}
+                    className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+                      index === activeSuggestionIndex
+                        ? "bg-green-50 dark:bg-green-900/20"
+                        : "hover:bg-gray-50 dark:hover:bg-[#222]"
+                    }`}
+                  >
+                    <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                        {suggestion.structured_formatting?.main_text || suggestion.description}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {suggestion.structured_formatting?.secondary_text || suggestion.description}
+                      </p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2913,9 +3294,15 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           <Input
             ref={inputRef}
             value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
+            onChange={handleSearchInputChange}
             onKeyDown={handleSearchInputKeyDown}
+            onFocus={() => {
+              if (searchSuggestions.length > 0) {
+                setShowSearchSuggestions(true)
+              }
+            }}
             placeholder="Search for area, street name..."
+            autoComplete="off"
             className="pl-12 pr-24 h-12 w-full bg-gray-50 dark:bg-[#2a2a2a] border-gray-200 dark:border-gray-700 focus:border-primary-orange dark:focus:border-primary-orange rounded-xl text-base dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400"
           />
           <Button
@@ -2928,6 +3315,33 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           >
             {searchingLocation ? "..." : "Search"}
           </Button>
+
+          {showSearchSuggestions && searchSuggestions.length > 0 && (
+            <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-30 overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-[#1a1a1a]">
+              {searchSuggestions.map((suggestion, index) => (
+                <button
+                  key={suggestion.place_id}
+                  type="button"
+                  onClick={() => handleSelectSearchSuggestion(suggestion)}
+                  className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors ${
+                    index === activeSuggestionIndex
+                      ? "bg-orange-50 dark:bg-orange-900/20"
+                      : "hover:bg-gray-50 dark:hover:bg-[#222]"
+                  }`}
+                >
+                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary-orange" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-gray-900 dark:text-white">
+                      {suggestion.structured_formatting?.main_text || suggestion.description}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {suggestion.structured_formatting?.secondary_text || suggestion.description}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
