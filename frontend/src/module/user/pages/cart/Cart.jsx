@@ -100,6 +100,7 @@ export default function Cart() {
   const navigate = useNavigate()
   const orderSuccessAudioRef = useRef(null)
   const paymentMethodSelectRef = useRef(null)
+  const couponCelebrationTimeoutRef = useRef(null)
 
   // Defensive check: Ensure CartProvider is available
   let cartContext;
@@ -136,6 +137,7 @@ export default function Cart() {
   const [appliedCoupon, setAppliedCoupon] = useState(null)
   const [couponCode, setCouponCode] = useState("")
   const [manualCouponCode, setManualCouponCode] = useState("")
+  const [couponCelebration, setCouponCelebration] = useState(null)
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState("cash")
   const [walletBalance, setWalletBalance] = useState(0)
   const [isLoadingWallet, setIsLoadingWallet] = useState(false)
@@ -189,6 +191,9 @@ export default function Cart() {
         orderSuccessAudioRef.current.pause()
         orderSuccessAudioRef.current = null
       }
+      if (couponCelebrationTimeoutRef.current) {
+        clearTimeout(couponCelebrationTimeoutRef.current)
+      }
     }
   }, [])
 
@@ -224,6 +229,72 @@ export default function Cart() {
     platformFee: 5,
     gstRate: 5,
   })
+
+  const celebrationBalloons = useMemo(
+    () => ([
+      { left: 10, color: "#fb7185", drift: -22, delay: 0 },
+      { left: 18, color: "#f97316", drift: 18, delay: 0.08 },
+      { left: 28, color: "#facc15", drift: -14, delay: 0.16 },
+      { left: 40, color: "#34d399", drift: 20, delay: 0.05 },
+      { left: 52, color: "#60a5fa", drift: -18, delay: 0.12 },
+      { left: 64, color: "#818cf8", drift: 16, delay: 0.2 },
+      { left: 76, color: "#c084fc", drift: -16, delay: 0.1 },
+      { left: 88, color: "#f472b6", drift: 22, delay: 0.18 },
+    ]),
+    [],
+  )
+
+  const triggerCouponCelebration = (coupon) => {
+    const resolvedCode = coupon?.code || couponCode || "Coupon"
+
+    setCouponCelebration({
+      id: Date.now(),
+      code: resolvedCode,
+    })
+
+    if (couponCelebrationTimeoutRef.current) {
+      clearTimeout(couponCelebrationTimeoutRef.current)
+    }
+
+    couponCelebrationTimeoutRef.current = setTimeout(() => {
+      setCouponCelebration(null)
+      couponCelebrationTimeoutRef.current = null
+    }, 2200)
+
+    if (typeof window !== "undefined") {
+      const burstDefaults = {
+        spread: 70,
+        startVelocity: 28,
+        gravity: 0.95,
+        ticks: 140,
+        zIndex: 70,
+        scalar: 1.05,
+      }
+
+      confetti({
+        ...burstDefaults,
+        particleCount: 70,
+        origin: { x: 0.5, y: 0.72 },
+        colors: ["#EB590E", "#F97316", "#FB7185", "#FACC15", "#34D399", "#60A5FA"],
+      })
+
+      confetti({
+        ...burstDefaults,
+        particleCount: 32,
+        angle: 60,
+        origin: { x: 0.18, y: 0.76 },
+        colors: ["#F97316", "#FACC15", "#34D399"],
+      })
+
+      confetti({
+        ...burstDefaults,
+        particleCount: 32,
+        angle: 120,
+        origin: { x: 0.82, y: 0.76 },
+        colors: ["#EB590E", "#FB7185", "#60A5FA"],
+      })
+    }
+  }
 
 
   const cartCount = getCartCount()
@@ -722,21 +793,50 @@ export default function Cart() {
 
       const allCoupons = []
       const uniqueCouponCodes = new Set()
+      let menuItemsByName = new Map()
+
+      try {
+        const menuResponse = await restaurantAPI.getMenuByRestaurantId(restaurantId, { noCache: true })
+        const sections = menuResponse?.data?.data?.menu?.sections || []
+        const flattenItems = (list = []) =>
+          (Array.isArray(list) ? list : Object.values(list || {})).flatMap((section) => {
+            const directItems = Array.isArray(section?.items) ? section.items : Object.values(section?.items || {})
+            const subsectionItems = (Array.isArray(section?.subsections) ? section.subsections : Object.values(section?.subsections || {}))
+              .flatMap((subsection) => (Array.isArray(subsection?.items) ? subsection.items : Object.values(subsection?.items || {})))
+            return [...directItems, ...subsectionItems].filter(Boolean)
+          })
+
+        menuItemsByName = new Map(
+          flattenItems(sections).map((item) => [
+            String(item?.name || "").trim().toLowerCase(),
+            String(item?.id || item?._id || item?.itemId || item?.dishId || ""),
+          ]),
+        )
+      } catch (menuLookupError) {
+        debugWarn("[CART-COUPONS] Unable to prefetch menu for coupon lookup backfill:", menuLookupError)
+      }
 
       // Fetch coupons for each item in cart
       for (const cartItem of cart) {
-        if (!cartItem.id) {
+        const recoveredItemId = menuItemsByName.get(String(cartItem?.name || "").trim().toLowerCase())
+        const couponLookupItemId =
+          cartItem.couponItemId ||
+          cartItem.itemId ||
+          cartItem.dishId ||
+          recoveredItemId ||
+          cartItem.id
+        if (!couponLookupItemId) {
           debugLog(`[CART-COUPONS] Skipping item without id:`, cartItem)
           continue
         }
 
         try {
-          debugLog(`[CART-COUPONS] Fetching coupons for itemId: ${cartItem.id}, name: ${cartItem.name}`)
-          const response = await restaurantAPI.getCouponsByItemIdPublic(restaurantId, cartItem.id)
+          debugLog(`[CART-COUPONS] Fetching coupons for itemId: ${couponLookupItemId}, name: ${cartItem.name}`)
+          const response = await restaurantAPI.getCouponsByItemIdPublic(restaurantId, couponLookupItemId)
 
           if (response?.data?.success && response?.data?.data?.coupons) {
             const coupons = response.data.data.coupons
-            debugLog(`[CART-COUPONS] Found ${coupons.length} coupons for item ${cartItem.id}`)
+            debugLog(`[CART-COUPONS] Found ${coupons.length} coupons for item ${couponLookupItemId}`)
 
             // Add coupons, avoiding duplicates
             coupons.forEach(coupon => {
@@ -759,14 +859,14 @@ export default function Cart() {
                   discountedPrice: coupon.discountedPrice,
                   customerGroup: coupon.customerGroup || "all",
                   isGlobalCoupon: Boolean(coupon.isGlobalCoupon),
-                  itemId: cartItem.id,
+                  itemId: couponLookupItemId,
                   itemName: cartItem.name,
                 })
               }
             })
           }
         } catch (error) {
-          debugError(`[CART-COUPONS] Error fetching coupons for item ${cartItem.id}:`, error)
+          debugError(`[CART-COUPONS] Error fetching coupons for item ${couponLookupItemId}:`, error)
         }
       }
 
@@ -1042,11 +1142,6 @@ export default function Cart() {
       return
     }
 
-    setAppliedCoupon(coupon)
-    setCouponCode(coupon.code)
-    setManualCouponCode(coupon.code)
-    setShowCoupons(false)
-
     // Recalculate pricing with new coupon
     if (cart.length > 0 && hasSavedAddress) {
       try {
@@ -1071,9 +1166,16 @@ export default function Cart() {
 
         if (response?.data?.success && response?.data?.data?.pricing) {
           setPricing(response.data.data.pricing)
+          setAppliedCoupon(coupon)
+          setCouponCode(coupon.code)
+          setManualCouponCode(coupon.code)
+          setShowCoupons(false)
+          toast.success(`Coupon ${coupon.code} applied`)
+          triggerCouponCelebration(coupon)
         }
       } catch (error) {
         debugError("Error recalculating pricing:", error)
+        toast.error("Failed to apply coupon")
       }
     }
   }
@@ -1149,6 +1251,7 @@ export default function Cart() {
       )
       setShowCoupons(false)
       toast.success("Coupon applied")
+      triggerCouponCelebration(matchedCoupon || { code: inputCode })
     } catch (error) {
       debugError("Error applying coupon code:", error)
       toast.error("Failed to apply coupon")
@@ -1818,6 +1921,57 @@ export default function Cart() {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a]">
+      <AnimatePresence>
+        {couponCelebration && (
+          <motion.div
+            key={couponCelebration.id}
+            className="pointer-events-none fixed inset-0 z-[60] overflow-hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="absolute left-1/2 top-24 -translate-x-1/2 rounded-full bg-[#111827] px-4 py-2 text-white shadow-lg"
+              initial={{ y: -18, opacity: 0, scale: 0.92 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -12, opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-yellow-300" />
+                <span>{couponCelebration.code} unlocked</span>
+              </div>
+            </motion.div>
+
+            {celebrationBalloons.map((balloon, index) => (
+              <motion.div
+                key={`${couponCelebration.id}-${index}`}
+                className="absolute bottom-[-96px] flex flex-col items-center"
+                style={{ left: `${balloon.left}%` }}
+                initial={{ y: 0, x: 0, opacity: 0, scale: 0.8 }}
+                animate={{
+                  y: -440,
+                  x: balloon.drift,
+                  opacity: [0, 1, 1, 0],
+                  scale: [0.8, 1, 1, 0.94],
+                }}
+                transition={{
+                  duration: 1.85,
+                  delay: balloon.delay,
+                  ease: "easeOut",
+                }}
+              >
+                <div
+                  className="h-12 w-9 rounded-full shadow-md"
+                  style={{ backgroundColor: balloon.color }}
+                />
+                <div className="h-12 w-px bg-gray-300/80" />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header - Sticky at top */}
       <div className="bg-white dark:bg-[#1a1a1a] border-b dark:border-gray-800 sticky top-0 z-20 flex-shrink-0">
         <div className="max-w-7xl mx-auto">

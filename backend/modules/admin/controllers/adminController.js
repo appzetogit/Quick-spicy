@@ -47,6 +47,30 @@ const normalizeSpecialDishes = (value) => {
     );
 };
 
+const getEffectiveOfferEndDate = (endDateValue) => {
+  if (!endDateValue) return null;
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(endDate.getTime())) return null;
+
+  const isUtcMidnight =
+    endDate.getUTCHours() === 0 &&
+    endDate.getUTCMinutes() === 0 &&
+    endDate.getUTCSeconds() === 0 &&
+    endDate.getUTCMilliseconds() === 0;
+
+  const isLocalMidnight =
+    endDate.getHours() === 0 &&
+    endDate.getMinutes() === 0 &&
+    endDate.getSeconds() === 0 &&
+    endDate.getMilliseconds() === 0;
+
+  if (isUtcMidnight || isLocalMidnight) {
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  return endDate;
+};
+
 const attachMappedZoneToRestaurant = async (restaurantDoc) => {
   if (!restaurantDoc?._id) return restaurantDoc;
 
@@ -3380,6 +3404,15 @@ export const getAllOffers = asyncHandler(async (req, res) => {
     offers.forEach((offer, offerIndex) => {
       if (offer.items && offer.items.length > 0) {
         offer.items.forEach((item, itemIndex) => {
+          const now = new Date();
+          const effectiveEndDate = getEffectiveOfferEndDate(offer.endDate);
+          const derivedStatus =
+            offer.status === "active" &&
+            effectiveEndDate &&
+            effectiveEndDate < now
+              ? "expired"
+              : (offer.status || "active");
+
           // Apply search filter if provided
           if (search) {
             const searchLower = search.toLowerCase();
@@ -3414,9 +3447,9 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
             showInCart: item.showInCart !== false,
-            status: offer.status || "active",
+            status: derivedStatus,
             startDate: offer.startDate || null,
-            endDate: offer.endDate || null,
+            endDate: effectiveEndDate || offer.endDate || null,
             createdAt: offer.createdAt || new Date(),
           });
         });
@@ -3591,6 +3624,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       if (Number.isNaN(parsedEndDate.getTime())) {
         return errorResponse(res, 400, "Invalid endDate");
       }
+      parsedEndDate.setHours(23, 59, 59, 999);
     }
 
     const customerGroup = customerScope === "first-time" ? "new" : "all";

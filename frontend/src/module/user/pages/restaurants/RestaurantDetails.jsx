@@ -1,8 +1,9 @@
 ﻿import { useState, useEffect, useRef, Component } from "react"
 import { createPortal } from "react-dom"
+import { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { restaurantAPI, orderAPI } from "@/lib/api"
+import { restaurantAPI, orderAPI, zoneAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import { useLocation } from "../../hooks/useLocation"
@@ -57,6 +58,16 @@ const debugError = (...args) => {}
 
 const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
 const RUPEE_SYMBOL = "\u20B9"
+const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_STORAGE_KEY = "userLocation"
+
+const normalizeZoneMatchValue = (value) =>
+  String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 
 function RestaurantDetailsContent() {
   const { slug } = useParams()
@@ -64,9 +75,102 @@ function RestaurantDetailsContent() {
   const [searchParams] = useSearchParams()
   const showOnlyUnder250 = searchParams.get('under250') === 'true'
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
-  const { vegMode, addDishFavorite, removeDishFavorite, isDishFavorite, getDishFavorites, getFavorites, addFavorite, removeFavorite, isFavorite } = useProfile()
+  const { vegMode, getDefaultAddress, addDishFavorite, removeDishFavorite, isDishFavorite, getDishFavorites, getFavorites, addFavorite, removeFavorite, isFavorite } = useProfile()
   const { location: userLocation } = useLocation() // Get user's current location
-  const { zoneId, zone, loading: loadingZone, isOutOfService } = useZone(userLocation) // Get user's zone for zone-based filtering
+  const [storedManualLocation, setStoredManualLocation] = useState(() => {
+    try {
+      const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
+  const [locationPreference, setLocationPreference] = useState(() => {
+    try {
+      return localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live"
+    } catch {
+      return "live"
+    }
+  })
+  const [availableZones, setAvailableZones] = useState([])
+  const selectedLocation = useMemo(() => {
+    if (locationPreference !== "manual") return userLocation
+    return storedManualLocation || userLocation
+  }, [locationPreference, storedManualLocation, userLocation])
+  const defaultAddress = getDefaultAddress()
+  const zoneLookupLocation = useMemo(() => {
+    const coords = selectedLocation?.location?.coordinates
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const lng = Number(coords[0])
+      const lat = Number(coords[1])
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { latitude: lat, longitude: lng }
+      }
+    }
+
+    const latitude = Number(
+      selectedLocation?.latitude ??
+      selectedLocation?.lat ??
+      selectedLocation?.location?.latitude
+    )
+    const longitude = Number(
+      selectedLocation?.longitude ??
+      selectedLocation?.lng ??
+      selectedLocation?.location?.longitude
+    )
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      return { latitude, longitude }
+    }
+
+    const savedCoordinates = defaultAddress?.location?.coordinates
+    if (Array.isArray(savedCoordinates) && savedCoordinates.length >= 2) {
+      return {
+        latitude: Number(savedCoordinates[1]),
+        longitude: Number(savedCoordinates[0]),
+      }
+    }
+
+    return userLocation
+  }, [defaultAddress, selectedLocation, userLocation])
+  const { zoneId, zone, loading: loadingZone, isOutOfService } = useZone(zoneLookupLocation) // Prefer saved/default address zone before live location
+  const addressZoneFallbackId = useMemo(() => {
+    const textCandidates = [
+      selectedLocation?.city,
+      selectedLocation?.area,
+      selectedLocation?.state,
+      selectedLocation?.formattedAddress,
+      selectedLocation?.address,
+      defaultAddress?.city,
+      defaultAddress?.area,
+      defaultAddress?.state,
+      defaultAddress?.formattedAddress,
+      defaultAddress?.address,
+      defaultAddress?.additionalDetails,
+    ]
+      .map(normalizeZoneMatchValue)
+      .filter(Boolean)
+
+    if (textCandidates.length === 0 || availableZones.length === 0) return null
+
+    const matchedZone = availableZones.find((item) => {
+      const zoneValues = [
+        item?.name,
+        item?.zoneName,
+        item?.serviceLocation,
+      ]
+        .map(normalizeZoneMatchValue)
+        .filter(Boolean)
+
+      return textCandidates.some((candidate) =>
+        zoneValues.some((zoneValue) =>
+          zoneValue.includes(candidate) || candidate.includes(zoneValue)
+        )
+      )
+    })
+
+    return matchedZone?._id ? String(matchedZone._id) : null
+  }, [availableZones, defaultAddress, selectedLocation])
+  const effectiveZoneId = zoneId || addressZoneFallbackId
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [highlightIndex, setHighlightIndex] = useState(0)
   const [quantities, setQuantities] = useState({})
@@ -101,6 +205,55 @@ function RestaurantDetailsContent() {
   const [restaurantError, setRestaurantError] = useState(null)
   const fetchedRestaurantRef = useRef(false) // Track if restaurant has been fetched for current slug
   const fetchedSlugRef = useRef(null)
+
+  useEffect(() => {
+    const syncManualLocation = () => {
+      try {
+        setStoredManualLocation(JSON.parse(localStorage.getItem(USER_LOCATION_STORAGE_KEY) || "null"))
+      } catch {
+        setStoredManualLocation(null)
+      }
+
+      try {
+        setLocationPreference(localStorage.getItem(USER_LOCATION_PREFERENCE_KEY) || "live")
+      } catch {
+        setLocationPreference("live")
+      }
+    }
+
+    window.addEventListener("storage", syncManualLocation)
+    window.addEventListener("user-location-preference-changed", syncManualLocation)
+    window.addEventListener("user-location-updated", syncManualLocation)
+
+    return () => {
+      window.removeEventListener("storage", syncManualLocation)
+      window.removeEventListener("user-location-preference-changed", syncManualLocation)
+      window.removeEventListener("user-location-updated", syncManualLocation)
+    }
+  }, [])
+
+  useEffect(() => {
+    let active = true
+
+    const fetchZones = async () => {
+      try {
+        const response = await zoneAPI.getZones()
+        const zones = response?.data?.data?.zones || []
+        if (active) {
+          setAvailableZones(Array.isArray(zones) ? zones : [])
+        }
+      } catch (error) {
+        if (active) {
+          setAvailableZones([])
+        }
+      }
+    }
+
+    fetchZones()
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -138,8 +291,8 @@ function RestaurantDetailsContent() {
         } catch (directLookupError) {
           debugLog('? Direct lookup failed, trying search by name...')
 
-          const searchVariants = zoneId
-            ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
+          const searchVariants = effectiveZoneId
+            ? [{ limit: 100, zoneId: effectiveZoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
             : [{ limit: 100, _ts: Date.now() }]
 
           for (const searchParams of searchVariants) {
@@ -467,8 +620,8 @@ function RestaurantDetailsContent() {
           if (!restaurantIdForMenu) {
             debugWarn('? No restaurant ID available, searching for restaurant by name...')
             try {
-              const searchVariants = zoneId
-                ? [{ limit: 100, zoneId: zoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
+              const searchVariants = effectiveZoneId
+                ? [{ limit: 100, zoneId: effectiveZoneId, _ts: Date.now() }, { limit: 100, _ts: Date.now() }]
                 : [{ limit: 100, _ts: Date.now() }]
 
               for (const searchParams of searchVariants) {
@@ -629,6 +782,7 @@ function RestaurantDetailsContent() {
                 const normalizeItem = (item = {}) => ({
                   ...item,
                   id: String(item.id || item._id || `${Date.now()}-${Math.random()}`),
+                  couponItemId: String(item.id || item._id || item.itemId || item.dishId || ""),
                   name: item.name || "Unnamed Item",
                   foodType: item.foodType || "Non-Veg",
                   price: Number(item.price || 0),
@@ -841,7 +995,7 @@ function RestaurantDetailsContent() {
     }
 
     fetchRestaurant()
-  }, [slug, zoneId, restaurant])
+  }, [effectiveZoneId, slug, restaurant])
 
   // Track previous values to prevent unnecessary recalculations
   const prevCoordsRef = useRef({ userLat: null, userLng: null, restaurantLat: null, restaurantLng: null })
@@ -951,7 +1105,7 @@ function RestaurantDetailsContent() {
     }
 
     // CRITICAL: Check if user is in service zone or restaurant is available
-    if (isOutOfService) {
+    if (isOutOfService && !effectiveZoneId) {
       toast.error('You are outside the service zone. Please select a location within the service area.');
       return;
     }
@@ -1001,6 +1155,7 @@ function RestaurantDetailsContent() {
     // Prepare cart item with all required properties
     const cartItem = {
       id: item.id,
+      couponItemId: item.couponItemId || item._id || item.itemId || item.dishId || item.id,
       name: item.name,
       price: item.price,
       image: item.image,

@@ -94,6 +94,7 @@ const normalizeCartData = (rawCart) => {
       return {
         ...item,
         id: item.id || item._id || `cart-item-${index}`,
+        couponItemId: item.couponItemId || item.itemId || item.dishId || item._id || item.id || null,
         name: item.name || item.product?.name || "Item",
         quantity:
           Number.isFinite(parsedQuantity) && parsedQuantity > 0

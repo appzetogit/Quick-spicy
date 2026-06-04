@@ -3,6 +3,30 @@ import Offer from '../../restaurant/models/Offer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
 import mongoose from 'mongoose';
 
+const getEffectiveOfferEndDate = (endDateValue) => {
+  if (!endDateValue) return null;
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(endDate.getTime())) return null;
+
+  const isUtcMidnight =
+    endDate.getUTCHours() === 0 &&
+    endDate.getUTCMinutes() === 0 &&
+    endDate.getUTCSeconds() === 0 &&
+    endDate.getUTCMilliseconds() === 0;
+
+  const isLocalMidnight =
+    endDate.getHours() === 0 &&
+    endDate.getMinutes() === 0 &&
+    endDate.getSeconds() === 0 &&
+    endDate.getMilliseconds() === 0;
+
+  if (isUtcMidnight || isLocalMidnight) {
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  return endDate;
+};
+
 /**
  * Get active fee settings from database
  * Returns default values if no settings found
@@ -211,73 +235,76 @@ export const calculateOrderPricing = async ({
             restaurant: restaurantObjectId,
             status: 'active',
             'items.couponCode': couponCode,
-            startDate: { $lte: now },
-            $or: [
-              { endDate: { $gte: now } },
-              { endDate: null }
-            ]
+            startDate: { $lte: now }
           }).lean();
 
           if (offer) {
-            // Find the specific item coupon
-            const couponItem = offer.items.find(item => item.couponCode === couponCode);
-            
-            if (couponItem) {
-              // Check if coupon is valid for items in cart
-              const cartItemIds = items.map(item => item.itemId);
-              const isGlobalCoupon =
-                couponItem.itemId === 'all' ||
-                (typeof couponItem.itemId === 'string' && couponItem.itemId.startsWith('admin-coupon-')) ||
-                couponItem.itemName === 'All Items';
-              const isValidForCart = isGlobalCoupon || (couponItem.itemId && cartItemIds.includes(couponItem.itemId));
+            const effectiveEndDate = getEffectiveOfferEndDate(offer.endDate);
+            const isStillValid = !effectiveEndDate || effectiveEndDate >= now;
+            if (!isStillValid) {
+              // Treat date-only coupon expiry as end-of-day; otherwise ignore expired offers.
+            } else {
+
+              // Find the specific item coupon
+              const couponItem = offer.items.find(item => item.couponCode === couponCode);
               
-              // Check minimum order value
-              const minOrderMet = !offer.minOrderValue || subtotal >= offer.minOrderValue;
-              
-              if (isValidForCart && minOrderMet) {
-                if (isGlobalCoupon) {
-                  // Global coupon applies on order subtotal
-                  if (offer.discountType === 'percentage') {
-                    discount = Math.round(subtotal * ((couponItem.discountPercentage || 0) / 100));
-                    if (Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
-                      discount = Math.min(discount, offer.maxLimit);
-                    }
-                  } else {
-                    const flatDiscount = (couponItem.originalPrice || 0) - (couponItem.discountedPrice || 0);
-                    discount = Math.round(flatDiscount);
-                  }
-                  discount = Math.min(Math.max(discount, 0), subtotal);
-                } else {
-                  // Item-specific coupon applies only on matching item
-                  const itemInCart = items.find(item => item.itemId === couponItem.itemId);
-                  if (itemInCart) {
-                    const itemQuantity = itemInCart.quantity || 1;
-                    
-                    // Calculate discount per item
-                    const discountPerItem = couponItem.originalPrice - couponItem.discountedPrice;
-                    
-                    // Apply discount to all quantities of this item
-                    discount = Math.round(discountPerItem * itemQuantity);
-                    
-                    // Ensure discount doesn't exceed item subtotal
-                    const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
-                    discount = Math.min(discount, itemSubtotal);
-                  }
-                }
+              if (couponItem) {
+                // Check if coupon is valid for items in cart
+                const cartItemIds = items.map(item => item.itemId);
+                const isGlobalCoupon =
+                  couponItem.itemId === 'all' ||
+                  (typeof couponItem.itemId === 'string' && couponItem.itemId.startsWith('admin-coupon-')) ||
+                  couponItem.itemName === 'All Items';
+                const isValidForCart = isGlobalCoupon || (couponItem.itemId && cartItemIds.includes(couponItem.itemId));
                 
-                appliedCoupon = {
-                  code: couponCode,
-                  discount: discount,
-                  discountPercentage: couponItem.discountPercentage,
-                  maxDiscount: offer.maxLimit ?? null,
-                  minOrder: offer.minOrderValue || 0,
-                  type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
-                  itemId: couponItem.itemId,
-                  itemName: couponItem.itemName,
-                  isGlobalCoupon,
-                  originalPrice: couponItem.originalPrice,
-                  discountedPrice: couponItem.discountedPrice,
-                };
+                // Check minimum order value
+                const minOrderMet = !offer.minOrderValue || subtotal >= offer.minOrderValue;
+                
+                if (isValidForCart && minOrderMet) {
+                  if (isGlobalCoupon) {
+                    // Global coupon applies on order subtotal
+                    if (offer.discountType === 'percentage') {
+                      discount = Math.round(subtotal * ((couponItem.discountPercentage || 0) / 100));
+                      if (Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
+                        discount = Math.min(discount, offer.maxLimit);
+                      }
+                    } else {
+                      const flatDiscount = (couponItem.originalPrice || 0) - (couponItem.discountedPrice || 0);
+                      discount = Math.round(flatDiscount);
+                    }
+                    discount = Math.min(Math.max(discount, 0), subtotal);
+                  } else {
+                    // Item-specific coupon applies only on matching item
+                    const itemInCart = items.find(item => item.itemId === couponItem.itemId);
+                    if (itemInCart) {
+                      const itemQuantity = itemInCart.quantity || 1;
+                      
+                      // Calculate discount per item
+                      const discountPerItem = couponItem.originalPrice - couponItem.discountedPrice;
+                      
+                      // Apply discount to all quantities of this item
+                      discount = Math.round(discountPerItem * itemQuantity);
+                      
+                      // Ensure discount doesn't exceed item subtotal
+                      const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
+                      discount = Math.min(discount, itemSubtotal);
+                    }
+                  }
+
+                  appliedCoupon = {
+                    code: couponCode,
+                    discount: discount,
+                    discountPercentage: couponItem.discountPercentage,
+                    maxDiscount: offer.maxLimit ?? null,
+                    minOrder: offer.minOrderValue || 0,
+                    type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
+                    itemId: couponItem.itemId,
+                    itemName: couponItem.itemName,
+                    isGlobalCoupon,
+                    originalPrice: couponItem.originalPrice,
+                    discountedPrice: couponItem.discountedPrice,
+                  };
+                }
               }
             }
           }

@@ -377,6 +377,7 @@ export default function Under250() {
       menuItems: menuItems.map((item, itemIndex) => ({
         ...item,
         id: item?.id || item?._id || `${restaurantId}-item-${itemIndex}`,
+        couponItemId: item?.id || item?._id || item?.itemId || item?.dishId || "",
         restaurantId,
         restaurant: normalizedName,
         name:
@@ -733,6 +734,7 @@ export default function Under250() {
     // Prepare cart item with all required properties
     const cartItem = {
       id: item.id,
+      couponItemId: item.couponItemId || item._id || item.itemId || item.dishId || item.id,
       name: item.name,
       price: item.price,
       image: item.image,

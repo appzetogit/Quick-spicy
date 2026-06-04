@@ -1,5 +1,31 @@
 import Offer from '../models/Offer.js';
 import Restaurant from '../models/Restaurant.js';
+
+const getEffectiveOfferEndDate = (endDateValue) => {
+  if (!endDateValue) return null;
+  const endDate = new Date(endDateValue);
+  if (Number.isNaN(endDate.getTime())) return null;
+
+  // Admin coupons are often created from a date-only input, which lands at
+  // 00:00:00. Treat that as valid through the end of the selected day.
+  const isUtcMidnight =
+    endDate.getUTCHours() === 0 &&
+    endDate.getUTCMinutes() === 0 &&
+    endDate.getUTCSeconds() === 0 &&
+    endDate.getUTCMilliseconds() === 0;
+
+  const isLocalMidnight =
+    endDate.getHours() === 0 &&
+    endDate.getMinutes() === 0 &&
+    endDate.getSeconds() === 0 &&
+    endDate.getMilliseconds() === 0;
+
+  if (isUtcMidnight || isLocalMidnight) {
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  return endDate;
+};
 import mongoose from 'mongoose';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
@@ -219,7 +245,7 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
   // Filter by date validity
   const validOffers = allOffers.filter(offer => {
     const startDate = offer.startDate ? new Date(offer.startDate) : null;
-    const endDate = offer.endDate ? new Date(offer.endDate) : null;
+    const endDate = getEffectiveOfferEndDate(offer.endDate);
     
     // Start date should be <= now (or null)
     const startValid = !startDate || startDate <= now;
@@ -351,7 +377,7 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
   // Filter by date validity
   const validOffers = allOffers.filter(offer => {
     const startDate = offer.startDate ? new Date(offer.startDate) : null;
-    const endDate = offer.endDate ? new Date(offer.endDate) : null;
+    const endDate = getEffectiveOfferEndDate(offer.endDate);
     
     const startValid = !startDate || startDate <= now;
     const endOfToday = new Date(now);
@@ -423,7 +449,7 @@ export const getPublicOffers = asyncHandler(async (req, res) => {
     offers.forEach((offer) => {
       // Check if offer is valid (date-wise)
       const startDate = offer.startDate ? new Date(offer.startDate) : null;
-      const endDate = offer.endDate ? new Date(offer.endDate) : null;
+      const endDate = getEffectiveOfferEndDate(offer.endDate);
       
       const startValid = !startDate || startDate <= now;
       const endOfToday = new Date(now);
