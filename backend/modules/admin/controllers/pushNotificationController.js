@@ -386,6 +386,7 @@ const executePushNotification = async ({
   const isPartnerMobileTarget =
     (normalizedTarget === "restaurant" || normalizedTarget === "delivery") &&
     (normalizedPlatform === "mobile" || normalizedPlatform === "all");
+  const shouldUseSystemRenderedMobileNotification = Boolean(normalizedImageUrl);
 
   const mobilePayload = {
     data: {
@@ -393,12 +394,29 @@ const executePushNotification = async ({
       title: normalizedTitle,
       body: normalizedDescription,
       ...(normalizedImageUrl ? { image: normalizedImageUrl, imageUrl: normalizedImageUrl } : {}),
-      renderMode: "client",
+      renderMode: shouldUseSystemRenderedMobileNotification ? "system" : "client",
       ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
     },
+    ...(shouldUseSystemRenderedMobileNotification
+      ? {
+          notification: {
+            title: normalizedTitle,
+            body: normalizedDescription,
+            imageUrl: normalizedImageUrl,
+          },
+        }
+      : {}),
     android: {
       priority: "high",
       ttl: 120000,
+      ...(shouldUseSystemRenderedMobileNotification
+        ? {
+            notification: {
+              ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
+              imageUrl: normalizedImageUrl,
+            },
+          }
+        : {}),
     },
     apns: {
       headers: {
