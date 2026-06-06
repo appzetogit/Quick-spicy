@@ -393,20 +393,12 @@ const executePushNotification = async ({
       title: normalizedTitle,
       body: normalizedDescription,
       ...(normalizedImageUrl ? { image: normalizedImageUrl, imageUrl: normalizedImageUrl } : {}),
+      renderMode: "client",
       ...(isPartnerMobileTarget ? { androidChannelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-    },
-    notification: {
-      title: normalizedTitle,
-      body: normalizedDescription,
-      ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
     },
     android: {
       priority: "high",
       ttl: 120000,
-      notification: {
-        ...(isPartnerMobileTarget ? { channelId: PARTNER_ANDROID_CHANNEL_ID, sound: PARTNER_ANDROID_SOUND } : {}),
-        ...(normalizedImageUrl ? { imageUrl: normalizedImageUrl } : {}),
-      },
     },
     apns: {
       headers: {
@@ -417,7 +409,13 @@ const executePushNotification = async ({
       },
       payload: {
         aps: {
+          alert: {
+            title: normalizedTitle,
+            body: normalizedDescription,
+          },
+          sound: "default",
           "content-available": 1,
+          ...(normalizedImageUrl ? { "mutable-content": 1 } : {}),
         },
       },
     },

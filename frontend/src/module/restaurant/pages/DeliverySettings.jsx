@@ -5,6 +5,7 @@ import Lenis from "lenis"
 import { ArrowLeft, Truck, X, CheckCircle, AlertCircle } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
+import { getIndiaDateTimeParts } from "@/lib/utils/indiaTime"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -76,11 +77,9 @@ export default function DeliverySettings() {
       if (!saved) return false
 
       const days = JSON.parse(saved)
-      const now = new Date()
-      const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' })
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-      const currentTimeInMinutes = currentHour * 60 + currentMinute
+      const indiaNow = getIndiaDateTimeParts(new Date())
+      const currentDay = indiaNow.weekday
+      const currentTimeInMinutes = indiaNow.totalMinutes
 
       const dayData = days[currentDay]
       if (!dayData || !dayData.isOpen || !dayData.slots || dayData.slots.length === 0) {

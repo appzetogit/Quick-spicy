@@ -1,3 +1,5 @@
+import { getIndiaDateTimeParts } from "@/lib/utils/indiaTime"
+
 const DAY_NAMES = [
   "Sunday",
   "Monday",
@@ -172,12 +174,12 @@ const formatOpeningCountdown = (minutesUntilOpen, openingTime) => {
 }
 
 const getMinutesUntilNextOpening = (restaurant, now, fallbackOpeningTime) => {
-  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const indiaNow = getIndiaDateTimeParts(now)
+  const nowMinutes = indiaNow.totalMinutes
+  const currentDayIndex = DAY_NAMES.indexOf(indiaNow.weekday)
 
   for (let offset = 0; offset < 7; offset += 1) {
-    const candidateDate = new Date(now)
-    candidateDate.setDate(now.getDate() + offset)
-    const dayName = DAY_NAMES[candidateDate.getDay()]
+    const dayName = DAY_NAMES[(currentDayIndex + offset + 7) % 7]
     const timingForDay = getTodayTiming(restaurant, dayName)
 
     if (!isDayAvailable(restaurant, dayName, timingForDay)) {
@@ -240,7 +242,8 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
     }
   }
 
-  const dayName = DAY_NAMES[now.getDay()]
+  const indiaNow = getIndiaDateTimeParts(now)
+  const dayName = indiaNow.weekday
   const todayTiming = getTodayTiming(restaurant, dayName)
 
   // Legacy openDays can get stale; enforce only when no explicit outlet timing exists for today.
@@ -259,7 +262,7 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
 
   const openingMinutes = parseTimeToMinutes(openingTime)
   const closingMinutes = parseTimeToMinutes(closingTime)
-  const nowMinutes = now.getHours() * 60 + now.getMinutes()
+  const nowMinutes = indiaNow.totalMinutes
   const hasExplicitWindow = Boolean(openingTime || closingTime)
   const isWithinTimings = hasExplicitWindow
     ? (openingMinutes !== null && closingMinutes !== null

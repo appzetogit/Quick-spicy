@@ -5,6 +5,7 @@ import { ArrowLeft, Settings, ChevronRight } from "lucide-react"
 import { Switch } from "@/components/ui/switch"
 import { Card, CardContent } from "@/components/ui/card"
 import { restaurantAPI } from "@/lib/api"
+import { formatIndiaDateTime, getIndiaDateTimeParts } from "@/lib/utils/indiaTime"
 import {
   Dialog,
   DialogContent,
@@ -94,10 +95,9 @@ export default function RestaurantStatus() {
   useEffect(() => {
     const checkIfOpen = () => {
       const now = new Date()
-      const currentDayFull = now.toLocaleDateString('en-US', { weekday: 'long' }) // "Monday", "Tuesday", etc.
-      const currentHour = now.getHours()
-      const currentMinute = now.getMinutes()
-      const currentTimeInMinutes = currentHour * 60 + currentMinute
+      const indiaNow = getIndiaDateTimeParts(now)
+      const currentDayFull = indiaNow.weekday
+      const currentTimeInMinutes = indiaNow.totalMinutes
 
       // Single source of truth: outlet timings from /restaurant/outlet-timings
       let outletTimingsData = null
@@ -247,8 +247,8 @@ export default function RestaurantStatus() {
   // Format current date and time
   const formatCurrentDateTime = () => {
     const now = currentDateTime
-    const dateStr = now.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
-    const timeStr = now.toLocaleTimeString('en-US', { 
+    const dateStr = formatIndiaDateTime(now, { day: 'numeric', month: 'short' })
+    const timeStr = formatIndiaDateTime(now, {
       hour: 'numeric', 
       minute: '2-digit',
       hour12: true 
@@ -259,7 +259,7 @@ export default function RestaurantStatus() {
   // Get delivery timings for current day (outlet timings only)
   const getCurrentDayTimings = () => {
     const now = new Date()
-    const currentDayFull = now.toLocaleDateString('en-US', { weekday: 'long' }) // "Monday", "Tuesday", etc.
+    const currentDayFull = getIndiaDateTimeParts(now).weekday
     
     // Single source of truth: outlet timings
     if (outletTimings && outletTimings[currentDayFull]) {
