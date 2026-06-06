@@ -207,6 +207,8 @@ function RestaurantDetailsContent() {
   const fetchedRestaurantRef = useRef(false) // Track if restaurant has been fetched for current slug
   const fetchedSlugRef = useRef(null)
   const fetchingSlugRef = useRef(null)
+  const fetchedMenuKeyRef = useRef(null)
+  const fetchingMenuKeyRef = useRef(null)
 
   useEffect(() => {
     const syncManualLocation = () => {
@@ -666,23 +668,30 @@ function RestaurantDetailsContent() {
           }
 
           const normalizedLookupIds = [
-            restaurantIdForMenu,
-            slug,
-            transformedRestaurant.id,
-            transformedRestaurant.restaurantId,
             transformedRestaurant.mongoId,
-            apiRestaurant?.restaurantId,
+            transformedRestaurant.restaurantId,
+            transformedRestaurant.id,
             apiRestaurant?._id,
-            actualRestaurant?.restaurantId,
+            apiRestaurant?.restaurantId,
             actualRestaurant?._id,
+            actualRestaurant?.restaurantId,
+            restaurantIdForMenu,
             actualRestaurant?.slug,
+            slug,
           ]
             .filter(Boolean)
             .map((value) => String(value).trim())
             .filter((value, index, arr) => arr.indexOf(value) === index)
 
-          setLoadingMenuItems(true)
-          if (normalizedLookupIds.length > 0) {
+          const menuLookupKey = normalizedLookupIds[0] || slug
+
+          if (fetchedMenuKeyRef.current === menuLookupKey) {
+            debugLog('? Menu already fetched for lookup key:', menuLookupKey)
+          } else if (fetchingMenuKeyRef.current === menuLookupKey) {
+            debugLog('? Menu fetch already in progress for lookup key:', menuLookupKey)
+          } else if (normalizedLookupIds.length > 0) {
+            fetchingMenuKeyRef.current = menuLookupKey
+            setLoadingMenuItems(true)
             try {
               debugLog('? Fetching menu for restaurant ID:', restaurantIdForMenu)
               let menuResponse = null
@@ -796,6 +805,7 @@ function RestaurantDetailsContent() {
                   Array.from({ length: Math.min(3, finalMenuSections.length) }, (_, idx) => idx)
                 )
                 setExpandedSections(defaultExpandedSections)
+                fetchedMenuKeyRef.current = menuLookupKey
 
                 debugLog('Fetched menu sections with recommended items:', finalMenuSections)
 
@@ -869,6 +879,9 @@ function RestaurantDetailsContent() {
                 debugError('? Error fetching menu:', menuError)
               }
             } finally {
+              if (fetchingMenuKeyRef.current === menuLookupKey) {
+                fetchingMenuKeyRef.current = null
+              }
               setLoadingMenuItems(false)
             }
           }
@@ -930,10 +943,12 @@ function RestaurantDetailsContent() {
     if (fetchedRestaurantRef.current && fetchedSlugRef.current !== slug) {
       fetchedRestaurantRef.current = false
       fetchedSlugRef.current = null
+      fetchedMenuKeyRef.current = null
+      fetchingMenuKeyRef.current = null
     }
 
     fetchRestaurant()
-  }, [effectiveZoneId, slug])
+  }, [slug])
 
   // Track previous values to prevent unnecessary recalculations
   const prevCoordsRef = useRef({ userLat: null, userLng: null, restaurantLat: null, restaurantLng: null })

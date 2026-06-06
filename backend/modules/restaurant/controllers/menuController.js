@@ -5,6 +5,13 @@ import { successResponse, errorResponse } from '../../../shared/utils/response.j
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 
+const ENABLE_USER_MENU_DEBUG = process.env.DEBUG_USER_MENU === 'true';
+const userMenuDebugLog = (...args) => {
+  if (ENABLE_USER_MENU_DEBUG) {
+    console.log(...args);
+  }
+};
+
 const normalizeSingleItemImages = (item = {}) => {
   const validArrayImages = Array.isArray(item.images)
     ? item.images.filter((img) => img && typeof img === 'string' && img.trim() !== '')
@@ -831,8 +838,8 @@ export const getMenuByRestaurantId = async (req, res) => {
       });
     }
 
-    console.log('[USER MENU] Processing menu for restaurant:', restaurant._id);
-    console.log('[USER MENU] Total sections:', menu.sections?.length || 0);
+    userMenuDebugLog('[USER MENU] Processing menu for restaurant:', restaurant._id);
+    userMenuDebugLog('[USER MENU] Total sections:', menu.sections?.length || 0);
 
     const categoryRecords = await RestaurantCategory.find({
       restaurant: restaurant._id,
@@ -858,12 +865,12 @@ export const getMenuByRestaurantId = async (req, res) => {
         // If isEnabled is undefined/null, treat as enabled (default true)
         const isEnabled = section.isEnabled !== false;
         if (!isEnabled || !isCategoryActive) {
-          console.log(`[USER MENU] Filtering out disabled section: "${section.name}"`);
+          userMenuDebugLog(`[USER MENU] Filtering out disabled section: "${section.name}"`);
         }
         return isEnabled && isCategoryActive;
       })
       .map(section => {
-        console.log(`[USER MENU] Processing section: "${section.name}", items: ${section.items?.length || 0}`);
+        userMenuDebugLog(`[USER MENU] Processing section: "${section.name}", items: ${section.items?.length || 0}`);
         // Filter direct items - only show available AND approved items
         // Items where isAvailable is not explicitly false AND approvalStatus is 'approved' should be shown
         const availableItems = (section.items || []).filter(item => {
@@ -873,12 +880,12 @@ export const getMenuByRestaurantId = async (req, res) => {
 
           // Debug logging for filtered items
           if (!shouldShow) {
-            console.log(`[USER MENU] Filtering out item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
+            userMenuDebugLog(`[USER MENU] Filtering out item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
           }
 
           // Debug logging for preparationTime - log ALL items to see what's in the data
           if (shouldShow) {
-            console.log(`[USER MENU] Item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
+            userMenuDebugLog(`[USER MENU] Item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
           }
 
           return shouldShow;
@@ -894,12 +901,12 @@ export const getMenuByRestaurantId = async (req, res) => {
 
               // Debug logging for filtered items
               if (!shouldShow) {
-                console.log(`[USER MENU] Filtering out subsection item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
+                userMenuDebugLog(`[USER MENU] Filtering out subsection item "${item.name}": isAvailable=${item.isAvailable}, approvalStatus=${item.approvalStatus}`);
               }
 
               // Debug logging for preparationTime - log ALL items to see what's in the data
               if (shouldShow) {
-                console.log(`[USER MENU] Subsection item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
+                userMenuDebugLog(`[USER MENU] Subsection item "${item.name}": preparationTime="${item.preparationTime}" (type: ${typeof item.preparationTime}, exists: ${item.hasOwnProperty('preparationTime')})`);
               }
 
               return shouldShow;
@@ -922,7 +929,7 @@ export const getMenuByRestaurantId = async (req, res) => {
         // This ensures category remains visible even if some items are unavailable
         if (availableItems.length > 0 || availableSubsections.length > 0) {
           const sortedItems = sortNewestFirst(availableItems);
-          console.log(`[USER MENU] Section "${section.name}" included with ${availableItems.length} items and ${availableSubsections.length} subsections`);
+          userMenuDebugLog(`[USER MENU] Section "${section.name}" included with ${availableItems.length} items and ${availableSubsections.length} subsections`);
           return {
             ...section,
             name: section.name || "Unnamed Section", // Ensure name is always present
@@ -931,24 +938,24 @@ export const getMenuByRestaurantId = async (req, res) => {
           };
         }
         // Return null only if section has no available items AND no subsections with available items
-        console.log(`[USER MENU] Section "${section.name}" excluded - no available/approved items`);
+        userMenuDebugLog(`[USER MENU] Section "${section.name}" excluded - no available/approved items`);
         return null;
       })
       .filter(section => section !== null); // Remove null sections (sections with no available items)
 
-    console.log('[USER MENU] Final filtered sections count:', filteredSections.length);
+    userMenuDebugLog('[USER MENU] Final filtered sections count:', filteredSections.length);
     const totalItems = filteredSections.reduce((sum, section) => {
       const sectionItems = (section.items || []).length;
       const subsectionItems = (section.subsections || []).reduce((subSum, sub) => subSum + (sub.items || []).length, 0);
       return sum + sectionItems + subsectionItems;
     }, 0);
-    console.log('[USER MENU] Total items shown to user:', totalItems);
+    userMenuDebugLog('[USER MENU] Total items shown to user:', totalItems);
 
     // Safety fallback: if strict approval filtering hides everything, show available items
     // so a restaurant page doesn't appear empty due status drift on legacy data.
     let sectionsToReturn = filteredSections;
     if (totalItems === 0) {
-      console.log('[USER MENU] No items after approval filtering; applying availability-only fallback.');
+      userMenuDebugLog('[USER MENU] No items after approval filtering; applying availability-only fallback.');
       const fallbackSections = (menu.sections || [])
         .filter((section) => {
           const sectionNameKey = String(section.name || '').trim().toLowerCase();
@@ -994,7 +1001,7 @@ export const getMenuByRestaurantId = async (req, res) => {
       }, 0);
 
       if (fallbackItemCount > 0) {
-        console.log('[USER MENU] Fallback applied. Items shown:', fallbackItemCount);
+        userMenuDebugLog('[USER MENU] Fallback applied. Items shown:', fallbackItemCount);
         sectionsToReturn = fallbackSections;
       }
     }
