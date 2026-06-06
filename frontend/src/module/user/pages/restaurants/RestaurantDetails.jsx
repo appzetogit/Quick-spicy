@@ -60,6 +60,7 @@ const FOOD_IMAGE_FALLBACK = "https://picsum.photos/seed/food-fallback/800/600"
 const RUPEE_SYMBOL = "\u20B9"
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
 const USER_LOCATION_STORAGE_KEY = "userLocation"
+const PREVIOUS_ORDER_LOOKUP_LIMIT = 20
 
 const normalizeZoneMatchValue = (value) =>
   String(value || "")
@@ -205,6 +206,7 @@ function RestaurantDetailsContent() {
   const [restaurantError, setRestaurantError] = useState(null)
   const fetchedRestaurantRef = useRef(false) // Track if restaurant has been fetched for current slug
   const fetchedSlugRef = useRef(null)
+  const fetchingSlugRef = useRef(null)
 
   useEffect(() => {
     const syncManualLocation = () => {
@@ -268,11 +270,19 @@ function RestaurantDetailsContent() {
     const fetchRestaurant = async () => {
       if (!slug) return
 
+      // Keep only one in-flight fetch per slug. Without this, location/zone
+      // updates during initial load can spawn duplicate menu requests.
+      if (fetchingSlugRef.current === slug) {
+        return
+      }
+
       // Prevent re-fetching for the same slug. Mobile location/zone updates can
       // trigger transient refetch failures that clear already-rendered content.
       if (fetchedRestaurantRef.current && fetchedSlugRef.current === slug && restaurant) {
         return
       }
+
+      fetchingSlugRef.current = slug
 
       try {
         // Keep the existing page visible on background retries.
@@ -673,82 +683,6 @@ function RestaurantDetailsContent() {
 
           setLoadingMenuItems(true)
           if (normalizedLookupIds.length > 0) {
-            let hasPreviousOrderForRestaurant = false
-            if (isModuleAuthenticated('user')) {
-              try {
-                const normalize = (value) => (value ? String(value).trim().toLowerCase() : "")
-                const targetRestaurantName = normalize(transformedRestaurant.name)
-                const targetRestaurantIds = new Set(
-                  [
-                    ...normalizedLookupIds,
-                    transformedRestaurant.id,
-                    transformedRestaurant.restaurantId,
-                    apiRestaurant?.restaurantId,
-                    apiRestaurant?._id,
-                    actualRestaurant?.restaurantId,
-                    actualRestaurant?._id,
-                  ].map(normalize).filter(Boolean)
-                )
-
-                const FETCH_LIMIT = 100
-                const firstResponse = await orderAPI.getOrders({ limit: FETCH_LIMIT, page: 1 })
-                let allOrders = []
-                let totalPages = 1
-
-                if (firstResponse?.data?.success && firstResponse?.data?.data?.orders) {
-                  allOrders = firstResponse.data.data.orders || []
-                  totalPages = firstResponse.data.data?.pagination?.pages || 1
-                } else if (firstResponse?.data?.orders) {
-                  allOrders = firstResponse.data.orders || []
-                  totalPages = firstResponse.data?.pagination?.pages || 1
-                } else if (Array.isArray(firstResponse?.data?.data)) {
-                  allOrders = firstResponse.data.data || []
-                }
-
-                if (totalPages > 1) {
-                  const pagePromises = []
-                  for (let p = 2; p <= totalPages; p += 1) {
-                    pagePromises.push(orderAPI.getOrders({ limit: FETCH_LIMIT, page: p }))
-                  }
-
-                  const pageResponses = await Promise.all(pagePromises)
-                  const remainingOrders = pageResponses.flatMap((resp) => {
-                    if (resp?.data?.success && resp?.data?.data?.orders) return resp.data.data.orders || []
-                    if (resp?.data?.orders) return resp.data.orders || []
-                    if (Array.isArray(resp?.data?.data)) return resp.data.data || []
-                    return []
-                  })
-                  allOrders = [...allOrders, ...remainingOrders]
-                }
-
-                hasPreviousOrderForRestaurant = allOrders.some((order) => {
-                  const orderRestaurantField = order?.restaurantId
-                  const candidateIds = [
-                    order?.restaurantId,
-                    orderRestaurantField?._id,
-                    orderRestaurantField?.id,
-                    orderRestaurantField?.restaurantId,
-                    order?.restaurant,
-                    order?.restaurant_id,
-                  ].map(normalize).filter(Boolean)
-
-                  if (candidateIds.some((id) => targetRestaurantIds.has(id))) {
-                    return true
-                  }
-
-                  const candidateNames = [
-                    order?.restaurantName,
-                    orderRestaurantField?.name,
-                    order?.restaurant?.name,
-                  ].map(normalize).filter(Boolean)
-
-                  return !!targetRestaurantName && candidateNames.includes(targetRestaurantName)
-                })
-              } catch (orderCheckError) {
-                debugWarn("Could not verify previous orders for recommendation section:", orderCheckError)
-              }
-            }
-
             try {
               debugLog('? Fetching menu for restaurant ID:', restaurantIdForMenu)
               let menuResponse = null
@@ -850,9 +784,7 @@ function RestaurantDetailsContent() {
                   })) || []
                 })))
 
-                const finalMenuSections = hasPreviousOrderForRestaurant
-                  ? [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...menuSections]
-                  : menuSections
+                const finalMenuSections = menuSections
 
                 setRestaurant(prev => ({
                   ...prev,
@@ -866,6 +798,69 @@ function RestaurantDetailsContent() {
                 setExpandedSections(defaultExpandedSections)
 
                 debugLog('Fetched menu sections with recommended items:', finalMenuSections)
+
+                if (isModuleAuthenticated('user') && recommendedItems.length > 0) {
+                  const normalize = (value) => (value ? String(value).trim().toLowerCase() : "")
+                  const targetRestaurantName = normalize(transformedRestaurant.name)
+                  const targetRestaurantIds = new Set(
+                    [
+                      ...normalizedLookupIds,
+                      transformedRestaurant.id,
+                      transformedRestaurant.restaurantId,
+                      apiRestaurant?.restaurantId,
+                      apiRestaurant?._id,
+                      actualRestaurant?.restaurantId,
+                      actualRestaurant?._id,
+                    ].map(normalize).filter(Boolean)
+                  )
+
+                  orderAPI.getOrders({ limit: PREVIOUS_ORDER_LOOKUP_LIMIT, page: 1 })
+                    .then((ordersResponse) => {
+                      const recentOrders =
+                        ordersResponse?.data?.data?.orders ||
+                        ordersResponse?.data?.orders ||
+                        (Array.isArray(ordersResponse?.data?.data) ? ordersResponse.data.data : [])
+
+                      const hasPreviousOrderForRestaurant = recentOrders.some((order) => {
+                        const orderRestaurantField = order?.restaurantId
+                        const candidateIds = [
+                          order?.restaurantId,
+                          orderRestaurantField?._id,
+                          orderRestaurantField?.id,
+                          orderRestaurantField?.restaurantId,
+                          order?.restaurant,
+                          order?.restaurant_id,
+                        ].map(normalize).filter(Boolean)
+
+                        if (candidateIds.some((candidateId) => targetRestaurantIds.has(candidateId))) {
+                          return true
+                        }
+
+                        const candidateNames = [
+                          order?.restaurantName,
+                          orderRestaurantField?.name,
+                          order?.restaurant?.name,
+                        ].map(normalize).filter(Boolean)
+
+                        return !!targetRestaurantName && candidateNames.includes(targetRestaurantName)
+                      })
+
+                      if (!hasPreviousOrderForRestaurant) return
+
+                      setRestaurant((prev) => {
+                        if (!prev?.menuSections || prev.menuSections.length === 0) return prev
+                        if (prev.menuSections[0]?.name === "Recommended for you") return prev
+
+                        return {
+                          ...prev,
+                          menuSections: [{ name: "Recommended for you", items: recommendedItems, subsections: [] }, ...prev.menuSections],
+                        }
+                      })
+                    })
+                    .catch((orderCheckError) => {
+                      debugWarn("Could not verify previous orders for recommendation section:", orderCheckError)
+                    })
+                }
               }
             } catch (menuError) {
               if (menuError.response && menuError.response.status === 404) {
@@ -875,66 +870,6 @@ function RestaurantDetailsContent() {
               }
             } finally {
               setLoadingMenuItems(false)
-            }
-
-            try {
-              debugLog('? Fetching inventory for restaurant ID:', restaurantIdForMenu)
-              let inventoryResponse = null
-              let resolvedInventoryLookupId = null
-              for (const lookupId of normalizedLookupIds) {
-                try {
-                  debugLog('? Fetching inventory for restaurant lookup ID:', lookupId)
-                  const response = await restaurantAPI.getInventoryByRestaurantId(lookupId)
-                  if (response?.data?.success) {
-                    inventoryResponse = response
-                    resolvedInventoryLookupId = lookupId
-                    break
-                  }
-                } catch (lookupError) {
-                  if (lookupError?.response?.status !== 404) {
-                    throw lookupError
-                  }
-                }
-              }
-              if (!inventoryResponse) {
-                throw Object.assign(new Error('Inventory not found'), { response: { status: 404 } })
-              }
-              debugLog('? Inventory resolved using lookup ID:', resolvedInventoryLookupId)
-              if (inventoryResponse.data && inventoryResponse.data.success && inventoryResponse.data.data && inventoryResponse.data.data.inventory) {
-                const inventoryCategories = inventoryResponse.data.data.inventory.categories || []
-
-                // Normalize inventory categories to ensure proper structure
-                const normalizedInventory = inventoryCategories.map((category, index) => ({
-                  id: category.id || `category-${index}`,
-                  name: category.name || "Unnamed Category",
-                  description: category.description || "",
-                  itemCount: category.itemCount || (category.items?.length || 0),
-                  inStock: category.inStock !== undefined ? category.inStock : true,
-                  items: Array.isArray(category.items) ? category.items.map(item => ({
-                    id: String(item.id || Date.now() + Math.random()),
-                    name: item.name || "Unnamed Item",
-                    inStock: item.inStock !== undefined ? item.inStock : true,
-                    isVeg: item.isVeg !== undefined ? item.isVeg : true,
-                    stockQuantity: item.stockQuantity || "Unlimited",
-                    unit: item.unit || "piece",
-                    expiryDate: item.expiryDate || null,
-                    lastRestocked: item.lastRestocked || null,
-                  })) : [],
-                  order: category.order !== undefined ? category.order : index,
-                }))
-
-                setRestaurant(prev => ({
-                  ...prev,
-                  inventory: normalizedInventory,
-                }))
-                debugLog('? Fetched and normalized inventory categories:', normalizedInventory)
-              }
-            } catch (inventoryError) {
-              if (inventoryError.response && inventoryError.response.status === 404) {
-                debugLog('? Inventory not found for this restaurant (might be a dining-only listing).')
-              } else {
-                debugError('? Error fetching inventory:', inventoryError)
-              }
             }
           }
           else {
@@ -981,6 +916,9 @@ function RestaurantDetailsContent() {
           }
         }
       } finally {
+        if (fetchingSlugRef.current === slug) {
+          fetchingSlugRef.current = null
+        }
         setLoadingRestaurant(false)
         setLoadingMenuItems(false)
       }
@@ -995,7 +933,7 @@ function RestaurantDetailsContent() {
     }
 
     fetchRestaurant()
-  }, [effectiveZoneId, slug, restaurant])
+  }, [effectiveZoneId, slug])
 
   // Track previous values to prevent unnecessary recalculations
   const prevCoordsRef = useRef({ userLat: null, userLng: null, restaurantLat: null, restaurantLng: null })
