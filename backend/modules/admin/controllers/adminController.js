@@ -3498,6 +3498,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       customerScope = "all",
       restaurantScope = "all",
       restaurantId,
+      restaurantIds,
       zoneId,
       endDate,
       minOrderValue = 0,
@@ -3554,11 +3555,25 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       );
     }
 
-    if (restaurantScope === "selected" && !restaurantId) {
+    const normalizedRestaurantIds = Array.isArray(restaurantIds)
+      ? [...new Set(
+          restaurantIds
+            .map((value) => String(value || "").trim())
+            .filter(Boolean),
+        )]
+      : [];
+
+    const fallbackRestaurantId = String(restaurantId || "").trim();
+
+    if (
+      restaurantScope === "selected" &&
+      normalizedRestaurantIds.length === 0 &&
+      !fallbackRestaurantId
+    ) {
       return errorResponse(
         res,
         400,
-        "restaurantId is required for selected restaurant scope",
+        "At least one restaurant is required for selected restaurant scope",
       );
     }
 
@@ -3596,26 +3611,44 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         );
       }
     } else {
-      if (!mongoose.Types.ObjectId.isValid(restaurantId)) {
+      const selectedRestaurantIds = normalizedRestaurantIds.length > 0
+        ? normalizedRestaurantIds
+        : [fallbackRestaurantId];
+
+      const invalidRestaurantId = selectedRestaurantIds.find(
+        (value) => !mongoose.Types.ObjectId.isValid(value),
+      );
+
+      if (invalidRestaurantId) {
         return errorResponse(res, 400, "Invalid restaurantId");
       }
-      const selectedRestaurant = await Restaurant.findById(restaurantId).select(
+
+      const selectedRestaurants = await Restaurant.find({
+        _id: { $in: selectedRestaurantIds },
+      }).select(
         "_id name zoneId zoneName",
       );
-      if (!selectedRestaurant) {
-        return errorResponse(res, 404, "Restaurant not found");
+
+      if (selectedRestaurants.length !== selectedRestaurantIds.length) {
+        return errorResponse(res, 404, "One or more restaurants were not found");
       }
-      if (
-        selectedZone?._id &&
-        String(selectedRestaurant.zoneId || "") !== String(selectedZone._id)
-      ) {
-        return errorResponse(
-          res,
-          400,
-          "Selected restaurant does not belong to the chosen zone",
+
+      if (selectedZone?._id) {
+        const hasZoneMismatch = selectedRestaurants.some(
+          (selectedRestaurant) =>
+            String(selectedRestaurant.zoneId || "") !== String(selectedZone._id),
         );
+
+        if (hasZoneMismatch) {
+          return errorResponse(
+            res,
+            400,
+            "One or more selected restaurants do not belong to the chosen zone",
+          );
+        }
       }
-      restaurants = [selectedRestaurant];
+
+      restaurants = selectedRestaurants;
     }
 
     let parsedEndDate = null;

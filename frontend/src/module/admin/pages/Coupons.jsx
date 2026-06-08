@@ -9,6 +9,8 @@ const debugError = (...args) => {}
 export default function Coupons() {
   const today = new Date().toISOString().split("T")[0]
   const [searchQuery, setSearchQuery] = useState("")
+  const [restaurantSearch, setRestaurantSearch] = useState("")
+  const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false)
   const [offers, setOffers] = useState([])
   const [restaurants, setRestaurants] = useState([])
   const [zones, setZones] = useState([])
@@ -27,7 +29,7 @@ export default function Coupons() {
     maxDiscount: "",
     customerScope: "all",
     restaurantScope: "all",
-    restaurantId: "",
+    restaurantIds: [],
     zoneId: "",
     endDate: "",
   })
@@ -95,6 +97,16 @@ export default function Coupons() {
     }
   }
 
+  const getRestaurantLabel = useCallback((restaurant) => {
+    return (
+      restaurant?.name ||
+      restaurant?.restaurantName ||
+      restaurant?.restaurantDetails?.restaurantName ||
+      restaurant?.businessName ||
+      "Unnamed Restaurant"
+    )
+  }, [])
+
   const resetForm = () => {
     setFormData({
       couponCode: "",
@@ -104,10 +116,12 @@ export default function Coupons() {
       maxDiscount: "",
       customerScope: "all",
       restaurantScope: "all",
-      restaurantId: "",
+      restaurantIds: [],
       zoneId: "",
       endDate: "",
     })
+    setRestaurantSearch("")
+    setShowRestaurantSuggestions(false)
   }
 
   const filteredRestaurants = useMemo(() => {
@@ -120,6 +134,33 @@ export default function Coupons() {
       return String(restaurantZoneId) === String(formData.zoneId)
     })
   }, [formData.zoneId, restaurants])
+
+  const restaurantSuggestions = useMemo(() => {
+    const query = restaurantSearch.trim().toLowerCase()
+
+    if (!query) {
+      return filteredRestaurants.slice(0, 20)
+    }
+
+    return filteredRestaurants.filter((restaurant) => {
+      const restaurantName = getRestaurantLabel(restaurant).toLowerCase()
+      const phone = String(restaurant?.phone || restaurant?.mobile || "")
+      const email = String(restaurant?.email || "")
+
+      return (
+        restaurantName.includes(query) ||
+        phone.includes(query) ||
+        email.toLowerCase().includes(query)
+      )
+    }).slice(0, 20)
+  }, [filteredRestaurants, getRestaurantLabel, restaurantSearch])
+
+  useEffect(() => {
+    if (formData.restaurantScope !== "selected") {
+      setRestaurantSearch("")
+      setShowRestaurantSuggestions(false)
+    }
+  }, [formData.restaurantScope])
 
   const handleCreateCoupon = async (e) => {
     e.preventDefault()
@@ -151,17 +192,20 @@ export default function Coupons() {
       return
     }
 
-    if (formData.restaurantScope === "selected" && !formData.restaurantId) {
-      setSubmitError("Please select a restaurant")
+    if (formData.restaurantScope === "selected" && formData.restaurantIds.length === 0) {
+      setSubmitError("Please select at least one restaurant")
       return
     }
 
     if (
       formData.restaurantScope === "selected" &&
       formData.zoneId &&
-      !filteredRestaurants.some((restaurant) => String(restaurant._id) === String(formData.restaurantId))
+      formData.restaurantIds.some(
+        (restaurantId) =>
+          !filteredRestaurants.some((restaurant) => String(restaurant._id) === String(restaurantId)),
+      )
     ) {
-      setSubmitError("Selected restaurant is not available in the chosen zone")
+      setSubmitError("One or more selected restaurants are not available in the chosen zone")
       return
     }
 
@@ -180,7 +224,7 @@ export default function Coupons() {
         maxDiscount: formData.discountType === "percentage" ? parsedMaxDiscount : undefined,
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
-        restaurantId: formData.restaurantScope === "selected" ? formData.restaurantId : undefined,
+        restaurantIds: formData.restaurantScope === "selected" ? formData.restaurantIds : undefined,
         zoneId: formData.zoneId || undefined,
         endDate: formData.endDate || undefined,
       })
@@ -343,7 +387,20 @@ export default function Coupons() {
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Restaurant Scope</label>
                   <select
                     value={formData.restaurantScope}
-                    onChange={(e) => handleFormChange("restaurantScope", e.target.value)}
+                    onChange={(e) => {
+                      const nextScope = e.target.value
+                      setFormData((prev) => ({
+                        ...prev,
+                        restaurantScope: nextScope,
+                        restaurantIds: nextScope === "selected" ? prev.restaurantIds : [],
+                      }))
+                      if (nextScope !== "selected") {
+                        setRestaurantSearch("")
+                        setShowRestaurantSuggestions(false)
+                      }
+                      if (submitError) setSubmitError("")
+                      if (submitSuccess) setSubmitSuccess("")
+                    }}
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="all">All Restaurants</option>
@@ -360,20 +417,26 @@ export default function Coupons() {
                       setFormData((prev) => ({
                         ...prev,
                         zoneId: nextZoneId,
-                        restaurantId:
+                        restaurantIds:
                           prev.restaurantScope === "selected" &&
                           nextZoneId &&
-                          !restaurants.some((restaurant) => {
-                            const restaurantZoneId = restaurant?.zoneId?._id
-                              || restaurant?.zoneId
-                              || restaurant?.restaurantZoneId
-                              || ""
-                            return String(restaurant._id) === String(prev.restaurantId)
-                              && String(restaurantZoneId) === String(nextZoneId)
-                          })
-                            ? ""
-                            : prev.restaurantId,
+                          prev.restaurantIds.length > 0
+                            ? prev.restaurantIds.filter((selectedRestaurantId) =>
+                                restaurants.some((restaurant) => {
+                                  const restaurantZoneId = restaurant?.zoneId?._id
+                                    || restaurant?.zoneId
+                                    || restaurant?.restaurantZoneId
+                                    || ""
+                                  return String(restaurant._id) === String(selectedRestaurantId)
+                                    && String(restaurantZoneId) === String(nextZoneId)
+                                }),
+                              )
+                            : prev.restaurantIds,
                       }))
+                      if (formData.restaurantScope === "selected") {
+                        setRestaurantSearch("")
+                        setShowRestaurantSuggestions(false)
+                      }
                       if (submitError) setSubmitError("")
                       if (submitSuccess) setSubmitSuccess("")
                     }}
@@ -402,18 +465,106 @@ export default function Coupons() {
                 {formData.restaurantScope === "selected" && (
                   <div className="md:col-span-2 lg:col-span-3">
                     <label className="block text-xs font-semibold text-slate-600 mb-1">Select Restaurant</label>
-                    <select
-                      value={formData.restaurantId}
-                      onChange={(e) => handleFormChange("restaurantId", e.target.value)}
-                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">Choose a restaurant</option>
-                      {filteredRestaurants.map((restaurant) => (
-                        <option key={restaurant._id} value={restaurant._id}>
-                          {restaurant.name}
-                        </option>
-                      ))}
-                    </select>
+                    {formData.restaurantIds.length > 0 && (
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        {formData.restaurantIds.map((restaurantId) => {
+                          const restaurant = restaurants.find(
+                            (item) => String(item._id) === String(restaurantId),
+                          )
+                          if (!restaurant) return null
+
+                          return (
+                            <span
+                              key={restaurantId}
+                              className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                            >
+                              {getRestaurantLabel(restaurant)}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    restaurantIds: prev.restaurantIds.filter(
+                                      (selectedId) => String(selectedId) !== String(restaurantId),
+                                    ),
+                                  }))
+                                }}
+                                className="text-blue-700 hover:text-blue-900"
+                              >
+                                ×
+                              </button>
+                            </span>
+                          )
+                        })}
+                      </div>
+                    )}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={restaurantSearch}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setRestaurantSearch(value)
+                          setShowRestaurantSuggestions(true)
+                          if (submitError) setSubmitError("")
+                          if (submitSuccess) setSubmitSuccess("")
+                        }}
+                        onFocus={() => setShowRestaurantSuggestions(true)}
+                        placeholder="Search restaurant by name, phone, or email"
+                        className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+
+                      {showRestaurantSuggestions && (
+                        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                          {restaurantSuggestions.length > 0 ? (
+                            restaurantSuggestions.map((restaurant) => (
+                              <button
+                                key={restaurant._id}
+                                type="button"
+                                onClick={() => {
+                                  const alreadySelected = formData.restaurantIds.some(
+                                    (selectedId) => String(selectedId) === String(restaurant._id),
+                                  )
+                                  if (alreadySelected) {
+                                    setShowRestaurantSuggestions(false)
+                                    setRestaurantSearch("")
+                                    return
+                                  }
+
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    restaurantIds: [...prev.restaurantIds, restaurant._id],
+                                  }))
+                                  setRestaurantSearch("")
+                                  setShowRestaurantSuggestions(true)
+                                  if (submitError) setSubmitError("")
+                                  if (submitSuccess) setSubmitSuccess("")
+                                }}
+                                className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50"
+                              >
+                                <div className="text-sm font-medium text-slate-900">
+                                  {getRestaurantLabel(restaurant)}
+                                </div>
+                                {(restaurant?.phone || restaurant?.email) && (
+                                  <div className="text-xs text-slate-500">
+                                    {[restaurant?.phone || restaurant?.mobile, restaurant?.email].filter(Boolean).join(" • ")}
+                                  </div>
+                                )}
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-sm text-slate-500">
+                              No restaurants found
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {formData.restaurantIds.length > 0 && (
+                      <p className="mt-1 text-xs text-green-600">
+                        {formData.restaurantIds.length} restaurant{formData.restaurantIds.length > 1 ? "s" : ""} selected
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

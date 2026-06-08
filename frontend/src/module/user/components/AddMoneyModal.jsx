@@ -31,6 +31,59 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     }
   }
 
+  const refreshWalletBalance = async (attempts = 1, delayMs = 0) => {
+    if (!onSuccess) return
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      if (delayMs > 0 && attempt > 1) {
+        await wait(delayMs)
+      }
+
+      try {
+        await onSuccess()
+      } catch (refreshError) {
+        debugWarn("Wallet refresh attempt failed:", refreshError)
+      }
+    }
+  }
+
+  const continueVerificationInBackground = async (cashfreeOrderId, amountNum) => {
+    let paymentCredited = false
+
+    for (let attempt = 1; attempt <= 12; attempt += 1) {
+      await wait(2500)
+
+      try {
+        const verifyResponse = await userAPI.verifyWalletTopupPayment({
+          cashfreeOrderId,
+          amount: amountNum
+        })
+
+        if (verifyResponse?.data?.success) {
+          paymentCredited = true
+          await refreshWalletBalance(3, 1500)
+          toast.success(`₹${amountNum} added to wallet successfully!`)
+          break
+        }
+      } catch (verifyError) {
+        const isPendingVerification =
+          verifyError?.response?.status === 202 ||
+          verifyError?.response?.data?.pending === true
+
+        if (isPendingVerification) {
+          continue
+        }
+
+        debugError("Background wallet verification failed:", verifyError)
+        break
+      }
+    }
+
+    if (!paymentCredited) {
+      await refreshWalletBalance(2, 3000)
+    }
+  }
+
   const handleAddMoney = async () => {
     const amountNum = parseFloat(amount)
 
@@ -136,9 +189,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         setProcessing(false)
         onOpenChange(false)
 
-        if (onSuccess) {
-          onSuccess()
-        }
+        await refreshWalletBalance(2, 1200)
       } catch (error) {
         debugError("Payment verification error:", error)
         const pendingVerification =
@@ -149,10 +200,10 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
           toast.success("Payment is processing. Your wallet balance should update shortly.")
           setAmount("")
           setProcessing(false)
+          onOpenChange(false)
 
-          if (onSuccess) {
-            onSuccess()
-          }
+          await refreshWalletBalance(2, 1500)
+          void continueVerificationInBackground(cashfree.orderId, amountNum)
           return
         }
 
