@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import ProtectedRoute from "./ProtectedRoute";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminLayout from "./AdminLayout";
 import Loader from "@/components/Loader";
 
@@ -128,7 +128,7 @@ export default function AdminRouter() {
         {/* Protected Routes - With Layout */}
         <Route
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredRole="admin" loginPath="/admin/login">
               <AdminLayout />
             </ProtectedRoute>
           }

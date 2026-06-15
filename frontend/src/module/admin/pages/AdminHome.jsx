@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate } from "react-router-dom"
+import { clearModuleAuth } from "@/lib/utils/auth"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Area,
@@ -102,6 +103,7 @@ function getOrderZoneLabel(order, restaurantZoneMap) {
 
 export default function AdminHome() {
   const navigate = useNavigate()
+  const hasFetchedRef = useRef(false)
   const [selectedZone, setSelectedZone] = useState("all")
   const [selectedPeriod, setSelectedPeriod] = useState("overall")
   const [isLoading, setIsLoading] = useState(true)
@@ -117,121 +119,125 @@ export default function AdminHome() {
   const [addonsCountByRestaurant, setAddonsCountByRestaurant] = useState({})
   const [addonsLoaded, setAddonsLoaded] = useState(false)
   const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
+  const isInitialLoading = isLoading && !dashboardData
 
   // Fetch dashboard stats on mount
   useEffect(() => {
+    if (hasFetchedRef.current) return
+    hasFetchedRef.current = true
+
     const fetchDashboardStats = async () => {
       try {
         setIsLoading(true)
-        const [
-          dashboardResponse,
-          feeSettingsResponse,
-          joinRequestsResponse,
-          deliveryPartnersResponse,
-          zonesResponse,
-          ordersResponse,
-          pendingOrdersResponse,
-          activeRestaurantsResponse,
-          inactiveRestaurantsResponse,
-        ] = await Promise.all([
-          adminAPI.getDashboardStats(),
+        const dashboardResponse = await adminAPI.getDashboardStats()
+
+        if (dashboardResponse?.data?.success && dashboardResponse?.data?.data) {
+          setDashboardData(dashboardResponse.data.data)
+          setIsLoading(false)
+          debugLog('Dashboard stats fetched:', dashboardResponse.data.data)
+          debugLog('Commission:', dashboardResponse.data.data.commission)
+          debugLog('Platform Fee:', dashboardResponse.data.data.platformFee)
+          debugLog('Delivery Fee:', dashboardResponse.data.data.deliveryFee)
+          debugLog('GST:', dashboardResponse.data.data.gst)
+          debugLog('Total Admin Earnings:', dashboardResponse.data.data.totalAdminEarnings)
+        } else {
+          debugError('Dashboard stats unavailable or invalid response')
+        }
+
+        Promise.allSettled([
           adminAPI.getFeeSettings(),
           adminAPI.getRestaurantJoinRequests({ status: "pending", page: 1, limit: 200 }),
-          adminAPI.getDeliveryPartners({ page: 1, limit: 1000 }),
-          adminAPI.getZones({ limit: 1000 }),
-          adminAPI.getOrders({ page: 1, limit: 1000 }),
-          adminAPI.getOrders({ page: 1, limit: 1000, status: "pending" }),
-          adminAPI.getRestaurants({ limit: 1000 }),
-          adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
-        ])
+          adminAPI.getDeliveryPartners({ page: 1, limit: 200 }),
+          adminAPI.getZones({ limit: 200 }),
+          adminAPI.getOrders({ page: 1, limit: 200 }),
+          adminAPI.getOrders({ page: 1, limit: 200, status: "pending" }),
+          adminAPI.getRestaurants({ limit: 200 }),
+          adminAPI.getRestaurants({ limit: 200, status: "inactive" }),
+        ]).then((secondaryResults) => {
+          const getSettledValue = (index) =>
+            secondaryResults[index]?.status === "fulfilled" ? secondaryResults[index].value : null
 
-        const response = dashboardResponse
-        if (response.data?.success && response.data?.data) {
-          setDashboardData(response.data.data)
-          debugLog('✅ Dashboard stats fetched:', response.data.data)
-          debugLog('💰 Commission:', response.data.data.commission)
-          debugLog('💳 Platform Fee:', response.data.data.platformFee)
-          debugLog('🚚 Delivery Fee:', response.data.data.deliveryFee)
-          debugLog('🧾 GST:', response.data.data.gst)
-          debugLog('💵 Total Admin Earnings:', response.data.data.totalAdminEarnings)
-        } else {
-          debugError('❌ Invalid response format:', response.data)
-        }
+          const feeSettingsResponse = getSettledValue(0)
+          const joinRequestsResponse = getSettledValue(1)
+          const deliveryPartnersResponse = getSettledValue(2)
+          const zonesResponse = getSettledValue(3)
+          const ordersResponse = getSettledValue(4)
+          const pendingOrdersResponse = getSettledValue(5)
+          const activeRestaurantsResponse = getSettledValue(6)
+          const inactiveRestaurantsResponse = getSettledValue(7)
 
-        if (feeSettingsResponse.data?.success && feeSettingsResponse.data?.data?.feeSettings) {
-          const feeSettings = feeSettingsResponse.data.data.feeSettings
-          setConfiguredPlatformFee(Number(feeSettings.platformFee || 0))
-          setConfiguredDeliveryFee(Number(feeSettings.deliveryFee || 0))
-          setConfiguredGstRate(Number(feeSettings.gstRate || 0))
-        }
+          if (feeSettingsResponse?.data?.success && feeSettingsResponse.data?.data?.feeSettings) {
+            const feeSettings = feeSettingsResponse.data.data.feeSettings
+            setConfiguredPlatformFee(Number(feeSettings.platformFee || 0))
+            setConfiguredDeliveryFee(Number(feeSettings.deliveryFee || 0))
+            setConfiguredGstRate(Number(feeSettings.gstRate || 0))
+          }
 
-        if (joinRequestsResponse.data?.success && joinRequestsResponse.data?.data) {
-          const requests =
-            joinRequestsResponse.data.data.requests ||
-            joinRequestsResponse.data.data.restaurants ||
-            joinRequestsResponse.data.data ||
+          if (joinRequestsResponse?.data?.success && joinRequestsResponse.data?.data) {
+            const requests =
+              joinRequestsResponse.data.data.requests ||
+              joinRequestsResponse.data.data.restaurants ||
+              joinRequestsResponse.data.data ||
+              []
+            setPendingRestaurantRequestsCount(Array.isArray(requests) ? requests.length : 0)
+          }
+
+          if (deliveryPartnersResponse?.data?.success && deliveryPartnersResponse.data?.data) {
+            const deliveryPartners = deliveryPartnersResponse.data.data.deliveryPartners || []
+            setDeliveryPartnersCount(Array.isArray(deliveryPartners) ? deliveryPartners.length : 0)
+          }
+
+          if (zonesResponse?.data?.success && zonesResponse.data?.data?.zones) {
+            setZoneOptions(zonesResponse.data.data.zones || [])
+          }
+
+          if (ordersResponse?.data?.success && ordersResponse.data?.data?.orders) {
+            setAllOrders(ordersResponse.data.data.orders || [])
+          }
+
+          if (pendingOrdersResponse?.data?.success && pendingOrdersResponse.data?.data?.orders) {
+            setPendingOrdersCount((pendingOrdersResponse.data.data.orders || []).length)
+          }
+
+          const activeRestaurants =
+            activeRestaurantsResponse?.data?.data?.restaurants ||
+            activeRestaurantsResponse?.data?.restaurants ||
             []
-          setPendingRestaurantRequestsCount(Array.isArray(requests) ? requests.length : 0)
-        }
+          const inactiveRestaurants =
+            inactiveRestaurantsResponse?.data?.data?.restaurants ||
+            inactiveRestaurantsResponse?.data?.restaurants ||
+            []
 
-        if (deliveryPartnersResponse.data?.success && deliveryPartnersResponse.data?.data) {
-          const deliveryPartners = deliveryPartnersResponse.data.data.deliveryPartners || []
-          setDeliveryPartnersCount(Array.isArray(deliveryPartners) ? deliveryPartners.length : 0)
-        }
+          const restaurantMap = new Map()
+          ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
+            const restaurantId = String(restaurant?._id || restaurant?.id || "")
+            if (!restaurantId || restaurantMap.has(restaurantId)) return
+            restaurantMap.set(restaurantId, restaurant)
+          })
 
-        if (zonesResponse.data?.success && zonesResponse.data?.data?.zones) {
-          setZoneOptions(zonesResponse.data.data.zones || [])
-        }
+          const mergedRestaurants = Array.from(restaurantMap.values())
+          setAllRestaurants(mergedRestaurants)
 
-        if (ordersResponse.data?.success && ordersResponse.data?.data?.orders) {
-          setAllOrders(ordersResponse.data.data.orders || [])
-        }
-
-        if (pendingOrdersResponse.data?.success && pendingOrdersResponse.data?.data?.orders) {
-          setPendingOrdersCount((pendingOrdersResponse.data.data.orders || []).length)
-        }
-
-        const activeRestaurants =
-          activeRestaurantsResponse?.data?.data?.restaurants ||
-          activeRestaurantsResponse?.data?.restaurants ||
-          []
-        const inactiveRestaurants =
-          inactiveRestaurantsResponse?.data?.data?.restaurants ||
-          inactiveRestaurantsResponse?.data?.restaurants ||
-          []
-
-        const restaurantMap = new Map()
-        ;[...activeRestaurants, ...inactiveRestaurants].forEach((restaurant) => {
-          const restaurantId = String(restaurant?._id || restaurant?.id || "")
-          if (!restaurantId || restaurantMap.has(restaurantId)) return
-          restaurantMap.set(restaurantId, restaurant)
+          // Menus are not loaded here to prevent heavy network overhead and server timeouts.
+          // We utilize the pre-calculated addons count from the dashboard statistics instead.
+          setAddonsCountByRestaurant({})
+          setAddonsLoaded(true)
+        }).catch((error) => {
+          debugError('Secondary dashboard requests failed:', error)
         })
-
-        const mergedRestaurants = Array.from(restaurantMap.values())
-        setAllRestaurants(mergedRestaurants)
-
-        // Menus are not loaded here to prevent heavy network overhead and server timeouts.
-        // We utilize the pre-calculated addons count from the dashboard statistics instead.
-        setAddonsCountByRestaurant({})
-        setAddonsLoaded(true)
       } catch (error) {
-        debugError('❌ Error fetching dashboard stats:', error)
+        debugError("Error fetching dashboard stats:", error)
+        if (error?.response?.status === 401) {
+          clearModuleAuth("admin")
+          navigate("/admin/login", { replace: true })
+        }
       } finally {
         setIsLoading(false)
       }
     }
 
     fetchDashboardStats()
-  }, [])
-
-  // Update loading state when filters change
-  useEffect(() => {
-    if (dashboardData) {
-      setIsLoading(true)
-      const timer = setTimeout(() => setIsLoading(false), 350)
-      return () => clearTimeout(timer)
-    }
-  }, [dashboardData, selectedZone, selectedPeriod])
+  }, [navigate])
 
   const restaurantZoneMap = new Map(
     allRestaurants.map((restaurant) => [
@@ -382,7 +388,7 @@ export default function AdminHome() {
   return (
     <div className="px-4 pb-10 lg:px-6 pt-4">
       <div className="relative overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_30px_120px_-60px_rgba(0,0,0,0.28)]">
-        {isLoading && (
+        {isInitialLoading && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/70 backdrop-blur-sm">
             <div className="flex items-center gap-3 rounded-full bg-white px-4 py-2 text-sm text-neutral-700 ring-1 ring-neutral-200">
               <span className="h-3 w-3 animate-ping rounded-full bg-neutral-800/70" />
@@ -397,8 +403,13 @@ export default function AdminHome() {
               <p className="text-xs uppercase tracking-[0.2em] text-neutral-500">Admin Overview</p>
               <h1 className="text-2xl font-semibold text-neutral-900">Operations Command</h1>
             </div>
-
           </div>
+          {isLoading && dashboardData && (
+            <div className="inline-flex items-center gap-2 self-start rounded-full bg-neutral-100 px-3 py-1 text-xs text-neutral-600 ring-1 ring-neutral-200 lg:self-auto">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-neutral-500" />
+              Refreshing details
+            </div>
+          )}
         </div>
 
         <div className="space-y-6 px-6 py-6">

@@ -105,6 +105,7 @@ const menuSchema = new mongoose.Schema({
 
 // Index for faster queries
 menuSchema.index({ restaurant: 1, isActive: 1 });
+menuSchema.index({ isActive: 1 });
 
 export default mongoose.model('Menu', menuSchema);
 

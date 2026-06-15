@@ -5,6 +5,7 @@ import Zone from "../models/Zone.js";
 import Delivery from "../../delivery/models/Delivery.js";
 import OutletTimings from "../../restaurant/models/OutletTimings.js";
 import Menu from "../../restaurant/models/Menu.js";
+import User from "../../auth/models/User.js";
 import Offer from "../../restaurant/models/Offer.js";
 import AdminCommission from "../models/AdminCommission.js";
 import OrderSettlement from "../../order/models/OrderSettlement.js";
@@ -119,159 +120,8 @@ const attachMappedZoneToRestaurant = async (restaurantDoc) => {
  */
 export const getDashboardStats = asyncHandler(async (req, res) => {
   try {
-    // Calculate date ranges
     const now = new Date();
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-    // Get total revenue (sum of all delivered orders)
-    const revenueStats = await Order.aggregate([
-      {
-        $match: {
-          status: "delivered",
-          "pricing.total": { $exists: true },
-        },
-      },
-      {
-        $group: {
-          _id: null,
-          totalRevenue: { $sum: "$pricing.total" },
-          last30DaysRevenue: {
-            $sum: {
-              $cond: [{ $gte: ["$createdAt", last30Days] }, "$pricing.total", 0],
-            },
-          },
-        },
-      },
-    ]);
-
-    const revenueData = revenueStats[0] || {
-      totalRevenue: 0,
-      last30DaysRevenue: 0,
-    };
-
-    // Use highly optimized aggregation to calculate settlement statistics in a single query
-    const settlementStats = await OrderSettlement.aggregate([
-      {
-        $lookup: {
-          from: "orders",
-          localField: "orderId",
-          foreignField: "_id",
-          as: "order"
-        }
-      },
-      {
-        $unwind: "$order"
-      },
-      {
-        $match: {
-          "order.status": "delivered"
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalCommission: { $sum: "$adminEarning.commission" },
-          totalPlatformFee: { $sum: "$adminEarning.platformFee" },
-          totalDeliveryFee: { $sum: "$adminEarning.deliveryFee" },
-          totalGST: { $sum: "$adminEarning.gst" },
-          
-          last30DaysCommission: {
-            $sum: {
-              $cond: [
-                { $gte: ["$createdAt", last30Days] },
-                "$adminEarning.commission",
-                0
-              ]
-            }
-          },
-          last30DaysPlatformFee: {
-            $sum: {
-              $cond: [
-                { $gte: ["$createdAt", last30Days] },
-                "$adminEarning.platformFee",
-                0
-              ]
-            }
-          },
-          last30DaysDeliveryFee: {
-            $sum: {
-              $cond: [
-                { $gte: ["$createdAt", last30Days] },
-                "$adminEarning.deliveryFee",
-                0
-              ]
-            }
-          },
-          last30DaysGST: {
-            $sum: {
-              $cond: [
-                { $gte: ["$createdAt", last30Days] },
-                "$adminEarning.gst",
-                0
-              ]
-            }
-          }
-        }
-      }
-    ]);
-
-    const settlementData = settlementStats[0] || {
-      totalCommission: 0,
-      totalPlatformFee: 0,
-      totalDeliveryFee: 0,
-      totalGST: 0,
-      last30DaysCommission: 0,
-      last30DaysPlatformFee: 0,
-      last30DaysDeliveryFee: 0,
-      last30DaysGST: 0
-    };
-
-    let totalCommission = Math.round((settlementData.totalCommission || 0) * 100) / 100;
-    let totalPlatformFee = Math.round((settlementData.totalPlatformFee || 0) * 100) / 100;
-    let totalDeliveryFee = Math.round((settlementData.totalDeliveryFee || 0) * 100) / 100;
-    let totalGST = Math.round((settlementData.totalGST || 0) * 100) / 100;
-
-    const last30DaysCommission = settlementData.last30DaysCommission || 0;
-    const last30DaysPlatformFee = settlementData.last30DaysPlatformFee || 0;
-    const last30DaysDeliveryFee = settlementData.last30DaysDeliveryFee || 0;
-    const last30DaysGST = settlementData.last30DaysGST || 0;
-
-    // Get order statistics
-    const orderStats = await Order.aggregate([
-      {
-        $group: {
-          _id: "$status",
-          count: { $sum: 1 },
-        },
-      },
-    ]);
-
-    const orderStatusMap = {};
-    orderStats.forEach((stat) => {
-      orderStatusMap[stat._id] = stat.count;
-    });
-
-    // Get total orders processed
-    const totalOrders = await Order.countDocuments({ status: "delivered" });
-
-    // Get active partners count
-    const activeRestaurants = await Restaurant.countDocuments({
-      isActive: true,
-    });
-    const User = (await import("../../auth/models/User.js")).default;
-    const activeDeliveryPartners = await Delivery.countDocuments({
-      isActive: true,
-    });
-    const activePartners = activeRestaurants + activeDeliveryPartners;
-
-    // Get additional stats
-    // Total restaurants (only active/approved restaurants)
-    // This matches the admin restaurants list which shows only active restaurants by default
-    const totalRestaurants = await Restaurant.countDocuments({
-      isActive: true,
-    });
-
-    // Restaurant requests pending (inactive restaurants with completed onboarding, no rejection)
     const pendingRestaurantRequestsQuery = {
       isActive: false,
       $and: [
@@ -299,159 +149,343 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
         },
       ],
     };
-    const pendingRestaurantRequests = await Restaurant.countDocuments(
-      pendingRestaurantRequestsQuery,
-    );
-
-    // Total delivery boys are stored in the dedicated Delivery collection.
-    const totalDeliveryBoys = await Delivery.countDocuments({});
-
-    // Pending join requests are delivery partners awaiting approval or inactive.
-    const pendingDeliveryBoyRequests = await Delivery.countDocuments({
-      $or: [{ status: "pending" }, { isActive: false }],
-    });
-
-    // Total foods (Menu items) - Count all individual menu items from active menus
-    // Count ALL items (including disabled sections, unavailable items, pending/approved, excluding only rejected)
-    const Menu = (await import("../../restaurant/models/Menu.js")).default;
-    // Get all active menus and count items in sections and subsections
-    const activeMenus = await Menu.find({ isActive: true })
-      .select("sections")
-      .lean();
-    let totalFoods = 0;
-    activeMenus.forEach((menu) => {
-      if (menu.sections && Array.isArray(menu.sections)) {
-        menu.sections.forEach((section) => {
-          // Count items from ALL sections (enabled and disabled)
-
-          // Count items directly in section (all items, excluding only rejected)
-          if (section.items && Array.isArray(section.items)) {
-            totalFoods += section.items.filter((item) => {
-              // Must have required fields
-              if (!item || !item.id || !item.name) return false;
-              // Exclude only rejected items (include all others: pending, approved, available, unavailable)
-              if (item.approvalStatus === "rejected") return false;
-              // Count all other items regardless of availability or approval status
-              return true;
-            }).length;
-          }
-          // Count items in subsections (all items, excluding only rejected)
-          if (section.subsections && Array.isArray(section.subsections)) {
-            section.subsections.forEach((subsection) => {
-              if (subsection.items && Array.isArray(subsection.items)) {
-                totalFoods += subsection.items.filter((item) => {
-                  // Must have required fields
-                  if (!item || !item.id || !item.name) return false;
-                  // Exclude only rejected items (include all others: pending, approved, available, unavailable)
-                  if (item.approvalStatus === "rejected") return false;
-                  // Count all other items regardless of availability or approval status
-                  return true;
-                }).length;
-              }
-            });
-          }
-        });
-      }
-    });
-
-    // Total addons - Count all addons from active menus
-    // Count ALL addons (including unavailable, pending/approved, excluding only rejected)
-    let totalAddons = 0;
-    const menusWithAddons = await Menu.find({ isActive: true })
-      .select("addons")
-      .lean();
-    menusWithAddons.forEach((menu) => {
-      // Only process if menu has addons array and it's not empty
-      if (
-        !menu.addons ||
-        !Array.isArray(menu.addons) ||
-        menu.addons.length === 0
-      ) {
-        return;
-      }
-
-      totalAddons += menu.addons.filter((addon) => {
-        // Only count if addon exists and has required fields (id and name are mandatory)
-        if (!addon || typeof addon !== "object") return false;
-        if (!addon.id || typeof addon.id !== "string" || addon.id.trim() === "")
-          return false;
-        if (
-          !addon.name ||
-          typeof addon.name !== "string" ||
-          addon.name.trim() === ""
-        )
-          return false;
-        // Exclude only rejected addons (include all others: pending, approved, available, unavailable)
-        if (addon.approvalStatus === "rejected") return false;
-        // Count all other addons regardless of availability or approval status
-        return true;
-      }).length;
-    });
-
-    // Total customers (users with role 'user' or no role specified)
-    const totalCustomers = await User.countDocuments({
-      $or: [{ role: "user" }, { role: { $exists: false } }, { role: null }],
-    });
-
-    // Pending orders (already in orderStatusMap)
-    const pendingOrders = orderStatusMap.pending || 0;
-
-    // Completed orders (delivered orders)
-    const completedOrders = orderStatusMap.delivered || 0;
-
-    // Get recent activity (last 24 hours)
     const last24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const recentOrders = await Order.countDocuments({
-      createdAt: { $gte: last24Hours },
-    });
-    const recentRestaurants = await Restaurant.countDocuments({
-      createdAt: { $gte: last24Hours },
-      isActive: true,
-    });
-
-    // Get monthly data for last 12 months using a single highly optimized aggregation query
     const yearAgo = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     yearAgo.setHours(0, 0, 0, 0);
 
-    const monthlyStats = await Order.aggregate([
-      {
-        $match: {
-          status: "delivered",
-          deliveredAt: { $gte: yearAgo, $lte: now }
-        }
-      },
-      {
-        $lookup: {
-          from: "ordersettlements",
-          localField: "_id",
-          foreignField: "orderId",
-          as: "settlement"
-        }
-      },
-      {
-        $unwind: {
-          path: "$settlement",
-          preserveNullAndEmptyArrays: true
-        }
-      },
-      {
-        $group: {
-          _id: {
-            year: { $year: "$deliveredAt" },
-            month: { $month: "$deliveredAt" }
+    const [
+      revenueStats,
+      settlementStats,
+      orderStats,
+      activeRestaurants,
+      pendingRestaurantRequests,
+      totalDeliveryBoys,
+      pendingDeliveryBoyRequests,
+      menuTotals,
+      totalCustomers,
+      recentOrders,
+      recentRestaurants,
+      activeDeliveryPartners,
+      monthlyStats,
+    ] = await Promise.all([
+      Order.aggregate([
+        {
+          $match: {
+            status: "delivered",
+            "pricing.total": { $exists: true },
           },
-          revenue: { $sum: { $ifNull: ["$pricing.total", 0] } },
-          commission: { $sum: { $ifNull: ["$settlement.adminEarning.commission", 0] } },
-          orders: { $sum: 1 }
-        }
-      },
-      {
-        $sort: {
-          "_id.year": 1,
-          "_id.month": 1
-        }
-      }
+        },
+        {
+          $group: {
+            _id: null,
+            totalRevenue: { $sum: "$pricing.total" },
+            last30DaysRevenue: {
+              $sum: {
+                $cond: [{ $gte: ["$createdAt", last30Days] }, "$pricing.total", 0],
+              },
+            },
+          },
+        },
+      ]),
+      OrderSettlement.aggregate([
+        {
+          $lookup: {
+            from: "orders",
+            localField: "orderId",
+            foreignField: "_id",
+            as: "order",
+          },
+        },
+        { $unwind: "$order" },
+        {
+          $match: {
+            "order.status": "delivered",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalCommission: { $sum: "$adminEarning.commission" },
+            totalPlatformFee: { $sum: "$adminEarning.platformFee" },
+            totalDeliveryFee: { $sum: "$adminEarning.deliveryFee" },
+            totalGST: { $sum: "$adminEarning.gst" },
+            last30DaysCommission: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", last30Days] },
+                  "$adminEarning.commission",
+                  0,
+                ],
+              },
+            },
+            last30DaysPlatformFee: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", last30Days] },
+                  "$adminEarning.platformFee",
+                  0,
+                ],
+              },
+            },
+            last30DaysDeliveryFee: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", last30Days] },
+                  "$adminEarning.deliveryFee",
+                  0,
+                ],
+              },
+            },
+            last30DaysGST: {
+              $sum: {
+                $cond: [
+                  { $gte: ["$createdAt", last30Days] },
+                  "$adminEarning.gst",
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      ]),
+      Order.aggregate([
+        {
+          $group: {
+            _id: "$status",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      Restaurant.countDocuments({ isActive: true }),
+      Restaurant.countDocuments(pendingRestaurantRequestsQuery),
+      Delivery.countDocuments({}),
+      Delivery.countDocuments({
+        $or: [{ status: "pending" }, { isActive: false }],
+      }),
+      Menu.aggregate([
+        {
+          $match: {
+            isActive: true,
+          },
+        },
+        {
+          $project: {
+            foodsCount: {
+              $reduce: {
+                input: { $ifNull: ["$sections", []] },
+                initialValue: 0,
+                in: {
+                  $add: [
+                    "$$value",
+                    {
+                      $size: {
+                        $filter: {
+                          input: { $ifNull: ["$$this.items", []] },
+                          as: "item",
+                          cond: {
+                            $and: [
+                              { $eq: [{ $type: "$$item.id" }, "string"] },
+                              { $ne: [{ $trim: { input: "$$item.id" } }, ""] },
+                              { $eq: [{ $type: "$$item.name" }, "string"] },
+                              { $ne: [{ $trim: { input: "$$item.name" } }, ""] },
+                              {
+                                $ne: [
+                                  { $ifNull: ["$$item.approvalStatus", ""] },
+                                  "rejected",
+                                ],
+                              },
+                            ],
+                          },
+                        },
+                      },
+                    },
+                    {
+                      $reduce: {
+                        input: { $ifNull: ["$$this.subsections", []] },
+                        initialValue: 0,
+                        in: {
+                          $add: [
+                            "$$value",
+                            {
+                              $size: {
+                                $filter: {
+                                  input: { $ifNull: ["$$this.items", []] },
+                                  as: "item",
+                                  cond: {
+                                    $and: [
+                                      {
+                                        $eq: [{ $type: "$$item.id" }, "string"],
+                                      },
+                                      {
+                                        $ne: [
+                                          { $trim: { input: "$$item.id" } },
+                                          "",
+                                        ],
+                                      },
+                                      {
+                                        $eq: [{ $type: "$$item.name" }, "string"],
+                                      },
+                                      {
+                                        $ne: [
+                                          { $trim: { input: "$$item.name" } },
+                                          "",
+                                        ],
+                                      },
+                                      {
+                                        $ne: [
+                                          {
+                                            $ifNull: [
+                                              "$$item.approvalStatus",
+                                              "",
+                                            ],
+                                          },
+                                          "rejected",
+                                        ],
+                                      },
+                                    ],
+                                  },
+                                },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+            addonsCount: {
+              $size: {
+                $filter: {
+                  input: { $ifNull: ["$addons", []] },
+                  as: "addon",
+                  cond: {
+                    $and: [
+                      { $eq: [{ $type: "$$addon.id" }, "string"] },
+                      { $ne: [{ $trim: { input: "$$addon.id" } }, ""] },
+                      { $eq: [{ $type: "$$addon.name" }, "string"] },
+                      { $ne: [{ $trim: { input: "$$addon.name" } }, ""] },
+                      {
+                        $ne: [
+                          { $ifNull: ["$$addon.approvalStatus", ""] },
+                          "rejected",
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            totalFoods: { $sum: "$foodsCount" },
+            totalAddons: { $sum: "$addonsCount" },
+          },
+        },
+      ]),
+      User.countDocuments({
+        $or: [{ role: "user" }, { role: { $exists: false } }, { role: null }],
+      }),
+      Order.countDocuments({
+        createdAt: { $gte: last24Hours },
+      }),
+      Restaurant.countDocuments({
+        createdAt: { $gte: last24Hours },
+        isActive: true,
+      }),
+      Delivery.countDocuments({
+        isActive: true,
+      }),
+      Order.aggregate([
+        {
+          $match: {
+            status: "delivered",
+            deliveredAt: { $gte: yearAgo, $lte: now },
+          },
+        },
+        {
+          $lookup: {
+            from: "ordersettlements",
+            localField: "_id",
+            foreignField: "orderId",
+            as: "settlement",
+          },
+        },
+        {
+          $unwind: {
+            path: "$settlement",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $group: {
+            _id: {
+              year: { $year: "$deliveredAt" },
+              month: { $month: "$deliveredAt" },
+            },
+            revenue: { $sum: { $ifNull: ["$pricing.total", 0] } },
+            commission: {
+              $sum: { $ifNull: ["$settlement.adminEarning.commission", 0] },
+            },
+            orders: { $sum: 1 },
+          },
+        },
+        {
+          $sort: {
+            "_id.year": 1,
+            "_id.month": 1,
+          },
+        },
+      ]),
     ]);
+
+    const revenueData = revenueStats[0] || {
+      totalRevenue: 0,
+      last30DaysRevenue: 0,
+    };
+
+    const settlementData = settlementStats[0] || {
+      totalCommission: 0,
+      totalPlatformFee: 0,
+      totalDeliveryFee: 0,
+      totalGST: 0,
+      last30DaysCommission: 0,
+      last30DaysPlatformFee: 0,
+      last30DaysDeliveryFee: 0,
+      last30DaysGST: 0,
+    };
+
+    const totalCommission =
+      Math.round((settlementData.totalCommission || 0) * 100) / 100;
+    const totalPlatformFee =
+      Math.round((settlementData.totalPlatformFee || 0) * 100) / 100;
+    const totalDeliveryFee =
+      Math.round((settlementData.totalDeliveryFee || 0) * 100) / 100;
+    const totalGST = Math.round((settlementData.totalGST || 0) * 100) / 100;
+
+    const last30DaysCommission = settlementData.last30DaysCommission || 0;
+    const last30DaysPlatformFee = settlementData.last30DaysPlatformFee || 0;
+    const last30DaysDeliveryFee = settlementData.last30DaysDeliveryFee || 0;
+    const last30DaysGST = settlementData.last30DaysGST || 0;
+
+    const orderStatusMap = {};
+    orderStats.forEach((stat) => {
+      orderStatusMap[stat._id] = stat.count;
+    });
+
+    const totalOrders = orderStatusMap.delivered || 0;
+    const activePartners = activeRestaurants + activeDeliveryPartners;
+    const totalRestaurants = activeRestaurants;
+    const menuTotalsData = menuTotals[0] || { totalFoods: 0, totalAddons: 0 };
+    const totalFoods = menuTotalsData.totalFoods || 0;
+    const totalAddons = menuTotalsData.totalAddons || 0;
+
+    const pendingOrders = orderStatusMap.pending || 0;
+    const completedOrders = orderStatusMap.delivered || 0;
 
     const monthNames = [
       "Jan", "Feb", "Mar", "Apr", "May", "Jun",
