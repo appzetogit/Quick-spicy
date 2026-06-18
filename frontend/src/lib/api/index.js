@@ -263,10 +263,11 @@ export const userAPI = {
     });
   },
 
-  // Create Razorpay order for wallet top-up
-  createWalletTopupOrder: (amount) => {
+  // Create Cashfree order for wallet top-up
+  createWalletTopupOrder: (amount, returnUrl = null) => {
     return apiClient.post(`${API_ENDPOINTS.USER.WALLET}/create-topup-order`, {
       amount,
+      ...(returnUrl ? { returnUrl } : {})
     });
   },
 

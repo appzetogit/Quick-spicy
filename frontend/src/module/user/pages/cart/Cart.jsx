@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useMemo } from "react"
+import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -1649,6 +1649,9 @@ export default function Cart() {
         return;
       }
 
+      // Construct returnUrl for WebView redirection
+      const returnUrl = `${window.location.origin}/user/orders?order_id={order_id}`;
+
       const orderPayload = {
         items: orderItems,
         address: defaultAddress,
@@ -1662,7 +1665,8 @@ export default function Cart() {
         note: note || "",
         sendCutlery: sendCutlery !== false,
         paymentMethod: effectivePaymentMethod,
-        zoneId: finalZoneId
+        zoneId: finalZoneId,
+        returnUrl
       };
       // Log final order details (including paymentMethod for COD debugging)
       debugLog('📤 FINAL: Sending order to backend with:', {

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, IndianRupee, Plus, ArrowDownCircle, ArrowUpCircle, RefreshCw, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -53,8 +53,47 @@ export default function Wallet() {
     }
   }
 
+  // Verify redirected payment from query parameters
+  const verifyRedirectPayment = async (orderId) => {
+    try {
+      setLoading(true)
+      setError(null)
+      toast.loading("Verifying payment status...")
+      
+      const response = await userAPI.verifyWalletTopupPayment({
+        cashfreeOrderId: orderId
+      })
+      
+      toast.dismiss()
+      if (response?.data?.success) {
+        toast.success("Money added to wallet successfully! 🎉")
+      } else {
+        toast.error(response?.data?.message || "Failed to verify top-up payment")
+      }
+      
+      // Clean up the URL query parameters
+      window.history.replaceState({}, document.title, window.location.pathname)
+      
+      // Fetch latest wallet data
+      await fetchWalletData()
+    } catch (err) {
+      toast.dismiss()
+      debugError('Error verifying redirect payment:', err)
+      setError(err?.response?.data?.message || 'Payment verification failed')
+      toast.error('Failed to verify payment')
+      window.history.replaceState({}, document.title, window.location.pathname)
+      await fetchWalletData()
+    }
+  }
+
   useEffect(() => {
-    fetchWalletData()
+    const params = new URLSearchParams(window.location.search)
+    const orderId = params.get('order_id')
+    if (orderId && orderId.startsWith('WT_')) {
+      verifyRedirectPayment(orderId)
+    } else {
+      fetchWalletData()
+    }
   }, [])
 
   // Get current balance from wallet

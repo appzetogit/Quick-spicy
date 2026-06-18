@@ -1,4 +1,4 @@
-﻿import { useState } from "react"
+import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -100,9 +100,12 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     try {
       setLoading(true)
 
+      // Construct returnUrl for WebView redirection
+      const returnUrl = `${window.location.origin}/wallet?order_id={order_id}`;
+
       // Create Cashfree order
       debugLog('Creating wallet top-up order for amount:', amountNum)
-      const orderResponse = await userAPI.createWalletTopupOrder(amountNum)
+      const orderResponse = await userAPI.createWalletTopupOrder(amountNum, returnUrl)
       debugLog('Order response:', orderResponse)
 
       const { cashfree } = orderResponse.data.data

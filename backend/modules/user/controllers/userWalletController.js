@@ -193,7 +193,8 @@ export const getTransactions = asyncHandler(async (req, res) => {
  * POST /api/user/wallet/create-topup-order
  */
 const createTopupOrderSchema = Joi.object({
-  amount: Joi.number().positive().required()
+  amount: Joi.number().positive().required(),
+  returnUrl: Joi.string().uri().optional()
 });
 
 export const createTopupOrder = asyncHandler(async (req, res) => {
@@ -204,7 +205,7 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
     }
 
     const user = req.user;
-    const { amount } = req.body;
+    const { amount, returnUrl } = req.body;
 
     if (amount === undefined || amount === null) {
       return errorResponse(res, 400, 'Amount is required');
@@ -229,6 +230,11 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
     }
 
     const orderId = `WT_${user._id.toString().slice(-8)}_${Date.now().toString().slice(-10)}`;
+    const orderMeta = {};
+    if (returnUrl) {
+      orderMeta.return_url = returnUrl;
+    }
+
     const cashfreeOrder = await createCashfreeOrder({
       orderId,
       orderAmount: Number(amount.toFixed(2)),
@@ -238,6 +244,7 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
         customerEmail: user.email || 'wallet@example.com',
         customerPhone: user.phone || ''
       },
+      orderMeta,
       orderNote: `Wallet top-up of INR ${amount}`,
       orderTags: {
         type: 'wallet_topup',
@@ -278,7 +285,7 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
  */
 const verifyTopupPaymentSchema = Joi.object({
   cashfreeOrderId: Joi.string().required(),
-  amount: Joi.number().positive().required()
+  amount: Joi.number().positive().optional()
 });
 
 export const verifyTopupPayment = asyncHandler(async (req, res) => {
@@ -342,6 +349,12 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
     const cashfreePaymentId = verification.payment.cf_payment_id;
     const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
+    // Securely resolve the top-up amount from verified order response, fallback to body amount
+    const resolvedAmount = Number(verification.order?.order_amount || amount);
+    if (!resolvedAmount || isNaN(resolvedAmount) || resolvedAmount <= 0) {
+      return errorResponse(res, 400, 'Invalid payment amount');
+    }
+
     const existingTransaction = wallet.transactions.find(
       t => t.paymentId && t.paymentId === cashfreePaymentId
     );
@@ -365,7 +378,7 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
     }
 
     const transaction = wallet.addTransaction({
-      amount,
+      amount: resolvedAmount,
       type: 'addition',
       status: 'Completed',
       description: 'Added money via Cashfree',
@@ -389,7 +402,7 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
 
     logger.info('Money added to wallet after Cashfree payment verification', {
       userId: user._id,
-      amount,
+      amount: resolvedAmount,
       cashfreePaymentId,
       transactionId: transaction._id,
       newBalance: wallet.balance

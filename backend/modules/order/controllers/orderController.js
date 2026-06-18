@@ -342,7 +342,8 @@ export const createOrder = async (req, res) => {
       note,
       sendCutlery,
       paymentMethod: bodyPaymentMethod,
-      tipAmount: bodyTipAmount
+      tipAmount: bodyTipAmount,
+      returnUrl
     } = req.body;
     // Support both camelCase and snake_case from client
     const paymentMethod = bodyPaymentMethod ?? req.body.payment_method;
@@ -1072,7 +1073,8 @@ export const createOrder = async (req, res) => {
             customerPhone: userCustomer.phone || ''
           },
           orderMeta: {
-            payment_methods: 'upi,cc,dc,nb,wallet'
+            payment_methods: 'upi,cc,dc,nb,wallet',
+            ...(returnUrl ? { return_url: returnUrl } : {})
           },
           orderNote: `Order ${order.orderId}`,
           orderTags: {

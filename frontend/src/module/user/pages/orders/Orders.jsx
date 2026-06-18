@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useState, useEffect } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, Search, MoreVertical, ChevronRight, Star, RotateCcw, AlertCircle, Loader2, Clock } from "lucide-react"
 import { orderAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -11,8 +11,11 @@ const debugError = (...args) => {}
 
 export default function Orders() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const redirectOrderId = searchParams.get("order_id")
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [verifyingPayment, setVerifyingPayment] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [ratingModal, setRatingModal] = useState({ open: false, order: null })
   const [activeMenuOrderId, setActiveMenuOrderId] = useState(null)
@@ -39,6 +42,41 @@ export default function Orders() {
       debugError('Error saving shownRatingForOrders to localStorage:', error)
     }
   }, [shownRatingForOrders])
+
+  // Detect and verify redirected order payment on mount
+  useEffect(() => {
+    if (redirectOrderId) {
+      const verifyRedirectedOrder = async () => {
+        try {
+          setVerifyingPayment(true)
+          toast.loading("Verifying payment status...")
+          
+          const response = await orderAPI.verifyPayment({
+            orderId: redirectOrderId,
+            cashfreeOrderId: redirectOrderId
+          })
+          
+          toast.dismiss()
+          if (response?.data?.success) {
+            toast.success("Payment verified and order placed! 🎉")
+            // Navigate to tracking page with confirmed=true
+            navigate(`/user/orders/${redirectOrderId}?confirmed=true`, { replace: true })
+          } else {
+            toast.error(response?.data?.message || "Payment verification failed")
+            setSearchParams({}, { replace: true })
+          }
+        } catch (error) {
+          toast.dismiss()
+          debugError("Error verifying redirected order payment:", error)
+          toast.error(error?.response?.data?.message || "Payment verification failed")
+          setSearchParams({}, { replace: true })
+        } finally {
+          setVerifyingPayment(false)
+        }
+      }
+      verifyRedirectedOrder()
+    }
+  }, [redirectOrderId])
 
   // Calculate countdown for an order
   const calculateCountdown = (order) => {
@@ -498,6 +536,23 @@ Order again from this restaurant in the ${companyName} app.`
     } finally {
       setSubmittingRating(false)
     }
+  }
+
+  if (verifyingPayment) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a] pb-10 transition-colors">
+        <div className="bg-white dark:bg-[#111111] p-4 flex items-center shadow-sm sticky top-0 z-10 border-b border-transparent dark:border-gray-800">
+          <Link to="/user">
+            <ArrowLeft className="w-6 h-6 text-gray-700 dark:text-gray-200 cursor-pointer" />
+          </Link>
+          <h1 className="ml-4 text-xl font-semibold text-gray-800 dark:text-white">Verifying Payment</h1>
+        </div>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <Loader2 className="w-8 h-8 text-[#EB590E] animate-spin" />
+          <p className="text-gray-600 dark:text-gray-300 font-medium text-center">Verifying your payment status, please wait...</p>
+        </div>
+      </div>
+    )
   }
 
   if (loading) {

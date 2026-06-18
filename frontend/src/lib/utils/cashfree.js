@@ -32,13 +32,18 @@ export const initCashfreePayment = async (options) => {
     throw new Error('Cashfree SDK not available');
   }
 
+  const isWebView =
+    Boolean(window.ReactNativeWebView) ||
+    Boolean(window.flutter_inappwebview) ||
+    /\bwv\b|WebView/i.test(navigator.userAgent);
+
   const cashfree = window.Cashfree({
     mode: options.environment === 'production' ? 'production' : 'sandbox'
   });
 
   const result = await cashfree.checkout({
     paymentSessionId: options.paymentSessionId,
-    redirectTarget: '_modal'
+    redirectTarget: isWebView ? '_self' : '_modal'
   });
 
   if (result?.error) {
