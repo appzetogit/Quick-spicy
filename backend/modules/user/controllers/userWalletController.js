@@ -192,9 +192,43 @@ export const getTransactions = asyncHandler(async (req, res) => {
  * Create Cashfree Order for Wallet Top-up
  * POST /api/user/wallet/create-topup-order
  */
+const isValidReturnUrl = (value) => {
+  if (!value) return true;
+
+  // Cashfree placeholders like {order_id} are valid for the gateway, but
+  // Joi's standard URI validator rejects them.
+  const normalizedValue = String(value).replace(/\{[^}]+\}/g, 'placeholder');
+
+  try {
+    const parsed = new URL(normalizedValue);
+    return ['http:', 'https:'].includes(parsed.protocol);
+  } catch {
+    return false;
+  }
+};
+
+const shouldSendReturnUrlToCashfree = (value) => {
+  if (!value || !isValidReturnUrl(value)) return false;
+
+  const normalizedValue = String(value).replace(/\{[^}]+\}/g, 'placeholder');
+
+  try {
+    const parsed = new URL(normalizedValue);
+    const hostname = String(parsed.hostname || '').toLowerCase();
+    return !['localhost', '127.0.0.1', '::1'].includes(hostname);
+  } catch {
+    return false;
+  }
+};
+
 const createTopupOrderSchema = Joi.object({
   amount: Joi.number().positive().required(),
-  returnUrl: Joi.string().uri().optional()
+  returnUrl: Joi.string().custom((value, helpers) => {
+    if (!isValidReturnUrl(value)) {
+      return helpers.error('string.uri');
+    }
+    return value;
+  }).optional()
 });
 
 export const createTopupOrder = asyncHandler(async (req, res) => {
@@ -231,7 +265,7 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
 
     const orderId = `WT_${user._id.toString().slice(-8)}_${Date.now().toString().slice(-10)}`;
     const orderMeta = {};
-    if (returnUrl) {
+    if (shouldSendReturnUrlToCashfree(returnUrl)) {
       orderMeta.return_url = returnUrl;
     }
 

@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input"
 import { IndianRupee, Loader2 } from "lucide-react"
 import { userAPI } from "@/lib/api"
 import { initCashfreePayment } from "@/lib/utils/cashfree"
+import { buildSafeReturnUrl } from "@/lib/utils/returnUrl"
+import { clearPendingWalletTopup, savePendingWalletTopup } from "@/lib/utils/walletTopupSession"
 import { toast } from "sonner"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -61,6 +63,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
 
         if (verifyResponse?.data?.success) {
           paymentCredited = true
+          clearPendingWalletTopup()
           await refreshWalletBalance(3, 1500)
           toast.success(`₹${amountNum} added to wallet successfully!`)
           break
@@ -100,8 +103,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
     try {
       setLoading(true)
 
-      // Construct returnUrl for WebView redirection
-      const returnUrl = `${window.location.origin}/wallet?order_id={order_id}`;
+      const returnUrl = buildSafeReturnUrl("/user/wallet", "order_id={order_id}")
 
       // Create Cashfree order
       debugLog('Creating wallet top-up order for amount:', amountNum)
@@ -114,6 +116,11 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
         debugError('Invalid Cashfree response:', { cashfree, orderResponse })
         throw new Error("Failed to initialize payment gateway")
       }
+
+      savePendingWalletTopup({
+        cashfreeOrderId: cashfree.orderId,
+        amount: amountNum
+      })
 
       setLoading(false)
 
@@ -187,6 +194,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
           throw new Error(lastPendingMessage || "Payment verification failed")
         }
 
+        clearPendingWalletTopup()
         toast.success(`₹${amountNum} added to wallet successfully!`)
         setAmount("")
         setProcessing(false)
@@ -210,6 +218,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
           return
         }
 
+        clearPendingWalletTopup()
         toast.error(error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support.")
         setProcessing(false)
       }
@@ -234,6 +243,7 @@ export default function AddMoneyModal({ open, onOpenChange, onSuccess }) {
       }
 
       debugError("Final error message:", errorMessage)
+      clearPendingWalletTopup()
       toast.error(errorMessage)
       setLoading(false)
       setProcessing(false)

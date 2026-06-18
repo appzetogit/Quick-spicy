@@ -15,6 +15,7 @@ import { useLocationSelector } from "../../components/UserLayout"
 import { orderAPI, restaurantAPI, adminAPI, userAPI, API_ENDPOINTS } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { initCashfreePayment } from "@/lib/utils/cashfree"
+import { buildSafeReturnUrl } from "@/lib/utils/returnUrl"
 import { toast } from "sonner"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
@@ -1649,8 +1650,7 @@ export default function Cart() {
         return;
       }
 
-      // Construct returnUrl for WebView redirection
-      const returnUrl = `${window.location.origin}/user/orders?order_id={order_id}`;
+      const returnUrl = buildSafeReturnUrl("/user/orders", "order_id={order_id}")
 
       const orderPayload = {
         items: orderItems,

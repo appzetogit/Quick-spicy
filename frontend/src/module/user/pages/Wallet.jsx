@@ -6,11 +6,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import AnimatedPage from "../components/AnimatedPage"
 import AddMoneyModal from "../components/AddMoneyModal"
 import { userAPI } from "@/lib/api"
+import { clearPendingWalletTopup, getPendingWalletTopup } from "@/lib/utils/walletTopupSession"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 
 // Transaction types
@@ -86,11 +88,73 @@ export default function Wallet() {
     }
   }
 
+  const recoverPendingWalletTopup = async (orderId, amount = null) => {
+    try {
+      setLoading(true)
+      setError(null)
+      toast.loading("Verifying payment status...")
+
+      let response = null
+
+      for (let attempt = 1; attempt <= 8; attempt += 1) {
+        try {
+          response = await userAPI.verifyWalletTopupPayment({
+            cashfreeOrderId: orderId,
+            ...(amount ? { amount } : {})
+          })
+          break
+        } catch (err) {
+          const isPendingVerification =
+            err?.response?.status === 202 ||
+            err?.response?.data?.pending === true
+
+          if (isPendingVerification && attempt < 8) {
+            await wait(2000)
+            continue
+          }
+
+          throw err
+        }
+      }
+
+      toast.dismiss()
+      if (response?.data?.success) {
+        clearPendingWalletTopup()
+        toast.success("Money added to wallet successfully! 🎉")
+      } else {
+        toast.error(response?.data?.message || "Failed to verify top-up payment")
+      }
+
+      window.history.replaceState({}, document.title, window.location.pathname)
+      await fetchWalletData()
+    } catch (err) {
+      toast.dismiss()
+      debugError('Error verifying redirect payment:', err)
+      const pendingVerification =
+        err?.response?.status === 202 ||
+        err?.response?.data?.pending === true
+
+      if (pendingVerification) {
+        toast.success('Payment is processing. Your wallet balance should update shortly.')
+      } else {
+        clearPendingWalletTopup()
+        setError(err?.response?.data?.message || 'Payment verification failed')
+        toast.error('Failed to verify payment')
+      }
+
+      window.history.replaceState({}, document.title, window.location.pathname)
+      await fetchWalletData()
+    }
+  }
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const orderId = params.get('order_id')
+    const pendingTopup = getPendingWalletTopup()
     if (orderId && orderId.startsWith('WT_')) {
-      verifyRedirectPayment(orderId)
+      recoverPendingWalletTopup(orderId, pendingTopup?.amount ?? null)
+    } else if (pendingTopup?.cashfreeOrderId?.startsWith('WT_')) {
+      recoverPendingWalletTopup(pendingTopup.cashfreeOrderId, pendingTopup.amount ?? null)
     } else {
       fetchWalletData()
     }
