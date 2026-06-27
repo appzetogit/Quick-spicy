@@ -388,7 +388,9 @@ async function initializeServices() {
 }
 
 // Security middleware
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: false
+}));
 // CORS configuration - allow multiple origins
 const envOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];
 const allowedOrigins = [
