@@ -8,7 +8,12 @@ import GourmetRestaurant from '../models/GourmetRestaurant.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { deleteFromCloudinary, uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
+import { normalizeStoredImageUrl } from '../../../config/mediaStorage.js';
 import mongoose from 'mongoose';
+
+const normalizeImageUrlForResponse = (imageUrl, req) => normalizeStoredImageUrl(imageUrl, req);
+const withNormalizedImageUrl = (item, req) =>
+  item ? { ...item, imageUrl: normalizeImageUrlForResponse(item.imageUrl, req) } : item;
 
 /**
  * Get all active hero banners (public endpoint)
@@ -23,7 +28,7 @@ export const getHeroBanners = async (req, res) => {
 
     return successResponse(res, 200, 'Hero banners retrieved successfully', {
       banners: banners.map(b => ({
-        imageUrl: b.imageUrl,
+        imageUrl: normalizeImageUrlForResponse(b.imageUrl, req),
         linkedRestaurants: b.linkedRestaurants || []
       }))
     });
@@ -44,7 +49,7 @@ export const getAllHeroBanners = async (req, res) => {
       .lean();
 
     return successResponse(res, 200, 'Hero banners retrieved successfully', {
-      banners
+      banners: banners.map(b => withNormalizedImageUrl(b, req))
     });
   } catch (error) {
     console.error('Error fetching hero banners:', error);
@@ -67,6 +72,7 @@ export const createHeroBanner = async (req, res) => {
       folder,
       resource_type: 'image'
     });
+    const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
     // Get the highest order number
     const lastBanner = await HeroBanner.findOne()
@@ -78,7 +84,7 @@ export const createHeroBanner = async (req, res) => {
 
     // Create banner record
     const banner = new HeroBanner({
-      imageUrl: result.secure_url,
+      imageUrl: normalizedImageUrl,
       cloudinaryPublicId: result.public_id,
       order: newOrder,
       isActive: true
@@ -89,7 +95,7 @@ export const createHeroBanner = async (req, res) => {
     return successResponse(res, 201, 'Hero banner uploaded successfully', {
       banner: {
         _id: banner._id,
-        imageUrl: banner.imageUrl,
+        imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
         order: banner.order,
         isActive: banner.isActive,
         createdAt: banner.createdAt
@@ -136,10 +142,11 @@ export const createMultipleHeroBanners = async (req, res) => {
           folder,
           resource_type: 'image'
         });
+        const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
         // Create banner record
         const banner = new HeroBanner({
-          imageUrl: result.secure_url,
+          imageUrl: normalizedImageUrl,
           cloudinaryPublicId: result.public_id,
           order: currentOrder++,
           isActive: true
@@ -148,7 +155,7 @@ export const createMultipleHeroBanners = async (req, res) => {
         await banner.save();
         uploadedBanners.push({
           _id: banner._id,
-          imageUrl: banner.imageUrl,
+          imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
           order: banner.order,
           isActive: banner.isActive,
           createdAt: banner.createdAt
@@ -235,7 +242,7 @@ export const updateBannerOrder = async (req, res) => {
     }
 
     return successResponse(res, 200, 'Banner order updated successfully', {
-      banner
+      banner: withNormalizedImageUrl(banner.toObject(), req)
     });
   } catch (error) {
     console.error('Error updating banner order:', error);
@@ -260,7 +267,7 @@ export const toggleBannerStatus = async (req, res) => {
     await banner.save();
 
     return successResponse(res, 200, 'Banner status updated successfully', {
-      banner
+      banner: withNormalizedImageUrl(banner.toObject(), req)
     });
   } catch (error) {
     console.error('Error toggling banner status:', error);
@@ -304,7 +311,7 @@ export const linkRestaurantsToBanner = async (req, res) => {
     await banner.populate('linkedRestaurants', 'name slug restaurantId profileImage');
 
     return successResponse(res, 200, 'Restaurants linked to banner successfully', {
-      banner
+      banner: withNormalizedImageUrl(banner.toObject(), req)
     });
   } catch (error) {
     console.error('Error linking restaurants to banner:', error);
@@ -336,14 +343,14 @@ export const getLandingConfig = async (req, res) => {
     );
 
     return successResponse(res, 200, 'Landing config retrieved successfully', {
-      categories,
-      exploreMore,
+      categories: categories.map(c => withNormalizedImageUrl(c, req)),
+      exploreMore: exploreMore.map(e => withNormalizedImageUrl(e, req)),
       settings: {
         exploreMoreHeading: settings.exploreMoreHeading,
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
-          imageUrl: settings.homePopup?.imageUrl || '',
+          imageUrl: normalizeImageUrlForResponse(settings.homePopup?.imageUrl, req) || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
@@ -377,7 +384,7 @@ export const getLandingCategories = async (req, res) => {
       .lean();
 
     return successResponse(res, 200, 'Categories retrieved successfully', {
-      categories
+      categories: categories.map(category => withNormalizedImageUrl(category, req))
     });
   } catch (error) {
     console.error('Error fetching landing categories:', error);
@@ -407,6 +414,7 @@ export const createLandingCategory = async (req, res) => {
       folder,
       resource_type: 'image'
     });
+    const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
     // Get the highest order number
     const lastCategory = await LandingPageCategory.findOne()
@@ -420,7 +428,7 @@ export const createLandingCategory = async (req, res) => {
     const category = new LandingPageCategory({
       label,
       slug,
-      imageUrl: result.secure_url,
+      imageUrl: normalizedImageUrl,
       cloudinaryPublicId: result.public_id,
       order: newOrder,
       isActive: true
@@ -432,7 +440,7 @@ export const createLandingCategory = async (req, res) => {
       category: {
         _id: category._id,
         label: category.label,
-        imageUrl: category.imageUrl,
+        imageUrl: normalizeImageUrlForResponse(category.imageUrl, req),
         order: category.order,
         isActive: category.isActive,
         createdAt: category.createdAt
@@ -496,7 +504,7 @@ export const updateLandingCategoryOrder = async (req, res) => {
     }
 
     return successResponse(res, 200, 'Category order updated successfully', {
-      category
+      category: withNormalizedImageUrl(category.toObject(), req)
     });
   } catch (error) {
     console.error('Error updating category order:', error);
@@ -521,7 +529,7 @@ export const toggleLandingCategoryStatus = async (req, res) => {
     await category.save();
 
     return successResponse(res, 200, 'Category status updated successfully', {
-      category
+      category: withNormalizedImageUrl(category.toObject(), req)
     });
   } catch (error) {
     console.error('Error toggling category status:', error);
@@ -541,7 +549,7 @@ export const getLandingExploreMore = async (req, res) => {
       .lean();
 
     return successResponse(res, 200, 'Explore more items retrieved successfully', {
-      items
+      items: items.map(item => withNormalizedImageUrl(item, req))
     });
   } catch (error) {
     console.error('Error fetching explore more items:', error);
@@ -568,6 +576,7 @@ export const createLandingExploreMore = async (req, res) => {
       folder,
       resource_type: 'image'
     });
+    const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
     // Get the highest order number
     const lastItem = await LandingPageExploreMore.findOne()
@@ -581,7 +590,7 @@ export const createLandingExploreMore = async (req, res) => {
     const item = new LandingPageExploreMore({
       label,
       link,
-      imageUrl: result.secure_url,
+      imageUrl: normalizedImageUrl,
       cloudinaryPublicId: result.public_id,
       order: newOrder,
       isActive: true
@@ -594,7 +603,7 @@ export const createLandingExploreMore = async (req, res) => {
         _id: item._id,
         label: item.label,
         link: item.link,
-        imageUrl: item.imageUrl,
+        imageUrl: normalizeImageUrlForResponse(item.imageUrl, req),
         order: item.order,
         isActive: item.isActive,
         createdAt: item.createdAt
@@ -636,7 +645,7 @@ export const updateLandingExploreMore = async (req, res) => {
         }
       }
 
-      item.imageUrl = result.secure_url;
+      item.imageUrl = normalizeImageUrlForResponse(result.secure_url, req);
       item.cloudinaryPublicId = result.public_id;
     }
 
@@ -647,7 +656,7 @@ export const updateLandingExploreMore = async (req, res) => {
     await item.save();
 
     return successResponse(res, 200, 'Explore more item updated successfully', {
-      item
+      item: withNormalizedImageUrl(item.toObject(), req)
     });
   } catch (error) {
     console.error('Error updating explore more item:', error);
@@ -707,7 +716,7 @@ export const updateLandingExploreMoreOrder = async (req, res) => {
     }
 
     return successResponse(res, 200, 'Explore more order updated successfully', {
-      item
+      item: withNormalizedImageUrl(item.toObject(), req)
     });
   } catch (error) {
     console.error('Error updating explore more order:', error);
@@ -732,7 +741,7 @@ export const toggleLandingExploreMoreStatus = async (req, res) => {
     await item.save();
 
     return successResponse(res, 200, 'Explore more status updated successfully', {
-      item
+      item: withNormalizedImageUrl(item.toObject(), req)
     });
   } catch (error) {
     console.error('Error toggling explore more status:', error);
@@ -759,7 +768,7 @@ export const getLandingSettings = async (req, res) => {
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
-          imageUrl: settings.homePopup?.imageUrl || '',
+          imageUrl: normalizeImageUrlForResponse(settings.homePopup?.imageUrl, req) || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
@@ -876,7 +885,7 @@ export const updateLandingSettings = async (req, res) => {
       settings.homePopup = {
         enabled: Boolean(settings.homePopup?.enabled),
         message: settings.homePopup?.message || '',
-        imageUrl: result.secure_url,
+        imageUrl: normalizeImageUrlForResponse(result.secure_url, req),
         cloudinaryPublicId: result.public_id,
       };
     }
@@ -908,7 +917,7 @@ export const updateLandingSettings = async (req, res) => {
         homePopup: {
           enabled: Boolean(settings.homePopup?.enabled),
           message: settings.homePopup?.message || '',
-          imageUrl: settings.homePopup?.imageUrl || '',
+          imageUrl: normalizeImageUrlForResponse(settings.homePopup?.imageUrl, req) || '',
         },
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id || restaurant)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
@@ -943,7 +952,7 @@ export const getUnder250Banners = async (req, res) => {
       .lean();
 
     return successResponse(res, 200, 'Under 250 banners retrieved successfully', {
-      banners: banners.map(b => b.imageUrl)
+      banners: banners.map(b => normalizeImageUrlForResponse(b.imageUrl, req))
     });
   } catch (error) {
     console.error('Error fetching under 250 banners:', error);
@@ -961,7 +970,7 @@ export const getAllUnder250Banners = async (req, res) => {
       .lean();
 
     return successResponse(res, 200, 'Under 250 banners retrieved successfully', {
-      banners
+      banners: banners.map(b => withNormalizedImageUrl(b, req))
     });
   } catch (error) {
     console.error('Error fetching under 250 banners:', error);
@@ -984,6 +993,7 @@ export const createUnder250Banner = async (req, res) => {
       folder,
       resource_type: 'image'
     });
+    const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
     // Get the highest order number
     const lastBanner = await Under250Banner.findOne()
@@ -995,7 +1005,7 @@ export const createUnder250Banner = async (req, res) => {
 
     // Create banner record
     const banner = new Under250Banner({
-      imageUrl: result.secure_url,
+      imageUrl: normalizedImageUrl,
       cloudinaryPublicId: result.public_id,
       order: newOrder,
       isActive: true
@@ -1006,7 +1016,7 @@ export const createUnder250Banner = async (req, res) => {
     return successResponse(res, 201, 'Under 250 banner uploaded successfully', {
       banner: {
         _id: banner._id,
-        imageUrl: banner.imageUrl,
+        imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
         order: banner.order,
         isActive: banner.isActive,
         createdAt: banner.createdAt
@@ -1053,10 +1063,11 @@ export const createMultipleUnder250Banners = async (req, res) => {
           folder,
           resource_type: 'image'
         });
+        const normalizedImageUrl = normalizeImageUrlForResponse(result.secure_url, req);
 
         // Create banner record
         const banner = new Under250Banner({
-          imageUrl: result.secure_url,
+          imageUrl: normalizedImageUrl,
           cloudinaryPublicId: result.public_id,
           order: currentOrder++,
           isActive: true
@@ -1065,7 +1076,7 @@ export const createMultipleUnder250Banners = async (req, res) => {
         await banner.save();
         uploadedBanners.push({
           _id: banner._id,
-          imageUrl: banner.imageUrl,
+          imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
           order: banner.order,
           isActive: banner.isActive,
           createdAt: banner.createdAt
@@ -1152,7 +1163,7 @@ export const updateUnder250BannerOrder = async (req, res) => {
     }
 
     return successResponse(res, 200, 'Banner order updated successfully', {
-      banner
+      banner: withNormalizedImageUrl(banner.toObject(), req)
     });
   } catch (error) {
     console.error('Error updating under 250 banner order:', error);
@@ -1177,7 +1188,7 @@ export const toggleUnder250BannerStatus = async (req, res) => {
     await banner.save();
 
     return successResponse(res, 200, 'Banner status updated successfully', {
-      banner
+      banner: withNormalizedImageUrl(banner.toObject(), req)
     });
   } catch (error) {
     console.error('Error toggling under 250 banner status:', error);
