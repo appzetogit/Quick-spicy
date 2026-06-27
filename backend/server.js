@@ -117,6 +117,9 @@ app.use('/images', express.static(MEDIA_STORAGE_ROOT, {
   maxAge: '365d',
   setHeaders: (res) => {
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   }
 }));
 
