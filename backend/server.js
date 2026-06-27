@@ -11,6 +11,7 @@ import cron from 'node-cron';
 import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { MEDIA_STORAGE_ROOT, ensureMediaStorageDirs } from './config/mediaStorage.js';
 import {
   pruneStaleActiveOrders,
   markOfflineStaleDeliveryBoys,
@@ -109,6 +110,15 @@ const app = express();
 const httpServer = createServer(app);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+ensureMediaStorageDirs();
+app.use('/images', express.static(MEDIA_STORAGE_ROOT, {
+  fallthrough: true,
+  immutable: true,
+  maxAge: '365d',
+  setHeaders: (res) => {
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+}));
 
 // Initialize Socket.IO with proper CORS configuration
 const envSocketOrigins = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : [];

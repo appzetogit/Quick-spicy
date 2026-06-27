@@ -874,14 +874,14 @@ export const uploadMenuImage = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'File buffer is empty or invalid');
     }
 
-    // Validate file size (max 20MB)
-    const maxSize = 20 * 1024 * 1024; // 20MB
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
     if (req.file.size > maxSize) {
       return errorResponse(res, 400, `File size exceeds ${maxSize / (1024 * 1024)}MB limit`);
     }
 
     // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif'];
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     if (!allowedMimeTypes.includes(req.file.mimetype)) {
       return errorResponse(res, 400, `Invalid file type. Allowed types: ${allowedMimeTypes.join(', ')}`);
     }

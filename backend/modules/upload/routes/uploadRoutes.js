@@ -120,7 +120,7 @@ router.post(
         console.error('❌ Multer upload error:', err);
         if (err instanceof multer.MulterError) {
           if (err.code === 'LIMIT_FILE_SIZE') {
-            return errorResponse(res, 400, 'File size exceeds 20MB limit');
+            return errorResponse(res, 400, 'File size exceeds 5MB limit');
           }
           return errorResponse(res, 400, `Upload error: ${err.message}`);
         }

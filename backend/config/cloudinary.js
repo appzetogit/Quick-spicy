@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from 'cloudinary';
 import { getCloudinaryCredentials } from '../shared/utils/envService.js';
+import { MEDIA_STORAGE_PROVIDER } from './mediaStorage.js';
 
 // Normalize env values (trim quotes if present)
 function cleanEnv(value) {
@@ -18,6 +19,10 @@ function cleanEnv(value) {
 let cloudinaryInitialized = false;
 
 async function initializeCloudinary() {
+  if (MEDIA_STORAGE_PROVIDER !== 'cloudinary') {
+    return cloudinary;
+  }
+
   if (cloudinaryInitialized) {
     return cloudinary;
   }
@@ -85,6 +90,10 @@ if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_API_KEY && CLOUDINARY_API_SECRET) {
 
 // Reinitialize function (call after updating env variables)
 export async function reinitializeCloudinary() {
+  if (MEDIA_STORAGE_PROVIDER !== 'cloudinary') {
+    cloudinaryInitialized = false;
+    return cloudinary;
+  }
   cloudinaryInitialized = false;
   return await initializeCloudinary();
 }

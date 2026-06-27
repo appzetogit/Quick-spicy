@@ -1,0 +1,15 @@
+{
+  "exportedAt": "2026-06-25T09:35:06.454Z",
+  "completedAt": "2026-06-25T09:46:21.238Z",
+  "cloudName": "domsrrt2x",
+  "totalResources": 2930,
+  "downloaded": 1153,
+  "failed": 0,
+  "skippedExistingVerified": 1777,
+  "byResourceType": {
+    "image": 2926,
+    "video": 4,
+    "raw": 0
+  },
+  "failures": []
+}
