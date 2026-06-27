@@ -1,10 +1,14 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import dotenv from "dotenv";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const backendRoot = path.join(__dirname, "..");
+
+// Ensure dotenv is loaded immediately to avoid ES Module hoisting order-of-import issues
+dotenv.config({ path: path.join(backendRoot, ".env") });
 
 const provider = String(process.env.MEDIA_STORAGE_PROVIDER || "local")
   .trim()
