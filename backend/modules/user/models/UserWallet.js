@@ -1,4 +1,15 @@
 import mongoose from 'mongoose';
+import winston from 'winston';
+
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.json(),
+  transports: [
+    new winston.transports.Console({
+      format: winston.format.simple()
+    })
+  ]
+});
 
 // Transaction Schema for User Wallet
 const transactionSchema = new mongoose.Schema({
@@ -107,6 +118,7 @@ userWalletSchema.index({ 'transactions.orderId': 1 });
 userWalletSchema.index({ 'transactions.status': 1 });
 userWalletSchema.index({ 'transactions.type': 1 });
 userWalletSchema.index({ 'transactions.createdAt': -1 });
+userWalletSchema.index({ 'transactions.paymentId': 1 });
 userWalletSchema.index({ lastTransactionAt: -1 });
 
 // Method to add transaction and update balances
@@ -199,20 +211,146 @@ userWalletSchema.methods.updateTransactionStatus = function(transactionId, statu
 };
 
 // Static method to get wallet by user ID or create if doesn't exist
+// Fixed: handles race condition where concurrent requests both try to create
 userWalletSchema.statics.findOrCreateByUserId = async function(userId) {
   let wallet = await this.findOne({ userId });
   
   if (!wallet) {
-    wallet = await this.create({
-      userId,
-      balance: 0,
-      totalAdded: 0,
-      totalSpent: 0,
-      totalRefunded: 0
-    });
+    try {
+      wallet = await this.create({
+        userId,
+        balance: 0,
+        totalAdded: 0,
+        totalSpent: 0,
+        totalRefunded: 0
+      });
+    } catch (err) {
+      // Handle duplicate key error — another concurrent request already created it
+      if (err.code === 11000) {
+        wallet = await this.findOne({ userId });
+        if (!wallet) {
+          throw new Error(`Wallet creation race condition: duplicate key but wallet not found for userId ${userId}`);
+        }
+      } else {
+        throw err;
+      }
+    }
   }
   
   return wallet;
+};
+
+/**
+ * Atomically credit wallet balance using $inc and $push.
+ * Prevents race conditions and ensures idempotency via paymentId check.
+ * 
+ * @param {ObjectId} userId - User ID
+ * @param {Object} params - Credit parameters
+ * @param {number} params.amount - Amount to credit
+ * @param {string} params.paymentId - Unique payment ID (cf_payment_id) for idempotency
+ * @param {string} params.cashfreeOrderId - Cashfree order ID
+ * @param {string} params.cashfreePaymentId - Cashfree payment ID
+ * @param {string} params.paymentMethod - Payment method (upi, card, etc.)
+ * @param {string} params.description - Transaction description
+ * @param {string} params.source - Source of the credit (webhook, verify, etc.)
+ * @returns {Object} { updated: boolean, wallet: document|null, previousBalance: number }
+ */
+userWalletSchema.statics.atomicCreditWallet = async function(userId, {
+  amount,
+  paymentId,
+  cashfreeOrderId,
+  cashfreePaymentId,
+  paymentMethod = 'other',
+  description = 'Added money via Cashfree',
+  source = 'verify'
+}) {
+  if (!userId || !amount || !paymentId) {
+    throw new Error('atomicCreditWallet: userId, amount, and paymentId are required');
+  }
+
+  if (amount <= 0 || isNaN(amount)) {
+    throw new Error(`atomicCreditWallet: invalid amount ${amount}`);
+  }
+
+  // Ensure wallet exists first
+  const wallet = await this.findOrCreateByUserId(userId);
+  const previousBalance = wallet.balance;
+
+  // Atomic update: only applies if paymentId is NOT already in transactions
+  // This prevents double-crediting from duplicate webhooks or retries
+  const result = await this.findOneAndUpdate(
+    {
+      userId,
+      'transactions.paymentId': { $ne: paymentId }  // Idempotency guard
+    },
+    {
+      $inc: {
+        balance: amount,
+        totalAdded: amount
+      },
+      $push: {
+        transactions: {
+          _id: new mongoose.Types.ObjectId(),
+          amount,
+          type: 'addition',
+          status: 'Completed',
+          description,
+          paymentMethod,
+          paymentGateway: 'cashfree',
+          paymentId,
+          metadata: new Map(Object.entries({
+            cashfreeOrderId: cashfreeOrderId || '',
+            cashfreePaymentId: cashfreePaymentId || '',
+            source,
+            previousBalance: String(previousBalance)
+          })),
+          createdAt: new Date(),
+          processedAt: new Date()
+        }
+      },
+      $set: {
+        lastTransactionAt: new Date()
+      }
+    },
+    {
+      new: true,      // Return updated document
+      upsert: false   // Don't create new document
+    }
+  );
+
+  if (!result) {
+    // Either wallet doesn't exist or paymentId was already processed (duplicate)
+    const existingWallet = await this.findOne({ userId });
+    const isDuplicate = existingWallet?.transactions?.some(
+      t => t.paymentId === paymentId
+    );
+
+    if (isDuplicate) {
+      logger.info('atomicCreditWallet: duplicate payment detected, skipping', {
+        userId: String(userId),
+        paymentId,
+        currentBalance: existingWallet.balance
+      });
+      return { updated: false, wallet: existingWallet, previousBalance, isDuplicate: true };
+    }
+
+    logger.error('atomicCreditWallet: update failed but not a duplicate', {
+      userId: String(userId),
+      paymentId
+    });
+    return { updated: false, wallet: existingWallet, previousBalance, isDuplicate: false };
+  }
+
+  logger.info('atomicCreditWallet: wallet credited successfully', {
+    userId: String(userId),
+    paymentId,
+    amount,
+    previousBalance,
+    newBalance: result.balance,
+    source
+  });
+
+  return { updated: true, wallet: result, previousBalance, isDuplicate: false };
 };
 
 export default mongoose.model('UserWallet', userWalletSchema);

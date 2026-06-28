@@ -1,4 +1,5 @@
 import axios from 'axios';
+import crypto from 'crypto';
 import winston from 'winston';
 import { getCashfreeCredentials } from '../../../shared/utils/envService.js';
 
@@ -161,6 +162,55 @@ const verifyCashfreeOrderPayment = async (orderId) => {
   };
 };
 
+/**
+ * Verify Cashfree webhook signature (HMAC-SHA256).
+ * Cashfree sends x-webhook-signature (base64) and x-webhook-timestamp.
+ * The signed string is: timestamp + rawBody
+ * @param {string} rawBody - The raw request body string (NOT parsed JSON)
+ * @param {string} timestamp - The x-webhook-timestamp header value
+ * @param {string} signature - The x-webhook-signature header value
+ * @param {string} secretKey - Your Cashfree Secret Key
+ * @returns {boolean} True if signature is valid
+ */
+const verifyCashfreeWebhookSignature = (rawBody, timestamp, signature, secretKey) => {
+  if (!rawBody || !timestamp || !signature || !secretKey) {
+    logger.warn('Webhook signature verification: missing required parameters');
+    return false;
+  }
+
+  try {
+    const payload = timestamp + rawBody;
+    const expectedSignature = crypto
+      .createHmac('sha256', secretKey)
+      .update(payload)
+      .digest('base64');
+
+    // Use timing-safe comparison to prevent timing attacks
+    const sigBuffer = Buffer.from(signature, 'base64');
+    const expectedBuffer = Buffer.from(expectedSignature, 'base64');
+
+    if (sigBuffer.length !== expectedBuffer.length) {
+      return false;
+    }
+
+    return crypto.timingSafeEqual(sigBuffer, expectedBuffer);
+  } catch (error) {
+    logger.error('Error verifying Cashfree webhook signature', {
+      error: error.message
+    });
+    return false;
+  }
+};
+
+/**
+ * Get Cashfree secret key for webhook signature verification.
+ * @returns {Promise<string>} The Cashfree secret key
+ */
+const getCashfreeSecretKey = async () => {
+  const credentials = await getCashfreeCredentials();
+  return String(credentials.secretKey || '').trim();
+};
+
 export {
   CASHFREE_API_VERSION,
   createCashfreeOrder,
@@ -168,5 +218,7 @@ export {
   fetchCashfreePaymentsForOrder,
   createCashfreeRefund,
   verifyCashfreeOrderPayment,
+  verifyCashfreeWebhookSignature,
+  getCashfreeSecretKey,
   mapCashfreePaymentMethod
 };

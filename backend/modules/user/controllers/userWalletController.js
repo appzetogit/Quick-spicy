@@ -5,7 +5,7 @@ import User from '../../auth/models/User.js';
 import Joi from 'joi';
 import winston from 'winston';
 import { createCashfreeOrder, verifyCashfreeOrderPayment, mapCashfreePaymentMethod } from '../../payment/services/cashfreeService.js';
-import { getCashfreeCredentials } from '../../../shared/utils/envService.js';
+import { getCashfreeCredentials, getEnvVar } from '../../../shared/utils/envService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -269,6 +269,17 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
       orderMeta.return_url = returnUrl;
     }
 
+    // Set the notify_url so Cashfree sends webhook events to our backend
+    // This is the critical piece that enables server-side wallet crediting
+    const backendUrl = await getEnvVar('BACKEND_URL', '');
+    if (backendUrl) {
+      orderMeta.notify_url = `${backendUrl.replace(/\/+$/, '')}/api/payment/cashfree/webhook`;
+    } else {
+      logger.warn('BACKEND_URL not configured — Cashfree webhooks will rely on dashboard-level webhook URL', {
+        orderId
+      });
+    }
+
     const cashfreeOrder = await createCashfreeOrder({
       orderId,
       orderAmount: Number(amount.toFixed(2)),
@@ -381,7 +392,6 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
-    const wallet = await UserWallet.findOrCreateByUserId(user._id);
 
     // Securely resolve the top-up amount from verified order response, fallback to body amount
     const resolvedAmount = Number(verification.order?.order_amount || amount);
@@ -389,76 +399,109 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'Invalid payment amount');
     }
 
-    const existingTransaction = wallet.transactions.find(
-      t => t.paymentId && t.paymentId === cashfreePaymentId
-    );
+    // Use atomic credit operation — prevents race conditions and double-crediting
+    const creditResult = await UserWallet.atomicCreditWallet(user._id, {
+      amount: resolvedAmount,
+      paymentId: String(cashfreePaymentId),
+      cashfreeOrderId,
+      cashfreePaymentId: String(cashfreePaymentId),
+      paymentMethod: mapCashfreePaymentMethod(verification.payment),
+      description: `Added ₹${resolvedAmount} via Cashfree`,
+      source: 'verify-topup'
+    });
 
-    if (existingTransaction) {
+    // Handle duplicate (already credited by webhook or previous verify call)
+    if (creditResult.isDuplicate) {
+      const existingTx = creditResult.wallet?.transactions?.find(
+        t => t.paymentId === String(cashfreePaymentId)
+      );
+
+      logger.info('Wallet top-up already processed (duplicate verify call)', {
+        userId: user._id,
+        cashfreePaymentId,
+        cashfreeOrderId,
+        currentBalance: creditResult.wallet?.balance
+      });
+
       return successResponse(res, 200, 'Money already added to wallet', {
-        transaction: {
-          id: existingTransaction._id,
-          amount: existingTransaction.amount,
-          type: existingTransaction.type,
-          status: existingTransaction.status,
-          description: existingTransaction.description,
-          date: existingTransaction.createdAt
-        },
+        transaction: existingTx ? {
+          id: existingTx._id,
+          amount: existingTx.amount,
+          type: existingTx.type,
+          status: existingTx.status,
+          description: existingTx.description,
+          date: existingTx.createdAt
+        } : null,
         wallet: {
-          balance: wallet.balance,
-          currency: wallet.currency,
-          totalAdded: wallet.totalAdded
+          balance: creditResult.wallet?.balance || 0,
+          currency: creditResult.wallet?.currency || 'INR',
+          totalAdded: creditResult.wallet?.totalAdded || 0
         }
       });
     }
 
-    const transaction = wallet.addTransaction({
-      amount: resolvedAmount,
-      type: 'addition',
-      status: 'Completed',
-      description: 'Added money via Cashfree',
-      paymentMethod: mapCashfreePaymentMethod(verification.payment),
-      paymentGateway: 'cashfree',
-      paymentId: cashfreePaymentId,
-      metadata: {
-        cashfreeOrderId,
+    if (!creditResult.updated) {
+      logger.error('Wallet credit failed during verify-topup', {
+        userId: user._id,
         cashfreePaymentId,
-        cashfreeOrderStatus: verification.order?.order_status || null,
-        cashfreePaymentStatus: verification.payment?.payment_status || null
-      }
-    });
+        cashfreeOrderId,
+        resolvedAmount
+      });
+      return errorResponse(res, 500, 'Failed to credit wallet. Please contact support.');
+    }
 
-    await wallet.save();
+    // Sync balance to User model (best-effort, authoritative balance is in UserWallet)
+    try {
+      await User.findByIdAndUpdate(user._id, {
+        'wallet.balance': creditResult.wallet.balance,
+        'wallet.currency': creditResult.wallet.currency || 'INR'
+      });
+    } catch (userSyncError) {
+      logger.error('Failed to sync wallet balance to User model', {
+        userId: user._id,
+        error: userSyncError.message,
+        walletBalance: creditResult.wallet.balance
+      });
+    }
 
-    await User.findByIdAndUpdate(user._id, {
-      'wallet.balance': wallet.balance,
-      'wallet.currency': wallet.currency
-    });
+    // Find the newly added transaction for the response
+    const newTransaction = creditResult.wallet.transactions?.find(
+      t => t.paymentId === String(cashfreePaymentId)
+    );
 
     logger.info('Money added to wallet after Cashfree payment verification', {
       userId: user._id,
       amount: resolvedAmount,
       cashfreePaymentId,
-      transactionId: transaction._id,
-      newBalance: wallet.balance
+      cashfreeOrderId,
+      transactionId: newTransaction?._id,
+      previousBalance: creditResult.previousBalance,
+      newBalance: creditResult.wallet.balance,
+      source: 'verify-topup'
     });
 
     return successResponse(res, 200, 'Money added to wallet successfully', {
-      transaction: {
-        id: transaction._id,
-        amount: transaction.amount,
-        type: transaction.type,
-        status: transaction.status,
-        description: transaction.description,
-        date: transaction.createdAt
-      },
+      transaction: newTransaction ? {
+        id: newTransaction._id,
+        amount: newTransaction.amount,
+        type: newTransaction.type,
+        status: newTransaction.status,
+        description: newTransaction.description,
+        date: newTransaction.createdAt
+      } : { amount: resolvedAmount, type: 'addition', status: 'Completed' },
       wallet: {
-        balance: wallet.balance,
-        currency: wallet.currency,
-        totalAdded: wallet.totalAdded
+        balance: creditResult.wallet.balance,
+        currency: creditResult.wallet.currency || 'INR',
+        totalAdded: creditResult.wallet.totalAdded
       }
     });
   } catch (error) {
-    logger.error('Error verifying Cashfree payment and adding money to wallet:', error);
+    logger.error('Error verifying Cashfree payment and adding money to wallet:', {
+      error: error.message,
+      stack: error.stack,
+      userId: req.user?._id,
+      cashfreeOrderId: req.body?.cashfreeOrderId
+    });
     return errorResponse(res, 500, 'Failed to verify payment');
   }
 });

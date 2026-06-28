@@ -65,6 +65,7 @@ import subscriptionRoutes from './modules/subscription/index.js';
 import uploadModuleRoutes from './modules/upload/index.js';
 import locationRoutes from './modules/location/index.js';
 import heroBannerRoutes from './modules/heroBanner/index.js';
+import cashfreeWebhookRoutes from './modules/payment/routes/cashfreeWebhookRoutes.js';
 
 
 // Validate required environment variables
@@ -428,7 +429,15 @@ app.use(cors({
 }));
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
+// The verify callback captures the raw body for Cashfree webhook signature verification
+app.use(express.json({
+  limit: '10mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl && req.originalUrl.includes('/cashfree/webhook')) {
+      req.rawBody = buf.toString('utf8');
+    }
+  }
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
@@ -464,6 +473,9 @@ app.use('/api/user', userRoutes);
 app.use('/api/restaurant', restaurantRoutes);
 app.use('/api/delivery', deliveryRoutes);
 app.use('/api/order', orderRoutes);
+// Cashfree webhook route — mounted BEFORE authenticated payment routes
+// This endpoint is unauthenticated; security is via HMAC signature verification
+app.use('/api/payment/cashfree', cashfreeWebhookRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/menu', menuRoutes);
 app.use('/api/campaign', campaignRoutes);
