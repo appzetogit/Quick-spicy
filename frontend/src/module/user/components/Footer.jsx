@@ -85,7 +85,6 @@ export default function Footer() {
                   src={logoUrl}
                   alt="Company Logo"
                   className="h-10 w-10 rounded-full object-cover"
-                  crossOrigin="anonymous"
                   onError={(e) => {
                     // Fallback to default logo if business logo fails to load
                     e.target.src = quickSpicyLogo

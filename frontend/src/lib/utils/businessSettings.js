@@ -53,8 +53,6 @@ export const updateFavicon = (url) => {
   link.rel = "icon";
   link.type = "image/png";
   link.href = url;
-  // Prevent third-party cookie warning (Cloudinary)
-  link.crossOrigin = "anonymous";
   document.head.appendChild(link);
 };
 
