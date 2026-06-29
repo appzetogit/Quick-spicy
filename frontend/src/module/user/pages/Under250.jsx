@@ -1,4 +1,4 @@
-﻿import { Link, useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import { Star, Clock, MapPin, ArrowDownUp, Timer, ArrowRight, ChevronDown, Bookmark, Share2, Plus, Minus, X } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -529,66 +529,70 @@ export default function Under250() {
           return
         }
 
-        const [under250Response, fallbackRestaurantMenus] = await Promise.all([
-          restaurantAPI.getRestaurantsUnder250(effectiveZoneId).catch(() => null),
-          Promise.all(
-            restaurantsArray.map(async (restaurant, index) => {
-              try {
-                const publicRestaurantLookupId =
-                  restaurant?.restaurantId ||
-                  restaurant?.slug ||
-                  restaurant?._id
-                if (!publicRestaurantLookupId) return null
-
-                const menuResponse = await restaurantAPI.getMenuByRestaurantId(publicRestaurantLookupId, { noCache: true })
-                const menu = menuResponse?.data?.data?.menu || null
-                const menuItems = extractUnder250ItemsFromMenu(menu).slice(0, MAX_UNDER_250_ITEMS_PER_RESTAURANT)
-
-                if (menuItems.length === 0) return null
-
-                return normalizeUnder250Restaurant({
-                  ...restaurant,
-                  id: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
-                  restaurantId: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
-                  deliveryTime: restaurant?.estimatedDeliveryTime || restaurant?.deliveryTime,
-                  cuisine: Array.isArray(restaurant?.cuisines) ? restaurant.cuisines.join(" | ") : restaurant?.cuisine,
-                  image:
-                    restaurant?.profileImage?.url ||
-                    restaurant?.profileImage ||
-                    restaurant?.coverImage?.url ||
-                    restaurant?.coverImage ||
-                    (Array.isArray(restaurant?.coverImages) ? restaurant.coverImages[0]?.url || restaurant.coverImages[0] : "") ||
-                    (Array.isArray(restaurant?.menuImages) ? restaurant.menuImages[0]?.url || restaurant.menuImages[0] : ""),
-                  restaurantZoneId:
-                    restaurant?.restaurantZoneId ||
-                    restaurant?.zoneId ||
-                    restaurant?.zone?._id ||
-                    restaurant?.zone?.id ||
-                    effectiveZoneId,
-                  isInUserZone: true,
-                  menuItems,
-                }, index)
-              } catch (_) {
-                return null
-              }
-            })
-          ),
-        ])
-
-        const normalizedFallbackRestaurants = fallbackRestaurantMenus.filter(Boolean)
-        const under250ApiRestaurants = under250Response?.data?.data?.restaurants
-
-        if (under250Response?.data?.success && Array.isArray(under250ApiRestaurants) && under250ApiRestaurants.length > 0) {
-          const normalizedRestaurants = under250ApiRestaurants
-            .map((restaurant, index) => normalizeUnder250Restaurant(restaurant, index))
-            .filter(Boolean)
-
-          setUnder250Restaurants(
-            normalizedRestaurants.length > 0 ? normalizedRestaurants : normalizedFallbackRestaurants
-          )
-          return
+        // Try the optimized backend endpoint first
+        let normalizedRestaurants = [];
+        try {
+          const under250Response = await restaurantAPI.getRestaurantsUnder250(effectiveZoneId);
+          const under250ApiRestaurants = under250Response?.data?.data?.restaurants;
+          if (under250Response?.data?.success && Array.isArray(under250ApiRestaurants) && under250ApiRestaurants.length > 0) {
+            normalizedRestaurants = under250ApiRestaurants
+              .map((restaurant, index) => normalizeUnder250Restaurant(restaurant, index))
+              .filter(Boolean);
+          }
+        } catch (err) {
+          debugError('Error in getRestaurantsUnder250:', err);
         }
 
+        if (normalizedRestaurants.length > 0) {
+          setUnder250Restaurants(normalizedRestaurants);
+          return;
+        }
+
+        // Only fall back to slow per-restaurant menu fetching if the backend API returns nothing
+        const fallbackRestaurantMenus = await Promise.all(
+          restaurantsArray.map(async (restaurant, index) => {
+            try {
+              const publicRestaurantLookupId =
+                restaurant?.restaurantId ||
+                restaurant?.slug ||
+                restaurant?._id
+              if (!publicRestaurantLookupId) return null
+
+              const menuResponse = await restaurantAPI.getMenuByRestaurantId(publicRestaurantLookupId, { noCache: true })
+              const menu = menuResponse?.data?.data?.menu || null
+              const menuItems = extractUnder250ItemsFromMenu(menu).slice(0, MAX_UNDER_250_ITEMS_PER_RESTAURANT)
+
+              if (menuItems.length === 0) return null
+
+              return normalizeUnder250Restaurant({
+                ...restaurant,
+                id: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
+                restaurantId: restaurant?.restaurantId || restaurant?._id || `restaurant-${index}`,
+                deliveryTime: restaurant?.estimatedDeliveryTime || restaurant?.deliveryTime,
+                cuisine: Array.isArray(restaurant?.cuisines) ? restaurant.cuisines.join(" | ") : restaurant?.cuisine,
+                image:
+                  restaurant?.profileImage?.url ||
+                  restaurant?.profileImage ||
+                  restaurant?.coverImage?.url ||
+                  restaurant?.coverImage ||
+                  (Array.isArray(restaurant?.coverImages) ? restaurant.coverImages[0]?.url || restaurant.coverImages[0] : "") ||
+                  (Array.isArray(restaurant?.menuImages) ? restaurant.menuImages[0]?.url || restaurant.menuImages[0] : ""),
+                restaurantZoneId:
+                  restaurant?.restaurantZoneId ||
+                  restaurant?.zoneId ||
+                  restaurant?.zone?._id ||
+                  restaurant?.zone?.id ||
+                  effectiveZoneId,
+                isInUserZone: true,
+                menuItems,
+              }, index)
+            } catch (_) {
+              return null
+            }
+          })
+        )
+
+        const normalizedFallbackRestaurants = fallbackRestaurantMenus.filter(Boolean)
         setUnder250Restaurants(normalizedFallbackRestaurants)
       } catch (error) {
         debugError('Error fetching restaurants under 250:', error)
