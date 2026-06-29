@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Search,
@@ -467,14 +467,12 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
   return (
     <>
       <style>{`
-        @keyframes slideIn {
+        @keyframes sidebarFadeIn {
           from {
             opacity: 0;
-            transform: translateX(-10px);
           }
           to {
             opacity: 1;
-            transform: translateX(0);
           }
         }
         
@@ -501,7 +499,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         }
         
         .menu-item-animate {
-          animation: slideIn 0.3s ease-out forwards;
+          animation: sidebarFadeIn 0.3s ease-out forwards;
         }
         
         .submenu-animate {
@@ -536,18 +534,26 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
       `}</style>
       <div
         className={cn(
-          "admin-sidebar-scroll bg-neutral-950 border-r border-neutral-800/60 h-screen fixed left-0 top-0 overflow-y-auto z-50",
-          "transform transition-all duration-300 ease-in-out",
-          "lg:translate-x-0",
-          isOpen ? "translate-x-0" : "-translate-x-full",
-          isCollapsed ? "w-20" : "w-80"
+          "admin-sidebar-scroll bg-neutral-950 border-r border-neutral-800/60 h-screen overflow-y-auto",
+          "max-lg:transform max-lg:transition-all max-lg:duration-300 max-lg:ease-in-out",
+          isOpen ? "max-lg:translate-x-0" : "max-lg:-translate-x-full"
         )}
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          width: isCollapsed ? '80px' : '320px',
+          zIndex: 50
+        }}
       >
         {/* Header with Logo and Brand */}
-        <div className="px-3 py-3 border-b border-neutral-800/60 bg-neutral-900 animate-[fadeIn_0.4s_ease-out]">
+        <div className={cn(
+          "py-3 border-b border-neutral-800/60 bg-neutral-900 animate-[fadeIn_0.4s_ease-out]",
+          isCollapsed ? "px-2" : "pl-16 pr-4"
+        )}>
           <div className="flex items-center justify-between mb-3">
             {!isCollapsed && (
-              <div className="flex items-center gap-2 animate-[slideIn_0.3s_ease-out]">
+              <div className="flex items-center gap-2 animate-[sidebarFadeIn_0.3s_ease-out]">
                 <div className="w-24 h-12 rounded-lg flex items-center justify-center shadow-black/20">
                   {logoUrl ? (
                     <img
@@ -617,7 +623,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
 
           {/* Admin Panel Label */}
           {!isCollapsed && (
-            <div className="mb-3 animate-[slideIn_0.4s_ease-out_0.1s_both]">
+            <div className="mb-3 animate-[sidebarFadeIn_0.4s_ease-out_0.1s_both]">
               <h2 className="text-sm font-semibold text-neutral-300 uppercase tracking-wider text-left">
                 Admin Panel
               </h2>
@@ -626,7 +632,7 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
 
           {/* Search Bar */}
           {!isCollapsed && (
-            <div className="relative animate-[slideIn_0.4s_ease-out_0.2s_both]">
+            <div className="relative animate-[sidebarFadeIn_0.4s_ease-out_0.2s_both]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 w-4 h-4 z-10 transition-colors duration-200" />
               <Input
                 type="text"
@@ -652,7 +658,10 @@ export default function AdminSidebar({ isOpen = false, onClose, onCollapseChange
         </div>
 
         {/* Navigation Menu */}
-        <nav className="px-3 py-3 space-y-2">
+        <nav className={cn(
+          "py-3 space-y-2",
+          isCollapsed ? "px-2" : "pl-10 pr-4"
+        )}>
           {filteredMenuData.length === 0 && searchQuery.trim() ? (
             <div className="px-3 py-12 text-left animate-[fadeIn_0.4s_ease-out]">
               <p className="text-neutral-300 text-sm font-medium text-left">No menu items found</p>

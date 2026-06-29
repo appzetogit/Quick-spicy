@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Outlet } from "react-router-dom"
 import AdminSidebar from "./AdminSidebar"
 import AdminNavbar from "./AdminNavbar"
@@ -28,7 +28,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-200 flex">
+    <div className="min-h-screen bg-neutral-200">
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
@@ -45,15 +45,17 @@ export default function AdminLayout() {
       />
 
       {/* Main Content Area */}
-      <div className={`
-        flex-1 flex flex-col transition-all duration-300 ease-in-out min-w-0
-        ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-80'}
-      `}>
+      <div 
+        className="min-h-screen flex flex-col transition-all duration-300 ease-in-out min-w-0"
+        style={{
+          marginLeft: isSidebarCollapsed ? '80px' : '320px'
+        }}
+      >
         {/* Top Navbar */}
         <AdminNavbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Page Content */}
-        <main className="flex-1  w-full max-w-full overflow-x-hidden bg-neutral-100">
+        <main className="flex-1 w-full max-w-full overflow-x-hidden bg-neutral-100">
           <Outlet />
         </main>
       </div>
