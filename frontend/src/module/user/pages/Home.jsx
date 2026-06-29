@@ -2408,8 +2408,13 @@ export default function Home() {
                 )}
               </>
             ) : loadingRealCategories ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+              <div className="flex gap-4 overflow-x-hidden py-1 w-full">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={`category-skeleton-${index}`} className="flex-shrink-0 flex flex-col items-center gap-2 animate-pulse">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-gray-200 dark:bg-gray-800" />
+                    <div className="h-3 w-12 sm:w-16 bg-gray-200 dark:bg-gray-800 rounded" />
+                  </div>
+                ))}
               </div>
             ) : (
               // No categories available from API
