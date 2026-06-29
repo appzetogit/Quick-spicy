@@ -294,7 +294,7 @@ export default function OrdersTable({
                 </th>
               )}
               {visibleColumns.actions && (
-                <th className="px-6 py-4 text-center text-[10px] font-bold text-slate-700 uppercase tracking-wider">
+                <th className="px-6 py-4 text-left text-[10px] font-bold text-slate-700 uppercase tracking-wider">
                   Actions
                 </th>
               )}
@@ -468,8 +468,8 @@ export default function OrdersTable({
                   </td>
                 )}
                 {visibleColumns.actions && (
-                  <td className="px-6 py-4 whitespace-nowrap text-center">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="px-6 py-4 whitespace-nowrap text-left">
+                    <div className="flex items-center justify-start gap-2">
                       {isOrderAcceptable(order) && onAcceptOrder && (
                         <button
                           onClick={() => onAcceptOrder(order)}
