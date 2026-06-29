@@ -57,8 +57,7 @@ const auditLogSchema = new mongoose.Schema({
     status: String,
     orderId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Order',
-      sparse: true
+      ref: 'Order'
     },
     walletType: {
       type: String,
@@ -71,8 +70,7 @@ const auditLogSchema = new mongoose.Schema({
   commissionChange: {
     restaurantId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Restaurant',
-      sparse: true
+      ref: 'Restaurant'
     },
     oldValue: Number,
     newValue: Number,

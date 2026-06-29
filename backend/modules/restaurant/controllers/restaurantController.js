@@ -1119,7 +1119,15 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
 
-    let restaurants = await Restaurant.find({ isActive: true })
+    const restaurantQueryObj = { isActive: true };
+    if (userZoneId) {
+      restaurantQueryObj.$or = [
+        { zoneId: userZoneId },
+        { zoneId: { $in: [null, undefined] } }
+      ];
+    }
+
+    let restaurants = await Restaurant.find(restaurantQueryObj)
       .select([
         'restaurantId',
         'name',

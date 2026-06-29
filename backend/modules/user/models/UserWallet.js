@@ -35,8 +35,7 @@ const transactionSchema = new mongoose.Schema({
   },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order',
-    sparse: true // Optional field
+    ref: 'Order'
   },
   paymentMethod: {
     type: String,
@@ -48,8 +47,7 @@ const transactionSchema = new mongoose.Schema({
     sparse: true
   },
   paymentId: {
-    type: String, // Payment gateway transaction ID
-    sparse: true
+    type: String // Payment gateway transaction ID
   },
   metadata: {
     type: Map,
@@ -68,8 +66,7 @@ const userWalletSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   // Balance field
   balance: {
@@ -113,7 +110,6 @@ const userWalletSchema = new mongoose.Schema({
 });
 
 // Indexes
-userWalletSchema.index({ userId: 1 }, { unique: true });
 userWalletSchema.index({ 'transactions.orderId': 1 });
 userWalletSchema.index({ 'transactions.status': 1 });
 userWalletSchema.index({ 'transactions.type': 1 });

@@ -22,8 +22,7 @@ const transactionSchema = new mongoose.Schema({
   },
   orderId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Order',
-    sparse: true
+    ref: 'Order'
   },
   createdAt: {
     type: Date,
@@ -90,8 +89,7 @@ const restaurantWalletSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Restaurant',
     required: true,
-    unique: true,
-    index: true
+    unique: true
   },
   // Balance fields
   totalBalance: {
@@ -125,7 +123,6 @@ const restaurantWalletSchema = new mongoose.Schema({
 });
 
 // Indexes
-restaurantWalletSchema.index({ restaurantId: 1 });
 restaurantWalletSchema.index({ 'transactions.orderId': 1 });
 restaurantWalletSchema.index({ 'transactions.status': 1 });
 restaurantWalletSchema.index({ 'transactions.type': 1 });

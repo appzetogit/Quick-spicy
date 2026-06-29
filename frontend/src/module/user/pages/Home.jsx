@@ -358,8 +358,6 @@ export default function Home() {
   })
   const [realCategories, setRealCategories] = useState([])
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
-  const [menuCategories, setMenuCategories] = useState([])
-  const [loadingMenuCategories, setLoadingMenuCategories] = useState(false)
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
   const isHandlingSwitchOff = useRef(false)
@@ -579,26 +577,11 @@ export default function Home() {
   }, [landingCategories, normalizeImageUrl, slugifyCategory])
 
   const displayCategories = useMemo(() => {
-    const visibleCategoryKeys = new Set(
-      (Array.isArray(realCategories) ? realCategories : []).map((category) =>
-        slugifyCategory(category?.slug || category?.name || category?.label || "")
-      ).filter(Boolean)
-    )
-
-    const filteredMenuCategories =
-      visibleCategoryKeys.size > 0
-        ? menuCategories.filter((category) =>
-            visibleCategoryKeys.has(
-              slugifyCategory(category?.slug || category?.name || category?.label || "")
-            )
-          )
-        : menuCategories
-
-    if (vegMode) return filteredMenuCategories
-    if (filteredMenuCategories.length > 0) return filteredMenuCategories
-    if (realCategories.length > 0) return realCategories
-    return normalizedLandingCategories
-  }, [menuCategories, normalizedLandingCategories, realCategories, slugifyCategory, vegMode])
+    if (Array.isArray(realCategories) && realCategories.length > 0) {
+      return realCategories;
+    }
+    return normalizedLandingCategories;
+  }, [realCategories, normalizedLandingCategories]);
 
   // Swipe functionality for hero banner carousel
   const touchStartX = useRef(0)
@@ -724,35 +707,6 @@ export default function Home() {
     }
 
     fetchHeroBanners()
-  }, [normalizeImageUrl])
-
-  // Fetch real categories from backend API
-  useEffect(() => {
-    const fetchRealCategories = async () => {
-      try {
-        setLoadingRealCategories(true)
-        const response = await api.get('/categories/public')
-        if (response.data.success && response.data.data.categories) {
-          const adminCategories = response.data.data.categories.map(cat => ({
-            id: cat.id,
-            name: cat.name,
-            image: normalizeImageUrl(cat.image) || foodImages[0], // Fallback to default image if not provided
-            slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-'),
-            label: cat.name // For compatibility with existing code
-          }))
-          setRealCategories(adminCategories)
-        } else {
-          setRealCategories([])
-        }
-      } catch (error) {
-        debugError('Error fetching real categories:', error)
-        setRealCategories([])
-      } finally {
-        setLoadingRealCategories(false)
-      }
-    }
-
-    fetchRealCategories()
   }, [normalizeImageUrl])
 
   // Fetch landing page config (categories, explore more, settings)
@@ -1006,6 +960,42 @@ export default function Home() {
   const effectiveZoneId = zoneSelection.mode === "manual" && zoneSelection.zoneId
     ? zoneSelection.zoneId
     : zoneId
+
+  // Fetch real categories from backend API
+  useEffect(() => {
+    const fetchRealCategories = async () => {
+      try {
+        setLoadingRealCategories(true)
+        const params = {}
+        if (effectiveZoneId) {
+          params.zoneId = effectiveZoneId
+        }
+        if (vegMode) {
+          params.vegMode = 'true'
+        }
+        const response = await api.get('/categories/public', { params })
+        if (response.data.success && response.data.data.categories) {
+          const adminCategories = response.data.data.categories.map(cat => ({
+            id: cat.id,
+            name: cat.name,
+            image: normalizeImageUrl(cat.image) || foodImages[0], // Fallback to default image if not provided
+            slug: cat.slug || cat.name.toLowerCase().replace(/\s+/g, '-'),
+            label: cat.name // For compatibility with existing code
+          }))
+          setRealCategories(adminCategories)
+        } else {
+          setRealCategories([])
+        }
+      } catch (error) {
+        debugError('Error fetching real categories:', error)
+        setRealCategories([])
+      } finally {
+        setLoadingRealCategories(false)
+      }
+    }
+
+    fetchRealCategories()
+  }, [normalizeImageUrl, effectiveZoneId, vegMode])
 
   // Memoize cartCount to prevent recalculation on every render - use cart directly
   const cartCount = useMemo(() =>
@@ -1621,92 +1611,6 @@ export default function Home() {
     setRestaurantsData(updatedRestaurants)
     debugLog('🔄 Recalculated distances for all restaurants based on user location')
   }, [location?.latitude, location?.longitude])
-
-  // Build a union of menu categories across all restaurants.
-  useEffect(() => {
-    const fetchMenuCategories = async () => {
-      const sourceRestaurants = vegMode
-        ? restaurantsData.filter((restaurant) => String(restaurant?.foodPreference || "").trim().toLowerCase() === "pure-veg")
-        : restaurantsData
-
-      if (!Array.isArray(sourceRestaurants) || sourceRestaurants.length === 0) {
-        setMenuCategories([])
-        return
-      }
-
-      setLoadingMenuCategories(true)
-      try {
-        const categoryMap = new Map()
-        const menuResponses = await Promise.all(
-          sourceRestaurants.map(async (restaurant) => {
-            const id = restaurant?.restaurantId || restaurant?.id
-            if (!id) return { id: null, menu: null }
-            try {
-              const response = await restaurantAPI.getMenuByRestaurantId(id)
-              return {
-                id: String(id),
-                menu: response?.data?.data?.menu || null
-              }
-            } catch {
-              return {
-                id: String(id),
-                menu: null
-              }
-            }
-          })
-        )
-
-        menuResponses.forEach(({ menu }) => {
-          const sections = Array.isArray(menu?.sections) ? menu.sections : []
-          sections.forEach((section) => {
-            const categoryName = String(section?.name || "").trim()
-            if (!categoryName) return
-
-            const slug = slugifyCategory(categoryName)
-            if (!slug) return
-
-            let image = ""
-            if (Array.isArray(section?.items) && section.items.length > 0) {
-              image = normalizeImageUrl(section.items[0]?.image)
-            }
-            if (!image && Array.isArray(section?.subsections)) {
-              for (const subsection of section.subsections) {
-                if (Array.isArray(subsection?.items) && subsection.items.length > 0) {
-                  image = normalizeImageUrl(subsection.items[0]?.image)
-                  if (image) break
-                }
-              }
-            }
-
-            if (!categoryMap.has(slug)) {
-              categoryMap.set(slug, {
-                id: slug,
-                name: categoryName,
-                slug,
-                label: categoryName,
-                image: image || "",
-              })
-            } else if (image && !categoryMap.get(slug).image) {
-              categoryMap.get(slug).image = image
-            }
-          })
-        })
-
-        const categories = Array.from(categoryMap.values())
-          .sort((a, b) => a.name.localeCompare(b.name))
-          .map((category, index) => ({
-            ...category,
-            image: category.image || foodImages[index % foodImages.length] || foodImages[0],
-          }))
-
-        setMenuCategories(categories)
-      } finally {
-        setLoadingMenuCategories(false)
-      }
-    }
-
-    fetchMenuCategories()
-  }, [restaurantsData, normalizeImageUrl, slugifyCategory, vegMode])
 
   const matchesVegMode = useCallback((restaurant) => {
     if (!vegMode) return true
@@ -2503,7 +2407,7 @@ export default function Home() {
                   </motion.div>
                 )}
               </>
-            ) : loadingRealCategories || loadingMenuCategories ? (
+            ) : loadingRealCategories ? (
               <div className="flex items-center justify-center py-4">
                 <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
               </div>

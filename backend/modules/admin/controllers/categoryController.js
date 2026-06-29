@@ -1,5 +1,7 @@
 import AdminCategoryManagement from '../models/AdminCategoryManagement.js';
 import Menu from '../../restaurant/models/Menu.js';
+import Restaurant from '../../restaurant/models/Restaurant.js';
+import Zone from '../models/Zone.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
@@ -21,12 +23,124 @@ const normalizeCategoryType = (value) => {
   return ALLOWED_CATEGORY_TYPES.has(trimmed) ? trimmed : undefined;
 };
 
+function isPointInZone(lat, lng, zoneCoordinates) {
+  let isInside = false;
+  for (let i = 0, j = zoneCoordinates.length - 1; i < zoneCoordinates.length; j = i++) {
+    const xi = zoneCoordinates[i].latitude || zoneCoordinates[i][1];
+    const yi = zoneCoordinates[i].longitude || zoneCoordinates[i][0];
+    const xj = zoneCoordinates[j].latitude || zoneCoordinates[j][1];
+    const yj = zoneCoordinates[j].longitude || zoneCoordinates[j][0];
+    const intersect = ((yi > lng) !== (yj > lng))
+        && (lat < (xj - xi) * (lng - yi) / (yj - yi) + xi);
+    if (intersect) isInside = !isInside;
+  }
+  return isInside;
+}
+
+function calculateZoneArea(coordinates) {
+  let area = 0;
+  for (let i = 0; i < coordinates.length; i++) {
+    const j = (i + 1) % coordinates.length;
+    const xi = coordinates[i].latitude || coordinates[i][1] || 0;
+    const yi = coordinates[i].longitude || coordinates[i][0] || 0;
+    const xj = coordinates[j].latitude || coordinates[j][1] || 0;
+    const yj = coordinates[j].longitude || coordinates[j][0] || 0;
+    area += xi * yj - xj * yi;
+  }
+  return Math.abs(area / 2);
+}
+
+function getRestaurantZoneId(restaurantLat, restaurantLng, activeZones) {
+  if (restaurantLat === null || restaurantLng === null || !Array.isArray(activeZones)) {
+    return null;
+  }
+  let bestZoneId = null;
+  let bestArea = Infinity;
+  for (const zone of activeZones) {
+    if (!zone.coordinates || zone.coordinates.length < 3) continue;
+    let isInZone = isPointInZone(restaurantLat, restaurantLng, zone.coordinates);
+    if (isInZone) {
+      const area = calculateZoneArea(zone.coordinates);
+      if (area < bestArea) {
+        bestArea = area;
+        bestZoneId = zone._id.toString();
+      }
+    }
+  }
+  return bestZoneId;
+}
+
+function getExplicitRestaurantZoneId(restaurant, activeZones) {
+  if (!restaurant || !Array.isArray(activeZones)) return null;
+  const explicitZoneId = restaurant?.zoneId?.toString?.() || String(restaurant?.zoneId || '');
+  if (explicitZoneId) {
+    const explicitZone = activeZones.find((zone) => {
+      const zoneId = zone?._id?.toString?.() || String(zone?._id || '');
+      return zoneId && zoneId === explicitZoneId;
+    });
+    if (explicitZone) return explicitZoneId;
+  }
+  const restaurantMongoId = restaurant?._id?.toString?.() || String(restaurant?._id || '');
+  const restaurantPublicId = restaurant?.restaurantId ? String(restaurant.restaurantId) : null;
+  for (const zone of activeZones) {
+    const zoneRestaurantId = zone?.restaurantId?.toString?.() || String(zone?.restaurantId || '');
+    if (!zoneRestaurantId) continue;
+    if (restaurantMongoId && zoneRestaurantId === restaurantMongoId) {
+      return zone._id.toString();
+    }
+    if (restaurantPublicId && zoneRestaurantId === restaurantPublicId) {
+      return zone._id.toString();
+    }
+  }
+  return null;
+}
+
+function resolveRestaurantZoneId(restaurant, restaurantLat, restaurantLng, activeZones) {
+  const explicitZoneId = getExplicitRestaurantZoneId(restaurant, activeZones);
+  if (explicitZoneId) return explicitZoneId;
+  return getRestaurantZoneId(restaurantLat, restaurantLng, activeZones);
+}
+
+function resolveRestaurantZoneInfo(restaurant, activeZones) {
+  const { lat, lng } = extractRestaurantCoordinates(restaurant);
+  const restaurantZoneId = activeZones.length > 0
+    ? resolveRestaurantZoneId(restaurant, lat, lng, activeZones)
+    : null;
+  return {
+    lat,
+    lng,
+    restaurantZoneId,
+    hasCoordinates: lat !== null && lng !== null,
+  };
+}
+
+function extractRestaurantCoordinates(locationOrRestaurant = {}) {
+  const location = locationOrRestaurant?.location || locationOrRestaurant?.onboarding?.step1?.location || locationOrRestaurant || {};
+  const lat = location?.latitude
+    ?? (Array.isArray(location?.coordinates) ? location.coordinates[1] : null);
+  const lng = location?.longitude
+    ?? (Array.isArray(location?.coordinates) ? location.coordinates[0] : null);
+  if (
+    lat === null ||
+    lng === null ||
+    Number.isNaN(Number(lat)) ||
+    Number.isNaN(Number(lng)) ||
+    (Number(lat) === 0 && Number(lng) === 0)
+  ) {
+    return { lat: null, lng: null };
+  }
+  return { lat: Number(lat), lng: Number(lng) };
+}
+
 /**
  * Get All Categories (Public - for user frontend)
  * GET /api/categories/public
  */
 export const getPublicCategories = asyncHandler(async (req, res) => {
   try {
+    const { zoneId, vegMode } = req.query;
+    const isVegMode = vegMode === 'true';
+
     const categories = await AdminCategoryManagement.find({ status: true })
       .select('name image _id type showOnHome')
       .lean();
@@ -35,8 +149,47 @@ export const getPublicCategories = asyncHandler(async (req, res) => {
       categories.map((category) => [String(category.name || '').trim().toLowerCase(), category])
     );
 
-    const menus = await Menu.find({ isActive: true })
-      .select('sections')
+    // Build query for menus
+    const menuQuery = { isActive: true };
+
+    if (zoneId || isVegMode) {
+      const restaurantQueryObj = { isActive: true };
+      if (zoneId) {
+        restaurantQueryObj.$or = [
+          { zoneId: zoneId },
+          { zoneId: { $in: [null, undefined] } }
+        ];
+      }
+      if (isVegMode) {
+        restaurantQueryObj.foodPreference = 'pure-veg';
+      }
+
+      const activeZones = zoneId
+        ? await Zone.find({ isActive: true }).select('_id coordinates restaurantId').lean()
+        : [];
+
+      let restaurants = await Restaurant.find(restaurantQueryObj)
+        .select('_id zoneId location onboarding.step1.location')
+        .lean();
+
+      if (zoneId) {
+        restaurants = restaurants.filter((restaurant) => {
+          const { restaurantZoneId, hasCoordinates } = resolveRestaurantZoneInfo(
+            restaurant,
+            activeZones,
+          );
+          if (!hasCoordinates && !restaurantZoneId) {
+            return false;
+          }
+          return restaurantZoneId === zoneId;
+        });
+      }
+
+      menuQuery.restaurant = { $in: restaurants.map(r => r._id) };
+    }
+
+    const menus = await Menu.find(menuQuery)
+      .select('sections.name sections.items.image sections.subsections.name sections.subsections.items.image')
       .lean();
 
     const menuCategoryMap = new Map();
