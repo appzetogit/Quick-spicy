@@ -8,6 +8,10 @@ import {
 } from '../services/cashfreeService.js';
 import UserWallet from '../../user/models/UserWallet.js';
 import User from '../../auth/models/User.js';
+import Order from '../../order/models/Order.js';
+import OrderSettlement from '../../order/models/OrderSettlement.js';
+import AuditLog from '../../admin/models/AuditLog.js';
+
 
 const logger = winston.createLogger({
   level: 'info',
@@ -90,33 +94,256 @@ export const handleCashfreeWebhook = async (req, res) => {
     // ─── Step 2: Parse the webhook payload ───
     const event = req.body;
     const eventType = String(event?.type || '').toUpperCase();
-    const paymentData = event?.data?.payment || {};
-    const orderData = event?.data?.order || {};
-    const customerData = event?.data?.customer_details || {};
 
-    const cfPaymentId = String(paymentData.cf_payment_id || '');
-    const paymentStatus = String(paymentData.payment_status || '').toUpperCase();
-    const paymentAmount = Number(paymentData.payment_amount || 0);
-    const orderId = String(orderData.order_id || '');
-    const orderAmount = Number(orderData.order_amount || 0);
-    const customerId = String(customerData.customer_id || '');
-    const orderTags = orderData.order_tags || {};
+    let orderId = '';
+    let cfPaymentId = '';
+    let paymentStatus = '';
+    let paymentAmount = 0;
+    let orderAmount = 0;
+    let customerId = '';
+    let orderTags = {};
 
-    logger.info('Cashfree webhook: event parsed', {
-      eventType,
-      cfPaymentId,
-      paymentStatus,
-      paymentAmount,
-      orderId,
-      orderAmount,
-      customerId,
-      orderTags
-    });
+    let refundData = {};
+    let cfRefundId = '';
+    let refundStatus = '';
+    let refundAmount = 0;
 
-    // ─── Step 3: Determine if this is a wallet top-up ───
-    // Wallet top-up orders have order_id starting with "WT_" and/or tags.type = "wallet_topup"
+    if (eventType === 'REFUND_STATUS_WEBHOOK') {
+      refundData = event?.data?.refund || {};
+      cfRefundId = String(refundData.cf_refund_id || '');
+      cfPaymentId = String(refundData.cf_payment_id || '');
+      orderId = String(refundData.order_id || '');
+      refundAmount = Number(refundData.refund_amount || 0);
+      refundStatus = String(refundData.refund_status || '').toUpperCase();
+
+      logger.info('Cashfree webhook: refund event parsed', {
+        eventType,
+        cfRefundId,
+        cfPaymentId,
+        orderId,
+        refundAmount,
+        refundStatus
+      });
+    } else {
+      const paymentData = event?.data?.payment || {};
+      const orderData = event?.data?.order || {};
+      const customerData = event?.data?.customer_details || {};
+
+      cfPaymentId = String(paymentData.cf_payment_id || '');
+      paymentStatus = String(paymentData.payment_status || '').toUpperCase();
+      paymentAmount = Number(paymentData.payment_amount || 0);
+      orderId = String(orderData.order_id || '');
+      orderAmount = Number(orderData.order_amount || 0);
+      customerId = String(customerData.customer_id || '');
+      orderTags = orderData.order_tags || {};
+
+      logger.info('Cashfree webhook: event parsed', {
+        eventType,
+        cfPaymentId,
+        paymentStatus,
+        paymentAmount,
+        orderId,
+        orderAmount,
+        customerId,
+        orderTags
+      });
+    }
+
+    // Determine if this is a wallet top-up order
     const isWalletTopup = orderId.startsWith('WT_') || orderTags?.type === 'wallet_topup';
 
+    // ─── Step 3: Handle Refund Events ───
+    if (eventType === 'REFUND_STATUS_WEBHOOK') {
+      if (isWalletTopup) {
+        if (refundStatus !== 'SUCCESS') {
+          logger.info('Cashfree refund webhook: non-success refund event for wallet top-up', {
+            cfRefundId,
+            refundStatus,
+            orderId
+          });
+          return res.status(200).json({ status: 'acknowledged', message: `Refund event status ${refundStatus} acknowledged` });
+        }
+
+        logger.info('Cashfree refund webhook: success refund event for wallet top-up', {
+          cfRefundId,
+          cfPaymentId,
+          orderId,
+          refundAmount
+        });
+
+        try {
+          // Find wallet by the original payment ID
+          const wallet = await UserWallet.findOne({ 'transactions.paymentId': cfPaymentId });
+          if (!wallet) {
+            logger.error('Cashfree refund webhook: wallet not found for original payment ID', { cfPaymentId, orderId });
+            return res.status(200).json({ status: 'error', message: 'Wallet not found for original payment' });
+          }
+
+          // Process wallet debit atomically
+          const debitResult = await UserWallet.atomicDebitWallet(
+            wallet.userId,
+            {
+              amount: refundAmount,
+              paymentId: cfRefundId,
+              cashfreeOrderId: orderId,
+              cashfreeRefundId: cfRefundId,
+              description: `Debit: Refunded ₹${refundAmount} to bank account`,
+              source: 'webhook'
+            }
+          );
+
+          if (debitResult.isDuplicate) {
+            logger.info('Cashfree refund webhook: duplicate refund (DB-level), already debited', {
+              userId: wallet.userId,
+              cfRefundId,
+              orderId,
+              currentBalance: debitResult.wallet?.balance
+            });
+            return res.status(200).json({ status: 'duplicate', message: 'Refund already processed' });
+          }
+
+          if (!debitResult.updated) {
+            logger.error('Cashfree refund webhook: wallet debit failed', {
+              userId: wallet.userId,
+              cfRefundId,
+              orderId,
+              refundAmount
+            });
+            return res.status(500).json({ status: 'error', message: 'Wallet debit failed' });
+          }
+
+          // Sync balance to User model
+          try {
+            await User.findByIdAndUpdate(wallet.userId, {
+              $set: {
+                'wallet.balance': debitResult.wallet.balance,
+                'wallet.currency': debitResult.wallet.currency || 'INR'
+              }
+            });
+          } catch (userUpdateError) {
+            logger.error('Cashfree refund webhook: failed to sync balance to User model', {
+              userId: wallet.userId,
+              error: userUpdateError.message,
+              walletBalance: debitResult.wallet.balance
+            });
+          }
+
+          return res.status(200).json({
+            status: 'success',
+            message: 'Wallet debited for refund successfully'
+          });
+        } catch (refundError) {
+          logger.error('Cashfree refund webhook: error processing wallet refund', {
+            error: refundError.message,
+            stack: refundError.stack
+          });
+          return res.status(500).json({ status: 'error', message: 'Failed to process wallet refund' });
+        }
+      } else {
+        logger.info('Cashfree webhook: refund event for normal order received, processing...', {
+          orderId,
+          cfRefundId,
+          refundStatus,
+          refundAmount
+        });
+
+        // Process normal order refund completion
+        try {
+          let order = null;
+          if (mongoose.Types.ObjectId.isValid(orderId) && orderId.length === 24) {
+            order = await Order.findById(orderId);
+          }
+          if (!order) {
+            order = await Order.findOne({ orderId: orderId });
+          }
+
+          if (!order) {
+            logger.error('Cashfree refund webhook: order not found', { orderId });
+            return res.status(200).json({ status: 'error', message: 'Order not found' });
+          }
+
+          const settlement = await OrderSettlement.findOne({ orderId: order._id });
+          if (!settlement) {
+            logger.error('Cashfree refund webhook: settlement not found', { orderId: order._id });
+            return res.status(200).json({ status: 'error', message: 'Settlement not found' });
+          }
+
+          if (refundStatus === 'SUCCESS') {
+            settlement.cancellationDetails.refundStatus = 'processed';
+            settlement.cancellationDetails.refundProcessedAt = new Date();
+            await settlement.save();
+
+            // Create audit log
+            try {
+              await AuditLog.createLog({
+                entityType: 'order',
+                entityId: order._id,
+                action: 'cashfree_refund_success',
+                actionType: 'refund',
+                performedBy: {
+                  type: 'system',
+                  name: 'Cashfree Webhook'
+                },
+                transactionDetails: {
+                  amount: refundAmount,
+                  type: 'cashfree_refund',
+                  status: 'success',
+                  orderId: order._id,
+                  cashfreeRefundId: cfRefundId,
+                  cashfreeOrderId: orderId
+                },
+                description: `Cashfree refund successfully processed for order ${settlement.orderNumber || order.orderId}. Refund ID: ${cfRefundId}, Amount: ₹${refundAmount}`
+              });
+            } catch (auditError) {
+              logger.error('Cashfree refund webhook: failed to create audit log', { error: auditError.message });
+            }
+          } else if (refundStatus === 'FAILED') {
+            settlement.cancellationDetails.refundStatus = 'failed';
+            settlement.cancellationDetails.refundFailureReason = refundData.status_description || 'Cashfree refund failed';
+            await settlement.save();
+
+            // Create audit log
+            try {
+              await AuditLog.createLog({
+                entityType: 'order',
+                entityId: order._id,
+                action: 'cashfree_refund_failed',
+                actionType: 'refund',
+                performedBy: {
+                  type: 'system',
+                  name: 'Cashfree Webhook'
+                },
+                transactionDetails: {
+                  amount: refundAmount,
+                  type: 'cashfree_refund',
+                  status: 'failed',
+                  orderId: order._id,
+                  cashfreeRefundId: cfRefundId,
+                  cashfreeOrderId: orderId,
+                  failureReason: refundData.status_description || 'Unknown reason'
+                },
+                description: `Cashfree refund failed for order ${settlement.orderNumber || order.orderId}. Refund ID: ${cfRefundId}, Reason: ${refundData.status_description || 'Unknown'}`
+              });
+            } catch (auditError) {
+              logger.error('Cashfree refund webhook: failed to create audit log', { error: auditError.message });
+            }
+          }
+
+          return res.status(200).json({
+            status: 'success',
+            message: `Order refund status ${refundStatus} processed successfully`
+          });
+        } catch (orderRefundError) {
+          logger.error('Cashfree refund webhook: error processing normal order refund', {
+            error: orderRefundError.message,
+            stack: orderRefundError.stack
+          });
+          return res.status(500).json({ status: 'error', message: 'Failed to process order refund' });
+        }
+      }
+    }
+
+    // ─── Step 4: Determine if this is a wallet top-up ───
     if (!isWalletTopup) {
       logger.info('Cashfree webhook: not a wallet top-up order, skipping wallet processing', {
         orderId,
@@ -127,7 +354,7 @@ export const handleCashfreeWebhook = async (req, res) => {
       return res.status(200).json({ status: 'acknowledged', message: 'Non-wallet event acknowledged' });
     }
 
-    // ─── Step 4: Handle only SUCCESS events for wallet crediting ───
+    // ─── Step 5: Handle only SUCCESS events for wallet crediting ───
     if (eventType !== 'PAYMENT_SUCCESS_WEBHOOK' || paymentStatus !== 'SUCCESS') {
       logger.info('Cashfree webhook: non-success event for wallet top-up', {
         eventType,

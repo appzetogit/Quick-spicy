@@ -353,5 +353,121 @@ userWalletSchema.statics.atomicCreditWallet = async function(userId, {
   return { updated: true, wallet: result, previousBalance, isDuplicate: false };
 };
 
+/**
+ * Atomically debit wallet balance using $inc and $push.
+ * Prevents race conditions and ensures idempotency via paymentId check.
+ * 
+ * @param {ObjectId} userId - User ID
+ * @param {Object} params - Debit parameters
+ * @param {number} params.amount - Amount to deduct
+ * @param {string} params.paymentId - Unique payment ID (cf_refund_id) for idempotency
+ * @param {string} params.cashfreeOrderId - Cashfree order ID
+ * @param {string} params.cashfreeRefundId - Cashfree refund ID
+ * @param {string} params.description - Transaction description
+ * @param {string} params.source - Source of the debit
+ * @returns {Object} { updated: boolean, wallet: document|null, previousBalance: number }
+ */
+userWalletSchema.statics.atomicDebitWallet = async function(userId, {
+  amount,
+  paymentId,
+  cashfreeOrderId,
+  cashfreeRefundId,
+  description = 'Wallet refund processed',
+  source = 'webhook'
+}) {
+  if (!userId || !amount || !paymentId) {
+    throw new Error('atomicDebitWallet: userId, amount, and paymentId are required');
+  }
+
+  if (amount <= 0 || isNaN(amount)) {
+    throw new Error(`atomicDebitWallet: invalid amount ${amount}`);
+  }
+
+  // Ensure wallet exists first
+  const wallet = await this.findOrCreateByUserId(userId);
+  const previousBalance = wallet.balance;
+
+  // Capped deduction amount: can't deduct more than the current balance
+  // to avoid negative balance.
+  const deductionAmount = Math.min(amount, previousBalance);
+
+  // Atomic update: only applies if paymentId is NOT already in transactions
+  const result = await this.findOneAndUpdate(
+    {
+      userId,
+      'transactions.paymentId': { $ne: paymentId }  // Idempotency guard
+    },
+    {
+      $inc: {
+        balance: -deductionAmount,
+        totalSpent: amount // Log the full requested refund amount in totalSpent
+      },
+      $push: {
+        transactions: {
+          _id: new mongoose.Types.ObjectId(),
+          amount,
+          type: 'deduction',
+          status: 'Completed',
+          description,
+          paymentMethod: 'wallet',
+          paymentGateway: 'cashfree',
+          paymentId,
+          metadata: new Map(Object.entries({
+            cashfreeOrderId: cashfreeOrderId || '',
+            cashfreeRefundId: cashfreeRefundId || '',
+            source,
+            previousBalance: String(previousBalance),
+            actualDeducted: String(deductionAmount)
+          })),
+          createdAt: new Date(),
+          processedAt: new Date()
+        }
+      },
+      $set: {
+        lastTransactionAt: new Date()
+      }
+    },
+    {
+      new: true,
+      upsert: false
+    }
+  );
+
+  if (!result) {
+    const existingWallet = await this.findOne({ userId });
+    const isDuplicate = existingWallet?.transactions?.some(
+      t => t.paymentId === paymentId
+    );
+
+    if (isDuplicate) {
+      logger.info('atomicDebitWallet: duplicate transaction detected, skipping', {
+        userId: String(userId),
+        paymentId,
+        currentBalance: existingWallet.balance
+      });
+      return { updated: false, wallet: existingWallet, previousBalance, isDuplicate: true };
+    }
+
+    logger.error('atomicDebitWallet: update failed but not a duplicate', {
+      userId: String(userId),
+      paymentId
+    });
+    return { updated: false, wallet: existingWallet, previousBalance, isDuplicate: false };
+  }
+
+  logger.info('atomicDebitWallet: wallet debited successfully', {
+    userId: String(userId),
+    paymentId,
+    amount,
+    deductionAmount,
+    previousBalance,
+    newBalance: result.balance,
+    source
+  });
+
+  return { updated: true, wallet: result, previousBalance, isDuplicate: false };
+};
+
 export default mongoose.model('UserWallet', userWalletSchema);
+
 
