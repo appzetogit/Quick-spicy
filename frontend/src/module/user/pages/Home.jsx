@@ -2106,12 +2106,7 @@ export default function Home() {
         onMouseLeave={heroBannerImages.length > 0 ? handleMouseUp : undefined}
       >
         {loadingBanners ? (
-          <div className="absolute inset-0 z-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-            <div className="text-gray-500 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-              <p className="text-sm">Loading banners...</p>
-            </div>
-          </div>
+          <div className="absolute inset-0 z-0 bg-gray-200 dark:bg-gray-800 animate-pulse" />
         ) : heroBannerImages.length > 0 ? (
           <div className="absolute inset-0 z-0 bg-gray-100">
             {heroBannerImages.map((image, index) => (
