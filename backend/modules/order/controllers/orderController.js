@@ -2128,23 +2128,46 @@ export const cancelOrder = async (req, res) => {
     order.cancelledAt = new Date();
     await order.save();
 
-    // Calculate refund amount only for online payments (Cashfree) and wallet
-    // COD orders don't need refund since payment hasn't been made
+    // Calculate refunds for online payments (Cashfree/Razorpay) and wallet.
+    // Additionally: if wallet money was used as a partial payment, refund that wallet deduction instantly.
     let refundMessage = '';
     if (actualPaymentMethod === 'cashfree' || actualPaymentMethod === 'razorpay' || actualPaymentMethod === 'wallet') {
       try {
-        const { calculateCancellationRefund, processWalletRefund } = await import('../services/cancellationRefundService.js');
-        const refundDetails = await calculateCancellationRefund(order._id, reason);
-        logger.info(`Cancellation refund calculated for order ${order.orderId}`);
-        
+        const {
+          calculateCancellationRefund,
+          processWalletRefund,
+          refundWalletDeductionsForCancelledOrder
+        } = await import('../services/cancellationRefundService.js');
+
+        // Mixed payment support: if user used wallet partially but main method is NOT wallet,
+        // credit back the wallet deduction immediately.
+        if (actualPaymentMethod !== 'wallet') {
+          try {
+            const walletRefund = await refundWalletDeductionsForCancelledOrder(order._id, null);
+            if (walletRefund?.refunded && walletRefund?.amount > 0) {
+              refundMessage += ` Wallet amount ₹${walletRefund.amount} has been credited back instantly.`;
+            }
+          } catch (walletRefundError) {
+            logger.error(`Wallet partial refund failed for order ${order.orderId}:`, walletRefundError);
+          }
+        }
+
         if (actualPaymentMethod === 'wallet') {
-          // Process wallet refund automatically
-          const refundAmount = refundDetails?.refundAmount ?? order.pricing?.total;
+          // Wallet-paid orders must be auto-refunded instantly.
+          // IMPORTANT: Do NOT depend on OrderSettlement here because many wallet orders may not have one.
+          // `processWalletRefund` will create a settlement if missing.
+          const refundAmount = Number(order.pricing?.total) || 0;
           await processWalletRefund(order._id, null, refundAmount);
           logger.info(`Automatic wallet refund processed for order ${order.orderId} of amount ${refundAmount}`);
-          refundMessage = ` Refund of ₹${refundAmount} has been automatically credited back to your wallet.`;
+          if (refundAmount > 0) {
+            refundMessage += ` Refund of ₹${refundAmount} has been automatically credited back to your wallet.`;
+          } else {
+            refundMessage += ' Refund has been initiated to your wallet.';
+          }
         } else {
-          refundMessage = ' Refund will be processed after admin approval.';
+          const refundDetails = await calculateCancellationRefund(order._id, reason);
+          logger.info(`Cancellation refund calculated for order ${order.orderId}`);
+          refundMessage += ' Refund will be processed after admin approval.';
         }
       } catch (refundError) {
         logger.error(`Error calculating/processing cancellation refund for order ${order.orderId}:`, refundError);

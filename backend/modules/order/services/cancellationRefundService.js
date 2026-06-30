@@ -733,6 +733,100 @@ export const processCashfreeRefund = async (orderId, adminId = null) => {
 };
 
 /**
+ * Refund wallet deductions for a cancelled order (partial-wallet use case).
+ *
+ * When an order is paid with mixed methods (e.g., wallet + cashfree/cash),
+ * wallet money is deducted via UserWallet transactions, but the order payment method
+ * won't be `wallet`. This helper credits back ONLY the wallet-deducted amount.
+ *
+ * Idempotent: if a wallet-deduction refund was already credited for this order, it will no-op.
+ */
+export const refundWalletDeductionsForCancelledOrder = async (orderId, adminId = null) => {
+  const OrderModel = Order;
+  const order = await OrderModel.findById(orderId).select('_id orderId status userId cancellationReason').lean();
+  if (!order) throw new Error('Order not found');
+  if (order.status !== 'cancelled') throw new Error('Order is not cancelled');
+
+  const userId = order.userId;
+  if (!userId) {
+    return { success: false, refunded: false, amount: 0, reason: 'Order has no userId' };
+  }
+
+  const wallet = await UserWallet.findOrCreateByUserId(userId);
+
+  const orderObjectId = order._id?.toString?.() || String(order._id);
+  const hasExistingWalletDeductionRefund = wallet.transactions.some((t) => {
+    const tOrderId = t.orderId?.toString?.();
+    const refundKind = t.metadata?.get?.('refundKind');
+    return (
+      t.type === 'refund' &&
+      tOrderId === orderObjectId &&
+      refundKind === 'wallet_deduction_refund'
+    );
+  });
+
+  if (hasExistingWalletDeductionRefund) {
+    return { success: true, refunded: false, amount: 0, message: 'Wallet deduction refund already processed' };
+  }
+
+  const deductionsForOrder = wallet.transactions.filter((t) => {
+    const tOrderId = t.orderId?.toString?.();
+    return t.type === 'deduction' && t.status === 'Completed' && tOrderId === orderObjectId;
+  });
+
+  const deductedAmount = deductionsForOrder.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  if (!Number.isFinite(deductedAmount) || deductedAmount <= 0) {
+    return { success: true, refunded: false, amount: 0, message: 'No wallet deduction found for this order' };
+  }
+
+  const description = `Wallet refund (partial payment) for cancelled order ${order.orderId}. Reason: ${order.cancellationReason || 'Order cancelled'}`;
+  wallet.addTransaction({
+    amount: deductedAmount,
+    type: 'refund',
+    status: 'Completed',
+    description,
+    orderId: order._id,
+    paymentMethod: 'wallet',
+    metadata: new Map(Object.entries({
+      refundKind: 'wallet_deduction_refund',
+      refundedBy: adminId ? String(adminId) : 'system',
+      originalDeductionCount: String(deductionsForOrder.length)
+    }))
+  });
+
+  await wallet.save();
+
+  // Keep legacy balance copy in User model in sync
+  const User = (await import('../../auth/models/User.js')).default;
+  await User.findByIdAndUpdate(userId, {
+    'wallet.balance': wallet.balance,
+    'wallet.currency': wallet.currency
+  });
+
+  await AuditLog.createLog({
+    entityType: 'user',
+    entityId: userId,
+    action: 'wallet_partial_refund_credit',
+    actionType: 'refund',
+    performedBy: {
+      type: adminId ? 'admin' : 'system',
+      id: adminId || null,
+      name: adminId ? 'Admin' : 'System'
+    },
+    transactionDetails: {
+      amount: deductedAmount,
+      type: 'wallet_partial_refund',
+      status: 'success',
+      orderId: order._id,
+      walletType: 'user'
+    },
+    description: `Wallet partial refund of ₹${deductedAmount} credited for cancelled order ${order.orderId}`
+  });
+
+  return { success: true, refunded: true, amount: deductedAmount };
+};
+
+/**
  * Process wallet refund for cancelled order
  * Adds refund amount directly to user wallet
  * 
