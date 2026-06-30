@@ -62,16 +62,23 @@ export async function processAutoRejectOrders() {
 
           console.log(`✅ Order ${currentOrder.orderId} automatically rejected (elapsed: ${Math.floor(elapsedMs / 1000)}s >= ${ACCEPT_TIME_LIMIT_SECONDS}s)`);
 
-          // Calculate refund amount but don't process automatically
-          // Admin will process refund manually via refund button
+          // Calculate refund amount and automatically process wallet refund if wallet payment
           try {
-            await calculateCancellationRefund(
+            const refundDetails = await calculateCancellationRefund(
               currentOrder._id,
               'Order not accepted within time limit. Restaurant did not respond in time.'
             );
-            console.log(`✅ Cancellation refund calculated for order ${currentOrder.orderId} - awaiting admin approval`);
+            console.log(`✅ Cancellation refund calculated for order ${currentOrder.orderId}`);
+            
+            const paymentMethod = currentOrder.payment?.method;
+            if (paymentMethod === 'wallet') {
+              const { processWalletRefund } = await import('./cancellationRefundService.js');
+              const refundAmount = refundDetails?.refundAmount ?? currentOrder.pricing?.total;
+              await processWalletRefund(currentOrder._id, null, refundAmount);
+              console.log(`✅ Automatic wallet refund processed for auto-rejected order ${currentOrder.orderId} of amount ${refundAmount}`);
+            }
           } catch (refundError) {
-            console.error(`❌ Error calculating cancellation refund for order ${currentOrder.orderId}:`, refundError);
+            console.error(`❌ Error calculating/processing cancellation refund for order ${currentOrder.orderId}:`, refundError);
             // Don't fail order cancellation if refund calculation fails
           }
 

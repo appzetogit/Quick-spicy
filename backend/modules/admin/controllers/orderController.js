@@ -910,7 +910,28 @@ export const rejectOrder = asyncHandler(async (req, res) => {
 
     await order.save();
 
-    return successResponse(res, 200, "Order rejected successfully", {
+    // Automatically calculate refund and process wallet refund if applicable
+    const paymentMethod = order.payment?.method;
+    const adminId = req.user?.id || req.admin?.id || null;
+    let refundMessage = '';
+    if (paymentMethod === 'wallet' || paymentMethod === 'cashfree' || paymentMethod === 'razorpay') {
+      try {
+        const { calculateCancellationRefund, processWalletRefund } = await import('../../order/services/cancellationRefundService.js');
+        const refundDetails = await calculateCancellationRefund(order._id, order.cancellationReason);
+        console.log(`✅ Cancellation refund calculated for admin-rejected order ${order.orderId}`);
+        
+        if (paymentMethod === 'wallet') {
+          const refundAmount = refundDetails?.refundAmount ?? order.pricing?.total;
+          await processWalletRefund(order._id, adminId, refundAmount);
+          console.log(`✅ Automatic wallet refund processed for admin-rejected order ${order.orderId} of amount ${refundAmount}`);
+          refundMessage = ` Wallet refund of ₹${refundAmount} processed automatically.`;
+        }
+      } catch (refundError) {
+        console.error("Error processing refund for admin-rejected order:", refundError);
+      }
+    }
+
+    return successResponse(res, 200, `Order rejected successfully.${refundMessage}`, {
       order: {
         id: order._id.toString(),
         orderId: order.orderId,

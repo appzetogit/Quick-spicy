@@ -2133,12 +2133,21 @@ export const cancelOrder = async (req, res) => {
     let refundMessage = '';
     if (actualPaymentMethod === 'cashfree' || actualPaymentMethod === 'razorpay' || actualPaymentMethod === 'wallet') {
       try {
-        const { calculateCancellationRefund } = await import('../services/cancellationRefundService.js');
-        await calculateCancellationRefund(order._id, reason);
-        logger.info(`Cancellation refund calculated for order ${order.orderId} - awaiting admin approval`);
-        refundMessage = ' Refund will be processed after admin approval.';
+        const { calculateCancellationRefund, processWalletRefund } = await import('../services/cancellationRefundService.js');
+        const refundDetails = await calculateCancellationRefund(order._id, reason);
+        logger.info(`Cancellation refund calculated for order ${order.orderId}`);
+        
+        if (actualPaymentMethod === 'wallet') {
+          // Process wallet refund automatically
+          const refundAmount = refundDetails?.refundAmount ?? order.pricing?.total;
+          await processWalletRefund(order._id, null, refundAmount);
+          logger.info(`Automatic wallet refund processed for order ${order.orderId} of amount ${refundAmount}`);
+          refundMessage = ` Refund of ₹${refundAmount} has been automatically credited back to your wallet.`;
+        } else {
+          refundMessage = ' Refund will be processed after admin approval.';
+        }
       } catch (refundError) {
-        logger.error(`Error calculating cancellation refund for order ${order.orderId}:`, refundError);
+        logger.error(`Error calculating/processing cancellation refund for order ${order.orderId}:`, refundError);
         // Don't fail the cancellation if refund calculation fails
       }
     } else if (actualPaymentMethod === 'cash') {

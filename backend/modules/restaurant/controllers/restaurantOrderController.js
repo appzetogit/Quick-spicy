@@ -311,13 +311,20 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       await order.save();
 
       try {
-        const { calculateCancellationRefund } = await import('../../order/services/cancellationRefundService.js');
-        await calculateCancellationRefund(
+        const { calculateCancellationRefund, processWalletRefund } = await import('../../order/services/cancellationRefundService.js');
+        const refundDetails = await calculateCancellationRefund(
           order._id,
           'Order not accepted within time limit. Restaurant did not respond in time.'
         );
+        
+        const paymentMethod = order.payment?.method;
+        if (paymentMethod === 'wallet') {
+          const refundAmount = refundDetails?.refundAmount ?? order.pricing?.total;
+          await processWalletRefund(order._id, null, refundAmount);
+          console.log(`✅ Automatic wallet refund processed for timed out order ${order.orderId} of amount ${refundAmount}`);
+        }
       } catch (refundError) {
-        console.error(`Error calculating timeout refund for order ${order.orderId}:`, refundError);
+        console.error(`Error calculating/processing timeout refund for order ${order.orderId}:`, refundError);
       }
 
       try {
@@ -598,14 +605,21 @@ export const rejectOrder = asyncHandler(async (req, res) => {
     order.cancelledAt = new Date();
     await order.save();
 
-    // Calculate refund amount but don't process automatically
-    // Admin will process refund manually via refund button
+    // Calculate refund amount and automatically process wallet refund if wallet payment
+    // For other methods, admin will process refund manually
     try {
-      const { calculateCancellationRefund } = await import('../../order/services/cancellationRefundService.js');
-      await calculateCancellationRefund(order._id, reason || 'Rejected by restaurant');
-      console.log(`✅ Cancellation refund calculated for order ${order.orderId} - awaiting admin approval`);
+      const { calculateCancellationRefund, processWalletRefund } = await import('../../order/services/cancellationRefundService.js');
+      const refundDetails = await calculateCancellationRefund(order._id, reason || 'Rejected by restaurant');
+      console.log(`✅ Cancellation refund calculated for order ${order.orderId}`);
+      
+      const paymentMethod = order.payment?.method;
+      if (paymentMethod === 'wallet') {
+        const refundAmount = refundDetails?.refundAmount ?? order.pricing?.total;
+        await processWalletRefund(order._id, null, refundAmount);
+        console.log(`✅ Automatic wallet refund processed for order ${order.orderId} of amount ${refundAmount}`);
+      }
     } catch (refundError) {
-      console.error(`❌ Error calculating cancellation refund for order ${order.orderId}:`, refundError);
+      console.error(`❌ Error calculating/processing cancellation refund for order ${order.orderId}:`, refundError);
       // Don't fail order cancellation if refund calculation fails
       // But log it for investigation
     }
