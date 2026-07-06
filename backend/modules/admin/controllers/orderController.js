@@ -143,6 +143,7 @@ export const getOrders = asyncHandler(async (req, res) => {
         'delivered': 'delivered',
         'canceled': 'cancelled',
         'restaurant-cancelled': 'cancelled',
+        'admin-cancelled': 'cancelled',
         'payment-failed': 'failed',
         'refunded': 'refunded',
         'dine-in': 'dine_in',
@@ -157,6 +158,11 @@ export const getOrders = asyncHandler(async (req, res) => {
       // Restaurant-cancelled should rely on explicit canceller when available.
       if (status === 'restaurant-cancelled') {
         query.cancelledBy = 'restaurant';
+      }
+
+      // Admin-cancelled should rely on explicit canceller.
+      if (status === 'admin-cancelled') {
+        query.cancelledBy = 'admin';
       }
 
       // Payment failed should be filtered by payment status.
@@ -179,6 +185,10 @@ export const getOrders = asyncHandler(async (req, res) => {
     if (cancelledBy === 'restaurant') {
       query.status = 'cancelled';
       query.cancelledBy = 'restaurant';
+    }
+    if (cancelledBy === 'admin') {
+      query.status = 'cancelled';
+      query.cancelledBy = 'admin';
     }
 
     // Payment status filter
@@ -453,6 +463,8 @@ export const getOrders = asyncHandler(async (req, res) => {
           orderStatusDisplay = 'Cancelled by Restaurant';
         } else if (order.cancelledBy === 'user') {
           orderStatusDisplay = 'Cancelled by User';
+        } else if (order.cancelledBy === 'admin') {
+          orderStatusDisplay = 'Cancelled by Admin';
         } else {
           // Fallback: check cancellation reason pattern for old orders
           const cancellationReason = order.cancellationReason || '';
@@ -909,6 +921,18 @@ export const rejectOrder = asyncHandler(async (req, res) => {
       : "Rejected by Admin";
 
     await order.save();
+
+    // Notify about status update
+    try {
+      await notifyRestaurantOrderUpdate(order._id.toString(), 'cancelled');
+    } catch (notifError) {
+      console.error('Error sending restaurant notification for admin cancellation:', notifError);
+    }
+    try {
+      await notifyUserOrderUpdate(order._id.toString(), 'cancelled');
+    } catch (notifError) {
+      console.error('Error sending user notification for admin cancellation:', notifError);
+    }
 
     // Automatically calculate refund and process wallet refund if applicable
     const paymentMethod = order.payment?.method;

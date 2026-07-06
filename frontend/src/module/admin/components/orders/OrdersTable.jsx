@@ -54,6 +54,7 @@ const getStatusColor = (orderStatus) => {
     "Food On The Way": "bg-yellow-100 text-yellow-700",
     "Canceled": "bg-rose-100 text-rose-700",
     "Cancelled by Restaurant": "bg-red-100 text-red-700",
+    "Cancelled by Admin": "bg-red-100 text-red-700",
     "Cancelled by User": "bg-orange-100 text-orange-700",
     "Payment Failed": "bg-red-100 text-red-700",
     "Refunded": "bg-sky-100 text-sky-700",
@@ -104,10 +105,8 @@ export default function OrdersTable({
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
     return (
-      displayStatus === "pending" ||
-      displayStatus === "accepted" ||
-      backendStatus === "pending" ||
-      backendStatus === "confirmed"
+      ["pending", "confirmed", "preparing", "ready"].includes(backendStatus) ||
+      ["pending", "accepted", "processing", "ready"].includes(displayStatus)
     )
   }
 
@@ -490,14 +489,16 @@ export default function OrdersTable({
                           onClick={() => onRejectOrder(order)}
                           disabled={actionLoadingOrderId === (order.id || order.orderId)}
                           className="px-2.5 py-1.5 rounded text-xs font-medium text-white bg-rose-600 hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors flex items-center gap-1"
-                          title="Reject Order"
+                          title={String(order?.status || order?.orderStatus || "").toLowerCase() === "pending" ? "Reject Order" : "Cancel Order"}
                         >
                           {actionLoadingOrderId === (order.id || order.orderId) ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
                           ) : (
                             <X className="w-3.5 h-3.5" />
                           )}
-                          <span>Reject</span>
+                          <span>
+                            {String(order?.status || order?.orderStatus || "").toLowerCase() === "pending" ? "Reject" : "Cancel"}
+                          </span>
                         </button>
                       )}
                       {isOrderReadyMarkable(order) && onMarkReady && (
@@ -560,11 +561,12 @@ export default function OrdersTable({
                       )}
                       {/* Show Refund button or Refunded status for cancelled orders with Online/Wallet payment (restaurant or user cancelled) */}
                       {(() => {
-                        // Check if order is cancelled by restaurant or user
+                        // Check if order is cancelled by restaurant, user or admin
                         const isCancelled = order.orderStatus === "Cancelled by Restaurant" || 
-                                          order.orderStatus === "Cancelled" || 
-                                          order.orderStatus === "Cancelled by User" ||
-                                          (order.status === "cancelled" && (order.cancelledBy === "user" || order.cancelledBy === "restaurant"));
+                                           order.orderStatus === "Cancelled by Admin" || 
+                                           order.orderStatus === "Cancelled" || 
+                                           order.orderStatus === "Cancelled by User" ||
+                                           (order.status === "cancelled" && (order.cancelledBy === "user" || order.cancelledBy === "restaurant" || order.cancelledBy === "admin"));
                         
                         // Check if payment type is Online or Wallet (not Cash on Delivery)
                         const paymentMethod = String(order.payment?.method || order.paymentMethod || "").toLowerCase();

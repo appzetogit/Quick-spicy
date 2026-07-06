@@ -1,4 +1,4 @@
-﻿import { useParams, Link, useSearchParams } from "react-router-dom"
+import { useParams, Link, useSearchParams } from "react-router-dom"
 import { useState, useEffect, useMemo, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
@@ -1054,8 +1054,16 @@ export default function OrderTracking() {
       color: "bg-[#EB590E]"
     },
     cancelled: {
-      title: "Order cancelled",
-      subtitle: "This order has been cancelled",
+      title: order?.cancelledBy === 'admin'
+        ? "Cancelled by Admin"
+        : order?.cancelledBy === 'restaurant'
+          ? "Cancelled by Restaurant"
+          : "Order cancelled",
+      subtitle: order?.payment?.method === 'wallet'
+        ? "Refunded to your wallet balance automatically"
+        : order?.cancellationReason
+          ? `Reason: ${order.cancellationReason}`
+          : "This order has been cancelled",
       color: "bg-red-600"
     }
   }

@@ -296,6 +296,7 @@ export default function Orders() {
               /rejected by restaurant|restaurant rejected|restaurant cancelled|restaurant is too busy|item not available|outside delivery area|kitchen closing|technical issue|order not accepted within time limit|restaurant did not respond/i.test(cancellationReason)
             )
             const isUserCancelled = isCancelled && order.cancelledBy === 'user'
+            const isAdminCancelled = isCancelled && order.cancelledBy === 'admin'
 
             // Get original status from backend before transformation
             const originalStatus = order.status
@@ -336,6 +337,7 @@ export default function Orders() {
               cancellationReason: cancellationReason,
               isRestaurantCancelled: isRestaurantCancelled,
               isUserCancelled: isUserCancelled,
+              isAdminCancelled: isAdminCancelled,
               cancelledBy: order.cancelledBy,
               eta: order.eta || { min: order.estimatedDeliveryTime || 30, max: order.estimatedDeliveryTime || 30 },
               estimatedDeliveryTime: order.estimatedDeliveryTime || 30,
@@ -640,6 +642,7 @@ Order again from this restaurant in the ${companyName} app.`
             const isDelivered = order.status === 'delivered'
             const isRestaurantCancelled = order.isRestaurantCancelled || order.status === 'restaurant_cancelled'
             const isUserCancelled = order.isUserCancelled || (isCancelled && order.cancelledBy === 'user')
+            const isAdminCancelled = order.isAdminCancelled || (isCancelled && order.cancelledBy === 'admin')
             // Prefer food image from first item; fallback to restaurant image, then generic food photo
             const firstItemImage = order.items?.[0]?.image
             const restaurantImage = firstItemImage
@@ -849,7 +852,10 @@ Order again from this restaurant in the ${companyName} app.`
                     {isUserCancelled && (
                       <p className="text-xs font-medium text-gray-500 mt-1">✗ Cancelled by you</p>
                     )}
-                    {isCancelled && !isRestaurantCancelled && !isUserCancelled && (
+                    {isAdminCancelled && (
+                      <p className="text-xs font-medium text-red-500 mt-1">✗ Cancelled by Admin</p>
+                    )}
+                    {isCancelled && !isRestaurantCancelled && !isUserCancelled && !isAdminCancelled && (
                       <p className="text-xs font-medium text-gray-500 mt-1">✗ Cancelled</p>
                     )}
                   </div>
@@ -869,15 +875,21 @@ Order again from this restaurant in the ${companyName} app.`
                 {/* Card Footer: Actions */}
                 <div className="px-4 py-3 flex items-center justify-between">
                   {/* Left Side: Rating or Error */}
-                  {isRestaurantCancelled ? (
+                  {isRestaurantCancelled || isAdminCancelled ? (
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <div className="bg-red-100 p-1 rounded-full">
                           <AlertCircle className="w-4 h-4 text-red-500" />
                         </div>
-                        <span className="text-xs font-semibold text-red-500">Restaurant Cancelled</span>
+                        <span className="text-xs font-semibold text-red-500">
+                          {isRestaurantCancelled ? "Restaurant Cancelled" : "Cancelled by Admin"}
+                        </span>
                       </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 ml-7">Refund will be processed in 24-48 hours</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 ml-7">
+                        {order.paymentMethod === 'wallet'
+                          ? "Refunded to your wallet automatically"
+                          : "Refund will be processed in 24-48 hours"}
+                      </p>
                     </div>
                   ) : paymentFailed ? (
                     <div className="flex items-center gap-2">

@@ -30,6 +30,7 @@ const statusConfig = {
   "delivered": { title: "Delivered Orders", color: "emerald", icon: Package },
   "canceled": { title: "Canceled Orders", color: "rose", icon: Package },
   "restaurant-cancelled": { title: "Restaurant Cancelled Orders", color: "red", icon: Package },
+  "admin-cancelled": { title: "Admin Cancelled Orders", color: "red", icon: Package },
   "payment-failed": { title: "Payment Failed Orders", color: "red", icon: Package },
   "refunded": { title: "Refunded Orders", color: "sky", icon: Package },
   "offline-payments": { title: "Offline Payments", color: "slate", icon: Package },
@@ -378,10 +379,10 @@ export default function OrdersPage({ statusKey = "all" }) {
         status:
           statusKey === "all"
             ? undefined
-            : statusKey === "restaurant-cancelled"
+            : statusKey === "restaurant-cancelled" || statusKey === "admin-cancelled"
               ? "cancelled"
               : statusKey,
-        cancelledBy: statusKey === "restaurant-cancelled" ? "restaurant" : undefined,
+        cancelledBy: statusKey === "restaurant-cancelled" ? "restaurant" : statusKey === "admin-cancelled" ? "admin" : undefined,
       }
 
       const response = await adminAPI.getOrders(params)
@@ -688,9 +689,13 @@ export default function OrdersPage({ statusKey = "all" }) {
       return
     }
 
+    const isAccepted = !["pending"].includes(String(order.status || order.orderStatus || "").toLowerCase())
+    const actionWord = isAccepted ? "cancellation" : "rejection"
+    const defaultReason = isAccepted ? "Item out of stock / Restaurant unable to fulfill" : "Order rejected by admin"
+
     const reason = prompt(
-      `Enter rejection reason for order ${order.orderId}:`,
-      "Order rejected by admin",
+      `Enter ${actionWord} reason for order ${order.orderId}:`,
+      defaultReason,
     )
 
     if (reason === null) return
@@ -699,7 +704,7 @@ export default function OrdersPage({ statusKey = "all" }) {
       setProcessingActionOrderId(order.id || order.orderId)
       const response = await adminAPI.rejectOrder(orderIdToUse, reason)
       if (response.data?.success) {
-        toast.success(response.data?.message || `Order ${order.orderId} rejected`)
+        toast.success(response.data?.message || `Order ${order.orderId} ${isAccepted ? "cancelled" : "rejected"}`)
         await fetchOrders({ silent: true, withRingCheck: false })
       } else {
         toast.error(response.data?.message || "Failed to reject order")
@@ -1087,7 +1092,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         onRefund={handleRefund}
         onDeleteOrder={statusKey === "all" ? handleDeleteOrder : undefined}
         onAcceptOrder={statusKey === "all" || statusKey === "pending" ? handleAcceptOrder : undefined}
-        onRejectOrder={statusKey === "all" || statusKey === "pending" ? handleRejectOrder : undefined}
+        onRejectOrder={["all", "pending", "accepted", "processing", "scheduled"].includes(statusKey) ? handleRejectOrder : undefined}
         onMarkReady={statusKey === "all" || statusKey === "processing" ? handleMarkReadyOrder : undefined}
         onMarkDelivered={statusKey === "all" ? handleMarkDeliveredOrder : undefined}
         actionLoadingOrderId={processingActionOrderId}
