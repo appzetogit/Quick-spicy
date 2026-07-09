@@ -40,7 +40,7 @@ const verifyLoginOtpSchema = Joi.object({
       region: Joi.string().max(120).allow('').optional(),
       country: Joi.string().max(120).allow('').optional(),
       source: Joi.string().max(50).allow('').optional(),
-    }).optional(),
+    }).allow(null).optional(),
   }).optional(),
 });
 
@@ -57,7 +57,7 @@ const sessionLocationSchema = Joi.object({
       region: Joi.string().max(120).allow('').optional(),
       country: Joi.string().max(120).allow('').optional(),
       source: Joi.string().max(50).allow('').optional(),
-    }).optional(),
+    }).allow(null).optional(),
   }).required(),
 });
 

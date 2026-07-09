@@ -59,7 +59,7 @@ function getTokenForCurrentRoute() {
   const path = window.location.pathname;
 
     if (path.startsWith("/admin")) {
-      return null;
+      return sessionStorage.getItem("admin_accessToken");
   } else if (
     path.startsWith("/restaurant") &&
     !path.startsWith("/restaurants") &&
