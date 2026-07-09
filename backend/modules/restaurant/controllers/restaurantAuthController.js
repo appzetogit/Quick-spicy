@@ -12,14 +12,6 @@ import {
 } from '../../notification/utils/deviceTokens.js';
 import winston from 'winston';
 
-const OTP_BYPASS_PHONE = '7223077890';
-const OTP_BYPASS_CODE = '000000';
-
-const normalizePhoneToTenDigits = (value = '') =>
-  String(value || '')
-    .replace(/\D/g, '')
-    .slice(-10);
-
 /**
  * Build phone query that searches in multiple formats (with/without country code)
  * This handles both old data (without country code) and new data (with country code)
@@ -109,18 +101,6 @@ export const sendOTP = asyncHandler(async (req, res) => {
     }
   }
 
-  if (
-    phone &&
-    purpose === 'login' &&
-    normalizePhoneToTenDigits(phone) === OTP_BYPASS_PHONE
-  ) {
-    return successResponse(res, 200, 'OTP sent successfully', {
-      expiresIn: 300,
-      identifierType: 'phone',
-      bypass: true
-    });
-  }
-
   try {
     const result = await otpService.generateAndSendOTP(phone || null, purpose, email || null);
     return successResponse(res, 200, result.message, {
@@ -157,12 +137,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     const identifierType = normalizedPhone ? 'phone' : 'email';
     const normalizedProvidedName = typeof name === 'string' ? name.trim() : '';
     const resolvedRestaurantName = normalizedProvidedName || buildDefaultRestaurantName(identifierType, identifier);
-    const bypassOtpVerification =
-      purpose === 'login' &&
-      phone &&
-      normalizePhoneToTenDigits(phone) === OTP_BYPASS_PHONE &&
-      String(otp || '').trim() === OTP_BYPASS_CODE;
-
     if (purpose === 'register') {
       // Registration flow
       // Check if restaurant already exists with normalized phone
@@ -177,9 +151,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
 
       // Verify OTP (phone or email) before creating restaurant
-      if (!bypassOtpVerification) {
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
-      }
+      await otpService.verifyOTP(phone || null, otp, purpose, email || null);
 
       const restaurantData = {
         name: resolvedRestaurantName,

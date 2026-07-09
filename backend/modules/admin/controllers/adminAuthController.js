@@ -30,9 +30,27 @@ const ADMIN_REFRESH_COOKIE_OPTIONS = {
   maxAge: 7 * 24 * 60 * 60 * 1000
 };
 
+const ADMIN_ACCESS_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 24 * 60 * 60 * 1000
+};
+
 const clearAdminRefreshCookie = (res) => {
   res.cookie('refreshToken', '', {
     ...ADMIN_REFRESH_COOKIE_OPTIONS,
+    maxAge: 0
+  });
+};
+
+const setAdminAccessCookie = (res, accessToken) => {
+  res.cookie('adminAccessToken', accessToken, ADMIN_ACCESS_COOKIE_OPTIONS);
+};
+
+const clearAdminAccessCookie = (res) => {
+  res.cookie('adminAccessToken', '', {
+    ...ADMIN_ACCESS_COOKIE_OPTIONS,
     maxAge: 0
   });
 };
@@ -160,6 +178,7 @@ export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
     req,
     sessionContext,
   });
+  setAdminAccessCookie(res, tokens.accessToken);
   res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
 
   const adminResponse = admin.toObject();
@@ -175,7 +194,7 @@ export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
 
 export const refreshAdminToken = asyncHandler(async (req, res) => {
   // Prefer explicit module refresh token header to avoid cross-module cookie collisions.
-  const refreshToken = req.headers['x-refresh-token'] || req.cookies?.refreshToken;
+  const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'];
 
   if (!refreshToken) {
     return errorResponse(res, 401, 'Refresh token not found');
@@ -220,6 +239,7 @@ export const refreshAdminToken = asyncHandler(async (req, res) => {
       nextRefreshToken: tokens.refreshToken,
     });
 
+    setAdminAccessCookie(res, tokens.accessToken);
     res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
 
     return successResponse(res, 200, 'Token refreshed successfully', {
@@ -264,6 +284,7 @@ export const adminLogout = asyncHandler(async (req, res) => {
     sessionId: req.token?.sessionId,
     reason: 'logout',
   });
+  clearAdminAccessCookie(res);
   clearAdminRefreshCookie(res);
 
   logger.info(`Admin logged out: ${req.user?._id || req.user?.userId}`);
@@ -279,6 +300,7 @@ export const adminLogoutAll = asyncHandler(async (req, res) => {
   const admin = await Admin.findById(req.user?._id || req.user?.userId);
 
   if (!admin) {
+    clearAdminAccessCookie(res);
     clearAdminRefreshCookie(res);
     return errorResponse(res, 404, 'Admin not found');
   }
@@ -286,6 +308,7 @@ export const adminLogoutAll = asyncHandler(async (req, res) => {
   admin.tokenVersion = (admin.tokenVersion || 0) + 1;
   await admin.save();
   await revokeAllAdminSessions(admin._id, 'logout-all');
+  clearAdminAccessCookie(res);
   clearAdminRefreshCookie(res);
 
   logger.info(`Admin logged out from all sessions: ${admin._id}`, {

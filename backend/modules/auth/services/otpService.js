@@ -13,21 +13,6 @@ const logger = winston.createLogger({
   ]
 });
 
-// Test phone numbers that should use default OTP
-const TEST_PHONE_NUMBERS = [
-  '7610416911',
-  '7691810506',
-  '9009925021',
-  '6375095971',
-  '7223077890',
-];
-
-// Default OTP for test phone numbers
-const DEFAULT_TEST_OTP = '110211';
-const PHONE_SPECIFIC_TEST_OTPS = {
-  '7223077890': '000000',
-};
-
 /**
  * Extract phone number digits (without country code)
  * @param {string} phone - Phone number in format like "+91 9098569620" or "+91-9098569620"
@@ -44,21 +29,6 @@ const extractPhoneDigits = (phone) => {
   }
   // If exactly 10 digits or less, return as is
   return digits.length <= 10 ? digits : digits.slice(-10);
-};
-
-/**
- * Check if a phone number is a test number
- * @param {string} phone - Phone number in any format
- * @returns {boolean} - True if phone number is a test number
- */
-const isTestPhoneNumber = (phone) => {
-  const phoneDigits = extractPhoneDigits(phone);
-  return TEST_PHONE_NUMBERS.includes(phoneDigits);
-};
-
-const getTestOtpForPhone = (phone) => {
-  const phoneDigits = extractPhoneDigits(phone);
-  return PHONE_SPECIFIC_TEST_OTPS[phoneDigits] || DEFAULT_TEST_OTP;
 };
 
 /**
@@ -107,8 +77,7 @@ class OTPService {
         }
       }
 
-      // Generate OTP (use default for test phone numbers)
-      const otp = (normalizedPhone && isTestPhoneNumber(normalizedPhone)) ? getTestOtpForPhone(normalizedPhone) : generateOTP();
+      const otp = generateOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       // Build query for invalidating previous OTPs
@@ -135,36 +104,27 @@ class OTPService {
 
       // Send OTP via SMS or Email
       if (normalizedPhone) {
-        // Skip actual SMS sending for test phone numbers
-        if (!isTestPhoneNumber(normalizedPhone)) {
-          // Use SMSIndia Hub for phone OTP
-          try {
-            const smsStartedAt = Date.now();
-            const smsResult = await smsIndiaHubService.sendOTP(normalizedPhone, otp, purpose);
-            logger.info(`SMS OTP dispatch completed`, {
-              phone: normalizedPhone,
-              purpose,
-              requestMs: smsResult?.requestMs ?? (Date.now() - smsStartedAt),
-              providerStatus: smsResult?.status || 'unknown',
-              providerMessageId: smsResult?.messageId || null
-            });
-          } catch (smsError) {
-            // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
-            if (process.env.NODE_ENV !== 'production') {
-              logger.warn(`SMS send failed in non-production mode, continuing without SMS: ${smsError.message}`, {
-                phone: normalizedPhone,
-                purpose
-              });
-            } else {
-              throw smsError;
-            }
-          }
-        } else {
-          logger.info(`Skipping SMS for test phone number: ${normalizedPhone}`, {
+        // Use SMSIndia Hub for phone OTP
+        try {
+          const smsStartedAt = Date.now();
+          const smsResult = await smsIndiaHubService.sendOTP(normalizedPhone, otp, purpose);
+          logger.info(`SMS OTP dispatch completed`, {
             phone: normalizedPhone,
             purpose,
-            otp
+            requestMs: smsResult?.requestMs ?? (Date.now() - smsStartedAt),
+            providerStatus: smsResult?.status || 'unknown',
+            providerMessageId: smsResult?.messageId || null
           });
+        } catch (smsError) {
+          // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
+          if (process.env.NODE_ENV !== 'production') {
+            logger.warn(`SMS send failed in non-production mode, continuing without SMS: ${smsError.message}`, {
+              phone: normalizedPhone,
+              purpose
+            });
+          } else {
+            throw smsError;
+          }
         }
       } else if (email) {
         // Keep email service as is
@@ -211,18 +171,6 @@ class OTPService {
       const normalizedPhone = phone ? extractPhoneDigits(phone) : null;
       const identifier = normalizedPhone || email;
       const identifierType = normalizedPhone ? 'phone' : 'email';
-
-      // Check if this is a test phone number and OTP matches default test OTP
-      if (normalizedPhone && isTestPhoneNumber(normalizedPhone) && otp === getTestOtpForPhone(normalizedPhone)) {
-        logger.info(`Test OTP verified for ${normalizedPhone}`, {
-          phone: normalizedPhone,
-          purpose
-        });
-        return {
-          success: true,
-          message: 'OTP verified successfully'
-        };
-      }
 
       // Verify OTP from database
       if (purpose === 'reset-password') {

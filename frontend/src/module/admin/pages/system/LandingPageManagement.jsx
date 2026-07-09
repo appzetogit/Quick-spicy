@@ -2,7 +2,6 @@
 import { Upload, Trash2, Image as ImageIcon, Loader2, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Layout, Tag, UtensilsCrossed, Trophy, ChefHat, Megaphone, Search } from "lucide-react"
 import api from "@/lib/api"
 import { adminAPI } from "@/lib/api"
-import { getModuleToken } from "@/lib/utils/auth"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
@@ -112,32 +111,8 @@ export default function LandingPageManagement() {
 
   // Helper function to get admin token and add to request config
   const getAuthConfig = (additionalConfig = {}) => {
-    const adminToken = getModuleToken('admin')
-
-    // Debug logging in development
-    if (import.meta.env.DEV) {
-      debugLog('[LandingPageManagement] Token check:', {
-        token: adminToken ? 'exists' : 'missing',
-        tokenLength: adminToken?.length || 0,
-        path: window.location.pathname
-      })
-    }
-
-    if (!adminToken || adminToken.trim() === '' || adminToken === 'null' || adminToken === 'undefined') {
-      // Token not found, return config without auth header (will be handled by error)
-      debugWarn('[LandingPageManagement] Admin token not found!')
-      return additionalConfig
-    }
-
-    // Merge headers properly - ensure Authorization is always set
-    const mergedHeaders = {
-      ...additionalConfig.headers,
-      Authorization: `Bearer ${adminToken.trim()}`,
-    }
-
     return {
       ...additionalConfig,
-      headers: mergedHeaders,
     }
   }
 
@@ -204,13 +179,6 @@ export default function LandingPageManagement() {
 
   const uploadBanners = async (files) => {
     try {
-      // Check token first before proceeding
-      const adminToken = getModuleToken('admin')
-      if (!adminToken || adminToken.trim() === '' || adminToken === 'null' || adminToken === 'undefined') {
-        setErrorSafely('Authentication required. Please login again.')
-        return
-      }
-
       setBannersUploading(true)
       setError(null)
       setSuccess(null)
@@ -814,13 +782,6 @@ export default function LandingPageManagement() {
 
   const uploadUnder250Banners = async (files) => {
     try {
-      // Check token first before proceeding
-      const adminToken = getModuleToken('admin')
-      if (!adminToken || adminToken.trim() === '' || adminToken === 'null' || adminToken === 'undefined') {
-        setErrorSafely('Authentication required. Please login again.')
-        return
-      }
-
       setUnder250BannersUploading(true)
       setError(null)
       setSuccess(null)
@@ -939,12 +900,6 @@ export default function LandingPageManagement() {
 
   const uploadDiningBanners = async (files) => {
     try {
-      const adminToken = getModuleToken('admin')
-      if (!adminToken || adminToken.trim() === '' || adminToken === 'null' || adminToken === 'undefined') {
-        setErrorSafely('Authentication required. Please login again.')
-        return
-      }
-
       setDiningBannersUploading(true)
       setError(null)
       setSuccess(null)

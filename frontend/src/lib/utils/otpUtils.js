@@ -1,19 +1,7 @@
 /**
  * OTP Utility Functions
- * Helper functions for OTP handling, including test phone numbers
+ * Production-safe helpers. No client-side test OTP shortcuts are allowed.
  */
-
-// Test phone numbers that should use default OTP
-const TEST_PHONE_NUMBERS = [
-  '7610416911',
-  '7691810506',
-  '9009925021',
-  '6375095971',
-  '7223077890',
-];
-
-// Default OTP for test phone numbers
-export const DEFAULT_TEST_OTP = '110211';
 
 /**
  * Extract phone number digits (without country code)
@@ -39,8 +27,7 @@ export const extractPhoneDigits = (phone) => {
  * @returns {boolean} - True if phone number is a test number
  */
 export const isTestPhoneNumber = (phone) => {
-  const phoneDigits = extractPhoneDigits(phone);
-  return TEST_PHONE_NUMBERS.includes(phoneDigits);
+  return false;
 };
 
 /**
@@ -49,6 +36,6 @@ export const isTestPhoneNumber = (phone) => {
  * @returns {string|null} - Default OTP if test number, null otherwise
  */
 export const getDefaultOTP = (phone) => {
-  return isTestPhoneNumber(phone) ? DEFAULT_TEST_OTP : null;
+  return null;
 };
 

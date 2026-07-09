@@ -35,7 +35,6 @@ export default function AdminSettings() {
 
   const resetAdminSession = () => {
     clearModuleAuth("admin");
-    localStorage.removeItem("admin_accessToken");
     localStorage.removeItem("admin_authenticated");
     localStorage.removeItem("admin_user");
     sessionStorage.removeItem("adminAuthData");

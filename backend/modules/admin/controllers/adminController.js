@@ -960,6 +960,12 @@ export const changeAdminPassword = asyncHandler(async (req, res) => {
       sameSite: "strict",
       maxAge: 0,
     });
+    res.cookie("adminAccessToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0,
+    });
 
     logger.info(`Admin password changed: ${admin._id}`, {
       tokenVersion: admin.tokenVersion,

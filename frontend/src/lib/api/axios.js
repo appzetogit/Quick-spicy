@@ -58,8 +58,8 @@ const apiClient = axios.create({
 function getTokenForCurrentRoute() {
   const path = window.location.pathname;
 
-  if (path.startsWith("/admin")) {
-    return getModuleToken("admin");
+    if (path.startsWith("/admin")) {
+      return null;
   } else if (
     path.startsWith("/restaurant") &&
     !path.startsWith("/restaurants") &&
@@ -178,7 +178,7 @@ apiClient.interceptors.request.use(
           }
         } else {
           // Log warning in development if token is missing for authenticated routes
-          if (import.meta.env.DEV) {
+          if (import.meta.env.DEV && !path.startsWith("/admin")) {
             debugWarn(
               `[API Interceptor] No access token found for authenticated route: ${path}. Request may fail with 401.`,
             );
@@ -302,8 +302,6 @@ apiClient.interceptors.response.use(
         let expectedRole = "user";
 
         if (currentPath.startsWith("/admin")) {
-          tokenKey = "admin_accessToken";
-          refreshTokenKey = "admin_refreshToken";
           expectedRole = "admin";
         } else if (
         currentPath.startsWith("/restaurant") &&
@@ -335,16 +333,10 @@ apiClient.interceptors.response.use(
 
       // Only store the token if the role matches the current module
         if (!role || role !== expectedRole) {
-          clearModuleAuth(tokenKey.replace("_accessToken", ""));
+          clearModuleAuth(currentPath.startsWith("/admin") ? "admin" : tokenKey.replace("_accessToken", ""));
         } else {
           if (currentPath.startsWith("/admin")) {
-            sessionStorage.setItem(tokenKey, token);
             sessionStorage.setItem("admin_authenticated", "true");
-            if (refreshToken && typeof refreshToken === "string") {
-              sessionStorage.setItem(refreshTokenKey, refreshToken);
-            }
-            localStorage.removeItem(tokenKey);
-            localStorage.removeItem(refreshTokenKey);
             localStorage.removeItem("admin_authenticated");
           } else {
             localStorage.setItem(tokenKey, token);
@@ -399,7 +391,7 @@ apiClient.interceptors.response.use(
         // The refresh token is sent via httpOnly cookie automatically
         let refreshTokenHeader = null;
         if (currentPath.startsWith("/admin")) {
-          refreshTokenHeader = getModuleRefreshToken("admin");
+          refreshTokenHeader = null;
         } else if (
           currentPath.startsWith("/restaurant") &&
           !currentPath.startsWith("/restaurants")
@@ -432,7 +424,6 @@ apiClient.interceptors.response.use(
           let expectedRole = "user";
 
         if (currentPath.startsWith("/admin")) {
-          tokenKey = "admin_accessToken";
           expectedRole = "admin";
           } else if (
             currentPath.startsWith("/restaurant") &&
@@ -458,20 +449,21 @@ apiClient.interceptors.response.use(
 
           // Only store token if role matches expected module; otherwise treat as invalid for this module
           if (!role || role !== expectedRole) {
-            clearModuleAuth(tokenKey.replace("_accessToken", ""));
+            clearModuleAuth(currentPath.startsWith("/admin") ? "admin" : tokenKey.replace("_accessToken", ""));
             throw new Error("Role mismatch on refreshed token");
           }
 
           // Store new access token for the current module
-          if (currentPath.startsWith("/admin")) {
-            sessionStorage.setItem("admin_accessToken", accessToken);
-            localStorage.removeItem("admin_accessToken");
-          } else {
+          if (!currentPath.startsWith("/admin")) {
             localStorage.setItem(tokenKey, accessToken);
           }
 
           // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          if (!currentPath.startsWith("/admin")) {
+            originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          } else if (originalRequest.headers?.Authorization) {
+            delete originalRequest.headers.Authorization;
+          }
           return apiClient(originalRequest);
         }
       } catch (refreshError) {

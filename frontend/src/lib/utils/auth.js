@@ -86,7 +86,7 @@ export function hasModuleAccess(role, module) {
  */
 export function getModuleToken(module) {
   if (module === "admin") {
-    return sessionStorage.getItem(`${module}_accessToken`) || localStorage.getItem(`${module}_accessToken`);
+    return null;
   }
   return localStorage.getItem(`${module}_accessToken`);
 }
@@ -98,7 +98,7 @@ export function getModuleToken(module) {
  */
 export function getModuleRefreshToken(module) {
   if (module === "admin") {
-    return sessionStorage.getItem(`${module}_refreshToken`) || localStorage.getItem(`${module}_refreshToken`);
+    return null;
   }
   return localStorage.getItem(`${module}_refreshToken`);
 }
@@ -142,6 +142,13 @@ export function getCurrentUserRole(module = null) {
  * @returns {boolean} - True if authenticated
  */
 export function isModuleAuthenticated(module) {
+  if (module === "admin") {
+    return (
+      sessionStorage.getItem("admin_authenticated") === "true" ||
+      localStorage.getItem("admin_authenticated") === "true"
+    );
+  }
+
   const token = getModuleToken(module);
   if (!token) return false;
   
@@ -245,11 +252,15 @@ export function setAuthData(module, token, user, refreshToken = null) {
       clearRestaurantSessionCache();
     }
 
-    primaryStorage.setItem(tokenKey, token);
-    if (refreshToken && typeof refreshToken === "string") {
-      primaryStorage.setItem(refreshTokenKey, refreshToken);
+    if (module === "admin") {
+      primaryStorage.setItem(authKey, "true");
+    } else {
+      primaryStorage.setItem(tokenKey, token);
+      if (refreshToken && typeof refreshToken === "string") {
+        primaryStorage.setItem(refreshTokenKey, refreshToken);
+      }
+      primaryStorage.setItem(authKey, 'true');
     }
-    primaryStorage.setItem(authKey, 'true');
     
     if (user) {
       try {
@@ -268,15 +279,17 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     // Verify the token was stored correctly
-    const storedToken = primaryStorage.getItem(tokenKey);
     const storedAuth = primaryStorage.getItem(authKey);
-    
-    if (storedToken !== token) {
-      console.error(`[setAuthData] Token mismatch:`, {
-        expected: token?.substring(0, 20) + '...',
-        stored: storedToken?.substring(0, 20) + '...'
-      });
-      throw new Error(`Token storage verification failed for module: ${module}`);
+
+    if (module !== "admin") {
+      const storedToken = primaryStorage.getItem(tokenKey);
+      if (storedToken !== token) {
+        console.error(`[setAuthData] Token mismatch:`, {
+          expected: token?.substring(0, 20) + '...',
+          stored: storedToken?.substring(0, 20) + '...'
+        });
+        throw new Error(`Token storage verification failed for module: ${module}`);
+      }
     }
 
     if (storedAuth !== 'true') {
@@ -297,19 +310,23 @@ export function setAuthData(module, token, user, refreshToken = null) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
         // Retry storing
-        primaryStorage.setItem(`${module}_accessToken`, token);
-        if (refreshToken && typeof refreshToken === "string") {
-          primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
-        }
         primaryStorage.setItem(`${module}_authenticated`, 'true');
+        if (module !== "admin") {
+          primaryStorage.setItem(`${module}_accessToken`, token);
+          if (refreshToken && typeof refreshToken === "string") {
+            primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
+          }
+        }
         if (user) {
           primaryStorage.setItem(`${module}_user`, JSON.stringify(user));
         }
         
         // Verify again after retry
-        const storedToken = primaryStorage.getItem(`${module}_accessToken`);
-        if (storedToken !== token) {
-          throw new Error('Token storage failed even after clearing space');
+        if (module !== "admin") {
+          const storedToken = primaryStorage.getItem(`${module}_accessToken`);
+          if (storedToken !== token) {
+            throw new Error('Token storage failed even after clearing space');
+          }
         }
       } catch (retryError) {
         console.error('Failed to store auth data after clearing space:', retryError);

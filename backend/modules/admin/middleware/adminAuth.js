@@ -11,12 +11,15 @@ export const authenticateAdmin = async (req, res, next) => {
   try {
     // Get token from Authorization header (case-insensitive check)
     const authHeader = req.headers.authorization || req.headers.Authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    const cookieToken = req.cookies?.adminAccessToken;
+    const token =
+      authHeader && authHeader.startsWith('Bearer ')
+        ? authHeader.substring(7)
+        : cookieToken;
+
+    if (!token) {
       return errorResponse(res, 401, 'No token provided');
     }
-
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);

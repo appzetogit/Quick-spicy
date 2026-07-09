@@ -28,9 +28,6 @@ const logger = winston.createLogger({
 
 const REFERRAL_REWARD_AMOUNT = 50;
 const NEW_USER_WALLET_CREDIT_AMOUNT = 20;
-const OTP_BYPASS_USER_PHONE = "7223077890";
-const OTP_BYPASS_CODE = "000000";
-
 const normalizePhoneToTenDigits = (value = "") =>
   String(value || "")
     .replace(/\D/g, "")
@@ -192,19 +189,6 @@ export const sendOTP = asyncHandler(async (req, res) => {
     }
   }
 
-  // Hard bypass for test login number: do not generate/store/send real OTP.
-  if (
-    phone &&
-    purpose === "login" &&
-    normalizePhoneToTenDigits(phone) === OTP_BYPASS_USER_PHONE
-  ) {
-    return successResponse(res, 200, "OTP sent successfully", {
-      expiresIn: 300,
-      identifierType: "phone",
-      bypass: true,
-    });
-  }
-
   try {
     const result = await otpService.generateAndSendOTP(
       phone || null,
@@ -257,12 +241,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     );
   }
 
-  const bypassOtpVerification =
-    purpose === "login" &&
-    userRole === "user" &&
-    normalizePhoneToTenDigits(phone) === OTP_BYPASS_USER_PHONE &&
-    String(otp || "").trim() === OTP_BYPASS_CODE;
-
   // For email-based admin registration, password is mandatory
   if (purpose === "register" && !phone && userRole === "admin" && !password) {
     return errorResponse(
@@ -304,9 +282,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
 
       // Verify OTP (phone or email) before creating user
-      if (!bypassOtpVerification) {
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
-      }
+      await otpService.verifyOTP(phone || null, otp, purpose, email || null);
 
       const userData = {
         name,
