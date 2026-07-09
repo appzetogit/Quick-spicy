@@ -297,6 +297,19 @@ export const createTopupOrder = asyncHandler(async (req, res) => {
       }
     });
 
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
+    wallet.pendingTopups = (wallet.pendingTopups || []).filter(
+      (entry) => entry?.status === 'pending' || entry?.status === 'completed'
+    );
+    wallet.pendingTopups.push({
+      cashfreeOrderId: cashfreeOrder.order_id,
+      paymentSessionId: cashfreeOrder.payment_session_id,
+      amount: Number(cashfreeOrder.order_amount),
+      currency: cashfreeOrder.order_currency || 'INR',
+      status: 'pending'
+    });
+    await wallet.save();
+
     logger.info('Cashfree order created for wallet top-up', {
       userId: user._id,
       amount,
@@ -343,6 +356,14 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, validationError.details[0].message);
     }
 
+    const wallet = await UserWallet.findOrCreateByUserId(user._id);
+    const pendingTopup = (wallet.pendingTopups || []).find(
+      (entry) => entry?.cashfreeOrderId === cashfreeOrderId && entry?.status === 'pending'
+    );
+    if (!pendingTopup) {
+      return errorResponse(res, 400, 'Unknown or expired wallet top-up session');
+    }
+
     let verification = null;
     const verificationAttempts = 5;
 
@@ -375,6 +396,12 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
         latestPaymentStatus
       });
 
+      if (isDefinitelyFailed) {
+        pendingTopup.status = 'failed';
+        pendingTopup.verifiedAt = new Date();
+        await wallet.save();
+      }
+
       return res.status(isDefinitelyFailed ? 400 : 202).json({
         success: false,
         pending: !isDefinitelyFailed,
@@ -392,11 +419,27 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
+    const verificationUserId = String(
+      verification.order?.order_tags?.userId ||
+      verification.order?.customer_details?.customer_id ||
+      ''
+    );
+    if (verificationUserId !== String(user._id)) {
+      return errorResponse(res, 400, 'Payment session does not belong to this wallet');
+    }
 
-    // Securely resolve the top-up amount from verified order response, fallback to body amount
+    const verifiedOrderId = String(verification.order?.order_id || '');
+    if (verifiedOrderId !== pendingTopup.cashfreeOrderId) {
+      return errorResponse(res, 400, 'Payment session mismatch detected');
+    }
+
     const resolvedAmount = Number(verification.order?.order_amount || amount);
     if (!resolvedAmount || isNaN(resolvedAmount) || resolvedAmount <= 0) {
       return errorResponse(res, 400, 'Invalid payment amount');
+    }
+
+    if (Math.abs(resolvedAmount - Number(pendingTopup.amount || 0)) > 0.01) {
+      return errorResponse(res, 400, 'Payment amount mismatch detected');
     }
 
     // Use atomic credit operation — prevents race conditions and double-crediting
@@ -412,6 +455,10 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
 
     // Handle duplicate (already credited by webhook or previous verify call)
     if (creditResult.isDuplicate) {
+      pendingTopup.status = 'completed';
+      pendingTopup.verifiedAt = new Date();
+      await wallet.save();
+
       const existingTx = creditResult.wallet?.transactions?.find(
         t => t.paymentId === String(cashfreePaymentId)
       );
@@ -449,6 +496,10 @@ export const verifyTopupPayment = asyncHandler(async (req, res) => {
       });
       return errorResponse(res, 500, 'Failed to credit wallet. Please contact support.');
     }
+
+    pendingTopup.status = 'completed';
+    pendingTopup.verifiedAt = new Date();
+    await wallet.save();
 
     // Sync balance to User model (best-effort, authoritative balance is in UserWallet)
     try {

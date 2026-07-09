@@ -145,6 +145,35 @@ const deliveryWalletSchema = new mongoose.Schema({
   },
   // Transactions array
   transactions: [transactionSchema],
+  pendingDeposits: [{
+    cashfreeOrderId: {
+      type: String,
+      required: true
+    },
+    paymentSessionId: {
+      type: String,
+      required: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'INR'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'cancelled'],
+      default: 'pending'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    verifiedAt: Date
+  }],
   // Withdrawal requests
   withdrawalRequests: [withdrawalRequestSchema],
   // Status
@@ -163,6 +192,7 @@ deliveryWalletSchema.index({ 'transactions.orderId': 1 });
 deliveryWalletSchema.index({ 'transactions.status': 1 });
 deliveryWalletSchema.index({ 'transactions.type': 1 });
 deliveryWalletSchema.index({ 'transactions.createdAt': -1 });
+deliveryWalletSchema.index({ 'pendingDeposits.cashfreeOrderId': 1 });
 deliveryWalletSchema.index({ lastTransactionAt: -1 });
 
 // Virtual for pocket balance (totalBalance - cashInHand)

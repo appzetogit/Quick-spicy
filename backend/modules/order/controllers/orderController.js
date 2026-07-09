@@ -1199,6 +1199,13 @@ export const verifyOrderPayment = async (req, res) => {
       });
     }
 
+    if (!order.payment?.cashfreeOrderId || cashfreeOrderId !== order.payment.cashfreeOrderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment session mismatch detected'
+      });
+    }
+
     // Idempotent success path: if this order is already confirmed after Cashfree payment,
     // return success instead of creating duplicate payment records or flipping status again.
     if (
@@ -1290,6 +1297,32 @@ export const verifyOrderPayment = async (req, res) => {
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
+    const verificationUserId = String(
+      verification.order?.order_tags?.userId ||
+      verification.order?.customer_details?.customer_id ||
+      ''
+    );
+    if (verificationUserId !== String(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment session does not belong to this user'
+      });
+    }
+
+    if (String(verification.order?.order_id || '') !== order.payment.cashfreeOrderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment session mismatch detected'
+      });
+    }
+
+    const verifiedAmount = Number(verification.order?.order_amount || 0);
+    if (!verifiedAmount || Math.abs(verifiedAmount - Number(order.pricing?.total || 0)) > 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment amount mismatch detected'
+      });
+    }
 
     const existingCompletedPayment = await Payment.findOne({
       orderId: order._id,
@@ -1640,6 +1673,14 @@ export const verifyOrderTipPayment = async (req, res) => {
       });
     }
 
+    const tipEntry = (order.tipPayments || []).find(t => t.cashfreeOrderId === cashfreeOrderId);
+    if (!tipEntry) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tip payment session not found'
+      });
+    }
+
     const existingPayment = await Payment.findOne({
       orderId: order._id,
       method: 'cashfree',
@@ -1660,7 +1701,6 @@ export const verifyOrderTipPayment = async (req, res) => {
 
     const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
     if (!verification?.isPaid || !verification?.payment) {
-      const tipEntry = (order.tipPayments || []).find(t => t.cashfreeOrderId === cashfreeOrderId);
       if (tipEntry) {
         tipEntry.status = 'failed';
         await order.save();
@@ -1673,11 +1713,22 @@ export const verifyOrderTipPayment = async (req, res) => {
     }
 
     const cashfreePaymentId = verification.payment.cf_payment_id;
-    const tipEntry = (order.tipPayments || []).find(t => t.cashfreeOrderId === cashfreeOrderId);
-    if (!tipEntry) {
+    const verificationUserId = String(
+      verification.order?.order_tags?.userId ||
+      verification.order?.customer_details?.customer_id ||
+      ''
+    );
+    if (verificationUserId !== String(userId)) {
       return res.status(400).json({
         success: false,
-        message: 'Tip payment session not found'
+        message: 'Payment session does not belong to this user'
+      });
+    }
+
+    if (String(verification.order?.order_id || '') !== tipEntry.cashfreeOrderId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tip payment session mismatch detected'
       });
     }
 
@@ -1696,6 +1747,14 @@ export const verifyOrderTipPayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid tip amount'
+      });
+    }
+
+    const verifiedTipAmount = Number(verification.order?.order_amount || 0);
+    if (!verifiedTipAmount || Math.abs(verifiedTipAmount - tipAmount) > 0.01) {
+      return res.status(400).json({
+        success: false,
+        message: 'Tip payment amount mismatch detected'
       });
     }
 

@@ -98,6 +98,35 @@ const userWalletSchema = new mongoose.Schema({
   },
   // Transactions array
   transactions: [transactionSchema],
+  pendingTopups: [{
+    cashfreeOrderId: {
+      type: String,
+      required: true
+    },
+    paymentSessionId: {
+      type: String,
+      required: true
+    },
+    amount: {
+      type: Number,
+      required: true,
+      min: 0
+    },
+    currency: {
+      type: String,
+      default: 'INR'
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'completed', 'failed', 'cancelled'],
+      default: 'pending'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    verifiedAt: Date
+  }],
   // Status
   isActive: {
     type: Boolean,
@@ -115,6 +144,7 @@ userWalletSchema.index({ 'transactions.status': 1 });
 userWalletSchema.index({ 'transactions.type': 1 });
 userWalletSchema.index({ 'transactions.createdAt': -1 });
 userWalletSchema.index({ 'transactions.paymentId': 1 });
+userWalletSchema.index({ 'pendingTopups.cashfreeOrderId': 1 });
 userWalletSchema.index({ lastTransactionAt: -1 });
 
 // Method to add transaction and update balances

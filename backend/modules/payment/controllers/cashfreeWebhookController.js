@@ -390,6 +390,19 @@ export const handleCashfreeWebhook = async (req, res) => {
 
     // ─── Step 7: Determine the credit amount ───
     // Use payment_amount (actual amount paid) with fallback to order_amount
+    const wallet = await UserWallet.findOne({ userId: new mongoose.Types.ObjectId(userId) });
+    const pendingTopup = (wallet?.pendingTopups || []).find(
+      (entry) => entry?.cashfreeOrderId === orderId && entry?.status === 'pending'
+    );
+    if (!pendingTopup) {
+      logger.error('Cashfree webhook: no matching pending top-up intent found', {
+        userId,
+        orderId,
+        cfPaymentId
+      });
+      return res.status(200).json({ status: 'error', message: 'No matching pending top-up session' });
+    }
+
     const creditAmount = paymentAmount > 0 ? paymentAmount : orderAmount;
     if (!creditAmount || creditAmount <= 0) {
       logger.error('Cashfree webhook: invalid credit amount', {
@@ -399,6 +412,17 @@ export const handleCashfreeWebhook = async (req, res) => {
         cfPaymentId
       });
       return res.status(200).json({ status: 'error', message: 'Invalid payment amount' });
+    }
+
+    if (Math.abs(creditAmount - Number(pendingTopup.amount || 0)) > 0.01) {
+      logger.error('Cashfree webhook: top-up amount mismatch', {
+        userId,
+        orderId,
+        cfPaymentId,
+        creditAmount,
+        expectedAmount: pendingTopup.amount
+      });
+      return res.status(200).json({ status: 'error', message: 'Payment amount mismatch' });
     }
 
     // ─── Step 8: Optionally verify payment with Cashfree API (defense-in-depth) ───
@@ -452,6 +476,11 @@ export const handleCashfreeWebhook = async (req, res) => {
     recentlyProcessedPayments.add(cfPaymentId);
 
     if (creditResult.isDuplicate) {
+      pendingTopup.status = 'completed';
+      pendingTopup.verifiedAt = new Date();
+      wallet.markModified('pendingTopups');
+      await wallet.save();
+
       logger.info('Cashfree webhook: duplicate payment (DB-level), already credited', {
         userId,
         cfPaymentId,
@@ -473,6 +502,11 @@ export const handleCashfreeWebhook = async (req, res) => {
     }
 
     // ─── Step 10: Sync balance to User model ───
+    pendingTopup.status = 'completed';
+    pendingTopup.verifiedAt = new Date();
+    wallet.markModified('pendingTopups');
+    await wallet.save();
+
     try {
       await User.findByIdAndUpdate(userId, {
         $set: {

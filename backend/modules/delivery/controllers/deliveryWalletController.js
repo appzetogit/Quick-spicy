@@ -789,6 +789,19 @@ export const createDepositOrder = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to create payment order');
   }
 
+  const wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
+  wallet.pendingDeposits = (wallet.pendingDeposits || []).filter(
+    (entry) => entry?.status === 'pending' || entry?.status === 'completed'
+  );
+  wallet.pendingDeposits.push({
+    cashfreeOrderId: cashfreeOrder.order_id,
+    paymentSessionId: cashfreeOrder.payment_session_id,
+    amount: Number(cashfreeOrder.order_amount),
+    currency: cashfreeOrder.order_currency || 'INR',
+    status: 'pending'
+  });
+  await wallet.save();
+
   return successResponse(res, 201, 'Order created', {
     cashfree: {
       orderId: cashfreeOrder.order_id,
@@ -821,16 +834,56 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
   }
   const { cashfreeOrderId, amount } = req.body;
   const amt = Number(amount);
+  const wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
+  const pendingDeposit = (wallet.pendingDeposits || []).find(
+    (entry) => entry?.cashfreeOrderId === cashfreeOrderId && entry?.status === 'pending'
+  );
+  if (!pendingDeposit) {
+    return errorResponse(res, 400, 'Unknown or expired deposit session');
+  }
 
   const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
   if (!verification?.isPaid || !verification?.payment) {
+    const cashfreeOrderStatus = String(verification?.order?.order_status || '').toUpperCase();
+    const cashfreePaymentStatus = String(verification?.payment?.payment_status || '').toUpperCase();
+    if (
+      cashfreeOrderStatus === 'FAILED' ||
+      cashfreePaymentStatus === 'FAILED' ||
+      cashfreePaymentStatus === 'USER_DROPPED' ||
+      cashfreePaymentStatus === 'CANCELLED'
+    ) {
+      pendingDeposit.status = 'failed';
+      pendingDeposit.verifiedAt = new Date();
+      wallet.markModified('pendingDeposits');
+      await wallet.save();
+    }
     return errorResponse(res, 400, 'Payment verification failed');
   }
   const cashfreePaymentId = verification.payment.cf_payment_id;
+  const verificationDeliveryId = String(
+    verification.order?.order_tags?.deliveryId ||
+    verification.order?.customer_details?.customer_id ||
+    ''
+  );
+  if (verificationDeliveryId !== String(delivery._id)) {
+    return errorResponse(res, 400, 'Payment session does not belong to this delivery partner');
+  }
 
-  const wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
+  if (String(verification.order?.order_id || '') !== pendingDeposit.cashfreeOrderId) {
+    return errorResponse(res, 400, 'Payment session mismatch detected');
+  }
+
+  const resolvedAmount = Number(verification.order?.order_amount || amt);
+  if (!resolvedAmount || isNaN(resolvedAmount) || resolvedAmount <= 0) {
+    return errorResponse(res, 400, 'Invalid payment amount');
+  }
+
+  if (Math.abs(resolvedAmount - Number(pendingDeposit.amount || 0)) > 0.01) {
+    return errorResponse(res, 400, 'Payment amount mismatch detected');
+  }
+
   const cashInHand = Number(wallet.cashInHand) || 0;
-  if (cashInHand < amt) {
+  if (cashInHand < resolvedAmount) {
     return errorResponse(res, 400, `Insufficient cash in hand (₹${cashInHand.toFixed(2)}). Deposit amount cannot exceed cash in hand.`);
   }
 
@@ -839,6 +892,10 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
     t => t.type === 'deposit' && pid(t) === cashfreePaymentId
   );
   if (existing) {
+    pendingDeposit.status = 'completed';
+    pendingDeposit.verifiedAt = new Date();
+    wallet.markModified('pendingDeposits');
+    await wallet.save();
     return errorResponse(res, 400, 'Payment already processed');
   }
 
@@ -847,7 +904,7 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
   meta.set('cashfreePaymentId', cashfreePaymentId);
 
   wallet.addTransaction({
-    amount: amt,
+    amount: resolvedAmount,
     type: 'deposit',
     status: 'Completed',
     description: 'Cash limit deposit via Cashfree',
@@ -855,7 +912,10 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
     metadata: Object.fromEntries(meta),
     processedAt: new Date()
   });
+  pendingDeposit.status = 'completed';
+  pendingDeposit.verifiedAt = new Date();
   wallet.markModified('transactions');
+  wallet.markModified('pendingDeposits');
   await wallet.save();
 
   let limit = 0;
@@ -867,7 +927,7 @@ export const verifyDepositPayment = asyncHandler(async (req, res) => {
   const availableCashLimit = Math.max(0, limit - cashInHandNow);
 
   return successResponse(res, 200, 'Deposit successful', {
-    amount: amt,
+    amount: resolvedAmount,
     cashInHand: cashInHandNow,
     availableCashLimit
   });
