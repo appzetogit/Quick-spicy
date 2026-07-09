@@ -87,17 +87,27 @@ function getTokenForCurrentRoute() {
   return localStorage.getItem("accessToken");
 }
 
+function shouldUseLegacyAccessToken(pathname) {
+  const path = pathname || window.location.pathname;
+  return !path.startsWith("/admin");
+}
+
 /**
  * Request Interceptor
  * Adds authentication token to requests based on current route
  */
 apiClient.interceptors.request.use(
   (config) => {
+    const path = window.location.pathname;
+
     // Get access token for the current module based on route
     let accessToken = getTokenForCurrentRoute();
 
     // Fallback to legacy token if module-specific token not found
-    if (!accessToken || accessToken.trim() === "") {
+    if (
+      (!accessToken || accessToken.trim() === "") &&
+      shouldUseLegacyAccessToken(path)
+    ) {
       accessToken = localStorage.getItem("accessToken");
     }
 
@@ -118,7 +128,6 @@ apiClient.interceptors.request.use(
     }
 
     // Determine if this is an authenticated route
-    const path = window.location.pathname;
     const requestUrl = config.url || "";
 
     // Check if this is a public restaurant route (should not require authentication)
