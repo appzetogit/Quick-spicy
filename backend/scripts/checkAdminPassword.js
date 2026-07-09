@@ -1,10 +1,8 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-
-import Admin from "../modules/admin/models/Admin.js";
-import { revokeAllAdminSessions } from "../modules/admin/services/adminSessionService.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,15 +24,15 @@ const ADMIN_EMAIL =
   process.env.SECOND_ADMIN_EMAIL ||
   "quickspicyofficial@gmail.com";
 
-const NEW_PASSWORD =
+const PASSWORD_TO_CHECK =
   getArgValue("--password") ||
-  process.env.RESET_ADMIN_PASSWORD ||
+  process.env.CHECK_ADMIN_PASSWORD ||
   process.env.SECOND_ADMIN_PASSWORD ||
   process.env.ADMIN_PASSWORD;
 
-if (!NEW_PASSWORD) {
+if (!PASSWORD_TO_CHECK) {
   console.error(
-    "Missing password. Provide --password <value> or set RESET_ADMIN_PASSWORD in backend/.env",
+    "Missing password. Provide --password <value> or set CHECK_ADMIN_PASSWORD in backend/.env",
   );
   process.exit(1);
 }
@@ -49,33 +47,32 @@ const connectDB = async () => {
   }
 };
 
-const updatePassword = async () => {
+const checkPassword = async () => {
   try {
-    const admin = await Admin.findOne({
-      email: ADMIN_EMAIL.toLowerCase(),
-    }).select("+password");
+    const admin = await mongoose.connection.db.collection("admins").findOne(
+      { email: ADMIN_EMAIL.toLowerCase() },
+      { projection: { email: 1, name: 1, password: 1, isActive: 1 } },
+    );
 
     if (!admin) {
       console.error(`Admin not found for email: ${ADMIN_EMAIL}`);
       process.exit(1);
     }
 
-    admin.password = NEW_PASSWORD;
-    admin.tokenVersion = (admin.tokenVersion || 0) + 1;
-    await admin.save();
-    await revokeAllAdminSessions(admin._id, "password-updated-by-script");
+    const matches = await bcrypt.compare(PASSWORD_TO_CHECK, admin.password);
 
-    console.log("Admin password updated successfully.");
-    console.log("- ID:", admin._id);
+    console.log("Admin password check complete.");
+    console.log("- Name:", admin.name);
     console.log("- Email:", admin.email);
-    console.log("- Token Version:", admin.tokenVersion);
-    process.exit(0);
+    console.log("- Active:", admin.isActive);
+    console.log("- Password matches:", matches);
+    process.exit(matches ? 0 : 2);
   } catch (error) {
-    console.error("Failed to update admin password:", error.message);
+    console.error("Failed to check admin password:", error.message);
     process.exit(1);
   }
 };
 
 connectDB().then(() => {
-  updatePassword();
+  checkPassword();
 });

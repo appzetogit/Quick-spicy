@@ -8,6 +8,9 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "backup:mongodb": "node scripts/backup-all-mongodb.js",
+    "seed:admin": "node scripts/upsertAdminUser.js",
+    "check:admin": "node scripts/checkAdminPassword.js",
+    "reset:admin-password": "node scripts/updateAdminPassword.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
