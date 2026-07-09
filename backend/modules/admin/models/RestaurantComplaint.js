@@ -112,7 +112,6 @@ const restaurantComplaintSchema = new mongoose.Schema({
 // Indexes for better query performance
 restaurantComplaintSchema.index({ restaurantId: 1, status: 1 });
 restaurantComplaintSchema.index({ customerId: 1, createdAt: -1 });
-restaurantComplaintSchema.index({ orderId: 1 });
 restaurantComplaintSchema.index({ createdAt: -1 });
 
 export default mongoose.model('RestaurantComplaint', restaurantComplaintSchema);

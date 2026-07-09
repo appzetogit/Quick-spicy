@@ -117,7 +117,6 @@ const restaurantCommissionSchema = new mongoose.Schema(
 );
 
 // Indexes
-restaurantCommissionSchema.index({ restaurant: 1 });
 restaurantCommissionSchema.index({ restaurantId: 1 });
 restaurantCommissionSchema.index({ status: 1 });
 restaurantCommissionSchema.index({ createdAt: -1 });
