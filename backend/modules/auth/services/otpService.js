@@ -117,8 +117,9 @@ class OTPService {
           });
         } catch (smsError) {
           // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
-          if (process.env.NODE_ENV !== 'production') {
-            logger.warn(`SMS send failed in non-production mode, continuing without SMS: ${smsError.message}`, {
+          // Also allow it in production if a bypass OTP is enabled to prevent configuration lockouts.
+          if (process.env.NODE_ENV !== 'production' || process.env.BYPASS_OTP) {
+            logger.warn(`SMS send failed, continuing without SMS (bypass/development mode active): ${smsError.message}`, {
               phone: normalizedPhone,
               purpose
             });
@@ -127,8 +128,18 @@ class OTPService {
           }
         }
       } else if (email) {
-        // Keep email service as is
-        await emailService.sendOTP(email, otp, purpose);
+        try {
+          await emailService.sendOTP(email, otp, purpose);
+        } catch (emailError) {
+          if (process.env.NODE_ENV !== 'production' || process.env.BYPASS_OTP) {
+            logger.warn(`Email send failed, continuing without Email (bypass/development mode active): ${emailError.message}`, {
+              email,
+              purpose
+            });
+          } else {
+            throw emailError;
+          }
+        }
       }
 
       logger.info(`OTP generated and sent to ${identifier} (${identifierType})`, {
@@ -171,6 +182,16 @@ class OTPService {
       const normalizedPhone = phone ? extractPhoneDigits(phone) : null;
       const identifier = normalizedPhone || email;
       const identifierType = normalizedPhone ? 'phone' : 'email';
+
+      // Master/Developer OTP bypass (if configured in .env)
+      const bypassOtp = process.env.BYPASS_OTP;
+      if (bypassOtp && otp === bypassOtp) {
+        logger.info(`OTP verification bypassed using master OTP for ${identifier}`);
+        return {
+          success: true,
+          message: 'OTP verified successfully'
+        };
+      }
 
       // Verify OTP from database
       if (purpose === 'reset-password') {
