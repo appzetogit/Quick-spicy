@@ -86,7 +86,7 @@ export function hasModuleAccess(role, module) {
  */
 export function getModuleToken(module) {
   if (module === "admin") {
-    return sessionStorage.getItem(`admin_accessToken`);
+    return null;
   }
   return localStorage.getItem(`${module}_accessToken`);
 }
@@ -98,7 +98,7 @@ export function getModuleToken(module) {
  */
 export function getModuleRefreshToken(module) {
   if (module === "admin") {
-    return sessionStorage.getItem(`admin_refreshToken`);
+    return null;
   }
   return localStorage.getItem(`${module}_refreshToken`);
 }
@@ -111,6 +111,10 @@ export function getModuleRefreshToken(module) {
 export function getCurrentUserRole(module = null) {
   // If module is specified, check that module's token
   if (module) {
+    if (module === "admin") {
+      return isModuleAuthenticated("admin") ? "admin" : null;
+    }
+
     const token = getModuleToken(module);
     if (!token) return null;
     
@@ -143,18 +147,10 @@ export function getCurrentUserRole(module = null) {
  */
 export function isModuleAuthenticated(module) {
   if (module === "admin") {
-    const token = getModuleToken(module);
-    if (!token) {
-      return (
-        sessionStorage.getItem("admin_authenticated") === "true" ||
-        localStorage.getItem("admin_authenticated") === "true"
-      );
-    }
-    if (isTokenExpired(token)) {
-      clearModuleAuth(module);
-      return false;
-    }
-    return true;
+    return (
+      sessionStorage.getItem("admin_authenticated") === "true" ||
+      localStorage.getItem("admin_authenticated") === "true"
+    );
   }
 
   const token = getModuleToken(module);
@@ -237,7 +233,7 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     // Validate inputs
-    if (!module || !token) {
+    if (!module || (module !== "admin" && !token)) {
       throw new Error(`Invalid parameters: module=${module}, token=${!!token}`);
     }
 
@@ -260,11 +256,17 @@ export function setAuthData(module, token, user, refreshToken = null) {
       clearRestaurantSessionCache();
     }
 
-    primaryStorage.setItem(tokenKey, token);
-    if (refreshToken && typeof refreshToken === "string") {
-      primaryStorage.setItem(refreshTokenKey, refreshToken);
-    }
     primaryStorage.setItem(authKey, 'true');
+
+    if (module !== "admin") {
+      primaryStorage.setItem(tokenKey, token);
+      if (refreshToken && typeof refreshToken === "string") {
+        primaryStorage.setItem(refreshTokenKey, refreshToken);
+      }
+    } else {
+      primaryStorage.removeItem(tokenKey);
+      primaryStorage.removeItem(refreshTokenKey);
+    }
     
     if (user) {
       try {
@@ -286,7 +288,7 @@ export function setAuthData(module, token, user, refreshToken = null) {
     const storedAuth = primaryStorage.getItem(authKey);
     const storedToken = primaryStorage.getItem(tokenKey);
 
-    if (storedToken !== token) {
+    if (module !== "admin" && storedToken !== token) {
       console.error(`[setAuthData] Token mismatch:`, {
         expected: token?.substring(0, 20) + '...',
         stored: storedToken?.substring(0, 20) + '...'
@@ -314,9 +316,14 @@ export function setAuthData(module, token, user, refreshToken = null) {
         // Retry storing
         const primaryStorage = module === "admin" ? sessionStorage : localStorage;
         primaryStorage.setItem(`${module}_authenticated`, 'true');
-        primaryStorage.setItem(`${module}_accessToken`, token);
-        if (refreshToken && typeof refreshToken === "string") {
-          primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
+        if (module !== "admin") {
+          primaryStorage.setItem(`${module}_accessToken`, token);
+          if (refreshToken && typeof refreshToken === "string") {
+            primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
+          }
+        } else {
+          primaryStorage.removeItem(`${module}_accessToken`);
+          primaryStorage.removeItem(`${module}_refreshToken`);
         }
         if (user) {
           primaryStorage.setItem(`${module}_user`, JSON.stringify(user));
@@ -324,7 +331,7 @@ export function setAuthData(module, token, user, refreshToken = null) {
         
         // Verify again after retry
         const storedToken = primaryStorage.getItem(`${module}_accessToken`);
-        if (storedToken !== token) {
+        if (module !== "admin" && storedToken !== token) {
           throw new Error('Token storage failed even after clearing space');
         }
       } catch (retryError) {

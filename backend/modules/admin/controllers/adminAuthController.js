@@ -187,7 +187,6 @@ export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
   logger.info(`Admin logged in with OTP: ${admin._id}`, { email: admin.email });
 
   return successResponse(res, 200, 'Login successful', {
-    accessToken: tokens.accessToken,
     admin: adminResponse
   });
 });
@@ -242,9 +241,7 @@ export const refreshAdminToken = asyncHandler(async (req, res) => {
     setAdminAccessCookie(res, tokens.accessToken);
     res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
 
-    return successResponse(res, 200, 'Token refreshed successfully', {
-      accessToken: tokens.accessToken
-    });
+    return successResponse(res, 200, 'Token refreshed successfully');
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');
   }

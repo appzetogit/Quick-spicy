@@ -366,9 +366,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
 
       // Verify OTP first
-      if (!bypassOtpVerification) {
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
-      }
+      await otpService.verifyOTP(phone || null, otp, purpose, email || null);
 
       if (!restaurant) {
         // Auto-register new restaurant after OTP verification

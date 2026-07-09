@@ -279,11 +279,11 @@ export default function AdminLogin() {
       );
       const data = response?.data?.data || response?.data;
 
-      if (!data?.accessToken || !data?.admin) {
+      if (!data?.admin) {
         throw new Error("Login failed. Please try again.");
       }
 
-      setAuthData("admin", data.accessToken, data.admin, data.refreshToken);
+      setAuthData("admin", null, data.admin);
       window.dispatchEvent(new Event("adminAuthChanged"));
       navigate("/admin", { replace: true });
     } catch (err) {

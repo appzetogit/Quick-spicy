@@ -392,9 +392,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       // - user exists (normal login), or
       // - user does not exist but name is provided (auto-registration)
       // In both cases we must verify OTP first.
-      if (!bypassOtpVerification) {
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
-      }
+      await otpService.verifyOTP(phone || null, otp, purpose, email || null);
 
       if (!user) {
         const referrer =

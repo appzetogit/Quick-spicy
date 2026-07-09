@@ -59,7 +59,7 @@ function getTokenForCurrentRoute() {
   const path = window.location.pathname;
 
     if (path.startsWith("/admin")) {
-      return sessionStorage.getItem("admin_accessToken");
+      return null;
   } else if (
     path.startsWith("/restaurant") &&
     !path.startsWith("/restaurants") &&
@@ -293,10 +293,19 @@ apiClient.interceptors.response.use(
       responseUrl.includes("/auth/register");
 
     const responseData = response.data?.data || response.data;
+    const currentPath = window.location.pathname;
+    const isAdminCookieAuthEndpoint =
+      currentPath.startsWith("/admin") &&
+      (responseUrl.includes("/admin/auth/verify-login-otp") ||
+        responseUrl.includes("/admin/auth/refresh-token"));
+
+    if (isAdminCookieAuthEndpoint) {
+      sessionStorage.setItem("admin_authenticated", "true");
+      localStorage.removeItem("admin_authenticated");
+    }
 
     // If auth endpoint response contains new access token, store it for the current module
       if (isAuthTokenEndpoint && responseData?.accessToken) {
-        const currentPath = window.location.pathname;
         let tokenKey = "accessToken"; // fallback
         let refreshTokenKey = "refreshToken";
         let expectedRole = "user";
@@ -416,6 +425,15 @@ apiClient.interceptors.response.use(
         );
 
         const { accessToken } = response.data.data || response.data;
+
+        if (currentPath.startsWith("/admin")) {
+          sessionStorage.setItem("admin_authenticated", "true");
+          localStorage.removeItem("admin_authenticated");
+          if (originalRequest.headers?.Authorization) {
+            delete originalRequest.headers.Authorization;
+          }
+          return apiClient(originalRequest);
+        }
 
         if (accessToken) {
           // Determine which module's token to update based on current route
