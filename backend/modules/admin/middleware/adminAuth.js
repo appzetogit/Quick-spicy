@@ -1,6 +1,7 @@
 import jwtService from '../../auth/services/jwtService.js';
 import Admin from '../models/Admin.js';
 import { errorResponse } from '../../../shared/utils/response.js';
+import { isAdminSessionActive, touchAdminSession } from '../services/adminSessionService.js';
 
 /**
  * Admin Authentication Middleware
@@ -34,6 +35,27 @@ export const authenticateAdmin = async (req, res, next) => {
 
     if (!admin.isActive) {
       return errorResponse(res, 401, 'Admin account is inactive');
+    }
+
+    // Check tokenVersion match to handle rotated/revoked sessions
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== admin.tokenVersion) {
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
+    }
+
+    if (decoded.sessionId) {
+      const activeSession = await isAdminSessionActive({
+        adminId: admin._id,
+        sessionId: decoded.sessionId,
+      });
+
+      if (!activeSession) {
+        return errorResponse(res, 401, 'Admin session revoked or expired. Please log in again.');
+      }
+
+      await touchAdminSession({
+        adminId: admin._id,
+        sessionId: decoded.sessionId,
+      });
     }
 
     // Attach admin to request (both req.user and req.admin for compatibility)

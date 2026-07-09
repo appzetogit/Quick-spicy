@@ -8,6 +8,7 @@ const AdminHome = lazy(() => import("../pages/AdminHome"));
 const PointOfSale = lazy(() => import("../pages/PointOfSale"));
 const AdminProfile = lazy(() => import("../pages/AdminProfile"));
 const AdminSettings = lazy(() => import("../pages/AdminSettings"));
+const AdminSessions = lazy(() => import("../pages/AdminSessions"));
 const NewRefundRequests = lazy(() => import("../pages/refunds/NewRefundRequests"));
 const FoodApproval = lazy(() => import("../pages/restaurant/FoodApproval"));
 const OrdersPage = lazy(() => import("../pages/orders/OrdersPage"));
@@ -144,6 +145,7 @@ export default function AdminRouter() {
 
           {/* Settings */}
           <Route path="/settings" element={<AdminSettings />} />
+          <Route path="/sessions" element={<AdminSessions />} />
 
           {/* ORDER MANAGEMENT */}
           {/* Orders */}

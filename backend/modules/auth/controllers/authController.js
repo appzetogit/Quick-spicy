@@ -496,6 +496,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       userId: user._id.toString(),
       role: user.role,
       phone: user.phone,
+      tokenVersion: user.tokenVersion || 0,
     });
 
     // Set refresh token in httpOnly cookie
@@ -544,21 +545,45 @@ export const refreshToken = asyncHandler(async (req, res) => {
     const decoded = jwtService.verifyRefreshToken(refreshToken);
 
     // Get user
-    const user = await User.findById(decoded.userId).select("-password");
+    const user = await User.findById(decoded.userId);
 
     if (!user || !user.isActive) {
       return errorResponse(res, 401, "User not found or inactive");
     }
 
-    // Generate new access token
-    const accessToken = jwtService.generateAccessToken({
+    // RTR check: if tokenVersion mismatch, token reuse detected. Revoke all.
+    if (decoded.tokenVersion !== user.tokenVersion) {
+      user.tokenVersion += 1;
+      await user.save();
+      res.clearCookie("refreshToken", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+      });
+      return errorResponse(res, 401, "Session expired or revoked. Please log in again.");
+    }
+
+    // Rotate version
+    user.tokenVersion += 1;
+    await user.save();
+
+    // Generate new access and refresh tokens
+    const tokens = jwtService.generateTokens({
       userId: user._id.toString(),
       role: user.role,
-      phone: user.phone,
+      tokenVersion: user.tokenVersion,
+    });
+
+    // Set new refresh token in httpOnly cookie
+    res.cookie("refreshToken", tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return successResponse(res, 200, "Token refreshed successfully", {
-      accessToken,
+      accessToken: tokens.accessToken,
     });
   } catch (error) {
     return errorResponse(res, 401, error.message || "Invalid refresh token");
@@ -657,6 +682,7 @@ export const register = asyncHandler(async (req, res) => {
     userId: user._id.toString(),
     role: user.role,
     email: user.email,
+    tokenVersion: user.tokenVersion || 0,
   });
 
   // Set refresh token in httpOnly cookie
@@ -760,6 +786,7 @@ export const login = asyncHandler(async (req, res) => {
     userId: user._id.toString(),
     role: user.role,
     email: user.email,
+    tokenVersion: user.tokenVersion || 0,
   });
 
   // Set refresh token in httpOnly cookie
@@ -1211,6 +1238,7 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       userId: user._id.toString(),
       role: user.role,
       email: user.email,
+      tokenVersion: user.tokenVersion || 0,
     });
 
     // Set refresh token in httpOnly cookie
@@ -1331,10 +1359,10 @@ export const googleCallback = asyncHandler(async (req, res) => {
     );
   }
 
-  // Verify state (optional but recommended)
+  // Verify state parameter (mandatory for OAuth CSRF defense)
   const storedState = req.cookies?.oauth_state;
-  if (storedState && state !== storedState) {
-    logger.warn("OAuth state mismatch - possible CSRF attack");
+  if (!storedState || !state || state !== storedState) {
+    logger.warn("OAuth state mismatch or missing - possible CSRF attack");
     return res.redirect(
       `${process.env.FRONTEND_URL || "http://localhost:5173"}/restaurant/login?error=invalid_state`,
     );
@@ -1410,6 +1438,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
       userId: user._id.toString(),
       role: user.role,
       email: user.email,
+      tokenVersion: user.tokenVersion || 0,
     });
 
     // Set refresh token in httpOnly cookie
@@ -1423,7 +1452,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
     // Clear OAuth state cookie
     res.clearCookie("oauth_state");
 
-    // Redirect to frontend with access token as query param
+    // Redirect to frontend with access token in hash fragment to hide from logs
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirectPath =
       userRole === "restaurant"
@@ -1432,7 +1461,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
           ? "/delivery/auth/google-callback"
           : "/user/auth/google-callback";
 
-    const userData = {
+    const userDataObj = {
       id: user._id,
       name: user.name,
       email: user.email,
@@ -1444,7 +1473,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
       referralCode: user.referralCode,
     };
 
-    const redirectUrl = `${frontendUrl}${redirectPath}?token=${jwtTokens.accessToken}&user=${encodeURIComponent(JSON.stringify(userData))}`;
+    const redirectUrl = `${frontendUrl}${redirectPath}?user=${encodeURIComponent(JSON.stringify(userDataObj))}#token=${jwtTokens.accessToken}`;
 
     return res.redirect(redirectUrl);
   } catch (error) {

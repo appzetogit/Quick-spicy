@@ -1,5 +1,7 @@
-﻿import { useState } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { adminAPI } from "@/lib/api";
+import { clearModuleAuth } from "@/lib/utils/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +13,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Lock, Eye, EyeOff, Save, Loader2, Shield } from "lucide-react";
-const debugLog = (...args) => {}
-const debugWarn = (...args) => {}
-const debugError = (...args) => {}
+import { Lock, Eye, EyeOff, Save, Loader2, Shield, LogOut } from "lucide-react";
 
+const debugLog = (...args) => {};
+const debugWarn = (...args) => {};
+const debugError = (...args) => {};
 
 export default function AdminSettings() {
+  const navigate = useNavigate();
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -27,48 +30,58 @@ export default function AdminSettings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loggingOutAll, setLoggingOutAll] = useState(false);
   const [errors, setErrors] = useState({});
+
+  const resetAdminSession = () => {
+    clearModuleAuth("admin");
+    localStorage.removeItem("admin_accessToken");
+    localStorage.removeItem("admin_authenticated");
+    localStorage.removeItem("admin_user");
+    sessionStorage.removeItem("adminAuthData");
+    window.dispatchEvent(new Event("adminAuthChanged"));
+  };
 
   const handlePasswordChange = (field, value) => {
     setPasswordForm((prev) => ({
       ...prev,
       [field]: value,
     }));
-    // Clear error when user starts typing
+
     if (errors[field]) {
       setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
+        const nextErrors = { ...prev };
+        delete nextErrors[field];
+        return nextErrors;
       });
     }
   };
 
   const validatePasswordForm = () => {
-    const newErrors = {};
+    const nextErrors = {};
 
     if (!passwordForm.currentPassword) {
-      newErrors.currentPassword = "Current password is required";
+      nextErrors.currentPassword = "Current password is required";
     }
 
     if (!passwordForm.newPassword) {
-      newErrors.newPassword = "New password is required";
+      nextErrors.newPassword = "New password is required";
     } else if (passwordForm.newPassword.length < 6) {
-      newErrors.newPassword = "Password must be at least 6 characters long";
+      nextErrors.newPassword = "Password must be at least 6 characters long";
     }
 
     if (!passwordForm.confirmPassword) {
-      newErrors.confirmPassword = "Please confirm your new password";
+      nextErrors.confirmPassword = "Please confirm your new password";
     } else if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      newErrors.confirmPassword = "Passwords do not match";
+      nextErrors.confirmPassword = "Passwords do not match";
     }
 
     if (passwordForm.currentPassword === passwordForm.newPassword) {
-      newErrors.newPassword = "New password must be different from current password";
+      nextErrors.newPassword = "New password must be different from current password";
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handlePasswordSubmit = async (e) => {
@@ -80,32 +93,61 @@ export default function AdminSettings() {
 
     try {
       setSaving(true);
-      await adminAPI.changePassword(
+      const response = await adminAPI.changePassword(
         passwordForm.currentPassword,
         passwordForm.newPassword
       );
 
-      // Clear form
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
 
-      toast.success("Password changed successfully");
+      const forceReauth = response?.data?.data?.forceReauth;
+
+      toast.success(
+        forceReauth
+          ? "Password changed. All admin sessions were logged out."
+          : "Password changed successfully"
+      );
+
+      if (forceReauth) {
+        resetAdminSession();
+        navigate("/admin/login", { replace: true });
+      }
     } catch (error) {
       debugError("Error changing password:", error);
       const errorMessage =
         error?.response?.data?.message || "Failed to change password";
-      
-      // Set specific error for current password
-      if (errorMessage.includes("current password") || errorMessage.includes("incorrect")) {
+
+      if (
+        errorMessage.includes("current password") ||
+        errorMessage.includes("incorrect")
+      ) {
         setErrors({ currentPassword: errorMessage });
       } else {
         toast.error(errorMessage);
       }
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLogoutAllSessions = async () => {
+    try {
+      setLoggingOutAll(true);
+      await adminAPI.logoutAll();
+      resetAdminSession();
+      toast.success("All admin sessions have been logged out");
+      navigate("/admin/login", { replace: true });
+    } catch (error) {
+      debugError("Error logging out all admin sessions:", error);
+      const errorMessage =
+        error?.response?.data?.message || "Failed to log out all admin sessions";
+      toast.error(errorMessage);
+    } finally {
+      setLoggingOutAll(false);
     }
   };
 
@@ -118,7 +160,6 @@ export default function AdminSettings() {
         </p>
       </div>
 
-      {/* Password Change Card */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -154,7 +195,7 @@ export default function AdminSettings() {
                 <button
                   type="button"
                   onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-800 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-800"
                   disabled={saving}
                 >
                   {showCurrentPassword ? (
@@ -192,7 +233,7 @@ export default function AdminSettings() {
                 <button
                   type="button"
                   onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-800 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-800"
                   disabled={saving}
                 >
                   {showNewPassword ? (
@@ -233,7 +274,7 @@ export default function AdminSettings() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-neutral-800 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-800"
                   disabled={saving}
                 >
                   {showConfirmPassword ? (
@@ -252,7 +293,7 @@ export default function AdminSettings() {
               <Button
                 type="submit"
                 disabled={saving}
-                className="bg-black text-white hover:bg-neutral-900 h-11 px-8"
+                className="h-11 px-8 bg-black text-white hover:bg-neutral-900"
               >
                 {saving ? (
                   <>
@@ -271,7 +312,41 @@ export default function AdminSettings() {
         </CardContent>
       </Card>
 
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <LogOut className="w-5 h-5 text-neutral-700" />
+            <CardTitle>Session Control</CardTitle>
+          </div>
+          <CardDescription>
+            Revoke every active admin session across devices and browsers
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-neutral-600">
+            Use this to force every admin login to sign in again immediately.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={loggingOutAll}
+            onClick={handleLogoutAllSessions}
+            className="h-11 px-6"
+          >
+            {loggingOutAll ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Logging Out...
+              </>
+            ) : (
+              <>
+                <LogOut className="w-4 h-4 mr-2" />
+                Log Out All Sessions
+              </>
+            )}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 }
-

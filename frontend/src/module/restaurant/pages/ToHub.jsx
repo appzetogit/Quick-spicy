@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useRef, useEffect, useCallback } from "react"
+import { useState, useMemo, useRef, useEffect, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { DateRangeCalendar } from "@/components/ui/date-range-calendar"
@@ -1117,7 +1117,16 @@ export default function ToHub() {
     }
   }, [selectedRangeLabel, selectedDateRange, customDateRange])
 
-  const MyFeedContent = () => (
+  const aovData = useMemo(
+    () =>
+      chartData.map((d) => ({
+        ...d,
+        aov: d.orders ? d.sales / d.orders : 0,
+      })),
+    [chartData]
+  )
+
+  const renderMyFeedContent = () => (
     <div className="space-y-4">
 
       <div className="px-4">
@@ -1524,17 +1533,10 @@ export default function ToHub() {
     </AnimatePresence>
   )
 
-  const SalesTabContent = () => {
+  const renderSalesTabContent = () => {
     const salesMax = Math.max(...chartData.map((d) => d.sales || 0), 1)
     const ordersMax = Math.max(...chartData.map((d) => d.orders || 0), 1)
-    const aovData = useMemo(
-      () =>
-        chartData.map((d) => ({
-          ...d,
-          aov: d.orders ? d.sales / d.orders : 0,
-        })),
-      [chartData]
-    )
+
     const aovMax = Math.max(...aovData.map((d) => d.aov || 0), 1)
 
     return (
@@ -1874,7 +1876,7 @@ export default function ToHub() {
     )
   }
 
-  const EmptyTab = ({ label }) => (
+  const renderEmptyTab = (label) => (
     <div className="flex-1 flex items-center justify-center text-gray-500 text-sm px-4">
       {label} is empty for now.
     </div>
@@ -2041,11 +2043,11 @@ export default function ToHub() {
           }}
         >
           {activeTopTab === "my-feed" ? (
-            <MyFeedContent />
+            renderMyFeedContent()
           ) : activeTopTab === "sales" ? (
-            <SalesTabContent />
+            renderSalesTabContent()
           ) : (
-            <EmptyTab label={topTabs.find(t => t.id === activeTopTab)?.label || "Tab"} />
+            renderEmptyTab(topTabs.find(t => t.id === activeTopTab)?.label || "Tab")
           )}
         </motion.div>
       </AnimatePresence>

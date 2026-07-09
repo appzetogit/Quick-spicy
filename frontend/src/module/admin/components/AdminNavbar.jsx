@@ -46,11 +46,12 @@ export default function AdminNavbar({ onMenuClick }) {
   const [businessSettings, setBusinessSettings] = useState(null);
   const searchInputRef = useRef(null);
 
-  // Load admin data from localStorage
+  // Load admin data from session/local storage
   useEffect(() => {
     const loadAdminData = () => {
       try {
-        const adminUserStr = localStorage.getItem('admin_user');
+        const adminUserStr =
+          sessionStorage.getItem('admin_user') || localStorage.getItem('admin_user');
         if (adminUserStr) {
           const adminUser = JSON.parse(adminUserStr);
           setAdminData(adminUser);
@@ -199,11 +200,8 @@ export default function AdminNavbar({ onMenuClick }) {
         debugWarn("Logout API call failed, continuing with local cleanup:", apiError);
       }
 
-      // Clear admin authentication data from localStorage
+      // Clear admin authentication data
       clearModuleAuth('admin');
-      localStorage.removeItem('admin_accessToken');
-      localStorage.removeItem('admin_authenticated');
-      localStorage.removeItem('admin_user');
 
       // Clear sessionStorage if any
       sessionStorage.removeItem('adminAuthData');
@@ -219,9 +217,6 @@ export default function AdminNavbar({ onMenuClick }) {
 
       // Clear local data anyway
       clearModuleAuth('admin');
-      localStorage.removeItem('admin_accessToken');
-      localStorage.removeItem('admin_authenticated');
-      localStorage.removeItem('admin_user');
       sessionStorage.removeItem('adminAuthData');
       window.dispatchEvent(new Event('adminAuthChanged'));
 

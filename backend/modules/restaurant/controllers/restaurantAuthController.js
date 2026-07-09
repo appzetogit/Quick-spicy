@@ -829,24 +829,46 @@ export const refreshToken = asyncHandler(async (req, res) => {
     }
 
     // Get restaurant from database
-    const restaurant = await Restaurant.findById(decoded.userId).select('-password');
+    const restaurant = await Restaurant.findById(decoded.userId);
 
     if (!restaurant) {
       return errorResponse(res, 401, 'Restaurant not found');
     }
 
-    // Allow inactive restaurants to refresh tokens - they need access to complete onboarding
-    // The middleware will handle blocking inactive restaurants from accessing restricted routes
+    // RTR check
+    if (decoded.tokenVersion !== restaurant.tokenVersion) {
+      restaurant.tokenVersion += 1;
+      await restaurant.save();
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
+    }
 
-    // Generate new access token
-    const accessToken = jwtService.generateAccessToken({
+    // Rotate version
+    restaurant.tokenVersion += 1;
+    await restaurant.save();
+
+    // Generate new rotated access and refresh tokens
+    const tokens = jwtService.generateTokens({
       userId: restaurant._id.toString(),
       role: 'restaurant',
-      email: restaurant.email || restaurant.phone || restaurant.restaurantId
+      email: restaurant.email || restaurant.phone || restaurant.restaurantId,
+      tokenVersion: restaurant.tokenVersion
+    });
+
+    // Set new refresh token in httpOnly cookie
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     return successResponse(res, 200, 'Token refreshed successfully', {
-      accessToken
+      accessToken: tokens.accessToken
     });
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');

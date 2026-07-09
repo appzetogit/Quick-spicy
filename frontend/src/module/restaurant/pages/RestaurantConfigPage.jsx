@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate } from "react-router-dom"
 import Lenis from "lenis"
@@ -12,6 +12,23 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+
+const ToggleSwitch = ({ enabled, onChange }) => (
+  <motion.button
+    type="button"
+    whileTap={{ scale: 0.95 }}
+    onClick={() => onChange(!enabled)}
+    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff8100] focus:ring-offset-2 ${
+      enabled ? "bg-[#ff8100]" : "bg-gray-300"
+    }`}
+  >
+    <motion.span
+      animate={{ x: enabled ? 24 : 4 }}
+      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+      className="inline-block h-4 w-4 rounded-full bg-white"
+    />
+  </motion.button>
+)
 
 export default function RestaurantConfigPage() {
   const navigate = useNavigate()
@@ -136,22 +153,7 @@ export default function RestaurantConfigPage() {
     })
   }
 
-  const ToggleSwitch = ({ enabled, onChange }) => (
-    <motion.button
-      type="button"
-      whileTap={{ scale: 0.95 }}
-      onClick={() => onChange(!enabled)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff8100] focus:ring-offset-2 ${
-        enabled ? "bg-[#ff8100]" : "bg-gray-300"
-      }`}
-    >
-      <motion.span
-        animate={{ x: enabled ? 24 : 4 }}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
-        className="inline-block h-4 w-4 rounded-full bg-white"
-      />
-    </motion.button>
-  )
+
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">

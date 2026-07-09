@@ -90,15 +90,28 @@ const removeFcmTokenSchema = Joi.object({
   deviceId: Joi.string().trim().optional(),
 }).or('token', 'platform', 'channel', 'deviceId');
 
+import rateLimit from 'express-rate-limit';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // Limit each IP to 10 authentication requests per windowMs
+  message: {
+    success: false,
+    message: 'Too many authentication attempts from this IP, please try again after 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Public routes
 // OTP-based authentication
-router.post('/send-otp', validate(sendOTPSchema), sendOTP);
-router.post('/verify-otp', validate(verifyOTPSchema), verifyOTP);
+router.post('/send-otp', authLimiter, validate(sendOTPSchema), sendOTP);
+router.post('/verify-otp', authLimiter, validate(verifyOTPSchema), verifyOTP);
 
 // Email/Password authentication
-router.post('/register', validate(registerSchema), register);
-router.post('/login', validate(loginSchema), login);
-router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
 
 // Token management
 router.post('/refresh-token', refreshToken);

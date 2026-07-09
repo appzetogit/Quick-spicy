@@ -1154,28 +1154,45 @@ export const deliveryAPI = {
 // Export admin API helper functions
 export const adminAPI = {
   // Admin Auth
-  signup: (name, email, password, phone = null) => {
-    const payload = { name, email, password };
-    if (phone) payload.phone = phone;
-    return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.SIGNUP, payload);
-  },
-
-  signupWithOTP: (name, email, password, otp, phone = null) => {
-    const payload = { name, email, password, otp };
-    if (phone) payload.phone = phone;
-    return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.SIGNUP_OTP, payload);
-  },
-
   login: (email, password) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.LOGIN, { email, password });
+  },
+
+  verifyLoginOtp: (email, password, otp, sessionContext = null) => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.VERIFY_LOGIN_OTP, {
+      email,
+      password,
+      otp,
+      ...(sessionContext ? { sessionContext } : {}),
+    });
   },
 
   logout: () => {
     return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.LOGOUT);
   },
 
+  logoutAll: () => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.LOGOUT_ALL);
+  },
+
   getCurrentAdmin: () => {
     return apiClient.get(API_ENDPOINTS.ADMIN.AUTH.ME);
+  },
+
+  getSessions: () => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.AUTH.SESSIONS);
+  },
+
+  revokeSession: (sessionId) => {
+    return apiClient.delete(
+      API_ENDPOINTS.ADMIN.AUTH.SESSION_BY_ID.replace(":sessionId", sessionId),
+    );
+  },
+
+  updateCurrentSessionLocation: (sessionContext) => {
+    return apiClient.post(API_ENDPOINTS.ADMIN.AUTH.CURRENT_SESSION_LOCATION, {
+      sessionContext,
+    });
   },
 
   // Get admin profile

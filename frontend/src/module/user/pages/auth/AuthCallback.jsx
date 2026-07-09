@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
@@ -41,8 +41,14 @@ export default function AuthCallback() {
         }
 
         // Check for direct token from backend (Backend OAuth flow)
-        const token = searchParams.get("token")
+        let token = searchParams.get("token")
         const userStr = searchParams.get("user")
+
+        // Support extracting token from hash fragment parameter (#token=...) to avoid url log exposure
+        if (!token && window.location.hash) {
+          const hashParams = new URLSearchParams(window.location.hash.substring(1));
+          token = hashParams.get("token");
+        }
 
         if (token) {
           try {

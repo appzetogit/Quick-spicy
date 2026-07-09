@@ -13,13 +13,7 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
 
-  // Check if user is authenticated for the required module using module-specific token
-  if (!requiredRole) {
-    // If no role required, allow access
-    return children;
-  }
-
-  const isAuthenticated = isModuleAuthenticated(requiredRole);
+  const isAuthenticated = requiredRole ? isModuleAuthenticated(requiredRole) : false;
 
   useEffect(() => {
     let isMounted = true;
@@ -69,6 +63,11 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
       isMounted = false;
     };
   }, [isAuthenticated, requiredRole]);
+
+  // If no role required, allow access
+  if (!requiredRole) {
+    return children;
+  }
 
   // If not authenticated for this module, redirect to login
   if (!isAuthenticated) {

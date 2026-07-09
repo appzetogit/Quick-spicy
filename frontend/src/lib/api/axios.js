@@ -1,7 +1,7 @@
 import axios from "axios";
 import { toast } from "sonner";
 import { API_BASE_URL } from "./config.js";
-import { getRoleFromToken, clearModuleAuth } from "../utils/auth.js";
+import { getRoleFromToken, clearModuleAuth, getModuleRefreshToken, getModuleToken } from "../utils/auth.js";
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -59,7 +59,7 @@ function getTokenForCurrentRoute() {
   const path = window.location.pathname;
 
   if (path.startsWith("/admin")) {
-    return localStorage.getItem("admin_accessToken");
+    return getModuleToken("admin");
   } else if (
     path.startsWith("/restaurant") &&
     !path.startsWith("/restaurants") &&
@@ -183,7 +183,7 @@ apiClient.interceptors.request.use(
               `[API Interceptor] No access token found for authenticated route: ${path}. Request may fail with 401.`,
             );
             debugWarn(`[API Interceptor] Available tokens:`, {
-              admin: localStorage.getItem("admin_accessToken")
+              admin: getModuleToken("admin")
                 ? "exists"
                 : "missing",
               restaurant: localStorage.getItem("restaurant_accessToken")
@@ -285,14 +285,17 @@ apiClient.interceptors.response.use(
     const responseUrl = String(response.config?.url || "");
     const isAuthTokenEndpoint =
       responseUrl.includes("/auth/login") ||
+      responseUrl.includes("/auth/verify-login-otp") ||
       responseUrl.includes("/auth/verify-otp") ||
       responseUrl.includes("/auth/firebase-google-login") ||
       responseUrl.includes("/auth/refresh-token") ||
       responseUrl.includes("/auth/signup") ||
       responseUrl.includes("/auth/register");
 
+    const responseData = response.data?.data || response.data;
+
     // If auth endpoint response contains new access token, store it for the current module
-      if (isAuthTokenEndpoint && response.data?.accessToken) {
+      if (isAuthTokenEndpoint && responseData?.accessToken) {
         const currentPath = window.location.pathname;
         let tokenKey = "accessToken"; // fallback
         let refreshTokenKey = "refreshToken";
@@ -326,17 +329,28 @@ apiClient.interceptors.response.use(
           expectedRole = "user";
         }
 
-        const token = response.data.accessToken;
-        const refreshToken = response.data.refreshToken || response.data?.data?.refreshToken;
+        const token = responseData.accessToken;
+        const refreshToken = responseData.refreshToken;
         const role = getRoleFromToken(token);
 
       // Only store the token if the role matches the current module
         if (!role || role !== expectedRole) {
           clearModuleAuth(tokenKey.replace("_accessToken", ""));
         } else {
-          localStorage.setItem(tokenKey, token);
-          if (refreshToken && typeof refreshToken === "string") {
-            localStorage.setItem(refreshTokenKey, refreshToken);
+          if (currentPath.startsWith("/admin")) {
+            sessionStorage.setItem(tokenKey, token);
+            sessionStorage.setItem("admin_authenticated", "true");
+            if (refreshToken && typeof refreshToken === "string") {
+              sessionStorage.setItem(refreshTokenKey, refreshToken);
+            }
+            localStorage.removeItem(tokenKey);
+            localStorage.removeItem(refreshTokenKey);
+            localStorage.removeItem("admin_authenticated");
+          } else {
+            localStorage.setItem(tokenKey, token);
+            if (refreshToken && typeof refreshToken === "string") {
+              localStorage.setItem(refreshTokenKey, refreshToken);
+            }
           }
         }
       }
@@ -347,6 +361,7 @@ apiClient.interceptors.response.use(
     const requestUrl = String(originalRequest?.url || "");
     const isAuthRequest =
       requestUrl.includes("/auth/login") ||
+      requestUrl.includes("/auth/verify-login-otp") ||
       requestUrl.includes("/auth/signup") ||
       requestUrl.includes("/auth/register") ||
       requestUrl.includes("/auth/send-otp") ||
@@ -384,7 +399,7 @@ apiClient.interceptors.response.use(
         // The refresh token is sent via httpOnly cookie automatically
         let refreshTokenHeader = null;
         if (currentPath.startsWith("/admin")) {
-          refreshTokenHeader = localStorage.getItem("admin_refreshToken");
+          refreshTokenHeader = getModuleRefreshToken("admin");
         } else if (
           currentPath.startsWith("/restaurant") &&
           !currentPath.startsWith("/restaurants")
@@ -416,9 +431,9 @@ apiClient.interceptors.response.use(
           let tokenKey = "accessToken"; // fallback
           let expectedRole = "user";
 
-          if (currentPath.startsWith("/admin")) {
-            tokenKey = "admin_accessToken";
-            expectedRole = "admin";
+        if (currentPath.startsWith("/admin")) {
+          tokenKey = "admin_accessToken";
+          expectedRole = "admin";
           } else if (
             currentPath.startsWith("/restaurant") &&
             !currentPath.startsWith("/restaurants")
@@ -448,7 +463,12 @@ apiClient.interceptors.response.use(
           }
 
           // Store new access token for the current module
-          localStorage.setItem(tokenKey, accessToken);
+          if (currentPath.startsWith("/admin")) {
+            sessionStorage.setItem("admin_accessToken", accessToken);
+            localStorage.removeItem("admin_accessToken");
+          } else {
+            localStorage.setItem(tokenKey, accessToken);
+          }
 
           // Retry original request with new token
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -489,16 +509,13 @@ apiClient.interceptors.response.use(
           currentPath.includes("/landing-page");
         const isAdminAuthPage =
           currentPath === "/admin/login" ||
-          currentPath === "/admin/signup" ||
           currentPath === "/admin/forgot-password";
 
         // For landing page management, don't auto-logout on 401 - let component handle it
         // Only auto-logout for other pages after token refresh fails
         if (!isOnboardingPage && !isLandingPageManagement && !isAdminAuthPage) {
           if (currentPath.startsWith("/admin")) {
-            localStorage.removeItem("admin_accessToken");
-            localStorage.removeItem("admin_authenticated");
-            localStorage.removeItem("admin_user");
+            clearModuleAuth("admin");
             window.location.href = "/admin/login";
           } else if (
             currentPath.startsWith("/restaurant") &&

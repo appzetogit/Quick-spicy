@@ -21,6 +21,7 @@ import winston from "winston";
 import mongoose from "mongoose";
 import { uploadToCloudinary } from "../../../shared/utils/cloudinaryService.js";
 import { initializeCloudinary } from "../../../config/cloudinary.js";
+import { revokeAllAdminSessions } from "../services/adminSessionService.js";
 
 const logger = winston.createLogger({
   level: "info",
@@ -858,8 +859,13 @@ export const updateAdminProfile = asyncHandler(async (req, res) => {
     }
 
     if (phone !== undefined) {
-      // Allow empty string to clear phone number
-      admin.phone = phone ? phone.trim() : null;
+      // Allow empty string to clear phone number. Admin-managed phone is treated as OTP-verified.
+      const normalizedPhone = phone ? normalizePhoneNumber(phone) : "";
+      if (phone && !normalizedPhone) {
+        return errorResponse(res, 400, "Invalid phone number format");
+      }
+      admin.phone = normalizedPhone || null;
+      admin.phoneVerified = Boolean(normalizedPhone);
     }
 
     if (profileImage !== undefined) {
@@ -944,11 +950,29 @@ export const changeAdminPassword = asyncHandler(async (req, res) => {
 
     // Update password (pre-save hook will hash it)
     admin.password = newPassword;
+    admin.tokenVersion = (admin.tokenVersion || 0) + 1;
     await admin.save();
+    await revokeAllAdminSessions(admin._id, "password-changed");
 
-    logger.info(`Admin password changed: ${admin._id}`);
+    res.cookie("refreshToken", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0,
+    });
 
-    return successResponse(res, 200, "Password changed successfully");
+    logger.info(`Admin password changed: ${admin._id}`, {
+      tokenVersion: admin.tokenVersion,
+    });
+
+    return successResponse(
+      res,
+      200,
+      "Password changed successfully. All active admin sessions have been revoked.",
+      {
+        forceReauth: true,
+      },
+    );
   } catch (error) {
     logger.error(`Error changing admin password: ${error.message}`, {
       error: error.stack,

@@ -103,30 +103,7 @@ export default function Cart() {
   const paymentMethodSelectRef = useRef(null)
   const couponCelebrationTimeoutRef = useRef(null)
 
-  // Defensive check: Ensure CartProvider is available
-  let cartContext;
-  try {
-    cartContext = useCart();
-  } catch (error) {
-    debugError('❌ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
-    // Return early with error message
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-[#0a0a0a]">
-        <div className="text-center p-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Cart Error</h2>
-          <p className="text-gray-600 dark:text-gray-400">
-            Cart functionality is not available. Please refresh the page.
-          </p>
-          <button
-            onClick={() => navigate('/')}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            Go to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
+  const cartContext = useCart();
 
   const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant, syncCartRestaurant } = cartContext;
   const { getDefaultAddress, getDefaultPaymentMethod, setDefaultAddress, addresses, paymentMethods, userProfile } = useProfile()
@@ -1002,12 +979,31 @@ export default function Cart() {
     fetchFeeSettings()
     window.addEventListener("focus", handleFocus)
     const intervalId = setInterval(fetchFeeSettings, 30000)
-
     return () => {
       window.removeEventListener("focus", handleFocus)
       clearInterval(intervalId)
     }
   }, [])
+
+  if (cartContext._isProvider === false) {
+    debugError('❌ CartProvider not found. Make sure Cart component is rendered within UserLayout.');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f5f5] dark:bg-[#0a0a0a]">
+        <div className="text-center p-8">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4">Cart Error</h2>
+          <p className="text-gray-600 dark:text-gray-400">
+            Cart functionality is not available. Please refresh the page.
+          </p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          >
+            Go to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Use backend pricing if available, otherwise fallback to database fee settings
   const subtotal = pricing?.subtotal || cart.reduce((sum, item) => sum + (item.price || 0) * (item.quantity || 1), 0)

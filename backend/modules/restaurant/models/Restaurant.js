@@ -159,6 +159,10 @@ const restaurantSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    tokenVersion: {
+      type: Number,
+      default: 0,
+    },
     isAcceptingOrders: {
       type: Boolean,
       default: true,

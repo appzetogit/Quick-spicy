@@ -4,6 +4,14 @@ import otpService from '../../auth/services/otpService.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import winston from 'winston';
+import { randomUUID } from 'crypto';
+import {
+  createAdminSession,
+  revokeAdminSession,
+  revokeAllAdminSessions,
+  rotateAdminSession,
+  validateAdminSession,
+} from '../services/adminSessionService.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -15,86 +23,52 @@ const logger = winston.createLogger({
   ]
 });
 
-/**
- * Admin Signup
- * POST /api/admin/auth/signup
- */
-export const adminSignup = asyncHandler(async (req, res) => {
-  const { name, email, password, phone } = req.body;
+const ADMIN_REFRESH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+};
 
-  // Validation
-  if (!name || !email || !password) {
-    return errorResponse(res, 400, 'Name, email, and password are required');
-  }
+const clearAdminRefreshCookie = (res) => {
+  res.cookie('refreshToken', '', {
+    ...ADMIN_REFRESH_COOKIE_OPTIONS,
+    maxAge: 0
+  });
+};
 
-  if (password.length < 6) {
-    return errorResponse(res, 400, 'Password must be at least 6 characters long');
-  }
-
-  // Email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return errorResponse(res, 400, 'Invalid email format');
-  }
-
-  try {
-    // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
-    if (existingAdmin) {
-      return errorResponse(res, 400, 'Admin already exists with this email');
-    }
-
-    // Create new admin
-    const adminData = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password,
-      phoneVerified: false
-    };
-
-    if (phone) {
-      adminData.phone = phone.trim();
-    }
-
-    const admin = await Admin.create(adminData);
-
-    // Generate tokens
-    const tokens = jwtService.generateTokens({
-      userId: admin._id.toString(),
-      role: 'admin',
-      email: admin.email,
-      adminRole: admin.role
-    });
-
-    // Set refresh token in httpOnly cookie
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-
-    // Remove password from response
-    const adminResponse = admin.toObject();
-    delete adminResponse.password;
-
-    logger.info(`Admin registered: ${admin._id}`, { email: admin.email });
-
-    return successResponse(res, 201, 'Admin registered successfully', {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      admin: adminResponse
-    });
-  } catch (error) {
-    logger.error(`Error in admin signup: ${error.message}`);
-    
-    if (error.code === 11000) {
-      return errorResponse(res, 400, 'Admin with this email already exists');
-    }
-    
-    return errorResponse(res, 500, 'Failed to register admin');
-  }
+const buildAdminTokenPayload = (admin, sessionId = null) => ({
+  userId: admin._id.toString(),
+  role: 'admin',
+  email: admin.email,
+  adminRole: admin.role,
+  tokenVersion: admin.tokenVersion || 0,
+  ...(sessionId ? { sessionId } : {})
 });
+
+const maskEmail = (email = '') => {
+  const [local = '', domain = ''] = String(email).split('@');
+  if (!local || !domain) return email;
+  return `${local.slice(0, 1)}${'*'.repeat(Math.max(local.length - 1, 1))}@${domain}`;
+};
+
+const getAdminOtpTarget = (admin) => {
+  if (admin.phoneVerified && admin.phone) {
+    return {
+      phone: admin.phone,
+      email: null,
+      channel: 'phone',
+      maskedTarget: `******${String(admin.phone).replace(/\D/g, '').slice(-4)}`
+    };
+  }
+
+  return {
+    phone: null,
+    email: admin.email,
+    channel: 'email',
+    maskedTarget: maskEmail(admin.email)
+  };
+};
 
 /**
  * Admin Login
@@ -125,133 +99,80 @@ export const adminLogin = asyncHandler(async (req, res) => {
     return errorResponse(res, 401, 'Invalid email or password');
   }
 
-  // Update last login
+  const otpTarget = getAdminOtpTarget(admin);
+  await otpService.generateAndSendOTP(
+    otpTarget.phone,
+    'admin-login',
+    otpTarget.email
+  );
+
+  logger.info(`Admin login OTP sent: ${admin._id}`, {
+    email: admin.email,
+    channel: otpTarget.channel
+  });
+
+  return successResponse(res, 200, 'OTP sent successfully', {
+    requiresOtp: true,
+    channel: otpTarget.channel,
+    maskedTarget: otpTarget.maskedTarget,
+    email: admin.email
+  });
+});
+
+export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
+  const { email, password, otp, sessionContext } = req.body;
+
+  if (!email || !password || !otp) {
+    return errorResponse(res, 400, 'Email, password, and OTP are required');
+  }
+
+  const admin = await Admin.findOne({ email: email.toLowerCase() }).select('+password');
+
+  if (!admin) {
+    return errorResponse(res, 401, 'Invalid email, password, or OTP');
+  }
+
+  if (!admin.isActive) {
+    return errorResponse(res, 401, 'Admin account is inactive. Please contact super admin.');
+  }
+
+  const isPasswordValid = await admin.comparePassword(password);
+  if (!isPasswordValid) {
+    return errorResponse(res, 401, 'Invalid email, password, or OTP');
+  }
+
+  const otpTarget = getAdminOtpTarget(admin);
+  await otpService.verifyOTP(
+    otpTarget.phone,
+    otp,
+    'admin-login',
+    otpTarget.email
+  );
+
   await admin.updateLastLogin();
 
-  // Generate tokens
-  const tokens = jwtService.generateTokens({
-    userId: admin._id.toString(),
-    role: 'admin',
-    email: admin.email,
-    adminRole: admin.role
+  const sessionId = randomUUID();
+  const tokens = jwtService.generateTokens(buildAdminTokenPayload(admin, sessionId));
+  await createAdminSession({
+    admin,
+    sessionId,
+    refreshToken: tokens.refreshToken,
+    req,
+    sessionContext,
   });
+  res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
 
-  // Set refresh token in httpOnly cookie
-  res.cookie('refreshToken', tokens.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-  });
-
-  // Remove password from response
   const adminResponse = admin.toObject();
   delete adminResponse.password;
 
-  logger.info(`Admin logged in: ${admin._id}`, { email: admin.email });
+  logger.info(`Admin logged in with OTP: ${admin._id}`, { email: admin.email });
 
   return successResponse(res, 200, 'Login successful', {
     accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
     admin: adminResponse
   });
 });
 
-/**
- * Admin Signup with OTP
- * POST /api/admin/auth/signup/otp
- */
-export const adminSignupWithOTP = asyncHandler(async (req, res) => {
-  const { name, email, password, otp, phone } = req.body;
-
-  // Validation
-  if (!name || !email || !password || !otp) {
-    return errorResponse(res, 400, 'Name, email, password, and OTP are required');
-  }
-
-  if (password.length < 6) {
-    return errorResponse(res, 400, 'Password must be at least 6 characters long');
-  }
-
-  try {
-    // Verify OTP - pass phone and email separately as per otpService signature
-    let otpResult;
-    try {
-      otpResult = await otpService.verifyOTP(phone || null, otp, 'register', email || null);
-    } catch (otpError) {
-      logger.error(`OTP verification error: ${otpError.message}`);
-      return errorResponse(res, 400, otpError.message || 'Invalid or expired OTP');
-    }
-
-    if (!otpResult || !otpResult.success) {
-      return errorResponse(res, 400, otpResult?.message || 'Invalid or expired OTP');
-    }
-
-    const identifierType = phone ? 'phone' : 'email';
-
-    // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ email: email.toLowerCase() });
-    if (existingAdmin) {
-      return errorResponse(res, 400, 'Admin already exists with this email');
-    }
-
-    // Create new admin
-    const adminData = {
-      name: name.trim(),
-      email: email.toLowerCase().trim(),
-      password,
-      phoneVerified: identifierType === 'phone'
-    };
-
-    if (phone) {
-      adminData.phone = phone.trim();
-      adminData.phoneVerified = true;
-    }
-
-    const admin = await Admin.create(adminData);
-
-    // Generate tokens
-    const tokens = jwtService.generateTokens({
-      userId: admin._id.toString(),
-      role: 'admin',
-      email: admin.email,
-      adminRole: admin.role
-    });
-
-    // Set refresh token in httpOnly cookie
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-
-    // Remove password from response
-    const adminResponse = admin.toObject();
-    delete adminResponse.password;
-
-    logger.info(`Admin registered with OTP: ${admin._id}`, { email: admin.email });
-
-    return successResponse(res, 201, 'Admin registered successfully', {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      admin: adminResponse
-    });
-  } catch (error) {
-    logger.error(`Error in admin signup with OTP: ${error.message}`);
-    
-    if (error.code === 11000) {
-      return errorResponse(res, 400, 'Admin with this email already exists');
-    }
-    
-    return errorResponse(res, 500, 'Failed to register admin');
-  }
-});
-
-/**
- * Refresh Admin Access Token
- * POST /api/admin/auth/refresh-token
- */
 export const refreshAdminToken = asyncHandler(async (req, res) => {
   // Prefer explicit module refresh token header to avoid cross-module cookie collisions.
   const refreshToken = req.headers['x-refresh-token'] || req.cookies?.refreshToken;
@@ -267,21 +188,42 @@ export const refreshAdminToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 401, 'Invalid token for admin');
     }
 
-    const admin = await Admin.findById(decoded.userId).select('-password');
+    const admin = await Admin.findById(decoded.userId);
 
     if (!admin || !admin.isActive) {
       return errorResponse(res, 401, 'Admin not found or inactive');
     }
 
-    const accessToken = jwtService.generateAccessToken({
-      userId: admin._id.toString(),
-      role: 'admin',
-      email: admin.email,
-      adminRole: admin.role
+    // Version check: if it changed, every outstanding session is revoked.
+    if (decoded.tokenVersion !== admin.tokenVersion) {
+      clearAdminRefreshCookie(res);
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
+    }
+
+    const activeSession = await validateAdminSession({
+      adminId: admin._id,
+      sessionId: decoded.sessionId,
+      refreshToken,
     });
 
+    if (!activeSession) {
+      clearAdminRefreshCookie(res);
+      return errorResponse(res, 401, 'Admin session not found or already revoked. Please log in again.');
+    }
+
+    // Re-issue tokens without changing session version.
+    const tokens = jwtService.generateTokens(buildAdminTokenPayload(admin, decoded.sessionId));
+    await rotateAdminSession({
+      adminId: admin._id,
+      sessionId: decoded.sessionId,
+      currentRefreshToken: refreshToken,
+      nextRefreshToken: tokens.refreshToken,
+    });
+
+    res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
+
     return successResponse(res, 200, 'Token refreshed successfully', {
-      accessToken
+      accessToken: tokens.accessToken
     });
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');
@@ -317,16 +259,39 @@ export const getCurrentAdmin = asyncHandler(async (req, res) => {
  * POST /api/admin/auth/logout
  */
 export const adminLogout = asyncHandler(async (req, res) => {
-  // Clear refresh token cookie
-  res.cookie('refreshToken', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: 0
+  await revokeAdminSession({
+    adminId: req.user?._id || req.user?.userId,
+    sessionId: req.token?.sessionId,
+    reason: 'logout',
   });
+  clearAdminRefreshCookie(res);
 
   logger.info(`Admin logged out: ${req.user?._id || req.user?.userId}`);
 
   return successResponse(res, 200, 'Logout successful');
+});
+
+/**
+ * Logout all admin sessions by bumping token version.
+ * POST /api/admin/auth/logout-all
+ */
+export const adminLogoutAll = asyncHandler(async (req, res) => {
+  const admin = await Admin.findById(req.user?._id || req.user?.userId);
+
+  if (!admin) {
+    clearAdminRefreshCookie(res);
+    return errorResponse(res, 404, 'Admin not found');
+  }
+
+  admin.tokenVersion = (admin.tokenVersion || 0) + 1;
+  await admin.save();
+  await revokeAllAdminSessions(admin._id, 'logout-all');
+  clearAdminRefreshCookie(res);
+
+  logger.info(`Admin logged out from all sessions: ${admin._id}`, {
+    tokenVersion: admin.tokenVersion
+  });
+
+  return successResponse(res, 200, 'All admin sessions logged out successfully');
 });
 

@@ -1,0 +1,2 @@
+{"_id":{"$oid":"69ee54eec897a6a1d36ef17c"},"restaurant":{"$oid":"69da0b88a41a60e4af7ac9e3"},"rank":9,"order":1,"isActive":true,"createdAt":{"$date":"2026-04-26T18:09:50.449Z"},"updatedAt":{"$date":"2026-04-26T18:12:12.047Z"},"__v":0}
+{"_id":{"$oid":"69ee5524c897a6a1d36ef22d"},"restaurant":{"$oid":"69e353faae46b2b5da39f780"},"rank":10,"order":2,"isActive":true,"createdAt":{"$date":"2026-04-26T18:10:44.276Z"},"updatedAt":{"$date":"2026-04-26T18:10:44.276Z"},"__v":0}

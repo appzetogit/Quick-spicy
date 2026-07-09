@@ -11,6 +11,7 @@ import cron from 'node-cron';
 import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwtService from './modules/auth/services/jwtService.js';
 import { MEDIA_STORAGE_ROOT, ensureMediaStorageDirs } from './config/mediaStorage.js';
 import {
   pruneStaleActiveOrders,
@@ -20,6 +21,7 @@ import {
   updateActiveOrderLocation,
   getActiveOrderTracking
 } from './modules/delivery/services/firebaseRealtimeTrackingService.js';
+import { runMongoBackup } from './scripts/backup-all-mongodb.js';
 
 // Load environment variables
 dotenv.config();
@@ -179,6 +181,68 @@ const io = new Server(httpServer, {
   pingInterval: 25000
 });
 
+function getSocketToken(socket) {
+  const authToken = socket.handshake?.auth?.token;
+  if (typeof authToken === 'string' && authToken.trim()) {
+    return authToken.startsWith('Bearer ') ? authToken.slice(7) : authToken;
+  }
+
+  const headerToken = socket.handshake?.headers?.authorization;
+  if (typeof headerToken === 'string' && headerToken.startsWith('Bearer ')) {
+    return headerToken.slice(7);
+  }
+
+  return null;
+}
+
+function normalizeEntityId(value) {
+  if (!value) return '';
+  return value?.toString?.() || String(value);
+}
+
+async function attachSocketIdentity(socket) {
+  if (socket.data?.identity) {
+    return socket.data.identity;
+  }
+
+  const token = getSocketToken(socket);
+  if (!token) {
+    throw new Error('Authentication token required');
+  }
+
+  const decoded = jwtService.verifyAccessToken(token);
+  let identity = null;
+
+  if (decoded.role === 'admin') {
+    const { default: Admin } = await import('./modules/admin/models/Admin.js');
+    const admin = await Admin.findById(decoded.userId).select('_id role isActive');
+    if (!admin || !admin.isActive) throw new Error('Admin not found or inactive');
+    identity = { role: 'admin', id: admin._id.toString() };
+  } else if (decoded.role === 'restaurant') {
+    const { default: Restaurant } = await import('./modules/restaurant/models/Restaurant.js');
+    const restaurant = await Restaurant.findById(decoded.userId).select('_id');
+    if (!restaurant) throw new Error('Restaurant not found');
+    identity = { role: 'restaurant', id: restaurant._id.toString() };
+  } else if (decoded.role === 'delivery') {
+    const { default: Delivery } = await import('./modules/delivery/models/Delivery.js');
+    const delivery = await Delivery.findById(decoded.userId).select('_id isActive status');
+    if (!delivery || (!delivery.isActive && delivery.status !== 'pending' && delivery.status !== 'blocked')) {
+      throw new Error('Delivery partner not found or inactive');
+    }
+    identity = { role: 'delivery', id: delivery._id.toString() };
+  } else if (decoded.role === 'user') {
+    const { default: User } = await import('./modules/auth/models/User.js');
+    const user = await User.findById(decoded.userId).select('_id isActive');
+    if (!user || !user.isActive) throw new Error('User not found or inactive');
+    identity = { role: 'user', id: user._id.toString() };
+  } else {
+    throw new Error('Unsupported socket role');
+  }
+
+  socket.data.identity = identity;
+  return identity;
+}
+
 async function ensureFirebaseRealtimeBeforeSocket(next) {
   try {
     if (isFirebaseRealtimeReady()) return next();
@@ -200,7 +264,12 @@ async function ensureFirebaseRealtimeBeforeSocket(next) {
 }
 
 io.use(async (_socket, next) => {
-  await ensureFirebaseRealtimeBeforeSocket(next);
+  try {
+    await attachSocketIdentity(_socket);
+    await ensureFirebaseRealtimeBeforeSocket(next);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Export getIO function for use in other modules
@@ -211,7 +280,15 @@ export function getIO() {
 // Restaurant namespace for order notifications
 const restaurantNamespace = io.of('/restaurant');
 restaurantNamespace.use(async (_socket, next) => {
-  await ensureFirebaseRealtimeBeforeSocket(next);
+  try {
+    const identity = await attachSocketIdentity(_socket);
+    if (identity.role !== 'restaurant') {
+      return next(new Error('Restaurant access required'));
+    }
+    await ensureFirebaseRealtimeBeforeSocket(next);
+  } catch (error) {
+    next(error);
+  }
 });
 
 // Add connection error handling before connection event
@@ -226,9 +303,6 @@ restaurantNamespace.use((socket, next) => {
       userAgent: socket.handshake.headers['user-agent']
     });
 
-    // Allow all connections - authentication can be handled later if needed
-    // The token is passed in auth.token but we don't validate it here
-    // to avoid blocking connections unnecessarily
     next();
   } catch (error) {
     console.error('❌ Error in restaurant namespace middleware:', error);
@@ -244,9 +318,15 @@ restaurantNamespace.on('connection', (socket) => {
 
   // Restaurant joins their room
   socket.on('join-restaurant', (restaurantId) => {
-    if (restaurantId) {
-      // Normalize restaurantId to string (handle both ObjectId and string)
-      const normalizedRestaurantId = restaurantId?.toString() || restaurantId;
+    const identity = socket.data?.identity;
+    const normalizedRestaurantId = normalizeEntityId(restaurantId);
+
+    if (identity?.role !== 'restaurant' || normalizedRestaurantId !== identity.id) {
+      socket.emit('socket-error', { message: 'Unauthorized restaurant room access' });
+      return;
+    }
+
+    if (normalizedRestaurantId) {
       const room = `restaurant:${normalizedRestaurantId}`;
 
       // Log room join attempt with detailed info
@@ -303,7 +383,15 @@ restaurantNamespace.on('connection', (socket) => {
 // Delivery namespace for order assignments
 const deliveryNamespace = io.of('/delivery');
 deliveryNamespace.use(async (_socket, next) => {
-  await ensureFirebaseRealtimeBeforeSocket(next);
+  try {
+    const identity = await attachSocketIdentity(_socket);
+    if (identity.role !== 'delivery') {
+      return next(new Error('Delivery access required'));
+    }
+    await ensureFirebaseRealtimeBeforeSocket(next);
+  } catch (error) {
+    next(error);
+  }
 });
 
 deliveryNamespace.on('connection', (socket) => {
@@ -312,9 +400,15 @@ deliveryNamespace.on('connection', (socket) => {
 
   // Delivery boy joins their room
   socket.on('join-delivery', (deliveryId) => {
-    if (deliveryId) {
-      // Normalize deliveryId to string (handle both ObjectId and string)
-      const normalizedDeliveryId = deliveryId?.toString() || deliveryId;
+    const identity = socket.data?.identity;
+    const normalizedDeliveryId = normalizeEntityId(deliveryId);
+
+    if (identity?.role !== 'delivery' || normalizedDeliveryId !== identity.id) {
+      socket.emit('socket-error', { message: 'Unauthorized delivery room access' });
+      return;
+    }
+
+    if (normalizedDeliveryId) {
       const room = `delivery:${normalizedDeliveryId}`;
 
       socket.join(room);
@@ -420,7 +514,7 @@ app.use(cors({
       callback(null, true);
     } else {
       console.warn(`⚠️ CORS blocked origin: ${origin}`);
-      callback(null, true); // Allow in development, block in production
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -590,6 +684,10 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id);
 
   socket.on('join-admin-orders', () => {
+    if (socket.data?.identity?.role !== 'admin') {
+      socket.emit('socket-error', { message: 'Admin access required' });
+      return;
+    }
     socket.join('admin:orders');
     console.log(`🛎️ Admin client joined room: admin:orders (${socket.id})`);
   });
@@ -604,13 +702,13 @@ io.on('connection', (socket) => {
     let order = null;
     if (mongoose.Types.ObjectId.isValid(inputId)) {
       order = await Order.findById(inputId)
-        .select('orderId _id status address deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
+        .select('orderId _id status address userId restaurantId deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
         .lean();
     }
 
     if (!order) {
       order = await Order.findOne({ orderId: inputId })
-        .select('orderId _id status address deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
+        .select('orderId _id status address userId restaurantId deliveryState.currentPhase deliveryState.currentLocation deliveryState.routeToPickup.coordinates deliveryState.routeToDelivery.coordinates deliveryPartnerId')
         .lean();
     }
 
@@ -664,6 +762,10 @@ io.on('connection', (socket) => {
   // Delivery boy sends location update
   socket.on('update-location', async (data) => {
     try {
+      if (socket.data?.identity?.role !== 'delivery') {
+        return;
+      }
+
       // Validate data
       if (!data.orderId || typeof data.lat !== 'number' || typeof data.lng !== 'number') {
         console.error('Invalid location update data:', data);
@@ -681,6 +783,20 @@ io.on('connection', (socket) => {
         }
       } catch (resolveError) {
         console.warn('Could not resolve tracking IDs for update-location:', resolveError.message);
+      }
+
+      const assignedDeliveryId = normalizeEntityId(
+        trackedOrder?.deliveryPartnerId?._id ||
+        trackedOrder?.deliveryPartnerId
+      );
+      if (!trackedOrder || !assignedDeliveryId || assignedDeliveryId !== socket.data.identity.id) {
+        console.warn('Blocked unauthorized location update', {
+          socketId: socket.id,
+          actorId: socket.data.identity.id,
+          orderId: data.orderId,
+          assignedDeliveryId
+        });
+        return;
       }
 
       const customerCoords = getCustomerCoordsFromOrder(trackedOrder);
@@ -779,6 +895,14 @@ io.on('connection', (socket) => {
       console.error('Error resolving tracking order:', error.message);
     }
 
+    const orderUserId = normalizeEntityId(trackedOrder?.userId);
+    const isAllowedUser = socket.data?.identity?.role === 'user' && orderUserId === socket.data.identity.id;
+    const isAllowedAdmin = socket.data?.identity?.role === 'admin';
+    if (!isAllowedUser && !isAllowedAdmin) {
+      socket.emit('socket-error', { message: 'Unauthorized order tracking access' });
+      return;
+    }
+
     trackingIds.forEach((trackingId) => {
       socket.join(`order:${trackingId}`);
     });
@@ -826,6 +950,13 @@ io.on('connection', (socket) => {
 
     try {
       const { order, trackingIds } = await getTrackedOrderAndIds(orderId);
+      const orderUserId = normalizeEntityId(order?.userId);
+      const isAllowedUser = socket.data?.identity?.role === 'user' && orderUserId === socket.data.identity.id;
+      const isAllowedAdmin = socket.data?.identity?.role === 'admin';
+      if (!isAllowedUser && !isAllowedAdmin) {
+        socket.emit('socket-error', { message: 'Unauthorized order tracking access' });
+        return;
+      }
       const emitIds = trackingIds.length ? trackingIds : [String(orderId)];
       let locationData = await getFirebaseLocationData(emitIds, order, orderId);
 
@@ -863,9 +994,10 @@ io.on('connection', (socket) => {
 
   // Delivery boy joins delivery room
   socket.on('join-delivery', (deliveryId) => {
-    if (deliveryId) {
-      socket.join(`delivery:${deliveryId}`);
-      console.log(`Delivery boy joined: ${deliveryId}`);
+    const normalizedDeliveryId = normalizeEntityId(deliveryId);
+    if (socket.data?.identity?.role === 'delivery' && normalizedDeliveryId === socket.data.identity.id) {
+      socket.join(`delivery:${normalizedDeliveryId}`);
+      console.log(`Delivery boy joined: ${normalizedDeliveryId}`);
     }
   });
 
@@ -898,6 +1030,8 @@ startServer().catch((error) => {
 
 // Initialize scheduled tasks
 function initializeScheduledTasks() {
+  let mongoBackupInProgress = false;
+
   // Realtime DB hygiene: remove stale active orders and mark stale online partners offline.
   cron.schedule('*/10 * * * *', async () => {
     try {
@@ -989,6 +1123,38 @@ function initializeScheduledTasks() {
   }).catch((error) => {
     console.error('❌ Failed to initialize scheduled push notification service:', error);
   });
+
+  const backupCronExpression = process.env.MONGODB_BACKUP_CRON || '0 3 * * *';
+  const backupCronEnabled = !['false', '0', 'off'].includes(
+    String(process.env.MONGODB_BACKUP_ENABLED || 'true').toLowerCase()
+  );
+
+  if (backupCronEnabled) {
+    cron.schedule(backupCronExpression, async () => {
+      if (mongoBackupInProgress) {
+        console.warn('[Mongo Backup Cron] Skipping run because a previous backup is still in progress.');
+        return;
+      }
+
+      mongoBackupInProgress = true;
+      try {
+        const result = await runMongoBackup();
+        console.log(
+          `[Mongo Backup Cron] completed collections=${result.collections}, dir=${result.backupDir}`
+        );
+      } catch (error) {
+        console.error('[Mongo Backup Cron] Error:', error);
+      } finally {
+        mongoBackupInProgress = false;
+      }
+    });
+
+    console.log(
+      `✅ MongoDB backup scheduler initialized (cron: ${backupCronExpression}, root: backend/scripts/backups)`
+    );
+  } else {
+    console.log('ℹ️ MongoDB backup scheduler disabled via MONGODB_BACKUP_ENABLED');
+  }
 }
 
 // Handle unhandled promise rejections

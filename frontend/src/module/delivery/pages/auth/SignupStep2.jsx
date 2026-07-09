@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft, Upload, X, Check } from "lucide-react"
 import { deliveryAPI, uploadAPI } from "@/lib/api"
@@ -39,6 +39,108 @@ const sanitizeUploadedDocs = (docs) => ({
   drivingLicensePhoto: sanitizeUploadedDocValue(docs?.drivingLicensePhoto)
 })
 
+
+const DocumentUpload = ({
+  docType,
+  label,
+  required = true,
+  uploadedDocs,
+  uploading,
+  getPreviewSrc,
+  handleRemove,
+  handleOpenUploadOptions,
+  handleFileSelect,
+  fileInputRefs
+}) => {
+  const uploaded = uploadedDocs[docType]
+  const isUploading = uploading[docType]
+
+  return (
+    <div className="bg-white rounded-lg p-4 border border-gray-200">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+
+      {uploaded ? (
+        <div className="relative">
+          <img
+            src={getPreviewSrc(docType)}
+            alt={label}
+            className="w-full h-48 object-cover rounded-lg"
+          />
+          <button
+            type="button"
+            onClick={() => handleRemove(docType)}
+            className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          <div className="absolute bottom-2 left-2 bg-green-500 text-white px-3 py-1 rounded-full flex items-center gap-1 text-sm">
+            <Check className="w-4 h-4" />
+            <span>Uploaded</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 transition-colors px-4">
+          <div className="flex flex-col items-center justify-center pt-5 pb-3">
+            {isUploading ? (
+              <>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-2"></div>
+                <p className="text-sm text-gray-500">Uploading...</p>
+              </>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                <p className="text-sm text-gray-500 mb-1">Upload document</p>
+                <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
+              </>
+            )}
+          </div>
+
+          {!isUploading && (
+            <div className="w-full flex items-center gap-2 pb-4">
+              <button
+                type="button"
+                onClick={() =>
+                  handleOpenUploadOptions({
+                    title: label,
+                    docType,
+                    onSelectFile: (selectedFile) => handleFileSelect(docType, selectedFile)
+                  })
+                }
+                className="w-full text-center px-3 py-2 rounded-md bg-[#00B761] text-white text-sm font-medium cursor-pointer hover:bg-[#00A055] transition-colors"
+              >
+                Upload
+              </button>
+            </div>
+          )}
+
+          <input
+            ref={(node) => {
+              if (fileInputRefs && fileInputRefs.current) {
+                fileInputRefs.current[docType] = node
+              }
+            }}
+            type="file"
+            className="hidden"
+            accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onClick={(e) => {
+              e.target.value = ""
+            }}
+            onChange={(e) => {
+              const selectedFile = e.target.files[0]
+              if (selectedFile) {
+                handleFileSelect(docType, selectedFile)
+              }
+              e.target.value = ""
+            }}
+            disabled={isUploading}
+          />
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function SignupStep2() {
   const navigate = useNavigate()
@@ -379,94 +481,6 @@ export default function SignupStep2() {
     }
   }
 
-  const DocumentUpload = ({ docType, label, required = true }) => {
-    const uploaded = uploadedDocs[docType]
-    const isUploading = uploading[docType]
-
-    return (
-      <div className="bg-white rounded-lg p-4 border border-gray-200">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {label} {required && <span className="text-red-500">*</span>}
-        </label>
-
-        {uploaded ? (
-          <div className="relative">
-            <img
-              src={getPreviewSrc(docType)}
-              alt={label}
-              className="w-full h-48 object-cover rounded-lg"
-            />
-            <button
-              type="button"
-              onClick={() => handleRemove(docType)}
-              className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="absolute bottom-2 left-2 bg-green-500 text-white px-3 py-1 rounded-full flex items-center gap-1 text-sm">
-              <Check className="w-4 h-4" />
-              <span>Uploaded</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg hover:border-green-500 transition-colors px-4">
-            <div className="flex flex-col items-center justify-center pt-5 pb-3">
-              {isUploading ? (
-                <>
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500 mb-2"></div>
-                  <p className="text-sm text-gray-500">Uploading...</p>
-                </>
-              ) : (
-                <>
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500 mb-1">Upload document</p>
-                  <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-                </>
-              )}
-            </div>
-
-            {!isUploading && (
-              <div className="w-full flex items-center gap-2 pb-4">
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleOpenUploadOptions({
-                      title: label,
-                      docType,
-                      onSelectFile: (selectedFile) => handleFileSelect(docType, selectedFile)
-                    })
-                  }
-                  className="w-full text-center px-3 py-2 rounded-md bg-[#00B761] text-white text-sm font-medium cursor-pointer hover:bg-[#00A055] transition-colors"
-                >
-                  Upload
-                </button>
-              </div>
-            )}
-
-            <input
-              ref={(node) => {
-                fileInputRefs.current[docType] = node
-              }}
-              type="file"
-              className="hidden"
-              accept=".jpg,.jpeg,.png,.webp,.heic,.heif,image/jpeg,image/png,image/webp,image/heic,image/heif"
-              onClick={(e) => {
-                e.target.value = ""
-              }}
-              onChange={(e) => {
-                const selectedFile = e.target.files[0]
-                if (selectedFile) {
-                  handleFileSelect(docType, selectedFile)
-                }
-                e.target.value = ""
-              }}
-              disabled={isUploading}
-            />
-          </div>
-        )}
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -489,10 +503,10 @@ export default function SignupStep2() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <DocumentUpload docType="profilePhoto" label="Profile Photo" required={true} />
-          <DocumentUpload docType="aadharPhoto" label="Aadhar Card Photo" required={true} />
-          <DocumentUpload docType="panPhoto" label="PAN Card Photo" required={true} />
-          <DocumentUpload docType="drivingLicensePhoto" label="Driving License Photo" required={true} />
+          <DocumentUpload docType="profilePhoto" label="Profile Photo" required={true} uploadedDocs={uploadedDocs} uploading={uploading} getPreviewSrc={getPreviewSrc} handleRemove={handleRemove} handleOpenUploadOptions={handleOpenUploadOptions} handleFileSelect={handleFileSelect} fileInputRefs={fileInputRefs} />
+          <DocumentUpload docType="aadharPhoto" label="Aadhar Card Photo" required={true} uploadedDocs={uploadedDocs} uploading={uploading} getPreviewSrc={getPreviewSrc} handleRemove={handleRemove} handleOpenUploadOptions={handleOpenUploadOptions} handleFileSelect={handleFileSelect} fileInputRefs={fileInputRefs} />
+          <DocumentUpload docType="panPhoto" label="PAN Card Photo" required={true} uploadedDocs={uploadedDocs} uploading={uploading} getPreviewSrc={getPreviewSrc} handleRemove={handleRemove} handleOpenUploadOptions={handleOpenUploadOptions} handleFileSelect={handleFileSelect} fileInputRefs={fileInputRefs} />
+          <DocumentUpload docType="drivingLicensePhoto" label="Driving License Photo" required={true} uploadedDocs={uploadedDocs} uploading={uploading} getPreviewSrc={getPreviewSrc} handleRemove={handleRemove} handleOpenUploadOptions={handleOpenUploadOptions} handleFileSelect={handleFileSelect} fileInputRefs={fileInputRefs} />
 
           {/* Submit Button */}
           <button

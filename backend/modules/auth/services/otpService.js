@@ -88,8 +88,9 @@ class OTPService {
         throw new Error('Either phone or email must be provided');
       }
 
-      const identifier = phone || email;
-      const identifierType = phone ? 'phone' : 'email';
+      const normalizedPhone = phone ? extractPhoneDigits(phone) : null;
+      const identifier = normalizedPhone || email;
+      const identifierType = normalizedPhone ? 'phone' : 'email';
 
       // Check rate limiting (max 3 OTPs per identifier per hour) - using MongoDB
       if (process.env.NODE_ENV === 'production') {
@@ -107,12 +108,12 @@ class OTPService {
       }
 
       // Generate OTP (use default for test phone numbers)
-      const otp = (phone && isTestPhoneNumber(phone)) ? getTestOtpForPhone(phone) : generateOTP();
+      const otp = (normalizedPhone && isTestPhoneNumber(normalizedPhone)) ? getTestOtpForPhone(normalizedPhone) : generateOTP();
       const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
       // Build query for invalidating previous OTPs
       const invalidateQuery = { purpose, verified: false };
-      if (phone) invalidateQuery.phone = phone;
+      if (normalizedPhone) invalidateQuery.phone = normalizedPhone;
       if (email) invalidateQuery.email = email;
 
       // Invalidate previous OTPs for this identifier and purpose
@@ -127,21 +128,21 @@ class OTPService {
         purpose,
         expiresAt
       };
-      if (phone) otpData.phone = phone;
+      if (normalizedPhone) otpData.phone = normalizedPhone;
       if (email) otpData.email = email;
 
       const otpRecord = await Otp.create(otpData);
 
       // Send OTP via SMS or Email
-      if (phone) {
+      if (normalizedPhone) {
         // Skip actual SMS sending for test phone numbers
-        if (!isTestPhoneNumber(phone)) {
+        if (!isTestPhoneNumber(normalizedPhone)) {
           // Use SMSIndia Hub for phone OTP
           try {
             const smsStartedAt = Date.now();
-            const smsResult = await smsIndiaHubService.sendOTP(phone, otp, purpose);
+            const smsResult = await smsIndiaHubService.sendOTP(normalizedPhone, otp, purpose);
             logger.info(`SMS OTP dispatch completed`, {
-              phone,
+              phone: normalizedPhone,
               purpose,
               requestMs: smsResult?.requestMs ?? (Date.now() - smsStartedAt),
               providerStatus: smsResult?.status || 'unknown',
@@ -151,7 +152,7 @@ class OTPService {
             // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
             if (process.env.NODE_ENV !== 'production') {
               logger.warn(`SMS send failed in non-production mode, continuing without SMS: ${smsError.message}`, {
-                phone,
+                phone: normalizedPhone,
                 purpose
               });
             } else {
@@ -159,8 +160,8 @@ class OTPService {
             }
           }
         } else {
-          logger.info(`Skipping SMS for test phone number: ${phone}`, {
-            phone,
+          logger.info(`Skipping SMS for test phone number: ${normalizedPhone}`, {
+            phone: normalizedPhone,
             purpose,
             otp
           });
@@ -203,18 +204,18 @@ class OTPService {
    */
   async verifyOTP(phone = null, otp, purpose = 'login', email = null) {
     try {
-      // Validate that either phone or email is provided
       if (!phone && !email) {
         throw new Error('Either phone or email must be provided');
       }
 
-      const identifier = phone || email;
-      const identifierType = phone ? 'phone' : 'email';
+      const normalizedPhone = phone ? extractPhoneDigits(phone) : null;
+      const identifier = normalizedPhone || email;
+      const identifierType = normalizedPhone ? 'phone' : 'email';
 
       // Check if this is a test phone number and OTP matches default test OTP
-      if (phone && isTestPhoneNumber(phone) && otp === getTestOtpForPhone(phone)) {
-        logger.info(`Test OTP verified for ${phone}`, {
-          phone,
+      if (normalizedPhone && isTestPhoneNumber(normalizedPhone) && otp === getTestOtpForPhone(normalizedPhone)) {
+        logger.info(`Test OTP verified for ${normalizedPhone}`, {
+          phone: normalizedPhone,
           purpose
         });
         return {
@@ -224,76 +225,49 @@ class OTPService {
       }
 
       // Verify OTP from database
-      // For reset-password purpose, allow already-verified OTPs within 10 minutes
-      let otpRecord;
-      
       if (purpose === 'reset-password') {
-        // First try to find unverified OTP
-        const unverifiedQuery = {
+        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+        const verifiedQuery = {
           otp,
           purpose,
-          verified: false,
-          expiresAt: { $gt: new Date() }
+          verified: true,
+          expiresAt: { $gt: new Date() },
+          updatedAt: { $gt: tenMinutesAgo }
         };
-        if (phone) unverifiedQuery.phone = phone;
-        if (email) unverifiedQuery.email = email;
+        if (normalizedPhone) verifiedQuery.phone = normalizedPhone;
+        if (email) verifiedQuery.email = email;
         
-        otpRecord = await Otp.findOne(unverifiedQuery);
-        
-        // If not found, check for already-verified OTP within last 10 minutes
-        if (!otpRecord) {
-          const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-          const verifiedQuery = {
-            otp,
-            purpose,
-            verified: true,
-            expiresAt: { $gt: new Date() },
-            updatedAt: { $gt: tenMinutesAgo }
+        const alreadyVerified = await Otp.findOne(verifiedQuery);
+        if (alreadyVerified) {
+          return {
+            success: true,
+            message: 'OTP verified successfully'
           };
-          if (phone) verifiedQuery.phone = phone;
-          if (email) verifiedQuery.email = email;
-          
-          otpRecord = await Otp.findOne(verifiedQuery);
-          
-          if (otpRecord) {
-            // OTP already verified and still valid (within 10 minutes)
-            return {
-              success: true,
-              message: 'OTP verified successfully'
-            };
-          }
         }
-      } else {
-        // For other purposes, only check unverified OTPs
-        const query = {
-          otp,
-          purpose,
-          verified: false,
-          expiresAt: { $gt: new Date() }
-        };
-        if (phone) query.phone = phone;
-        if (email) query.email = email;
-        
-        otpRecord = await Otp.findOne(query);
       }
+
+      const query = {
+        purpose,
+        verified: false,
+        expiresAt: { $gt: new Date() },
+        attempts: { $lt: 5 }
+      };
+      if (normalizedPhone) query.phone = normalizedPhone;
+      if (email) query.email = email;
+
+      // Atomic increment on attempts. If it is already >= 5, document won't match the query.
+      const otpRecord = await Otp.findOneAndUpdate(
+        query,
+        { $inc: { attempts: 1 } },
+        { new: true }
+      );
 
       if (!otpRecord) {
-        // Increment attempts for security (only for unverified OTPs)
-        const incrementQuery = { purpose, verified: false };
-        if (phone) incrementQuery.phone = phone;
-        if (email) incrementQuery.email = email;
-
-        await Otp.updateMany(
-          incrementQuery,
-          { $inc: { attempts: 1 } }
-        );
-
-        throw new Error('Invalid or expired OTP');
+        throw new Error('Invalid OTP, expired, or locked out due to too many attempts.');
       }
 
-      // Check attempts
-      if (otpRecord.attempts >= 5) {
-        throw new Error('Too many failed attempts. Please request a new OTP.');
+      if (otpRecord.otp !== otp) {
+        throw new Error('Invalid or expired OTP');
       }
 
       // Mark as verified

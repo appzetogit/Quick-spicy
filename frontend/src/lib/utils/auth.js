@@ -85,6 +85,9 @@ export function hasModuleAccess(role, module) {
  * @returns {string|null} - Access token or null
  */
 export function getModuleToken(module) {
+  if (module === "admin") {
+    return sessionStorage.getItem(`${module}_accessToken`) || localStorage.getItem(`${module}_accessToken`);
+  }
   return localStorage.getItem(`${module}_accessToken`);
 }
 
@@ -94,6 +97,9 @@ export function getModuleToken(module) {
  * @returns {string|null} - Refresh token or null
  */
 export function getModuleRefreshToken(module) {
+  if (module === "admin") {
+    return sessionStorage.getItem(`${module}_refreshToken`) || localStorage.getItem(`${module}_refreshToken`);
+  }
   return localStorage.getItem(`${module}_refreshToken`);
 }
 
@@ -156,6 +162,10 @@ export function clearModuleAuth(module) {
   localStorage.removeItem(`${module}_refreshToken`);
   localStorage.removeItem(`${module}_authenticated`);
   localStorage.removeItem(`${module}_user`);
+  sessionStorage.removeItem(`${module}_accessToken`);
+  sessionStorage.removeItem(`${module}_refreshToken`);
+  sessionStorage.removeItem(`${module}_authenticated`);
+  sessionStorage.removeItem(`${module}_user`);
   if (module === "restaurant") {
     clearRestaurantSessionCache();
   }
@@ -227,30 +237,39 @@ export function setAuthData(module, token, user, refreshToken = null) {
     const refreshTokenKey = `${module}_refreshToken`;
     const authKey = `${module}_authenticated`;
     const userKey = `${module}_user`;
+    const primaryStorage = module === "admin" ? sessionStorage : localStorage;
+    const secondaryStorage = module === "admin" ? localStorage : null;
 
     // Prevent stale restaurant profile data from previous account after re-login.
     if (module === "restaurant") {
       clearRestaurantSessionCache();
     }
 
-    localStorage.setItem(tokenKey, token);
+    primaryStorage.setItem(tokenKey, token);
     if (refreshToken && typeof refreshToken === "string") {
-      localStorage.setItem(refreshTokenKey, refreshToken);
+      primaryStorage.setItem(refreshTokenKey, refreshToken);
     }
-    localStorage.setItem(authKey, 'true');
+    primaryStorage.setItem(authKey, 'true');
     
     if (user) {
       try {
-        localStorage.setItem(userKey, JSON.stringify(user));
+        primaryStorage.setItem(userKey, JSON.stringify(user));
       } catch (userError) {
         console.warn('Failed to store user data, but token was stored:', userError);
         // Don't throw - token storage is more important
       }
     }
 
+    if (secondaryStorage) {
+      secondaryStorage.removeItem(tokenKey);
+      secondaryStorage.removeItem(refreshTokenKey);
+      secondaryStorage.removeItem(authKey);
+      secondaryStorage.removeItem(userKey);
+    }
+
     // Verify the token was stored correctly
-    const storedToken = localStorage.getItem(tokenKey);
-    const storedAuth = localStorage.getItem(authKey);
+    const storedToken = primaryStorage.getItem(tokenKey);
+    const storedAuth = primaryStorage.getItem(authKey);
     
     if (storedToken !== token) {
       console.error(`[setAuthData] Token mismatch:`, {
@@ -278,17 +297,17 @@ export function setAuthData(module, token, user, refreshToken = null) {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
         // Retry storing
-        localStorage.setItem(`${module}_accessToken`, token);
+        primaryStorage.setItem(`${module}_accessToken`, token);
         if (refreshToken && typeof refreshToken === "string") {
-          localStorage.setItem(`${module}_refreshToken`, refreshToken);
+          primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
         }
-        localStorage.setItem(`${module}_authenticated`, 'true');
+        primaryStorage.setItem(`${module}_authenticated`, 'true');
         if (user) {
-          localStorage.setItem(`${module}_user`, JSON.stringify(user));
+          primaryStorage.setItem(`${module}_user`, JSON.stringify(user));
         }
         
         // Verify again after retry
-        const storedToken = localStorage.getItem(`${module}_accessToken`);
+        const storedToken = primaryStorage.getItem(`${module}_accessToken`);
         if (storedToken !== token) {
           throw new Error('Token storage failed even after clearing space');
         }

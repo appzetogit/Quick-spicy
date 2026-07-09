@@ -2,7 +2,7 @@
 
 Generated from `frontend/src/module/admin`.
 
-Total files: 218
+Total files: 217
 
 ## pages (130)
 
@@ -15,7 +15,6 @@ Total files: 218
 - pages/advertisement/NewAdvertisement.jsx
 - pages/auth/AdminForgotPassword.jsx
 - pages/auth/AdminLogin.jsx
-- pages/auth/AdminSignup.jsx
 - pages/Banners.jsx
 - pages/campaigns/BasicCampaign.jsx
 - pages/campaigns/FoodCampaign.jsx

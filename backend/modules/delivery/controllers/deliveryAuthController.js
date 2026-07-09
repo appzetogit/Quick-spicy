@@ -327,20 +327,45 @@ export const refreshToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 401, 'Delivery boy not found or inactive');
     }
 
-    // Verify refresh token matches stored token
-    if (delivery.refreshToken !== refreshToken) {
-      return errorResponse(res, 401, 'Invalid refresh token');
+    // RTR check: check both decoded.tokenVersion and delivery.refreshToken
+    if (decoded.tokenVersion !== delivery.tokenVersion || delivery.refreshToken !== refreshToken) {
+      // Token reuse detected. Revoke all.
+      delivery.tokenVersion += 1;
+      delivery.refreshToken = null;
+      await delivery.save();
+      res.clearCookie('refreshToken', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+      });
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
     }
 
-    // Generate new access token
-    const accessToken = jwtService.generateAccessToken({
+    // Rotate version
+    delivery.tokenVersion += 1;
+
+    // Generate new rotated access and refresh tokens
+    const tokens = jwtService.generateTokens({
       userId: delivery._id.toString(),
       role: 'delivery',
-      email: delivery.email || delivery.phone || delivery.deliveryId
+      email: delivery.email || delivery.phone || delivery.deliveryId,
+      tokenVersion: delivery.tokenVersion
+    });
+
+    // Save rotated refresh token to database
+    delivery.refreshToken = tokens.refreshToken;
+    await delivery.save();
+
+    // Set new refresh token in httpOnly cookie
+    res.cookie('refreshToken', tokens.refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 
     return successResponse(res, 200, 'Token refreshed successfully', {
-      accessToken
+      accessToken: tokens.accessToken
     });
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');

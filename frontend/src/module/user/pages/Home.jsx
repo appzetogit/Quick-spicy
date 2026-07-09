@@ -924,21 +924,7 @@ export default function Home() {
   const [activeFilterTab, setActiveFilterTab] = useState('sort')
   const categoryScrollRef = useRef(null)
   const gsapAnimationsRef = useRef([])
-  // Safely get profile context - handle case when ProfileProvider is not available
-  let profileContext = null
-  try {
-    profileContext = useProfile()
-  } catch (error) {
-    debugWarn("ProfileProvider not available, using fallback:", error.message)
-    // Fallback values when ProfileProvider is not available
-    profileContext = {
-      addFavorite: () => debugWarn("ProfileProvider not available"),
-      removeFavorite: () => debugWarn("ProfileProvider not available"),
-      isFavorite: () => false,
-      getFavorites: () => [],
-      getDefaultAddress: () => null
-    }
-  }
+  const profileContext = useProfile()
 
   const { addFavorite, removeFavorite, isFavorite, getFavorites, getDefaultAddress } = profileContext
   const { addToCart, cart } = useCart()

@@ -233,10 +233,11 @@ import {
   getPublicFeeSettings,
 } from "../controllers/feeSettingsController.js";
 import zoneRoutes from "./zoneRoutes.js";
-import { authenticateAdmin } from "../middleware/adminAuth.js";
+import { authenticateAdmin, authorizeAdmin } from "../middleware/adminAuth.js";
 import { uploadMiddleware } from "../../../shared/utils/cloudinaryService.js";
 
 const router = express.Router();
+const requireSuperAdmin = authorizeAdmin("super_admin");
 
 // Debug: Log route file loading
 console.log("📦 Loading adminRoutes.js - All routes will be registered");
@@ -270,19 +271,19 @@ router.get("/cash-limit-settlement", getCashLimitSettlements);
 
 // Delivery withdrawal requests (admin)
 router.get("/delivery-withdrawal/requests", getDeliveryWithdrawalRequests);
-router.post("/delivery-withdrawal/:id/approve", approveDeliveryWithdrawal);
-router.post("/delivery-withdrawal/:id/reject", rejectDeliveryWithdrawal);
+router.post("/delivery-withdrawal/:id/approve", requireSuperAdmin, approveDeliveryWithdrawal);
+router.post("/delivery-withdrawal/:id/reject", requireSuperAdmin, rejectDeliveryWithdrawal);
 
 router.get("/delivery-boy-wallet", getDeliveryBoyWallets);
-router.put("/delivery-boy-wallet", updateDeliveryBoyWalletBalances);
-router.post("/delivery-boy-wallet/adjustment", addWalletAdjustment);
+router.put("/delivery-boy-wallet", requireSuperAdmin, updateDeliveryBoyWalletBalances);
+router.post("/delivery-boy-wallet/adjustment", requireSuperAdmin, addWalletAdjustment);
 
 // Admin Management
 router.get("/admins", getAdmins);
 router.get("/admins/:id", getAdminById);
-router.post("/admins", createAdmin);
-router.put("/admins/:id", updateAdmin);
-router.delete("/admins/:id", deleteAdmin);
+router.post("/admins", requireSuperAdmin, createAdmin);
+router.put("/admins/:id", requireSuperAdmin, updateAdmin);
+router.delete("/admins/:id", requireSuperAdmin, deleteAdmin);
 
 // Profile Management
 router.get("/profile", getAdminProfile);
@@ -368,8 +369,8 @@ router.post("/earning-addon-history/:id/credit", creditEarningToWallet);
 router.patch("/earning-addon-history/:id/cancel", cancelEarningAddonHistory);
 
 // Environment Variables Management
-router.get("/env-variables", getEnvVariables);
-router.post("/env-variables", saveEnvVariables);
+router.get("/env-variables", requireSuperAdmin, getEnvVariables);
+router.post("/env-variables", requireSuperAdmin, saveEnvVariables);
 
 // Delivery Boy Commission Management
 router.get("/delivery-boy-commission", getCommissionRules);
@@ -602,7 +603,7 @@ router.get("/audit-logs/commission-changes", getCommissionChangeLogs);
 
 // Withdrawal Request Routes (Admin)
 router.get("/withdrawal/requests", getAllWithdrawalRequests);
-router.post("/withdrawal/:id/approve", approveWithdrawalRequest);
-router.post("/withdrawal/:id/reject", rejectWithdrawalRequest);
+router.post("/withdrawal/:id/approve", requireSuperAdmin, approveWithdrawalRequest);
+router.post("/withdrawal/:id/reject", requireSuperAdmin, rejectWithdrawalRequest);
 
 export default router;

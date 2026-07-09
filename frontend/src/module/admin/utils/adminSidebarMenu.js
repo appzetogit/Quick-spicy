@@ -208,6 +208,13 @@ export const adminSidebarMenu = [
   },
   {
     type: "section",
+    label: "SECURITY",
+    items: [
+      { type: "link", label: "Admin Sessions", path: "/admin/sessions", icon: "LogIn" },
+    ],
+  },
+  {
+    type: "section",
     label: "BANNER SETTINGS",
     items: [
       { type: "link", label: "Landing Page Management", path: "/admin/hero-banner-management", icon: "Image" },

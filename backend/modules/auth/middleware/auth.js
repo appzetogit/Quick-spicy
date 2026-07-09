@@ -8,14 +8,22 @@ import { errorResponse } from "../../../shared/utils/response.js";
  */
 export const authenticate = async (req, res, next) => {
   try {
-    // Get token from Authorization header
-    const authHeader = req.headers.authorization;
+    let token = null;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
-      return errorResponse(res, 401, "No token provided");
+    // 1. Check Authorization header
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.substring(7);
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // 2. Check accessToken cookie
+    if (!token && req.cookies?.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    if (!token) {
+      return errorResponse(res, 401, "No token provided");
+    }
 
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);
@@ -31,7 +39,17 @@ export const authenticate = async (req, res, next) => {
       return errorResponse(res, 401, "User account is inactive");
     }
 
-    // Attach user to request
+    // Check tokenVersion match to handle rotated/revoked sessions
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+      return errorResponse(res, 401, "Session expired or revoked. Please log in again.");
+    }
+
+    // Check email verification status for email registrations
+    if (user.signupMethod === "email" && !user.emailVerified) {
+      return errorResponse(res, 403, "Please verify your email address to proceed.");
+    }
+
+    // Attach user and decoded claims to request
     req.user = user;
     req.token = decoded;
 

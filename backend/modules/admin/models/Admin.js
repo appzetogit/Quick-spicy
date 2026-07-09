@@ -51,6 +51,10 @@ const adminSchema = new mongoose.Schema({
     enum: ['super_admin', 'admin', 'moderator'],
     default: 'admin'
   },
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
   isActive: {
     type: Boolean,
     default: true

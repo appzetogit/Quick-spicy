@@ -158,7 +158,8 @@ export default function AdminProfile() {
           fileInputRef.current.value = "";
         }
         // Update localStorage with new admin data
-        localStorage.setItem('admin_user', JSON.stringify(updatedAdmin));
+        sessionStorage.setItem('admin_user', JSON.stringify(updatedAdmin));
+        localStorage.removeItem('admin_user');
         // Dispatch event to notify other components
         window.dispatchEvent(new Event('adminAuthChanged'));
         toast.success("Profile updated successfully");
@@ -369,17 +370,20 @@ export default function AdminProfile() {
               <div className="space-y-2">
                 <Label htmlFor="phone" className="flex items-center gap-2">
                   <Phone className="w-4 h-4" />
-                  Phone Number
+                  OTP Phone Number
                 </Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
-                  placeholder="Enter phone number (optional)"
+                  placeholder="Enter phone number for admin login OTP"
                   disabled={!isEditMode || saving || uploading}
                   className={`h-11 ${!isEditMode ? "bg-neutral-50 cursor-not-allowed" : ""}`}
                 />
+                <p className="text-xs text-neutral-500">
+                  Admin login OTPs will be sent to this verified number.
+                </p>
               </div>
 
               <div className="space-y-2 md:col-span-2">

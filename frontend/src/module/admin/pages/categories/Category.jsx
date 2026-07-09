@@ -203,7 +203,7 @@ export default function Category() {
 
   // Fetch categories from API
   useEffect(() => {
-    const adminToken = localStorage.getItem('admin_accessToken')
+    const adminToken = sessionStorage.getItem('admin_accessToken') || localStorage.getItem('admin_accessToken')
     if (!adminToken) {
       debugWarn('No admin token found. User may need to login.')
       toast.error('Please login to access categories')

@@ -308,10 +308,14 @@ export const API_ENDPOINTS = {
   // Admin endpoints
   ADMIN: {
     AUTH: {
-      SIGNUP: "/admin/auth/signup",
-      SIGNUP_OTP: "/admin/auth/signup/otp",
       LOGIN: "/admin/auth/login",
+      VERIFY_LOGIN_OTP: "/admin/auth/verify-login-otp",
+      REFRESH_TOKEN: "/admin/auth/refresh-token",
       LOGOUT: "/admin/auth/logout",
+      LOGOUT_ALL: "/admin/auth/logout-all",
+      SESSIONS: "/admin/auth/sessions",
+      SESSION_BY_ID: "/admin/auth/sessions/:sessionId",
+      CURRENT_SESSION_LOCATION: "/admin/auth/sessions/current/location",
       ME: "/admin/auth/me",
     },
     PROFILE: "/admin/profile",

@@ -238,6 +238,14 @@ const userSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  tokenVersion: {
+    type: Number,
+    default: 0
+  },
+  emailVerified: {
+    type: Boolean,
+    default: false
   }
 }, {
   timestamps: true

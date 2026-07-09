@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, Component } from "react"
+import { useState, useEffect, useRef, Component } from "react"
 import { createPortal } from "react-dom"
 import { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -2749,9 +2749,9 @@ function RestaurantDetailsContent() {
                   <div className="flex-1 overflow-y-auto px-4 py-3">
                     {restaurant?.outlets && Array.isArray(restaurant.outlets) && restaurant.outlets.length > 0 ? (
                       <div className="space-y-2">
-                        {restaurant.outlets.map((outlet) => (
+                        {restaurant.outlets.map((outlet, index) => (
                           <div
-                            key={outlet?.id || Math.random()}
+                            key={outlet?.id || index}
                             className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#2a2a2a]"
                           >
                             {outlet?.isNearest && (

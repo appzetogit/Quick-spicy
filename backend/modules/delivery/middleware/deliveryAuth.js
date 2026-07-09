@@ -37,6 +37,11 @@ export const authenticate = async (req, res, next) => {
       return errorResponse(res, 401, 'Delivery boy not found');
     }
 
+    // Check tokenVersion match to handle rotated/revoked sessions
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== delivery.tokenVersion) {
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
+    }
+
     // Allow blocked/pending status partners to access (they can see rejection reason or verification message)
     // Only block if account is inactive AND not blocked/pending (blocked/pending partners can login)
     if (!delivery.isActive && delivery.status !== 'blocked' && delivery.status !== 'pending') {

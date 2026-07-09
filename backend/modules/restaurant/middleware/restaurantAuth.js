@@ -37,6 +37,11 @@ export const authenticate = async (req, res, next) => {
       return errorResponse(res, 401, 'Restaurant not found');
     }
 
+    // Check tokenVersion match to handle rotated/revoked sessions
+    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== restaurant.tokenVersion) {
+      return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
+    }
+
     // Allow inactive restaurants to access onboarding and profile routes
     // They need to complete onboarding even if not yet approved by admin
     // Only block inactive restaurants from accessing other restricted routes

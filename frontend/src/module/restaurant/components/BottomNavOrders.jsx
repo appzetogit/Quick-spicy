@@ -44,9 +44,6 @@ export default function BottomNavOrders() {
 
   // Hide on internal pages (create-offers flow)
   const isInternalPage = pathname.includes("/create-offers")
-  if (isInternalPage) {
-    return null
-  }
 
   // 🔒 single source of truth for mode
   const isHubMode = useMemo(() => {
@@ -164,6 +161,10 @@ export default function BottomNavOrders() {
         }, 200) // Wait for enter animation to complete (under 250ms)
       })
     })
+  }
+
+  if (isInternalPage) {
+    return null
   }
 
   return (

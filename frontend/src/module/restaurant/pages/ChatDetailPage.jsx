@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useNavigate, useParams } from "react-router-dom"
 import Lenis from "lenis"
@@ -9,6 +9,28 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+
+// Mock messages data
+const mockMessages = [
+  {
+    id: 1,
+    text: "Hi",
+    sender: "other",
+    time: "10:30 AM",
+  },
+  {
+    id: 2,
+    text: "Hello! How can I help you?",
+    sender: "me",
+    time: "10:31 AM",
+  },
+  {
+    id: 3,
+    text: "I need help with my order",
+    sender: "other",
+    time: "10:32 AM",
+  },
+]
 
 export default function ChatDetailPage() {
   const navigate = useNavigate()
@@ -36,27 +58,7 @@ export default function ChatDetailPage() {
     }
   }, [])
 
-  // Mock messages data
-  const messages = [
-    {
-      id: 1,
-      text: "Hi",
-      sender: "other",
-      time: "10:30 AM",
-    },
-    {
-      id: 2,
-      text: "Hello! How can I help you?",
-      sender: "me",
-      time: "10:31 AM",
-    },
-    {
-      id: 3,
-      text: "I need help with my order",
-      sender: "other",
-      time: "10:32 AM",
-    },
-  ]
+  const messages = mockMessages
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })

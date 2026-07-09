@@ -1,9 +1,10 @@
-﻿import { useState, useMemo } from "react"
+import { useState, useMemo } from "react"
 import { Pencil, Settings, Search, Download, ChevronDown, FileText, FileSpreadsheet, Code, Check, Columns, ArrowUpDown } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { exportSEOPagesToCSV, exportSEOPagesToExcel, exportSEOPagesToPDF, exportSEOPagesToJSON } from "../../components/seo/seoExportUtils"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
 const debugLog = (...args) => {}

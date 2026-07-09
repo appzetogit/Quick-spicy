@@ -257,6 +257,10 @@ const deliverySchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    tokenVersion: {
+      type: Number,
+      default: 0
+    },
     // Last login
     lastLogin: Date,
     // Verification
