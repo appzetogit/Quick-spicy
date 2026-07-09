@@ -110,6 +110,7 @@ if (missingEnvVars.length > 0) {
 
 // Initialize Express app
 const app = express();
+app.set('trust proxy', 1);
 const httpServer = createServer(app);
 
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
