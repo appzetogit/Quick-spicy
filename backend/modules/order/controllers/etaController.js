@@ -21,6 +21,56 @@ async function findOrderById(orderIdParam) {
   return order;
 }
 
+const normalizeId = (value) => String(value || '');
+
+function canAccessOrder(actor, order) {
+  if (!actor?.role || !actor?.account || !order) return false;
+
+  const actorId = normalizeId(actor.account._id);
+
+  if (actor.role === 'admin') {
+    return true;
+  }
+
+  if (actor.role === 'user') {
+    return normalizeId(order.userId) === actorId;
+  }
+
+  if (actor.role === 'restaurant') {
+    const orderRestaurantId = normalizeId(order.restaurantId);
+    return [
+      normalizeId(actor.account._id),
+      normalizeId(actor.account.restaurantId),
+    ].filter(Boolean).includes(orderRestaurantId);
+  }
+
+  if (actor.role === 'delivery') {
+    return normalizeId(order.deliveryPartnerId) === actorId;
+  }
+
+  return false;
+}
+
+function ensureOrderAccess(req, res, order) {
+  if (canAccessOrder(req.actor, order)) {
+    return null;
+  }
+
+  return errorResponse(res, 403, 'You are not allowed to access this order ETA data');
+}
+
+function ensureActorRole(req, res, allowedRoles) {
+  if (allowedRoles.includes(req.actor?.role)) {
+    return null;
+  }
+
+  return errorResponse(
+    res,
+    403,
+    `This action requires one of these roles: ${allowedRoles.join(', ')}`,
+  );
+}
+
 /**
  * Get live ETA for an order
  * GET /api/orders/:orderId/eta
@@ -32,6 +82,9 @@ export const getLiveETA = asyncHandler(async (req, res) => {
   if (!order) {
     return errorResponse(res, 404, 'Order not found');
   }
+
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
 
   const liveETA = await etaCalculationService.getLiveETA(order._id.toString());
 
@@ -74,6 +127,9 @@ export const getETAHistory = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
+
   const etaLogs = await ETALog.find({ orderId: order._id })
     .sort({ calculatedAt: -1 })
     .limit(50)
@@ -101,6 +157,9 @@ export const getOrderEvents = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
+
   const events = await OrderEvent.find({ orderId: order._id })
     .sort({ timestamp: -1 })
     .limit(100)
@@ -125,6 +184,9 @@ export const recalculateETA = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
+
   // Recalculate ETA
   const newETA = await etaCalculationService.recalculateETA(
     order._id.toString(),
@@ -147,6 +209,11 @@ export const handleRestaurantAccepted = asyncHandler(async (req, res) => {
   if (!order) {
     return errorResponse(res, 404, 'Order not found');
   }
+
+  const roleError = ensureActorRole(req, res, ['restaurant', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
 
   const result = await etaEventService.handleRestaurantAccepted(
     order._id.toString(),
@@ -173,6 +240,9 @@ export const handleRiderAssigned = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const roleError = ensureActorRole(req, res, ['admin']);
+  if (roleError) return roleError;
+
   const result = await etaEventService.handleRiderAssigned(order._id.toString(), riderId);
 
   return successResponse(res, 200, 'Rider assigned event processed', result);
@@ -188,6 +258,11 @@ export const handleRiderReachedRestaurant = asyncHandler(async (req, res) => {
   if (!order) {
     return errorResponse(res, 404, 'Order not found');
   }
+
+  const roleError = ensureActorRole(req, res, ['delivery', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
 
   const result = await etaEventService.handleRiderReachedRestaurant(order._id.toString());
 
@@ -210,6 +285,11 @@ export const handleFoodNotReady = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const roleError = ensureActorRole(req, res, ['restaurant', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
+
   const result = await etaEventService.handleFoodNotReady(order._id.toString(), waitingTime);
 
   return successResponse(res, 200, 'Food not ready event processed', result);
@@ -225,6 +305,11 @@ export const handleRiderStartedDelivery = asyncHandler(async (req, res) => {
   if (!order) {
     return errorResponse(res, 404, 'Order not found');
   }
+
+  const roleError = ensureActorRole(req, res, ['delivery', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
 
   const result = await etaEventService.handleRiderStartedDelivery(order._id.toString());
 
@@ -247,6 +332,11 @@ export const handleTrafficDetected = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found');
   }
 
+  const roleError = ensureActorRole(req, res, ['delivery', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
+
   const result = await etaEventService.handleTrafficDetected(order._id.toString(), trafficLevel);
 
   return successResponse(res, 200, 'Traffic detected event processed', result);
@@ -267,6 +357,11 @@ export const handleRiderNearby = asyncHandler(async (req, res) => {
   if (!order) {
     return errorResponse(res, 404, 'Order not found');
   }
+
+  const roleError = ensureActorRole(req, res, ['delivery', 'admin']);
+  if (roleError) return roleError;
+  const accessError = ensureOrderAccess(req, res, order);
+  if (accessError) return accessError;
 
   const result = await etaEventService.handleRiderNearby(order._id.toString(), distanceToDrop);
 

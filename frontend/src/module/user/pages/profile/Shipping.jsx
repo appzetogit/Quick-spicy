@@ -6,6 +6,7 @@ import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
 import api from "@/lib/api"
 import { API_ENDPOINTS } from "@/lib/api/config"
+import { sanitizeHtml } from "@/lib/utils/sanitizeHtml"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -85,7 +86,7 @@ export default function Shipping() {
               prose-a:text-[#EB590E] dark:prose-a:text-[#F97316]
               prose-a:no-underline hover:prose-a:underline
               leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: shippingData.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(shippingData.content) }}
           />
         </motion.div>
 

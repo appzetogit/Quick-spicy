@@ -40,7 +40,7 @@ export default function AuthCallback() {
           return
         }
 
-        // Check for direct token from backend (Backend OAuth flow)
+        // Check for backend OAuth callback data.
         let token = searchParams.get("token")
         const userStr = searchParams.get("user")
 
@@ -50,12 +50,14 @@ export default function AuthCallback() {
           token = hashParams.get("token");
         }
 
-        if (token) {
+        if (token || userStr) {
           try {
             const user = userStr ? JSON.parse(userStr) : null
 
-            // Save auth data
-            setAuthData("user", token, user)
+            // Save auth data. When OAuth is completed with httpOnly cookies,
+            // we persist a sentinel token locally so existing auth guards can
+            // finish hydration without exposing a real JWT to the browser.
+            setAuthData("user", token || "cookie-session", user)
 
             // Notify app of auth change
             window.dispatchEvent(new Event("userAuthChanged"))

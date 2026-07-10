@@ -727,13 +727,7 @@ export const login = asyncHandler(async (req, res) => {
     tokenVersion: user.tokenVersion || 0,
   });
 
-  // Set refresh token in httpOnly cookie
-  res.cookie("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
+  setAuthCookies(res, "user", tokens);
 
   logger.info(`User logged in via email: ${user._id}`, {
     email: normalizedEmail,
@@ -1376,7 +1370,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
     // Clear OAuth state cookie
     res.clearCookie("oauth_state");
 
-    // Redirect to frontend with access token in hash fragment to hide from logs
+    // Redirect to frontend with server-side cookies only.
     const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     const redirectPath =
       userRole === "restaurant"
@@ -1397,7 +1391,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
       referralCode: user.referralCode,
     };
 
-    const redirectUrl = `${frontendUrl}${redirectPath}?user=${encodeURIComponent(JSON.stringify(userDataObj))}#token=${jwtTokens.accessToken}`;
+    const redirectUrl = `${frontendUrl}${redirectPath}?user=${encodeURIComponent(JSON.stringify(userDataObj))}`;
 
     return res.redirect(redirectUrl);
   } catch (error) {

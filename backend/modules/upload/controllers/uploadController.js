@@ -2,6 +2,40 @@ import { successResponse, errorResponse } from "../../../shared/utils/response.j
 import { uploadToCloudinary } from "../../../shared/utils/cloudinaryService.js";
 import { initializeCloudinary } from "../../../config/cloudinary.js";
 
+const ALLOWED_UPLOAD_FOLDERS = new Set([
+  "appzeto/uploads",
+  "appzeto/user/profile",
+  "appzeto/restaurant/profile",
+  "appzeto/restaurant/menu",
+  "appzeto/restaurant/documents",
+  "appzeto/delivery/profile",
+  "appzeto/delivery/documents",
+  "appzeto/admin/categories",
+  "appzeto/business/logo",
+  "appzeto/business/favicon",
+  "appzeto/banners",
+]);
+
+const normalizeFolder = (value = "") =>
+  String(value || "")
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/\/+/g, "/")
+    .replace(/^\/+|\/+$/g, "");
+
+const resolveUploadFolder = (requestedFolder) => {
+  const normalizedFolder = normalizeFolder(requestedFolder);
+  if (!normalizedFolder) {
+    return "appzeto/uploads";
+  }
+
+  if (!ALLOWED_UPLOAD_FOLDERS.has(normalizedFolder)) {
+    throw new Error("Invalid upload folder");
+  }
+
+  return normalizedFolder;
+};
+
 export const uploadSingleMedia = async (req, res) => {
   try {
     await initializeCloudinary();
@@ -14,7 +48,7 @@ export const uploadSingleMedia = async (req, res) => {
       return errorResponse(res, 400, "File buffer is empty or invalid");
     }
 
-    const folder = req.body.folder || "appzeto/uploads";
+    const folder = resolveUploadFolder(req.body.folder);
 
     const result = await uploadToCloudinary(req.file.buffer, {
       folder,

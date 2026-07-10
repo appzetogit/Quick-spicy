@@ -13,6 +13,14 @@ const logger = winston.createLogger({
   ]
 });
 
+const isProduction = process.env.NODE_ENV === 'production';
+const getAllowedBypassOtp = () => {
+  if (isProduction) {
+    return null;
+  }
+  return process.env.BYPASS_OTP || null;
+};
+
 /**
  * Extract phone number digits (without country code)
  * @param {string} phone - Phone number in format like "+91 9098569620" or "+91-9098569620"
@@ -118,7 +126,7 @@ class OTPService {
         } catch (smsError) {
           // In development, allow OTP flow to continue for local testing even if SMS provider is misconfigured.
           // Also allow it in production if a bypass OTP is enabled to prevent configuration lockouts.
-          if (process.env.NODE_ENV !== 'production' || process.env.BYPASS_OTP) {
+          if (!isProduction) {
             logger.warn(`SMS send failed, continuing without SMS (bypass/development mode active): ${smsError.message}`, {
               phone: normalizedPhone,
               purpose
@@ -131,7 +139,7 @@ class OTPService {
         try {
           await emailService.sendOTP(email, otp, purpose);
         } catch (emailError) {
-          if (process.env.NODE_ENV !== 'production' || process.env.BYPASS_OTP) {
+          if (!isProduction) {
             logger.warn(`Email send failed, continuing without Email (bypass/development mode active): ${emailError.message}`, {
               email,
               purpose
@@ -184,7 +192,7 @@ class OTPService {
       const identifierType = normalizedPhone ? 'phone' : 'email';
 
       // Master/Developer OTP bypass (if configured in .env)
-      const bypassOtp = process.env.BYPASS_OTP;
+      const bypassOtp = getAllowedBypassOtp();
       if (bypassOtp && otp === bypassOtp) {
         logger.info(`OTP verification bypassed using master OTP for ${identifier}`);
         return {

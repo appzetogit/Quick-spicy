@@ -12,6 +12,7 @@ import {
   Save,
   RotateCcw
 } from "lucide-react"
+import { escapeHtml } from "@/lib/utils/sanitizeHtml"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -326,7 +327,14 @@ export default function EmailTemplate() {
             </div>
 
             <div className="space-y-4 text-sm text-slate-700">
-              <div dangerouslySetInnerHTML={{ __html: getPreviewContent().split('\n').map(line => `<p>${line}</p>`).join('') }} />
+              <div
+                dangerouslySetInnerHTML={{
+                  __html: getPreviewContent()
+                    .split('\n')
+                    .map((line) => `<p>${escapeHtml(line)}</p>`)
+                    .join('')
+                }}
+              />
             </div>
 
             <div className="mt-8 pt-6 border-t border-slate-200">
