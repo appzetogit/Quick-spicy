@@ -51,7 +51,7 @@ export const setAuthCookies = (res, role, tokens = {}) => {
     res.cookie(
       getAccessCookieName(role),
       accessToken,
-      buildCookieOptions(15 * 60 * 1000),
+      buildCookieOptions(24 * 60 * 60 * 1000),
     );
   }
 
