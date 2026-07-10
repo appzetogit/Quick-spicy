@@ -118,7 +118,7 @@ export const authAPI = {
   },
 
   // Login/Register via Firebase Google ID token
-  firebaseGoogleLogin: (idToken, role = "restaurant", referralCode = null) => {
+  firebaseGoogleLogin: (idToken, role = "user", referralCode = null) => {
     return apiClient.post(API_ENDPOINTS.AUTH.FIREBASE_GOOGLE_LOGIN, {
       idToken,
       role,

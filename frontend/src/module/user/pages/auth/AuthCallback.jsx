@@ -5,6 +5,7 @@ import AnimatedPage from "../../components/AnimatedPage"
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { setAuthData } from "@/lib/utils/auth"
+import api from "@/lib/api"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -72,6 +73,28 @@ export default function AuthCallback() {
           } catch (err) {
             debugError("Error processing token from URL:", err)
             throw new Error("Invalid user data received from server")
+          }
+        }
+
+        // Preferred flow: backend sets httpOnly auth cookies, then redirects here
+        // without exposing user data in the URL. Hydrate by calling /auth/me.
+        if (!code) {
+          try {
+            const meResponse = await api.get("/auth/me")
+            const user = meResponse?.data?.data?.user || meResponse?.data?.user || null
+
+            if (user) {
+              setAuthData("user", "cookie-session", user)
+              window.dispatchEvent(new Event("userAuthChanged"))
+              setStatus("success")
+
+              setTimeout(() => {
+                navigate("/user", { replace: true })
+              }, 1000)
+              return
+            }
+          } catch (meError) {
+            debugWarn("Cookie-based auth hydration failed:", meError)
           }
         }
 
