@@ -1,6 +1,7 @@
 import jwtService from '../../auth/services/jwtService.js';
 import Delivery from '../models/Delivery.js';
 import { errorResponse } from '../../../shared/utils/response.js';
+import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
 
 /**
  * Delivery Authentication Middleware
@@ -11,11 +12,19 @@ export const authenticate = async (req, res, next) => {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return errorResponse(res, 401, 'No token provided');
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    if (!token) {
+      token = getAccessTokenFromRequest(req, 'delivery');
+    }
+
+    if (!token) {
+      return errorResponse(res, 401, 'No token provided');
+    }
 
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);

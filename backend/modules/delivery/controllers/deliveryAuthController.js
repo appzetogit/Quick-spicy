@@ -8,6 +8,11 @@ import {
   removeNotificationDevice,
   upsertNotificationDevice,
 } from '../../notification/utils/deviceTokens.js';
+import {
+  clearAuthCookies,
+  getRefreshTokenFromRequest,
+  setAuthCookies,
+} from '../../../shared/utils/authCookies.js';
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -184,13 +189,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         delivery.refreshToken = tokens.refreshToken;
         await delivery.save();
 
-        // Set refresh token in httpOnly cookie
-        res.cookie('refreshToken', tokens.refreshToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
-          maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-        });
+        setAuthCookies(res, 'delivery', tokens);
 
         return successResponse(res, 200, 'OTP verified. Please complete your profile.', {
           accessToken: tokens.accessToken,
@@ -229,13 +228,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     delivery.refreshToken = tokens.refreshToken;
     await delivery.save();
 
-    // Set refresh token in httpOnly cookie
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    setAuthCookies(res, 'delivery', tokens);
 
     // Update last login
     delivery.lastLogin = new Date();
@@ -277,7 +270,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const refreshToken = asyncHandler(async (req, res) => {
   // Get refresh token from cookie or header
-  const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'];
+  const refreshToken = getRefreshTokenFromRequest(req, 'delivery') || req.headers['x-refresh-token'];
 
   if (!refreshToken) {
     return errorResponse(res, 401, 'Refresh token not found');
@@ -305,11 +298,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
       delivery.tokenVersion += 1;
       delivery.refreshToken = null;
       await delivery.save();
-      res.clearCookie('refreshToken', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-      });
+      clearAuthCookies(res, 'delivery');
       return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
     }
 
@@ -328,13 +317,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
     delivery.refreshToken = tokens.refreshToken;
     await delivery.save();
 
-    // Set new refresh token in httpOnly cookie
-    res.cookie('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
+    setAuthCookies(res, 'delivery', tokens);
 
     return successResponse(res, 200, 'Token refreshed successfully', {
       accessToken: tokens.accessToken
@@ -356,12 +339,7 @@ export const logout = asyncHandler(async (req, res) => {
     await req.delivery.save();
   }
 
-  // Clear refresh token cookie
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict'
-  });
+  clearAuthCookies(res, 'delivery');
 
   return successResponse(res, 200, 'Logged out successfully');
 });

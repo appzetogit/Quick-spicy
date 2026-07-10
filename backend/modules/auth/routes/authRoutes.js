@@ -47,7 +47,7 @@ const verifyOTPSchema = Joi.object({
     then: Joi.required(),
     otherwise: Joi.optional()
   }),
-  role: Joi.string().valid('user', 'restaurant', 'delivery', 'admin').default('user'),
+  role: Joi.string().valid('user', 'admin').default('user'),
   referralCode: Joi.string().trim().uppercase().max(32).optional(),
   // Password is only used for email-based registrations (e.g. admin signup)
   password: Joi.string().min(6).max(100).optional()
@@ -58,7 +58,6 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required().lowercase(),
   password: Joi.string().required().min(6).max(100),
   phone: Joi.string().optional().pattern(/^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/),
-  role: Joi.string().valid('user', 'restaurant', 'delivery', 'admin').default('user'),
   referralCode: Joi.string().trim().uppercase().max(32).optional()
 });
 

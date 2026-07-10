@@ -4,6 +4,7 @@ import DeliveryWallet from '../models/DeliveryWallet.js';
 import DeliveryWithdrawalRequest from '../models/DeliveryWithdrawalRequest.js';
 import Order from '../../order/models/Order.js';
 import BusinessSettings from '../../admin/models/BusinessSettings.js';
+import DeliveryBoyCommission from '../../admin/models/DeliveryBoyCommission.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
 import winston from 'winston';
@@ -428,16 +429,15 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
  * Internal endpoint - called when order is completed
  */
 const addEarningSchema = Joi.object({
-  amount: Joi.number().positive().required(),
   orderId: Joi.string().required(),
   description: Joi.string().optional(),
-  paymentCollected: Joi.boolean().default(false)
+  paymentCollected: Joi.boolean().optional()
 });
 
 export const addEarning = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
-    const { amount, orderId, description, paymentCollected = false } = req.body;
+    const { orderId, description } = req.body;
 
     // Validation
     const { error: validationError } = addEarningSchema.validate(req.body);
@@ -454,6 +454,28 @@ export const addEarning = asyncHandler(async (req, res) => {
 
     if (!order) {
       return errorResponse(res, 404, 'Order not found or not delivered');
+    }
+
+    // Derive payout on the server from the delivered order and commission rules.
+    let deliveryDistance = 0;
+    if (order.deliveryState?.routeToDelivery?.distance) {
+      deliveryDistance = Number(order.deliveryState.routeToDelivery.distance) || 0;
+    } else if (order.assignmentInfo?.distance) {
+      deliveryDistance = Number(order.assignmentInfo.distance) || 0;
+    }
+
+    const tipAmount = Math.max(0, Number(order.pricing?.tip) || 0);
+    let amount = 0;
+    try {
+      const commissionResult = await DeliveryBoyCommission.calculateCommission(deliveryDistance);
+      amount = Math.max(0, Number(commissionResult.commission) || 0) + tipAmount;
+    } catch (commissionError) {
+      logger.error('Error calculating delivery earning from commission rules', {
+        deliveryId: delivery._id,
+        orderId,
+        error: commissionError.message,
+      });
+      return errorResponse(res, 500, 'Failed to calculate delivery earnings');
     }
 
     // Find or create wallet
@@ -475,7 +497,7 @@ export const addEarning = asyncHandler(async (req, res) => {
       status: 'Completed',
       description: description || `Delivery earnings for Order #${order.orderId || orderId}`,
       orderId: orderId,
-      paymentCollected: paymentCollected
+      paymentCollected: false
     });
 
     await wallet.save();
@@ -513,14 +535,13 @@ export const addEarning = asyncHandler(async (req, res) => {
  * POST /api/delivery/wallet/collect-payment
  */
 const collectPaymentSchema = Joi.object({
-  orderId: Joi.string().required(),
-  amount: Joi.number().positive().optional()
+  orderId: Joi.string().required()
 });
 
 export const collectPayment = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
-    const { orderId, amount } = req.body;
+    const { orderId } = req.body;
 
     // Validation
     const { error: validationError } = collectPaymentSchema.validate(req.body);
@@ -538,6 +559,16 @@ export const collectPayment = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found');
     }
 
+    const paymentMethod = String(order.payment?.method || '').toLowerCase();
+    if (!['cash', 'cod', 'cash on delivery'].includes(paymentMethod)) {
+      return errorResponse(res, 400, 'Payment collection is only allowed for cash-on-delivery orders');
+    }
+
+    const collectedAmount = Math.max(0, Number(order.pricing?.total) || 0);
+    if (collectedAmount <= 0) {
+      return errorResponse(res, 400, 'Invalid order total for COD collection');
+    }
+
     // Find wallet
     const wallet = await DeliveryWallet.findOne({ deliveryId: delivery._id });
 
@@ -547,13 +578,13 @@ export const collectPayment = asyncHandler(async (req, res) => {
 
     // Collect payment
     try {
-      const transaction = wallet.collectPayment(orderId, amount);
+      const transaction = wallet.collectPayment(orderId, collectedAmount);
       await wallet.save();
 
       logger.info(`Payment collected for delivery: ${delivery._id}`, {
         deliveryId: delivery.deliveryId,
         orderId,
-        amount: amount || transaction.amount
+        amount: collectedAmount
       });
 
       return successResponse(res, 200, 'Payment collected successfully', {

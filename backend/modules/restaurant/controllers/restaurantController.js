@@ -66,6 +66,76 @@ const normalizeRestaurantImageFields = (restaurantLike) => {
   };
 };
 
+const sanitizePublicRestaurant = (restaurantLike) => {
+  if (!restaurantLike) return restaurantLike;
+
+  const normalizedRestaurant = normalizeRestaurantImageFields(restaurantLike);
+
+  return {
+    _id: normalizedRestaurant._id,
+    restaurantId: normalizedRestaurant.restaurantId,
+    slug: normalizedRestaurant.slug,
+    name: normalizedRestaurant.name,
+    profileImage: normalizedRestaurant.profileImage,
+    menuImages: normalizedRestaurant.menuImages,
+    cuisines: normalizedRestaurant.cuisines,
+    foodPreference: normalizedRestaurant.foodPreference,
+    deliveryTimings: normalizedRestaurant.deliveryTimings,
+    openDays: normalizedRestaurant.openDays,
+    rating: normalizedRestaurant.rating,
+    totalRatings: normalizedRestaurant.totalRatings,
+    isActive: normalizedRestaurant.isActive,
+    isAcceptingOrders: normalizedRestaurant.isAcceptingOrders,
+    estimatedDeliveryTime: normalizedRestaurant.estimatedDeliveryTime,
+    distance: normalizedRestaurant.distance,
+    priceRange: normalizedRestaurant.priceRange,
+    featuredDish: normalizedRestaurant.featuredDish,
+    specialDishes: normalizedRestaurant.specialDishes,
+    featuredPrice: normalizedRestaurant.featuredPrice,
+    offer: normalizedRestaurant.offer,
+    freeDelivery: normalizedRestaurant.freeDelivery,
+    deliveryFee: normalizedRestaurant.deliveryFee,
+    location: normalizedRestaurant.location
+      ? {
+          address: normalizedRestaurant.location.address,
+          addressLine1: normalizedRestaurant.location.addressLine1,
+          addressLine2: normalizedRestaurant.location.addressLine2,
+          area: normalizedRestaurant.location.area,
+          city: normalizedRestaurant.location.city,
+          state: normalizedRestaurant.location.state,
+          landmark: normalizedRestaurant.location.landmark,
+          zipCode: normalizedRestaurant.location.zipCode,
+          pincode: normalizedRestaurant.location.pincode,
+          postalCode: normalizedRestaurant.location.postalCode,
+          street: normalizedRestaurant.location.street,
+        }
+      : null,
+    onboarding: normalizedRestaurant.onboarding
+      ? {
+          step2: normalizedRestaurant.onboarding.step2
+            ? {
+                profileImageUrl: normalizedRestaurant.onboarding.step2.profileImageUrl || null,
+                menuImageUrls: normalizedRestaurant.onboarding.step2.menuImageUrls || [],
+              }
+            : undefined,
+          step4: normalizedRestaurant.onboarding.step4
+            ? {
+                estimatedDeliveryTime: normalizedRestaurant.onboarding.step4.estimatedDeliveryTime,
+                distance: normalizedRestaurant.onboarding.step4.distance,
+                priceRange: normalizedRestaurant.onboarding.step4.priceRange,
+                featuredDish: normalizedRestaurant.onboarding.step4.featuredDish,
+                specialDishes: normalizedRestaurant.onboarding.step4.specialDishes,
+                featuredPrice: normalizedRestaurant.onboarding.step4.featuredPrice,
+                offer: normalizedRestaurant.onboarding.step4.offer,
+              }
+            : undefined,
+        }
+      : undefined,
+    restaurantZoneId: normalizedRestaurant.restaurantZoneId,
+    isInUserZone: normalizedRestaurant.isInUserZone,
+  };
+};
+
 /**
  * Check if a point is within a zone polygon using ray casting algorithm
  * @param {number} lat - Latitude
@@ -430,13 +500,13 @@ export const getRestaurants = async (req, res) => {
         ? restaurantZoneId === userZoneId
         : null;
 
-      return {
+      return sanitizePublicRestaurant({
         ...normalizedRestaurant,
         deliveryFee: noDeliveryFeeConfigured ? null : resolvedDeliveryFee,
         freeDelivery: isFreeDelivery,
         restaurantZoneId,
         ...(userZoneId ? { isInUserZone } : {}),
-      };
+      });
     }).filter(Boolean);
 
     if (userZoneId) {
@@ -520,10 +590,10 @@ export const getRestaurantById = async (req, res) => {
     if (!hasCoordinates && !restaurantZoneId) {
       return errorResponse(res, 404, 'Restaurant not found');
     }
-    const restaurant = {
+    const restaurant = sanitizePublicRestaurant({
       ...normalizeRestaurantImageFields(restaurantDoc),
       restaurantZoneId,
-    };
+    });
 
     return successResponse(res, 200, 'Restaurant retrieved successfully', {
       restaurant,
@@ -1354,6 +1424,7 @@ export const getPublicDishes = async (req, res) => {
         const sectionItems = Array.isArray(section?.items) ? section.items : [];
         for (const item of sectionItems) {
           if (item?.isAvailable === false) continue;
+          if (item?.approvalStatus && item.approvalStatus !== 'approved') continue;
           const name = String(item?.name || "").trim();
           if (!name) continue;
           const key = name.toLowerCase();
@@ -1375,6 +1446,7 @@ export const getPublicDishes = async (req, res) => {
           const subsectionItems = Array.isArray(subsection?.items) ? subsection.items : [];
           for (const item of subsectionItems) {
             if (item?.isAvailable === false) continue;
+            if (item?.approvalStatus && item.approvalStatus !== 'approved') continue;
             const name = String(item?.name || "").trim();
             if (!name) continue;
             const key = name.toLowerCase();

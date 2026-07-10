@@ -327,7 +327,7 @@ deliveryWalletSchema.methods.updateTransactionStatus = function(transactionId, s
 };
 
 // Method to collect payment (mark payment as collected and update cashInHand)
-deliveryWalletSchema.methods.collectPayment = function(orderId, amount) {
+deliveryWalletSchema.methods.collectPayment = function(orderId, collectedAmount) {
   const paymentTransaction = this.transactions.find(
     t => t.orderId && t.orderId.toString() === orderId.toString() && 
          t.type === 'payment' && t.status === 'Completed'
@@ -342,7 +342,7 @@ deliveryWalletSchema.methods.collectPayment = function(orderId, amount) {
   }
   
   paymentTransaction.paymentCollected = true;
-  this.cashInHand += amount || paymentTransaction.amount;
+  this.cashInHand += Number(collectedAmount) || 0;
   
   return paymentTransaction;
 };

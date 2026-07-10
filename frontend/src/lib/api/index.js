@@ -901,13 +901,7 @@ export const deliveryAPI = {
     return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.VERIFY_OTP, payload);
   },
   refreshToken: () => {
-    const refreshToken = localStorage.getItem("delivery_refreshToken");
-    const config =
-      refreshToken && typeof refreshToken === "string"
-        ? { headers: { "x-refresh-token": refreshToken } }
-        : {};
-
-    return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.REFRESH_TOKEN, {}, config);
+    return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.REFRESH_TOKEN);
   },
   logout: () => {
     return apiClient.post(API_ENDPOINTS.DELIVERY.AUTH.LOGOUT);

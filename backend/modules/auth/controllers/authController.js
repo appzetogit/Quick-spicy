@@ -14,6 +14,11 @@ import {
   errorResponse,
 } from "../../../shared/utils/response.js";
 import { asyncHandler } from "../../../shared/middleware/asyncHandler.js";
+import {
+  clearAuthCookies,
+  getRefreshTokenFromRequest,
+  setAuthCookies,
+} from "../../../shared/utils/authCookies.js";
 import winston from "winston";
 
 const logger = winston.createLogger({
@@ -473,13 +478,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       tokenVersion: user.tokenVersion || 0,
     });
 
-    // Set refresh token in httpOnly cookie
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setAuthCookies(res, "user", tokens);
 
     // Return access token and user info
     return successResponse(res, 200, "Authentication successful", {
@@ -508,7 +507,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
  */
 export const refreshToken = asyncHandler(async (req, res) => {
   // Get refresh token from cookie
-  const refreshToken = req.cookies?.refreshToken;
+  const refreshToken = getRefreshTokenFromRequest(req, "user");
 
   if (!refreshToken) {
     return errorResponse(res, 401, "Refresh token not found");
@@ -529,11 +528,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
     if (decoded.tokenVersion !== user.tokenVersion) {
       user.tokenVersion += 1;
       await user.save();
-      res.clearCookie("refreshToken", {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-      });
+      clearAuthCookies(res, "user");
       return errorResponse(res, 401, "Session expired or revoked. Please log in again.");
     }
 
@@ -548,13 +543,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
       tokenVersion: user.tokenVersion,
     });
 
-    // Set new refresh token in httpOnly cookie
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setAuthCookies(res, "user", tokens);
 
     return successResponse(res, 200, "Token refreshed successfully", {
       accessToken: tokens.accessToken,
@@ -570,11 +559,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
  */
 export const logout = asyncHandler(async (req, res) => {
   // Clear refresh token cookie
-  res.clearCookie("refreshToken", {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-  });
+  clearAuthCookies(res, "user");
 
   return successResponse(res, 200, "Logged out successfully");
 });
@@ -584,25 +569,18 @@ export const logout = asyncHandler(async (req, res) => {
  * POST /api/auth/register
  */
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password, phone, role = "user", referralCode } = req.body;
+  const { name, email, password, phone, referralCode } = req.body;
 
-  if (!name || !email || !password) {
-    return errorResponse(res, 400, "Name, email, and password are required");
-  }
-
-  // Validate role - admin can be registered via email OTP
-  const allowedRoles = ["user", "restaurant", "delivery", "admin"];
-  const userRole = role || "user";
-  if (!allowedRoles.includes(userRole)) {
+  if (!name || !email || !password || !phone) {
     return errorResponse(
       res,
       400,
-      `Invalid role. Allowed roles: ${allowedRoles.join(", ")}`,
+      "Name, email, password, and phone are required. Complete phone OTP verification to finish registration.",
     );
   }
 
-  // Check if user already exists with same email/phone AND role
-  // Allow same email/phone for different roles
+  const userRole = "user";
+
   const findQuery = {};
   if (email) findQuery.email = email;
   if (phone) findQuery.phone = phone;
@@ -651,22 +629,6 @@ export const register = asyncHandler(async (req, res) => {
     await applyReferralReward({ newUser: user, referrer });
   }
 
-  // Generate tokens
-  const tokens = jwtService.generateTokens({
-    userId: user._id.toString(),
-    role: user.role,
-    email: user.email,
-    tokenVersion: user.tokenVersion || 0,
-  });
-
-  // Set refresh token in httpOnly cookie
-  res.cookie("refreshToken", tokens.refreshToken, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  });
-
   logger.info(`New user registered via email: ${user._id}`, {
     email,
     userId: user._id,
@@ -682,8 +644,11 @@ export const register = asyncHandler(async (req, res) => {
     });
   }
 
-  return successResponse(res, 201, "Registration successful", {
-    accessToken: tokens.accessToken,
+  return successResponse(
+    res,
+    201,
+    "Registration created. Verify your phone with OTP before login.",
+    {
     user: {
       id: user._id,
       name: user.name,
@@ -695,7 +660,9 @@ export const register = asyncHandler(async (req, res) => {
       signupMethod: user.signupMethod,
       referralCode: user.referralCode,
     },
-  });
+      requiresPhoneVerification: true,
+    },
+  );
 });
 
 /**
@@ -1215,13 +1182,7 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       tokenVersion: user.tokenVersion || 0,
     });
 
-    // Set refresh token in httpOnly cookie
-    res.cookie("refreshToken", tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setAuthCookies(res, "user", tokens);
 
     return successResponse(
       res,
@@ -1415,13 +1376,7 @@ export const googleCallback = asyncHandler(async (req, res) => {
       tokenVersion: user.tokenVersion || 0,
     });
 
-    // Set refresh token in httpOnly cookie
-    res.cookie("refreshToken", jwtTokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    setAuthCookies(res, "user", jwtTokens);
 
     // Clear OAuth state cookie
     res.clearCookie("oauth_state");

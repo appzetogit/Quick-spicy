@@ -119,9 +119,25 @@ export const getInventoryByRestaurantId = async (req, res) => {
       });
     }
 
+    const publicCategories = (inventory.categories || []).map((category) => ({
+      id: category.id,
+      name: category.name,
+      description: category.description || '',
+      itemCount: category.itemCount ?? (Array.isArray(category.items) ? category.items.length : 0),
+      inStock: category.inStock !== false,
+      items: Array.isArray(category.items)
+        ? category.items.map((item) => ({
+            id: item.id,
+            name: item.name,
+            inStock: item.inStock !== false,
+            isVeg: item.isVeg !== false,
+          }))
+        : [],
+    }));
+
     return successResponse(res, 200, 'Inventory retrieved successfully', {
       inventory: {
-        categories: inventory.categories || [],
+        categories: publicCategories,
         isActive: inventory.isActive,
       },
     });

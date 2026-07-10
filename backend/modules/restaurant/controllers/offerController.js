@@ -338,7 +338,10 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
       ];
     }
 
-    const restaurant = await Restaurant.findOne(restaurantQuery).select('_id').lean();
+    const restaurant = await Restaurant.findOne({
+      ...restaurantQuery,
+      isActive: true,
+    }).select('_id').lean();
 
     if (restaurant) {
       restaurantObjectId = restaurant._id;

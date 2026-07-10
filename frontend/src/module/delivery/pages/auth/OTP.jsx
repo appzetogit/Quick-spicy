@@ -42,27 +42,15 @@ export default function DeliveryOTP() {
       setAuthData(data)
     } else {
       // No active OTP flow: if already authenticated, go to delivery home
-      const token = localStorage.getItem("delivery_accessToken")
       const authenticated = localStorage.getItem("delivery_authenticated") === "true"
-      if (token && authenticated) {
-        try {
-          const parts = token.split('.')
-          if (parts.length === 3) {
-            const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
-            const now = Math.floor(Date.now() / 1000)
-            if (payload.exp && payload.exp > now) {
-              const pendingSignupPath = getPendingSignupPath()
-              if (pendingSignupPath) {
-                navigate(pendingSignupPath, { replace: true })
-                return
-              }
-              navigate("/delivery", { replace: true })
-              return
-            }
-          }
-        } catch (e) {
-          // Ignore token parse errors and continue to sign-in redirect
+      if (authenticated) {
+        const pendingSignupPath = getPendingSignupPath()
+        if (pendingSignupPath) {
+          navigate(pendingSignupPath, { replace: true })
+          return
         }
+        navigate("/delivery", { replace: true })
+        return
       }
 
       // No auth data, redirect to sign in
@@ -286,26 +274,22 @@ export default function DeliveryOTP() {
       setSuccess(true)
       setIsLoading(false)
 
-      // Verify token is stored and then navigate
+      // Verify auth state is stored and then navigate
       let retryCount = 0
       const maxRetries = 10
       const verifyAndNavigate = () => {
-        const storedToken = localStorage.getItem("delivery_accessToken")
         const storedAuth = localStorage.getItem("delivery_authenticated")
 
-        debugLog("Verifying token storage:", { hasToken: !!storedToken, authenticated: storedAuth, retryCount })
+        debugLog("Verifying auth storage:", { authenticated: storedAuth, retryCount })
 
-        if (storedToken && storedAuth === "true") {
-          // Token is stored, navigate to delivery home
-          debugLog("Token verified, navigating to /delivery")
+        if (storedAuth === "true") {
+          debugLog("Auth verified, navigating to /delivery")
           navigate("/delivery", { replace: true })
         } else if (retryCount < maxRetries) {
-          // Token not stored yet, retry after short delay
           retryCount++
           setTimeout(verifyAndNavigate, 100)
         } else {
-          // Max retries reached, show error
-          debugError("Token storage verification failed after max retries")
+          debugError("Auth storage verification failed after max retries")
           setError("Failed to save authentication. Please try again.")
           setIsLoading(false)
         }
@@ -389,26 +373,22 @@ export default function DeliveryOTP() {
       setSuccess(true)
       setIsLoading(false)
 
-      // Verify token is stored and then navigate
+      // Verify auth state is stored and then navigate
       let retryCount = 0
       const maxRetries = 10
       const verifyAndNavigate = () => {
-        const storedToken = localStorage.getItem("delivery_accessToken")
         const storedAuth = localStorage.getItem("delivery_authenticated")
 
-        debugLog("Verifying token storage (with name):", { hasToken: !!storedToken, authenticated: storedAuth, retryCount })
+        debugLog("Verifying auth storage (with name):", { authenticated: storedAuth, retryCount })
 
-        if (storedToken && storedAuth === "true") {
-          // Token is stored, navigate to delivery home
-          debugLog("Token verified, navigating to /delivery")
+        if (storedAuth === "true") {
+          debugLog("Auth verified, navigating to /delivery")
           navigate("/delivery", { replace: true })
         } else if (retryCount < maxRetries) {
-          // Token not stored yet, retry after short delay
           retryCount++
           setTimeout(verifyAndNavigate, 100)
         } else {
-          // Max retries reached, show error
-          debugError("Token storage verification failed after max retries")
+          debugError("Auth storage verification failed after max retries")
           setError("Failed to save authentication. Please try again.")
           setIsLoading(false)
         }

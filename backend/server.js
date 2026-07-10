@@ -14,6 +14,10 @@ import { fileURLToPath } from 'url';
 import jwtService from './modules/auth/services/jwtService.js';
 import { MEDIA_STORAGE_ROOT, ensureMediaStorageDirs } from './config/mediaStorage.js';
 import {
+  getAccessCookieName,
+  parseCookieHeader,
+} from './shared/utils/authCookies.js';
+import {
   pruneStaleActiveOrders,
   markOfflineStaleDeliveryBoys,
   enforceRealtimeSchemas,
@@ -191,6 +195,20 @@ function getSocketToken(socket) {
   const headerToken = socket.handshake?.headers?.authorization;
   if (typeof headerToken === 'string' && headerToken.startsWith('Bearer ')) {
     return headerToken.slice(7);
+  }
+
+  const cookies = parseCookieHeader(socket.handshake?.headers?.cookie || '');
+  const cookieNames = [
+    getAccessCookieName('restaurant'),
+    getAccessCookieName('delivery'),
+    getAccessCookieName('user'),
+    'accessToken',
+  ];
+
+  for (const cookieName of cookieNames) {
+    if (cookies[cookieName]) {
+      return cookies[cookieName];
+    }
   }
 
   return null;

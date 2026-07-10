@@ -1112,7 +1112,7 @@ export const getAddonsByRestaurantId = async (req, res) => {
     console.log(`[ADDONS] Request received for ID: ${id}`);
     console.log(`[ADDONS] ID type: ${typeof id}, length: ${id?.length}`);
 
-    // Find restaurant by ID, slug, or restaurantId - don't filter by isActive
+    // Find only active restaurants for customer-facing add-ons
     let restaurant = await Restaurant.findOne({
       $or: [
         { restaurantId: id },
@@ -1121,6 +1121,7 @@ export const getAddonsByRestaurantId = async (req, res) => {
           ? [{ _id: new mongoose.Types.ObjectId(id) }]
           : []),
       ],
+      isActive: true,
     });
 
     if (!restaurant) {
@@ -1132,9 +1133,10 @@ export const getAddonsByRestaurantId = async (req, res) => {
 
     console.log(`[ADDONS] Restaurant found: ${restaurant._id}, name: ${restaurant.name}`);
 
-    // Find menu - don't filter by isActive, just get the menu
+    // Find only active menus for customer-facing add-ons
     const menu = await Menu.findOne({
       restaurant: restaurant._id,
+      isActive: true,
     });
 
     if (!menu) {

@@ -88,7 +88,7 @@ export function getModuleToken(module) {
   if (module === "admin") {
     return null;
   }
-  return localStorage.getItem(`${module}_accessToken`);
+  return null;
 }
 
 /**
@@ -100,7 +100,7 @@ export function getModuleRefreshToken(module) {
   if (module === "admin") {
     return null;
   }
-  return localStorage.getItem(`${module}_refreshToken`);
+  return null;
 }
 
 /**
@@ -115,25 +115,32 @@ export function getCurrentUserRole(module = null) {
       return isModuleAuthenticated("admin") ? "admin" : null;
     }
 
-    const token = getModuleToken(module);
-    if (!token) return null;
-    
-    if (isTokenExpired(token)) {
-      // Token expired, clear it
-      clearModuleAuth(module);
-      return null;
+    try {
+      const storedUser = localStorage.getItem(`${module}_user`);
+      const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+      return parsedUser?.role || (isModuleAuthenticated(module) ? module : null);
+    } catch (error) {
+      return isModuleAuthenticated(module) ? module : null;
     }
-    
-    return getRoleFromToken(token);
   }
   
   // Legacy: check all modules and return the first valid role found
   // This is for backward compatibility but should be avoided
   const modules = ['user', 'restaurant', 'delivery', 'admin'];
   for (const mod of modules) {
-    const token = getModuleToken(mod);
-    if (token && !isTokenExpired(token)) {
-      return getRoleFromToken(token);
+    if (mod === "admin") {
+      if (isModuleAuthenticated(mod)) return "admin";
+      continue;
+    }
+
+    if (isModuleAuthenticated(mod)) {
+      try {
+        const storedUser = localStorage.getItem(`${mod}_user`);
+        const parsedUser = storedUser ? JSON.parse(storedUser) : null;
+        return parsedUser?.role || mod;
+      } catch (error) {
+        return mod;
+      }
     }
   }
   
@@ -153,15 +160,7 @@ export function isModuleAuthenticated(module) {
     );
   }
 
-  const token = getModuleToken(module);
-  if (!token) return false;
-  
-  if (isTokenExpired(token)) {
-    clearModuleAuth(module);
-    return false;
-  }
-  
-  return true;
+  return localStorage.getItem(`${module}_authenticated`) === "true";
 }
 
 /**
@@ -233,13 +232,12 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     // Validate inputs
-    if (!module || (module !== "admin" && !token)) {
-      throw new Error(`Invalid parameters: module=${module}, token=${!!token}`);
+    if (!module) {
+      throw new Error(`Invalid parameters: module=${module}`);
     }
 
     console.log(`[setAuthData] Storing auth for module: ${module}`, {
       hasToken: !!token,
-      tokenLength: token?.length,
       hasUser: !!user
     });
 
@@ -259,10 +257,10 @@ export function setAuthData(module, token, user, refreshToken = null) {
     primaryStorage.setItem(authKey, 'true');
 
     if (module !== "admin") {
-      primaryStorage.setItem(tokenKey, token);
-      if (refreshToken && typeof refreshToken === "string") {
-        primaryStorage.setItem(refreshTokenKey, refreshToken);
-      }
+      primaryStorage.removeItem(tokenKey);
+      primaryStorage.removeItem(refreshTokenKey);
+      sessionStorage.removeItem(tokenKey);
+      sessionStorage.removeItem(refreshTokenKey);
     } else {
       primaryStorage.removeItem(tokenKey);
       primaryStorage.removeItem(refreshTokenKey);
@@ -286,16 +284,6 @@ export function setAuthData(module, token, user, refreshToken = null) {
 
     // Verify the token was stored correctly
     const storedAuth = primaryStorage.getItem(authKey);
-    const storedToken = primaryStorage.getItem(tokenKey);
-
-    if (module !== "admin" && storedToken !== token) {
-      console.error(`[setAuthData] Token mismatch:`, {
-        expected: token?.substring(0, 20) + '...',
-        stored: storedToken?.substring(0, 20) + '...'
-      });
-      throw new Error(`Token storage verification failed for module: ${module}`);
-    }
-
     if (storedAuth !== 'true') {
       console.error(`[setAuthData] Auth flag mismatch:`, {
         expected: 'true',
@@ -317,10 +305,8 @@ export function setAuthData(module, token, user, refreshToken = null) {
         const primaryStorage = module === "admin" ? sessionStorage : localStorage;
         primaryStorage.setItem(`${module}_authenticated`, 'true');
         if (module !== "admin") {
-          primaryStorage.setItem(`${module}_accessToken`, token);
-          if (refreshToken && typeof refreshToken === "string") {
-            primaryStorage.setItem(`${module}_refreshToken`, refreshToken);
-          }
+          primaryStorage.removeItem(`${module}_accessToken`);
+          primaryStorage.removeItem(`${module}_refreshToken`);
         } else {
           primaryStorage.removeItem(`${module}_accessToken`);
           primaryStorage.removeItem(`${module}_refreshToken`);
@@ -330,10 +316,6 @@ export function setAuthData(module, token, user, refreshToken = null) {
         }
         
         // Verify again after retry
-        const storedToken = primaryStorage.getItem(`${module}_accessToken`);
-        if (module !== "admin" && storedToken !== token) {
-          throw new Error('Token storage failed even after clearing space');
-        }
       } catch (retryError) {
         console.error('Failed to store auth data after clearing space:', retryError);
         throw new Error('Unable to store authentication data. Please clear browser storage and try again.');

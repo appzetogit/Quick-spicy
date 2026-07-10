@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Navigate } from "react-router-dom"
 import { deliveryAPI } from "@/lib/api"
-import { getModuleToken, isTokenExpired, clearModuleAuth, setAuthData } from "@/lib/utils/auth"
+import { clearModuleAuth, setAuthData } from "@/lib/utils/auth"
 
 export default function ProtectedRoute({ children }) {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true)
@@ -11,9 +11,7 @@ export default function ProtectedRoute({ children }) {
     let isMounted = true
 
     const runAuthCheck = async () => {
-      const currentToken = getModuleToken("delivery")
-
-      if (currentToken && !isTokenExpired(currentToken)) {
+      if (localStorage.getItem("delivery_authenticated") === "true") {
         if (isMounted) {
           setIsAuthenticated(true)
           setIsCheckingAuth(false)
@@ -21,29 +19,18 @@ export default function ProtectedRoute({ children }) {
         return
       }
 
-      // Access token missing/expired: try silent refresh once.
       try {
-        const response = await deliveryAPI.refreshToken()
-        const data = response?.data?.data || response?.data || {}
-        const refreshedAccessToken = data?.accessToken
+        await deliveryAPI.refreshToken()
+        const meResponse = await deliveryAPI.getCurrentDelivery()
+        const currentUser = meResponse?.data?.data?.user || null
 
-        if (refreshedAccessToken && !isTokenExpired(refreshedAccessToken)) {
-          let currentUser = null
-          try {
-            const storedUser = localStorage.getItem("delivery_user")
-            currentUser = storedUser ? JSON.parse(storedUser) : null
-          } catch (error) {
-            currentUser = null
-          }
+        setAuthData("delivery", "cookie-session", currentUser)
 
-          setAuthData("delivery", refreshedAccessToken, currentUser)
-
-          if (isMounted) {
-            setIsAuthenticated(true)
-            setIsCheckingAuth(false)
-          }
-          return
+        if (isMounted) {
+          setIsAuthenticated(true)
+          setIsCheckingAuth(false)
         }
+        return
       } catch (error) {
         // Ignore and fall through to unauthenticated path
       }

@@ -1,6 +1,7 @@
 import jwtService from "../services/jwtService.js";
 import User from "../models/User.js";
 import { errorResponse } from "../../../shared/utils/response.js";
+import { getAccessTokenFromRequest } from "../../../shared/utils/authCookies.js";
 
 /**
  * Authentication Middleware
@@ -16,9 +17,9 @@ export const authenticate = async (req, res, next) => {
       token = authHeader.substring(7);
     }
 
-    // 2. Check accessToken cookie
-    if (!token && req.cookies?.accessToken) {
-      token = req.cookies.accessToken;
+    // 2. Check httpOnly access token cookie
+    if (!token) {
+      token = getAccessTokenFromRequest(req, "user");
     }
 
     if (!token) {

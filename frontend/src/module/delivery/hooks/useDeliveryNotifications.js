@@ -535,9 +535,7 @@ export const useDeliveryNotifications = () => {
       timeout: 20000,
       forceNew: false,
       autoConnect: true,
-      auth: {
-        token: localStorage.getItem('delivery_accessToken') || localStorage.getItem('accessToken')
-      }
+      withCredentials: true,
     });
 
     socketRef.current.on('connect', () => {
