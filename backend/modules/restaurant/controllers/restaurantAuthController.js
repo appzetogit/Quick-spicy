@@ -363,7 +363,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           return errorResponse(res, 404, 'No restaurant account found with this email.');
         }
         // Verify OTP for password reset
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
+        await otpService.verifyOTP(phone || null, otp, purpose, email || null, false);
         return successResponse(res, 200, 'OTP verified. You can now reset your password.', {
           verified: true,
           email: restaurant.email

@@ -6,6 +6,16 @@ dotenv.config();
 
 const updateCredentials = async () => {
   try {
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!process.env.MONGODB_URI || !cloudName || !apiKey || !apiSecret) {
+      throw new Error(
+        "MONGODB_URI, CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET are required"
+      );
+    }
+
     console.log("🔌 Connecting to MongoDB...");
     await mongoose.connect(process.env.MONGODB_URI);
     console.log("✅ Connected to MongoDB");
@@ -14,10 +24,9 @@ const updateCredentials = async () => {
     const envVars = await EnvironmentVariable.getOrCreate();
 
     console.log("📝 Updating Cloudinary Credentials...");
-    // Values provided by user
-    envVars.CLOUDINARY_CLOUD_NAME = "dciu4uawr";
-    envVars.CLOUDINARY_API_KEY = "321367185532319";
-    envVars.CLOUDINARY_API_SECRET = "YGxziMfOehQo2MCBfZsm2CPI5Uo";
+    envVars.CLOUDINARY_CLOUD_NAME = cloudName;
+    envVars.CLOUDINARY_API_KEY = apiKey;
+    envVars.CLOUDINARY_API_SECRET = apiSecret;
 
     await envVars.save();
     console.log("✅ Cloudinary Credentials updated successfully!");

@@ -2,6 +2,7 @@ import Otp from '../models/Otp.js';
 import smsIndiaHubService from './smsIndiaHubService.js';
 import emailService from './emailService.js';
 import winston from 'winston';
+import { randomInt } from 'crypto';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -43,7 +44,7 @@ const extractPhoneDigits = (phone) => {
  * Generate a random 6-digit OTP
  */
 const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 };
 
 /**
@@ -181,7 +182,7 @@ class OTPService {
    * @param {string} email - Email address (optional if phone provided)
    * @returns {Promise<Object>}
    */
-  async verifyOTP(phone = null, otp, purpose = 'login', email = null) {
+  async verifyOTP(phone = null, otp, purpose = 'login', email = null, consume = true) {
     try {
       if (!phone && !email) {
         throw new Error('Either phone or email must be provided');
@@ -201,28 +202,6 @@ class OTPService {
         };
       }
 
-      // Verify OTP from database
-      if (purpose === 'reset-password') {
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-        const verifiedQuery = {
-          otp,
-          purpose,
-          verified: true,
-          expiresAt: { $gt: new Date() },
-          updatedAt: { $gt: tenMinutesAgo }
-        };
-        if (normalizedPhone) verifiedQuery.phone = normalizedPhone;
-        if (email) verifiedQuery.email = email;
-        
-        const alreadyVerified = await Otp.findOne(verifiedQuery);
-        if (alreadyVerified) {
-          return {
-            success: true,
-            message: 'OTP verified successfully'
-          };
-        }
-      }
-
       const query = {
         purpose,
         verified: false,
@@ -232,24 +211,30 @@ class OTPService {
       if (normalizedPhone) query.phone = normalizedPhone;
       if (email) query.email = email;
 
-      // Atomic increment on attempts. If it is already >= 5, document won't match the query.
-      const otpRecord = await Otp.findOneAndUpdate(
-        query,
-        { $inc: { attempts: 1 } },
-        { new: true }
-      );
+      // A consuming verification marks the code used in the same database operation,
+      // preventing concurrent password-reset requests from replaying one OTP.
+      const otpRecord = consume
+        ? await Otp.findOneAndUpdate(
+            { ...query, otp },
+            { $inc: { attempts: 1 }, $set: { verified: true } },
+            { new: true }
+          )
+        : await Otp.findOneAndUpdate(
+            query,
+            { $inc: { attempts: 1 } },
+            { new: true }
+          );
 
       if (!otpRecord) {
+        if (consume) {
+          await Otp.findOneAndUpdate(query, { $inc: { attempts: 1 } });
+        }
         throw new Error('Invalid OTP, expired, or locked out due to too many attempts.');
       }
 
       if (otpRecord.otp !== otp) {
         throw new Error('Invalid or expired OTP');
       }
-
-      // Mark as verified
-      otpRecord.verified = true;
-      await otpRecord.save();
 
       logger.info(`OTP verified successfully for ${identifier} (${identifierType})`, {
         [identifierType]: identifier,

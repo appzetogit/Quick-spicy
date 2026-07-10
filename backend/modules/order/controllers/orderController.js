@@ -19,6 +19,7 @@ import OrderEvent from '../models/OrderEvent.js';
 import UserWallet from '../../user/models/UserWallet.js';
 import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 import OutletTimings from '../../restaurant/models/OutletTimings.js';
+import { randomInt } from 'crypto';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -32,7 +33,7 @@ const logger = winston.createLogger({
 
 const generateDropDeliveryOtp = () => {
   // 4-digit OTP for handover confirmation at drop.
-  return String(Math.floor(1000 + Math.random() * 9000));
+  return String(randomInt(1000, 10000));
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

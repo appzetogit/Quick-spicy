@@ -1,6 +1,7 @@
 import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 import winston from 'winston';
+import { randomBytes } from 'crypto';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -73,9 +74,7 @@ class GoogleAuthService {
    * Generate random state for CSRF protection
    */
   generateState(role) {
-    const randomString = Math.random().toString(36).substring(2, 15) + 
-                        Math.random().toString(36).substring(2, 15);
-    return `${role}_${randomString}_${Date.now()}`;
+    return `${role}_${randomBytes(32).toString('hex')}`;
   }
 
   /**

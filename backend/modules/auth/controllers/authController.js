@@ -20,6 +20,7 @@ import {
   setAuthCookies,
 } from "../../../shared/utils/authCookies.js";
 import winston from "winston";
+import { randomInt } from "crypto";
 
 const logger = winston.createLogger({
   level: "info",
@@ -50,7 +51,7 @@ const buildReferralBase = (name = "") => {
 };
 
 const generateRandomSuffix = () =>
-  Math.floor(1000 + Math.random() * 9000).toString();
+  randomInt(1000, 10000).toString();
 
 const generateUniqueReferralCode = async (name = "") => {
   const base = buildReferralBase(name);
@@ -235,8 +236,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     );
   }
 
-  // Validate role - admin can be used for admin signup/reset
-  const allowedRoles = ["user", "restaurant", "delivery", "admin"];
+  // Privileged account types use their dedicated authentication modules.
+  const allowedRoles = ["user"];
   const userRole = role || "user";
   if (!allowedRoles.includes(userRole)) {
     return errorResponse(
@@ -380,7 +381,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           );
         }
         // Verify OTP for password reset
-        await otpService.verifyOTP(phone || null, otp, purpose, email || null);
+        await otpService.verifyOTP(phone || null, otp, purpose, email || null, false);
         // Return success - frontend will call reset-password endpoint with OTP
         return successResponse(
           res,
@@ -977,8 +978,8 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
   }
 
   // Validate role - admin cannot be authenticated through this endpoint
-  const allowedRoles = ["user", "restaurant", "delivery"];
-  const userRole = role || "restaurant";
+  const allowedRoles = ["user"];
+  const userRole = role || "user";
   if (!allowedRoles.includes(userRole)) {
     return errorResponse(
       res,
@@ -1210,8 +1211,8 @@ export const googleAuth = asyncHandler(async (req, res) => {
   const { role } = req.params;
 
   // Validate role
-  const allowedRoles = ["user", "restaurant", "delivery"];
-  const userRole = role || "restaurant";
+  const allowedRoles = ["user"];
+  const userRole = role || "user";
 
   if (!allowedRoles.includes(userRole)) {
     return errorResponse(
@@ -1258,8 +1259,8 @@ export const googleCallback = asyncHandler(async (req, res) => {
   const { code, state, error } = req.query;
 
   // Validate role
-  const allowedRoles = ["user", "restaurant", "delivery"];
-  const userRole = role || "restaurant";
+  const allowedRoles = ["user"];
+  const userRole = role || "user";
 
   if (!allowedRoles.includes(userRole)) {
     return errorResponse(

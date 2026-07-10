@@ -2,7 +2,11 @@ import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 dotenv.config();
 
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://quickspicyofficial_db_user:nfIgadyMRjHXZxeN@cluster0.qilrmoh.mongodb.net/quickspicy';
+const MONGODB_URI = process.env.MONGODB_URI;
+
+if (!MONGODB_URI) {
+  throw new Error('MONGODB_URI is required');
+}
 
 async function checkPerformance() {
   console.log('Connecting to database...');
