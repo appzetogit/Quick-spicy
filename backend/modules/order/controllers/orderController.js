@@ -765,13 +765,17 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    const authoritativeItems = Array.isArray(authoritativePricing.items) && authoritativePricing.items.length > 0
+      ? authoritativePricing.items
+      : items;
+
     // Create order in database with pending status
     const order = new Order({
       orderId: generatedOrderId,
       userId,
       restaurantId: assignedRestaurantId,
       restaurantName: assignedRestaurantName,
-      items,
+      items: authoritativeItems,
       address: resolvedAddress,
       pricing: {
         ...authoritativePricing,
@@ -805,8 +809,8 @@ export const createOrder = async (req, res) => {
     // Parse preparation time from order items
     // Extract maximum preparation time from items (e.g., "20-25 mins" -> 25)
     let maxPreparationTime = 0;
-    if (items && Array.isArray(items)) {
-      items.forEach(item => {
+    if (authoritativeItems && Array.isArray(authoritativeItems)) {
+      authoritativeItems.forEach(item => {
         if (item.preparationTime) {
           const prepTimeStr = String(item.preparationTime).trim();
           // Parse formats like "20-25 mins", "20-25", "25 mins", "25"

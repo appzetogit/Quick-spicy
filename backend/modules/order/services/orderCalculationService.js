@@ -1,6 +1,7 @@
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Offer from '../../restaurant/models/Offer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
+import Menu from '../../restaurant/models/Menu.js';
 import mongoose from 'mongoose';
 
 const getEffectiveOfferEndDate = (endDateValue) => {
@@ -178,6 +179,116 @@ export const calculateDistance = (coord1, coord2) => {
   return distance;
 };
 
+const findMenuItemById = (menuSections = [], itemId) => {
+  const normalizedItemId = String(itemId || '').trim();
+  if (!normalizedItemId) return null;
+
+  for (const section of menuSections) {
+    for (const item of section?.items || []) {
+      if (String(item?.id || '').trim() === normalizedItemId) {
+        return item;
+      }
+    }
+
+    for (const subsection of section?.subsections || []) {
+      for (const item of subsection?.items || []) {
+        if (String(item?.id || '').trim() === normalizedItemId) {
+          return item;
+        }
+      }
+    }
+  }
+
+  return null;
+};
+
+const findAddonById = (addons = [], itemId) => {
+  const normalizedItemId = String(itemId || '').trim();
+  if (!normalizedItemId) return null;
+  return addons.find((addon) => String(addon?.id || '').trim() === normalizedItemId) || null;
+};
+
+const normalizeResolvedOrderItem = (sourceItem, clientItem, resolvedPrice) => {
+  const authoritativePrice = Math.max(0, Number(resolvedPrice) || 0);
+  const originalPrice = Math.max(
+    authoritativePrice,
+    Number(sourceItem?.originalPrice ?? authoritativePrice) || authoritativePrice
+  );
+
+  return {
+    itemId: String(sourceItem?.id || clientItem?.itemId || '').trim(),
+    name: sourceItem?.name || clientItem?.name || 'Item',
+    price: authoritativePrice,
+    originalPrice,
+    discountAmount: Math.max(0, originalPrice - authoritativePrice),
+    discountType: sourceItem?.discountAmount > 0 ? 'menu-offer' : (clientItem?.discountType || ''),
+    quantity: Math.max(1, Number(clientItem?.quantity) || 1),
+    image: sourceItem?.image || clientItem?.image || '',
+    description: sourceItem?.description || clientItem?.description || '',
+    isVeg: sourceItem?.foodType ? sourceItem.foodType === 'Veg' : clientItem?.isVeg !== false,
+    preparationTime: sourceItem?.preparationTime || clientItem?.preparationTime || ''
+  };
+};
+
+export const resolveOrderItems = async (items = [], restaurantId) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error('Order must have at least one item');
+  }
+
+  if (!restaurantId) {
+    throw new Error('Restaurant ID is required to validate order items');
+  }
+
+  let restaurant = null;
+  if (mongoose.Types.ObjectId.isValid(restaurantId) && restaurantId.length === 24) {
+    restaurant = await Restaurant.findById(restaurantId).select('_id').lean();
+  }
+  if (!restaurant) {
+    restaurant = await Restaurant.findOne({
+      $or: [
+        { restaurantId: restaurantId },
+        { slug: restaurantId }
+      ]
+    }).select('_id').lean();
+  }
+
+  if (!restaurant?._id) {
+    throw new Error('Restaurant not found for order item validation');
+  }
+
+  const menu = await Menu.findOne({
+    restaurant: restaurant._id,
+    isActive: true
+  })
+    .select('sections addons')
+    .lean();
+
+  if (!menu) {
+    throw new Error('Active menu not found for restaurant');
+  }
+
+  return items.map((clientItem) => {
+    const itemId = String(clientItem?.itemId || '').trim();
+    if (!itemId) {
+      throw new Error('Each order item must include a valid itemId');
+    }
+
+    const menuItem = findMenuItemById(menu.sections, itemId);
+    const addonItem = menuItem ? null : findAddonById(menu.addons, itemId);
+    const sourceItem = menuItem || addonItem;
+
+    if (!sourceItem) {
+      throw new Error(`Item ${itemId} is not available for this restaurant`);
+    }
+
+    if (sourceItem.isAvailable === false) {
+      throw new Error(`Item ${sourceItem.name} is currently unavailable`);
+    }
+
+    return normalizeResolvedOrderItem(sourceItem, clientItem, sourceItem.price);
+  });
+};
+
 /**
  * Main function to calculate order pricing
  */
@@ -190,8 +301,10 @@ export const calculateOrderPricing = async ({
   tipAmount = 0
 }) => {
   try {
+    const resolvedItems = await resolveOrderItems(items, restaurantId);
+
     // Calculate subtotal from items
-    const subtotal = items.reduce((sum, item) => {
+    const subtotal = resolvedItems.reduce((sum, item) => {
       return sum + (item.price || 0) * (item.quantity || 1);
     }, 0);
     
@@ -250,7 +363,7 @@ export const calculateOrderPricing = async ({
               
               if (couponItem) {
                 // Check if coupon is valid for items in cart
-                const cartItemIds = items.map(item => item.itemId);
+                const cartItemIds = resolvedItems.map(item => item.itemId);
                 const isGlobalCoupon =
                   couponItem.itemId === 'all' ||
                   (typeof couponItem.itemId === 'string' && couponItem.itemId.startsWith('admin-coupon-')) ||
@@ -275,7 +388,7 @@ export const calculateOrderPricing = async ({
                     discount = Math.min(Math.max(discount, 0), subtotal);
                   } else {
                     // Item-specific coupon applies only on matching item
-                    const itemInCart = items.find(item => item.itemId === couponItem.itemId);
+                    const itemInCart = resolvedItems.find(item => item.itemId === couponItem.itemId);
                     if (itemInCart) {
                       const itemQuantity = itemInCart.quantity || 1;
                       
@@ -362,6 +475,7 @@ export const calculateOrderPricing = async ({
         minOrder: appliedCoupon.minOrder || 0
       } : null,
       deliveryFeeBreakdown,
+      items: resolvedItems,
       breakdown: {
         itemTotal: Math.round(subtotal),
         discountAmount: Math.round(discount),
