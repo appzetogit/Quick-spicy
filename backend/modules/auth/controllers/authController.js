@@ -482,7 +482,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     // Return access token and user info
     return successResponse(res, 200, "Authentication successful", {
-      accessToken: tokens.accessToken,
       user: {
         id: user._id,
         name: user.name,
@@ -545,9 +544,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     setAuthCookies(res, "user", tokens);
 
-    return successResponse(res, 200, "Token refreshed successfully", {
-      accessToken: tokens.accessToken,
-    });
+    return successResponse(res, 200, "Token refreshed successfully");
   } catch (error) {
     return errorResponse(res, 401, error.message || "Invalid refresh token");
   }
@@ -745,7 +742,6 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, 200, "Login successful", {
-    accessToken: tokens.accessToken,
     user: {
       id: user._id,
       name: user.name,
@@ -1189,7 +1185,6 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       200,
       "Firebase Google authentication successful",
       {
-        accessToken: tokens.accessToken,
         user: {
           id: user._id,
           name: user.name,

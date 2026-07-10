@@ -192,8 +192,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         setAuthCookies(res, 'delivery', tokens);
 
         return successResponse(res, 200, 'OTP verified. Please complete your profile.', {
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
           user: {
             id: delivery._id,
             name: delivery.name,
@@ -236,8 +234,6 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     // Return access token and delivery boy info
     return successResponse(res, 200, 'Authentication successful', {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
       user: {
         id: delivery._id,
         deliveryId: delivery.deliveryId,
@@ -319,9 +315,7 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     setAuthCookies(res, 'delivery', tokens);
 
-    return successResponse(res, 200, 'Token refreshed successfully', {
-      accessToken: tokens.accessToken
-    });
+    return successResponse(res, 200, 'Token refreshed successfully');
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');
   }

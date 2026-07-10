@@ -162,9 +162,9 @@ export default function RestaurantSignupEmail() {
 
       const data = response?.data?.data || response?.data
       
-        if (data.accessToken && data.restaurant) {
+        if (data.restaurant) {
           // Replace old token with new one (handles cross-module login)
-          setAuthData("restaurant", data.accessToken, data.restaurant)
+          setAuthData("restaurant", "cookie-session", data.restaurant)
 
           try {
             await registerWebPushForCurrentModule("/restaurant")

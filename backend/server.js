@@ -15,6 +15,7 @@ import jwtService from './modules/auth/services/jwtService.js';
 import { MEDIA_STORAGE_ROOT, ensureMediaStorageDirs } from './config/mediaStorage.js';
 import {
   getAccessCookieName,
+  getRefreshCookieName,
   parseCookieHeader,
 } from './shared/utils/authCookies.js';
 import {
@@ -524,6 +525,20 @@ const allowedOrigins = [
   'http://127.0.0.1:5174'
 ].filter(Boolean); // Remove undefined values
 
+const authCookieNames = [
+  getAccessCookieName('user'),
+  getRefreshCookieName('user'),
+  getAccessCookieName('restaurant'),
+  getRefreshCookieName('restaurant'),
+  getAccessCookieName('delivery'),
+  getRefreshCookieName('delivery'),
+  getAccessCookieName('admin'),
+  getRefreshCookieName('admin'),
+  'accessToken',
+  'refreshToken',
+  'adminAccessToken',
+];
+
 app.use(cors({
   origin: function (origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
@@ -551,6 +566,38 @@ app.use(express.json({
     }
   }
 }));
+
+app.use((req, res, next) => {
+  const unsafeMethod = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+  if (!unsafeMethod) {
+    return next();
+  }
+
+  const requestCookies = req.cookies || {};
+  const hasAuthCookie = authCookieNames.some((cookieName) => Boolean(requestCookies[cookieName]));
+  if (!hasAuthCookie) {
+    return next();
+  }
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const source = origin || referer || '';
+
+  // Allow mobile/native clients or same-machine tools that do not send Origin/Referer.
+  if (!source) {
+    return next();
+  }
+
+  const isAllowedSource = allowedOrigins.some((allowedOrigin) => source.startsWith(allowedOrigin));
+  if (isAllowedSource) {
+    return next();
+  }
+
+  return res.status(403).json({
+    success: false,
+    message: 'Cross-site request blocked',
+  });
+});
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 

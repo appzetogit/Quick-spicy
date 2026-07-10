@@ -197,19 +197,16 @@ export default function DeliveryOTP() {
       if (data.needsSignup) {
         localStorage.setItem("delivery_signup_required", "true")
 
-        // Store tokens for authenticated signup flow
-        const accessToken = data.accessToken
-        const refreshToken = data.refreshToken || null
         const user = data.user
 
-        if (!accessToken || !user) {
+        if (!user) {
           throw new Error("Invalid response from server")
         }
 
         // Store auth data using utility function
         try {
-          debugLog("Storing auth data for signup flow:", { hasToken: !!accessToken, hasUser: !!user })
-          storeAuthData("delivery", accessToken, user, refreshToken)
+          debugLog("Storing auth data for signup flow:", { hasUser: !!user })
+          storeAuthData("delivery", "cookie-session", user)
           debugLog("Auth data stored successfully for signup")
         } catch (storageError) {
           debugError("Failed to store authentication data:", storageError)
@@ -238,11 +235,9 @@ export default function DeliveryOTP() {
       // Otherwise, OTP verified and user logged in (existing user with complete profile)
       localStorage.removeItem("delivery_signup_required")
 
-      const accessToken = data.accessToken
-      const refreshToken = data.refreshToken || null
       const user = data.user
 
-      if (!accessToken || !user) {
+      if (!user) {
         throw new Error("Invalid response from server")
       }
 
@@ -252,8 +247,8 @@ export default function DeliveryOTP() {
       // Store auth data using utility function to ensure proper role handling
       // The setAuthData function includes error handling and verification
       try {
-        debugLog("Storing auth data for delivery:", { hasToken: !!accessToken, hasUser: !!user })
-        storeAuthData("delivery", accessToken, user, refreshToken)
+        debugLog("Storing auth data for delivery:", { hasUser: !!user })
+        storeAuthData("delivery", "cookie-session", user)
         debugLog("Auth data stored successfully")
       } catch (storageError) {
         debugError("Failed to store authentication data:", storageError)
@@ -337,11 +332,9 @@ export default function DeliveryOTP() {
       const response = await deliveryAPI.verifyOTP(phone, verifiedOtp, purpose, trimmedName)
       const data = response?.data?.data || {}
 
-      const accessToken = data.accessToken
-      const refreshToken = data.refreshToken || null
       const user = data.user
 
-      if (!accessToken || !user) {
+      if (!user) {
         throw new Error("Invalid response from server")
       }
 
@@ -351,8 +344,8 @@ export default function DeliveryOTP() {
       // Store auth data using utility function to ensure proper role handling
       // The setAuthData function includes error handling and verification
       try {
-        debugLog("Storing auth data for delivery (with name):", { hasToken: !!accessToken, hasUser: !!user })
-        storeAuthData("delivery", accessToken, user, refreshToken)
+        debugLog("Storing auth data for delivery (with name):", { hasUser: !!user })
+        storeAuthData("delivery", "cookie-session", user)
         debugLog("Auth data stored successfully")
       } catch (storageError) {
         debugError("Failed to store authentication data:", storageError)

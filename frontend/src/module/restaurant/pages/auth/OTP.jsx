@@ -212,12 +212,11 @@ export default function RestaurantOTP() {
         data = response?.data?.data || response?.data
       }
 
-      const accessToken = data?.accessToken
       const restaurant = data?.restaurant
 
-      if (accessToken && restaurant) {
+      if (restaurant) {
         // Store auth data using utility function to ensure proper module-specific token storage
-        setRestaurantAuthData("restaurant", accessToken, restaurant)
+        setRestaurantAuthData("restaurant", "cookie-session", restaurant)
 
         try {
           await registerWebPushForCurrentModule("/restaurant")

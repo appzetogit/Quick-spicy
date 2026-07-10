@@ -2,15 +2,17 @@ const ACCESS_TOKEN_COOKIE_BY_ROLE = {
   user: "user_access_token",
   restaurant: "restaurant_access_token",
   delivery: "delivery_access_token",
+  admin: "admin_access_token",
 };
 
 const REFRESH_TOKEN_COOKIE_BY_ROLE = {
   user: "user_refresh_token",
   restaurant: "restaurant_refresh_token",
   delivery: "delivery_refresh_token",
+  admin: "admin_refresh_token",
 };
 
-const LEGACY_ACCESS_COOKIES = ["accessToken"];
+const LEGACY_ACCESS_COOKIES = ["accessToken", "adminAccessToken"];
 const LEGACY_REFRESH_COOKIES = ["refreshToken"];
 
 const buildCookieOptions = (maxAge = null) => {

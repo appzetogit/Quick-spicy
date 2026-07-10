@@ -234,7 +234,7 @@ apiClient.interceptors.response.use(
           responseData.deliveryPartner ||
           null;
 
-        if (currentModule === "admin") {
+        if (currentModule === "admin" && isAdminCookieAuthEndpoint) {
           sessionStorage.setItem("admin_authenticated", "true");
           localStorage.removeItem("admin_authenticated");
         } else if (userSnapshot || responseData.accessToken) {

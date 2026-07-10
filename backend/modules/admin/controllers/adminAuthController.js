@@ -12,6 +12,11 @@ import {
   rotateAdminSession,
   validateAdminSession,
 } from '../services/adminSessionService.js';
+import {
+  clearAuthCookies,
+  getRefreshTokenFromRequest,
+  setAuthCookies,
+} from '../../../shared/utils/authCookies.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -23,36 +28,16 @@ const logger = winston.createLogger({
   ]
 });
 
-const ADMIN_REFRESH_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
-  maxAge: 7 * 24 * 60 * 60 * 1000
-};
-
-const ADMIN_ACCESS_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict',
-  maxAge: 24 * 60 * 60 * 1000
-};
-
 const clearAdminRefreshCookie = (res) => {
-  res.cookie('refreshToken', '', {
-    ...ADMIN_REFRESH_COOKIE_OPTIONS,
-    maxAge: 0
-  });
+  clearAuthCookies(res, 'admin');
 };
 
 const setAdminAccessCookie = (res, accessToken) => {
-  res.cookie('adminAccessToken', accessToken, ADMIN_ACCESS_COOKIE_OPTIONS);
+  setAuthCookies(res, 'admin', { accessToken });
 };
 
 const clearAdminAccessCookie = (res) => {
-  res.cookie('adminAccessToken', '', {
-    ...ADMIN_ACCESS_COOKIE_OPTIONS,
-    maxAge: 0
-  });
+  clearAuthCookies(res, 'admin');
 };
 
 const buildAdminTokenPayload = (admin, sessionId = null) => ({
@@ -178,8 +163,7 @@ export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
     req,
     sessionContext,
   });
-  setAdminAccessCookie(res, tokens.accessToken);
-  res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
+  setAuthCookies(res, 'admin', tokens);
 
   const adminResponse = admin.toObject();
   delete adminResponse.password;
@@ -193,7 +177,7 @@ export const verifyAdminLoginOtp = asyncHandler(async (req, res) => {
 
 export const refreshAdminToken = asyncHandler(async (req, res) => {
   // Prefer explicit module refresh token header to avoid cross-module cookie collisions.
-  const refreshToken = req.cookies?.refreshToken || req.headers['x-refresh-token'];
+  const refreshToken = getRefreshTokenFromRequest(req, 'admin') || req.headers['x-refresh-token'];
 
   if (!refreshToken) {
     return errorResponse(res, 401, 'Refresh token not found');
@@ -238,8 +222,7 @@ export const refreshAdminToken = asyncHandler(async (req, res) => {
       nextRefreshToken: tokens.refreshToken,
     });
 
-    setAdminAccessCookie(res, tokens.accessToken);
-    res.cookie('refreshToken', tokens.refreshToken, ADMIN_REFRESH_COOKIE_OPTIONS);
+    setAuthCookies(res, 'admin', tokens);
 
     return successResponse(res, 200, 'Token refreshed successfully');
   } catch (error) {

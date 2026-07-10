@@ -22,6 +22,7 @@ import mongoose from "mongoose";
 import { uploadToCloudinary } from "../../../shared/utils/cloudinaryService.js";
 import { initializeCloudinary } from "../../../config/cloudinary.js";
 import { revokeAllAdminSessions } from "../services/adminSessionService.js";
+import { clearAuthCookies } from "../../../shared/utils/authCookies.js";
 
 const logger = winston.createLogger({
   level: "info",
@@ -954,18 +955,7 @@ export const changeAdminPassword = asyncHandler(async (req, res) => {
     await admin.save();
     await revokeAllAdminSessions(admin._id, "password-changed");
 
-    res.cookie("refreshToken", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 0,
-    });
-    res.cookie("adminAccessToken", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
-      maxAge: 0,
-    });
+    clearAuthCookies(res, "admin");
 
     logger.info(`Admin password changed: ${admin._id}`, {
       tokenVersion: admin.tokenVersion,

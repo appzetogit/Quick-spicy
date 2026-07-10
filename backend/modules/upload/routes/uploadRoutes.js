@@ -7,6 +7,7 @@ import User from '../../auth/models/User.js';
 import Admin from '../../admin/models/Admin.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import { errorResponse } from '../../../shared/utils/response.js';
+import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
 
 const router = express.Router();
 
@@ -17,12 +18,25 @@ const router = express.Router();
 const authenticateFlexible = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return errorResponse(res, 401, 'No token provided');
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
     }
 
-    const token = authHeader.substring(7);
+    if (!token) {
+      const roleScopedCookieTokens = [
+        getAccessTokenFromRequest(req, 'admin'),
+        getAccessTokenFromRequest(req, 'restaurant'),
+        getAccessTokenFromRequest(req, 'delivery'),
+        getAccessTokenFromRequest(req, 'user'),
+      ].filter(Boolean);
+      token = roleScopedCookieTokens[0] || null;
+    }
+
+    if (!token) {
+      return errorResponse(res, 401, 'No token provided');
+    }
     
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);

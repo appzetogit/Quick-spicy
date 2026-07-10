@@ -2,6 +2,7 @@ import jwtService from '../../auth/services/jwtService.js';
 import Admin from '../models/Admin.js';
 import { errorResponse } from '../../../shared/utils/response.js';
 import { isAdminSessionActive, touchAdminSession } from '../services/adminSessionService.js';
+import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
 
 /**
  * Admin Authentication Middleware
@@ -11,7 +12,7 @@ export const authenticateAdmin = async (req, res, next) => {
   try {
     // Get token from Authorization header (case-insensitive check)
     const authHeader = req.headers.authorization || req.headers.Authorization;
-    const cookieToken = req.cookies?.adminAccessToken;
+    const cookieToken = getAccessTokenFromRequest(req, 'admin');
     const token =
       authHeader && authHeader.startsWith('Bearer ')
         ? authHeader.substring(7)

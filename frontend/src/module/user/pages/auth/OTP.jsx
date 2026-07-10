@@ -205,10 +205,9 @@ export default function OTP() {
       }
 
       // Otherwise, OTP verified and user logged in/registered
-      const accessToken = data.accessToken
       const user = data.user
 
-      if (!accessToken || !user) {
+      if (!user) {
         throw new Error("Invalid response from server")
       }
 
@@ -216,7 +215,7 @@ export default function OTP() {
       sessionStorage.removeItem("userAuthData")
 
       // Replace old token with new one (handles cross-module login)
-      setUserAuthData("user", accessToken, user)
+      setUserAuthData("user", "cookie-session", user)
 
       try {
         await registerWebPushForCurrentModule("/user")
@@ -285,10 +284,9 @@ export default function OTP() {
       )
       const data = response?.data?.data || {}
 
-      const accessToken = data.accessToken
       const user = data.user
 
-      if (!accessToken || !user) {
+      if (!user) {
         throw new Error("Invalid response from server")
       }
 
@@ -296,7 +294,7 @@ export default function OTP() {
       sessionStorage.removeItem("userAuthData")
 
       // Replace old token with new one (handles cross-module login)
-      setUserAuthData("user", accessToken, user)
+      setUserAuthData("user", "cookie-session", user)
 
       try {
         await registerWebPushForCurrentModule("/user")
