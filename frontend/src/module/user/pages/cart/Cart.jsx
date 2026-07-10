@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
+import { toast } from "sonner"
 
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
@@ -16,17 +17,13 @@ import { orderAPI, restaurantAPI, adminAPI, userAPI, API_ENDPOINTS } from "@/lib
 import { API_BASE_URL } from "@/lib/api/config"
 import { initCashfreePayment } from "@/lib/utils/cashfree"
 import { buildSafeReturnUrl } from "@/lib/utils/returnUrl"
-import { toast } from "sonner"
+import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
+
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
-
-
-
-// Removed hardcoded suggested items - now fetching approved addons from backend
-// Coupons will be fetched from backend based on items in cart
 
 /**
  * Format full address string from address object
@@ -1480,6 +1477,45 @@ export default function Cart() {
         alert('Error: Restaurant information is missing. Please refresh the page and try again.');
         setIsPlacingOrder(false);
         return;
+      }
+
+      // Real-time restaurant availability check
+      try {
+        const restResponse = await restaurantAPI.getRestaurantById(finalRestaurantId);
+        const restObj = restResponse?.data?.data?.restaurant || restResponse?.data?.restaurant;
+        if (restObj) {
+          let timingsObj = null;
+          try {
+            const timingsResponse = await restaurantAPI.getOutletTimingsByRestaurantId(restObj._id || restObj.id);
+            timingsObj = timingsResponse?.data?.data?.outletTimings || timingsResponse?.data?.outletTimings || null;
+          } catch (err) {
+            debugWarn("Could not fetch timings for check", err);
+          }
+          
+          const fullRestData = {
+            ...restObj,
+            outletTimings: timingsObj || restObj.outletTimings || null
+          };
+
+          const availability = getRestaurantAvailabilityStatus(fullRestData);
+          if (!availability.isOpen) {
+            let errorMsg = "Restaurant is currently offline.";
+            if (availability.reason === "manual-offline") {
+              errorMsg = "Restaurant is currently not accepting orders. Please try again later.";
+            } else if (availability.reason === "outside-hours" || availability.reason === "offline-no-timings") {
+              errorMsg = `Restaurant is currently closed. Operating hours: ${availability.openingTime || ''} - ${availability.closingTime || ''}.`;
+            } else if (availability.reason === "day-closed" || availability.reason === "closed-day") {
+              errorMsg = "Restaurant is closed today.";
+            } else if (availability.reason === "inactive") {
+              errorMsg = "Restaurant is currently inactive.";
+            }
+            toast.error(errorMsg);
+            setIsPlacingOrder(false);
+            return;
+          }
+        }
+      } catch (checkError) {
+        debugWarn("Restaurant availability check failed, proceeding anyway", checkError);
       }
 
       let finalRestaurantZoneId =

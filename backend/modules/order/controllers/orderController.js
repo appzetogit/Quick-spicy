@@ -18,6 +18,7 @@ import etaWebSocketService from '../services/etaWebSocketService.js';
 import OrderEvent from '../models/OrderEvent.js';
 import UserWallet from '../../user/models/UserWallet.js';
 import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
+import OutletTimings from '../../restaurant/models/OutletTimings.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -482,18 +483,97 @@ export const createOrder = async (req, res) => {
       // Still proceed but log the mismatch
     }
 
-    // Note: Removed isAcceptingOrders check - orders can come even when restaurant is offline
-    // Restaurant can accept/reject orders manually, or orders will auto-reject after accept time expires
-    // if (!restaurant.isAcceptingOrders) {
-    //   logger.warn('⚠️ Restaurant not accepting orders:', {
-    //     restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
-    //     restaurantName: restaurant.name
-    //   });
-    //   return res.status(403).json({
-    //     success: false,
-    //     message: 'Restaurant is currently not accepting orders'
-    //   });
-    // }
+    // Block orders when restaurant has explicitly toggled offline
+    if (restaurant.isAcceptingOrders === false) {
+      logger.warn('⚠️ Restaurant not accepting orders:', {
+        restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+        restaurantName: restaurant.name
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'Restaurant is currently not accepting orders. Please try again later.'
+      });
+    }
+
+    // Block orders outside the restaurant's configured operating hours
+    try {
+      const outletTimings = await OutletTimings.findOne({
+        restaurantId: restaurant._id,
+        isActive: true
+      }).lean();
+
+      if (outletTimings && Array.isArray(outletTimings.timings)) {
+        const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+        const nowIST = new Date(Date.now() + IST_OFFSET_MS);
+        const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const todayName = DAY_NAMES[nowIST.getUTCDay()];
+        const todayTiming = outletTimings.timings.find(t => t.day === todayName);
+
+        if (todayTiming && todayTiming.isOpen === false) {
+          logger.warn('⚠️ Restaurant is closed today:', {
+            restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+            restaurantName: restaurant.name,
+            day: todayName
+          });
+          return res.status(403).json({
+            success: false,
+            message: `Restaurant is closed on ${todayName}. Please try again on an open day.`
+          });
+        }
+
+        if (todayTiming && todayTiming.openingTime && todayTiming.closingTime) {
+          const parseTime = (timeStr) => {
+            if (!timeStr) return null;
+            const normalized = timeStr.trim().toLowerCase();
+            const meridiemMatch = normalized.match(/^(\d{1,2}):(\d{2})\s*([ap]m)$/);
+            if (meridiemMatch) {
+              let h = Number(meridiemMatch[1]);
+              const m = Number(meridiemMatch[2]);
+              if (meridiemMatch[3] === 'pm' && h < 12) h += 12;
+              if (meridiemMatch[3] === 'am' && h === 12) h = 0;
+              return h * 60 + m;
+            }
+            const h24Match = normalized.match(/^(\d{1,2}):(\d{2})$/);
+            if (h24Match) return Number(h24Match[1]) * 60 + Number(h24Match[2]);
+            return null;
+          };
+
+          const openMin = parseTime(todayTiming.openingTime);
+          const closeMin = parseTime(todayTiming.closingTime);
+          const nowMin = nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes();
+
+          if (openMin !== null && closeMin !== null) {
+            let isWithin;
+            if (closeMin > openMin) {
+              isWithin = nowMin >= openMin && nowMin <= closeMin;
+            } else {
+              // Overnight window (e.g., 8 PM – 2 AM)
+              isWithin = nowMin >= openMin || nowMin <= closeMin;
+            }
+
+            if (!isWithin) {
+              logger.warn('⚠️ Restaurant is outside operating hours:', {
+                restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+                restaurantName: restaurant.name,
+                openingTime: todayTiming.openingTime,
+                closingTime: todayTiming.closingTime,
+                currentTimeIST: `${nowIST.getUTCHours()}:${String(nowIST.getUTCMinutes()).padStart(2, '0')}`
+              });
+              return res.status(403).json({
+                success: false,
+                message: `Restaurant is currently closed. Operating hours: ${todayTiming.openingTime} - ${todayTiming.closingTime}.`
+              });
+            }
+          }
+        }
+      }
+    } catch (timingsError) {
+      // Non-blocking: if timings check fails, allow the order through
+      logger.warn('⚠️ Failed to validate outlet timings, proceeding with order:', {
+        restaurantId: restaurant._id?.toString() || restaurant.restaurantId,
+        error: timingsError.message
+      });
+    }
 
     if (!restaurant.isActive && normalizedIncomingRestaurantName) {
       const activeRestaurantByName = await resolveActiveRestaurantByNameForOrder(restaurantName);

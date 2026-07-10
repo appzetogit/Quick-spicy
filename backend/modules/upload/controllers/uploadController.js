@@ -7,13 +7,22 @@ const ALLOWED_UPLOAD_FOLDERS = new Set([
   "appzeto/user/profile",
   "appzeto/restaurant/profile",
   "appzeto/restaurant/menu",
+  "appzeto/restaurant/menu-items",
+  "appzeto/restaurant/addons",
+  "appzeto/restaurant/pan",
+  "appzeto/restaurant/gst",
+  "appzeto/restaurant/fssai",
   "appzeto/restaurant/documents",
   "appzeto/delivery/profile",
   "appzeto/delivery/documents",
+  "appzeto/delivery/bills",
   "appzeto/admin/categories",
   "appzeto/business/logo",
   "appzeto/business/favicon",
   "appzeto/banners",
+  "appzeto/push-notifications",
+  "foods",
+  "admin-profiles",
 ]);
 
 const normalizeFolder = (value = "") =>
