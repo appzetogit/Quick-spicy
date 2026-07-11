@@ -5,6 +5,7 @@ import Zone from '../models/Zone.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { uploadToCloudinary } from '../../../shared/utils/cloudinaryService.js';
+import { escapeRegex } from '../../../shared/utils/regex.js';
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -273,10 +274,11 @@ export const getCategories = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { type: { $regex: search, $options: 'i' } }
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { description: { $regex: safeSearch, $options: 'i' } },
+        { type: { $regex: safeSearch, $options: 'i' } }
       ];
     }
 
@@ -359,7 +361,7 @@ export const createCategory = asyncHandler(async (req, res) => {
 
     // Check if category with same name already exists
     const existingCategory = await AdminCategoryManagement.findOne({
-      name: { $regex: new RegExp(`^${name.trim()}$`, 'i') }
+      name: { $regex: new RegExp(`^${escapeRegex(name.trim())}$`, 'i') }
     });
 
     if (existingCategory) {
@@ -446,7 +448,7 @@ export const updateCategory = asyncHandler(async (req, res) => {
     // Check if name is being changed and if it conflicts with existing category
     if (name && name.trim() !== category.name) {
       const existingCategory = await AdminCategoryManagement.findOne({
-        name: { $regex: new RegExp(`^${name.trim()}$`, 'i') },
+        name: { $regex: new RegExp(`^${escapeRegex(name.trim())}$`, 'i') },
         _id: { $ne: id }
       });
 
@@ -629,7 +631,7 @@ export const updateCategoryHomeVisibility = asyncHandler(async (req, res) => {
     const normalizedShowOnHome = showOnHome === 'true' || showOnHome === true;
 
     let category = await AdminCategoryManagement.findOne({
-      name: { $regex: new RegExp(`^${trimmedName}$`, 'i') }
+      name: { $regex: new RegExp(`^${escapeRegex(trimmedName)}$`, 'i') }
     });
 
     if (!category) {

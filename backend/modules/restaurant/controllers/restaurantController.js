@@ -8,6 +8,7 @@ import { initializeCloudinary } from '../../../config/cloudinary.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 import { deleteRestaurantRelatedData } from '../services/deleteRestaurantData.js';
+import { escapeRegex } from '../../../shared/utils/regex.js';
 
 const toImageObject = (value) => {
   if (!value) return null;
@@ -356,7 +357,7 @@ export const getRestaurants = async (req, res) => {
     
     // Cuisine filter
     if (cuisine) {
-      query.cuisines = { $in: [new RegExp(cuisine, 'i')] };
+      query.cuisines = { $in: [new RegExp(escapeRegex(cuisine), 'i')] };
     }
     
       // Rating filter

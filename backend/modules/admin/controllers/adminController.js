@@ -23,6 +23,7 @@ import { uploadToCloudinary } from "../../../shared/utils/cloudinaryService.js";
 import { initializeCloudinary } from "../../../config/cloudinary.js";
 import { revokeAllAdminSessions } from "../services/adminSessionService.js";
 import { clearAuthCookies } from "../../../shared/utils/authCookies.js";
+import { escapeRegex } from "../../../shared/utils/regex.js";
 
 const logger = winston.createLogger({
   level: "info",
@@ -629,9 +630,10 @@ export const getAdmins = asyncHandler(async (req, res) => {
     const query = {};
 
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -999,10 +1001,11 @@ export const getUsers = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
+        { phone: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
@@ -1312,25 +1315,27 @@ export const getRestaurants = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { ownerName: { $regex: search, $options: "i" } },
-        { ownerPhone: { $regex: search, $options: "i" } },
-        { phone: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: safeSearch, $options: "i" } },
+        { ownerName: { $regex: safeSearch, $options: "i" } },
+        { ownerPhone: { $regex: safeSearch, $options: "i" } },
+        { phone: { $regex: safeSearch, $options: "i" } },
+        { email: { $regex: safeSearch, $options: "i" } },
       ];
     }
 
     // Cuisine filter
     if (cuisine) {
-      query.cuisines = { $in: [new RegExp(cuisine, "i")] };
+      query.cuisines = { $in: [new RegExp(escapeRegex(cuisine), "i")] };
     }
 
     // Zone filter
     if (zone && zone !== "All over the World") {
+      const safeZone = escapeRegex(zone);
       query.$or = [
-        { "location.area": { $regex: zone, $options: "i" } },
-        { "location.city": { $regex: zone, $options: "i" } },
+        { "location.area": { $regex: safeZone, $options: "i" } },
+        { "location.city": { $regex: safeZone, $options: "i" } },
       ];
     }
 
@@ -2548,13 +2553,14 @@ export const getRestaurantJoinRequests = asyncHandler(async (req, res) => {
 
     // Search filter - combine with $and if search is provided
     if (search && search.trim()) {
+      const safeSearch = escapeRegex(search.trim());
       const searchConditions = {
         $or: [
-          { name: { $regex: search.trim(), $options: "i" } },
-          { ownerName: { $regex: search.trim(), $options: "i" } },
-          { ownerPhone: { $regex: search.trim(), $options: "i" } },
-          { phone: { $regex: search.trim(), $options: "i" } },
-          { email: { $regex: search.trim(), $options: "i" } },
+          { name: { $regex: safeSearch, $options: "i" } },
+          { ownerName: { $regex: safeSearch, $options: "i" } },
+          { ownerPhone: { $regex: safeSearch, $options: "i" } },
+          { phone: { $regex: safeSearch, $options: "i" } },
+          { email: { $regex: safeSearch, $options: "i" } },
         ],
       };
 

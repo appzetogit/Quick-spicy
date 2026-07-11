@@ -16,6 +16,7 @@ import {
 import { authenticate } from '../middleware/restaurantAuth.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -85,13 +86,24 @@ const removeFcmTokenSchema = Joi.object({
   deviceId: Joi.string().trim().optional(),
 }).or('token', 'platform', 'channel', 'deviceId');
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many authentication attempts from this IP, please try again after 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Public routes
-router.post('/send-otp', validate(sendOTPSchema), sendOTP);
-router.post('/verify-otp', validate(verifyOTPSchema), verifyOTP);
-router.post('/register', validate(registerSchema), register);
-router.post('/login', validate(loginSchema), login);
-router.post('/reset-password', validate(resetPasswordSchema), resetPassword);
-router.post('/firebase/google-login', validate(firebaseGoogleLoginSchema), firebaseGoogleLogin);
+router.post('/send-otp', authLimiter, validate(sendOTPSchema), sendOTP);
+router.post('/verify-otp', authLimiter, validate(verifyOTPSchema), verifyOTP);
+router.post('/register', authLimiter, validate(registerSchema), register);
+router.post('/login', authLimiter, validate(loginSchema), login);
+router.post('/reset-password', authLimiter, validate(resetPasswordSchema), resetPassword);
+router.post('/firebase/google-login', authLimiter, validate(firebaseGoogleLoginSchema), firebaseGoogleLogin);
 
 // Protected routes
 router.post('/refresh-token', refreshToken);

@@ -11,6 +11,7 @@ import {
 import { authenticate } from '../middleware/deliveryAuth.js';
 import { validate } from '../../../shared/middleware/validate.js';
 import Joi from 'joi';
+import rateLimit from 'express-rate-limit';
 
 const router = express.Router();
 
@@ -50,10 +51,21 @@ const removeFcmTokenSchema = Joi.object({
   deviceId: Joi.string().trim().optional(),
 }).or('token', 'platform', 'channel', 'deviceId');
 
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    message: 'Too many authentication attempts from this IP, please try again after 15 minutes.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // Public routes
-router.post('/send-otp', validate(sendOTPSchema), sendOTP);
-router.post('/verify-otp', validate(verifyOTPSchema), verifyOTP);
-router.post('/refresh-token', refreshToken);
+router.post('/send-otp', authLimiter, validate(sendOTPSchema), sendOTP);
+router.post('/verify-otp', authLimiter, validate(verifyOTPSchema), verifyOTP);
+router.post('/refresh-token', authLimiter, refreshToken);
 
 // Protected routes (require authentication)
 router.post('/logout', authenticate, logout);

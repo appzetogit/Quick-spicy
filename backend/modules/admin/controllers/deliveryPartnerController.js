@@ -2,6 +2,7 @@ import Delivery from '../../delivery/models/Delivery.js';
 import Zone from '../models/Zone.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
+import { escapeRegex } from '../../../shared/utils/regex.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
 
@@ -96,10 +97,11 @@ export const getJoinRequests = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { email: { $regex: safeSearch, $options: 'i' } },
+        { phone: { $regex: safeSearch, $options: 'i' } }
       ];
     }
 
@@ -373,11 +375,12 @@ export const getDeliveryPartners = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } },
-        { deliveryId: { $regex: search, $options: 'i' } }
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { email: { $regex: safeSearch, $options: 'i' } },
+        { phone: { $regex: safeSearch, $options: 'i' } },
+        { deliveryId: { $regex: safeSearch, $options: 'i' } }
       ];
     }
 

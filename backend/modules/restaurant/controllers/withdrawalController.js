@@ -8,6 +8,7 @@ import {
   errorResponse,
 } from "../../../shared/utils/response.js";
 import asyncHandler from "../../../shared/middleware/asyncHandler.js";
+import { escapeRegex } from "../../../shared/utils/regex.js";
 import winston from "winston";
 import mongoose from "mongoose";
 
@@ -318,9 +319,10 @@ export const getAllWithdrawalRequests = asyncHandler(async (req, res) => {
 
     // Search by restaurant name or ID
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { restaurantName: { $regex: search, $options: "i" } },
-        { restaurantIdString: { $regex: search, $options: "i" } },
+        { restaurantName: { $regex: safeSearch, $options: "i" } },
+        { restaurantIdString: { $regex: safeSearch, $options: "i" } },
       ];
     }
 

@@ -8,6 +8,7 @@ import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNoti
 import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
 import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotificationService.js';
 import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../delivery/services/firebaseRealtimeTrackingService.js';
+import { escapeRegex } from '../../../shared/utils/regex.js';
 
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
 const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
@@ -213,11 +214,12 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Restaurant filter
     if (restaurant && restaurant !== 'All restaurants') {
+      const safeRestaurant = escapeRegex(restaurant);
       // Try to find restaurant by name or ID
       const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
       const restaurantDoc = await Restaurant.findOne({
         $or: [
-          { name: { $regex: restaurant, $options: 'i' } },
+          { name: { $regex: safeRestaurant, $options: 'i' } },
           { _id: mongoose.Types.ObjectId.isValid(restaurant) ? restaurant : null },
           { restaurantId: restaurant }
         ]
@@ -235,12 +237,13 @@ export const getOrders = asyncHandler(async (req, res) => {
       if (mongoose.Types.ObjectId.isValid(normalizedZone)) {
         query['assignmentInfo.zoneId'] = normalizedZone;
       } else {
+        const safeZone = escapeRegex(normalizedZone);
         // Find zone by name
         const Zone = (await import('../models/Zone.js')).default;
         const zoneDoc = await Zone.findOne({
           $or: [
-            { name: { $regex: normalizedZone, $options: 'i' } },
-            { zoneName: { $regex: normalizedZone, $options: 'i' } }
+            { name: { $regex: safeZone, $options: 'i' } },
+            { zoneName: { $regex: safeZone, $options: 'i' } }
           ]
         }).select('_id name').lean();
 
@@ -252,9 +255,10 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Customer filter
     if (customer && customer !== 'All customers') {
+      const safeCustomer = escapeRegex(customer);
       const User = (await import('../../auth/models/User.js')).default;
       const userDoc = await User.findOne({
-        name: { $regex: customer, $options: 'i' }
+        name: { $regex: safeCustomer, $options: 'i' }
       }).select('_id').lean();
 
       if (userDoc) {
@@ -264,8 +268,9 @@ export const getOrders = asyncHandler(async (req, res) => {
 
     // Search filter (orderId, customer name, customer phone)
     if (search) {
+      const safeSearch = escapeRegex(search);
       query.$or = [
-        { orderId: { $regex: search, $options: 'i' } }
+        { orderId: { $regex: safeSearch, $options: 'i' } }
       ];
 
       // If search looks like a phone number, search in customer data
@@ -273,7 +278,7 @@ export const getOrders = asyncHandler(async (req, res) => {
       if (phoneRegex.test(search)) {
         const User = (await import('../../auth/models/User.js')).default;
         const cleanSearch = search.replace(/\D/g, '');
-        const userSearchQuery = { phone: { $regex: cleanSearch, $options: 'i' } };
+        const userSearchQuery = { phone: { $regex: escapeRegex(cleanSearch), $options: 'i' } };
         if (mongoose.Types.ObjectId.isValid(search)) {
           userSearchQuery._id = search;
         }
@@ -287,7 +292,7 @@ export const getOrders = asyncHandler(async (req, res) => {
       // Also search by customer name
       const User = (await import('../../auth/models/User.js')).default;
       const usersByName = await User.find({
-        name: { $regex: search, $options: 'i' }
+        name: { $regex: safeSearch, $options: 'i' }
       }).select('_id').lean();
       const userIdsByName = usersByName.map(u => u._id);
       if (userIdsByName.length > 0) {
@@ -1200,8 +1205,9 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     // Build search conditions if search is provided
     let searchConditions = null;
     if (search) {
+      const safeSearch = escapeRegex(search);
       const searchOrConditions = [
-        { orderId: { $regex: search, $options: 'i' } }
+        { orderId: { $regex: safeSearch, $options: 'i' } }
       ];
 
       // If search looks like a phone number, search in customer data
@@ -1209,7 +1215,7 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
       if (phoneRegex.test(search)) {
         const User = (await import('../../auth/models/User.js')).default;
         const cleanSearch = search.replace(/\D/g, '');
-        const userSearchQuery = { phone: { $regex: cleanSearch, $options: 'i' } };
+        const userSearchQuery = { phone: { $regex: escapeRegex(cleanSearch), $options: 'i' } };
         if (mongoose.Types.ObjectId.isValid(search)) {
           userSearchQuery._id = search;
         }
@@ -1223,7 +1229,7 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
       // Also search by customer name
       const User = (await import('../../auth/models/User.js')).default;
       const usersByName = await User.find({
-        name: { $regex: search, $options: 'i' }
+        name: { $regex: safeSearch, $options: 'i' }
       }).select('_id').lean();
       const userIdsByName = usersByName.map(u => u._id);
       if (userIdsByName.length > 0) {
@@ -1383,8 +1389,9 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
     // Build search conditions if search is provided
     let searchConditions = null;
     if (search) {
+      const safeSearch = escapeRegex(search);
       const searchOrConditions = [
-        { orderId: { $regex: search, $options: 'i' } }
+        { orderId: { $regex: safeSearch, $options: 'i' } }
       ];
 
       // If search looks like a phone number, search in customer data
@@ -1392,7 +1399,7 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
       if (phoneRegex.test(search)) {
         const User = (await import('../../auth/models/User.js')).default;
         const cleanSearch = search.replace(/\D/g, '');
-        const userSearchQuery = { phone: { $regex: cleanSearch, $options: 'i' } };
+        const userSearchQuery = { phone: { $regex: escapeRegex(cleanSearch), $options: 'i' } };
         if (mongoose.Types.ObjectId.isValid(search)) {
           userSearchQuery._id = search;
         }
@@ -1406,7 +1413,7 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
       // Also search by customer name
       const User = (await import('../../auth/models/User.js')).default;
       const usersByName = await User.find({
-        name: { $regex: search, $options: 'i' }
+        name: { $regex: safeSearch, $options: 'i' }
       }).select('_id').lean();
       const userIdsByName = usersByName.map(u => u._id);
       if (userIdsByName.length > 0) {
@@ -1607,9 +1614,10 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
 
     // Restaurant filter
     if (restaurant && restaurant !== 'All restaurants') {
+      const safeRestaurant = escapeRegex(restaurant);
       restaurantDoc = await Restaurant.findOne({
         $or: [
-          { name: { $regex: restaurant, $options: 'i' } },
+          { name: { $regex: safeRestaurant, $options: 'i' } },
           { _id: mongoose.Types.ObjectId.isValid(restaurant) ? restaurant : null },
           { restaurantId: restaurant }
         ]
@@ -1623,10 +1631,11 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
 
     // Zone filter
     if (zone && zone !== 'All Zones') {
+      const safeZone = escapeRegex(zone);
       const zoneDoc = await Zone.findOne({
         $or: [
           { _id: mongoose.Types.ObjectId.isValid(zone) ? zone : null },
-          { name: { $regex: zone, $options: 'i' } }
+          { name: { $regex: safeZone, $options: 'i' } }
         ]
       }).select('_id name').lean();
 
@@ -1638,7 +1647,7 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
 
     // Search filter (orderId)
     if (search) {
-      query.orderId = { $regex: search, $options: 'i' };
+      query.orderId = { $regex: escapeRegex(search), $options: 'i' };
     }
 
     // Calculate pagination
@@ -1693,11 +1702,12 @@ export const getTransactionReport = asyncHandler(async (req, res) => {
       }
 
       if (search) {
+        const safeSearch = escapeRegex(search);
         settlementPipeline.push({
           $match: {
             $or: [
-              { orderNumber: { $regex: search, $options: 'i' } },
-              { 'orderInfo.orderId': { $regex: search, $options: 'i' } }
+              { orderNumber: { $regex: safeSearch, $options: 'i' } },
+              { 'orderInfo.orderId': { $regex: safeSearch, $options: 'i' } }
             ]
           }
         });
@@ -1883,8 +1893,9 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
     // Zone filter
     if (zone && zone !== 'All Zones') {
       const Zone = (await import('../models/Zone.js')).default;
+      const safeZone = escapeRegex(zone);
       const zoneDoc = await Zone.findOne({
-        name: { $regex: zone, $options: 'i' }
+        name: { $regex: safeZone, $options: 'i' }
       }).select('_id name').lean();
 
       if (zoneDoc) {
@@ -1922,10 +1933,11 @@ export const getRestaurantReport = asyncHandler(async (req, res) => {
 
     // Search filter
     if (search) {
+      const safeSearch = escapeRegex(search);
       andConditions.push({
         $or: [
-        { name: { $regex: search, $options: 'i' } },
-        { restaurantId: { $regex: search, $options: 'i' } }
+        { name: { $regex: safeSearch, $options: 'i' } },
+        { restaurantId: { $regex: safeSearch, $options: 'i' } }
         ]
       });
     }
@@ -2174,9 +2186,10 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
     if (restaurant && restaurant !== 'All restaurants') {
       try {
         const Restaurant = (await import('../../restaurant/models/Restaurant.js')).default;
+        const safeRestaurant = escapeRegex(restaurant);
         const restaurantDoc = await Restaurant.findOne({
           $or: [
-            { name: { $regex: restaurant, $options: 'i' } },
+            { name: { $regex: safeRestaurant, $options: 'i' } },
             ...(mongoose.Types.ObjectId.isValid(restaurant) ? [{ _id: restaurant }] : []),
             { restaurantId: restaurant }
           ]
@@ -2209,9 +2222,10 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
     // Search filter - build search conditions separately
     const searchConditions = [];
     if (search) {
+      const safeSearch = escapeRegex(search);
       searchConditions.push(
-        { orderId: { $regex: search, $options: 'i' } },
-        { restaurantName: { $regex: search, $options: 'i' } }
+        { orderId: { $regex: safeSearch, $options: 'i' } },
+        { restaurantName: { $regex: safeSearch, $options: 'i' } }
       );
     }
 
@@ -2428,8 +2442,8 @@ export const processRefund = asyncHandler(async (req, res) => {
       try {
         const similarOrders = await Order.find({
           $or: [
-            { orderId: { $regex: orderId, $options: 'i' } },
-            { orderId: { $regex: orderId.substring(0, 10), $options: 'i' } }
+            { orderId: { $regex: escapeRegex(orderId), $options: 'i' } },
+            { orderId: { $regex: escapeRegex(orderId.substring(0, 10)), $options: 'i' } }
           ]
         })
         .select('_id orderId status')
