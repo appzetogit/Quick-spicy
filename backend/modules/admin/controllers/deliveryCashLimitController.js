@@ -9,9 +9,10 @@ import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 export const getDeliveryCashLimit = asyncHandler(async (req, res) => {
   try {
     const settings = await BusinessSettings.getSettings();
+    const deliveryWithdrawalLimit = Number(settings?.deliveryWithdrawalLimit);
     return successResponse(res, 200, 'Delivery cash limit retrieved successfully', {
       deliveryCashLimit: Number(settings?.deliveryCashLimit) || 0,
-      deliveryWithdrawalLimit: Number(settings?.deliveryWithdrawalLimit) ?? 100
+      deliveryWithdrawalLimit: Number.isFinite(deliveryWithdrawalLimit) ? deliveryWithdrawalLimit : 100
     });
   } catch (error) {
     console.error('Error fetching delivery cash limit:', error);
@@ -27,16 +28,14 @@ export const getDeliveryCashLimit = asyncHandler(async (req, res) => {
 export const updateDeliveryCashLimit = asyncHandler(async (req, res) => {
   try {
     const { deliveryCashLimit, deliveryWithdrawalLimit } = req.body;
-
-    let settings = await BusinessSettings.findOne();
-    if (!settings) settings = await BusinessSettings.getSettings();
+    const updateFields = {};
 
     if (deliveryCashLimit !== undefined) {
       const parsed = Number(deliveryCashLimit);
       if (!Number.isFinite(parsed) || parsed < 0) {
         return errorResponse(res, 400, 'deliveryCashLimit must be a number (>= 0)');
       }
-      settings.deliveryCashLimit = parsed;
+      updateFields.deliveryCashLimit = parsed;
     }
 
     if (deliveryWithdrawalLimit !== undefined) {
@@ -44,18 +43,30 @@ export const updateDeliveryCashLimit = asyncHandler(async (req, res) => {
       if (!Number.isFinite(parsed) || parsed < 0) {
         return errorResponse(res, 400, 'deliveryWithdrawalLimit must be a number (>= 0)');
       }
-      settings.deliveryWithdrawalLimit = parsed;
+      updateFields.deliveryWithdrawalLimit = parsed;
+    }
+
+    if (Object.keys(updateFields).length === 0) {
+      return errorResponse(res, 400, 'Provide deliveryCashLimit or deliveryWithdrawalLimit to update');
     }
 
     if (req.admin && req.admin._id) {
-      settings.updatedBy = req.admin._id;
+      updateFields.updatedBy = req.admin._id;
     }
 
-    await settings.save();
+    const existingSettings = await BusinessSettings.getSettings();
+    await BusinessSettings.updateOne(
+      { _id: existingSettings._id },
+      { $set: updateFields },
+      { runValidators: true }
+    );
+
+    const updatedSettings = await BusinessSettings.findById(existingSettings._id).lean();
+    const parsedWithdrawalLimit = Number(updatedSettings?.deliveryWithdrawalLimit);
 
     return successResponse(res, 200, 'Delivery cash limit updated successfully', {
-      deliveryCashLimit: Number(settings.deliveryCashLimit) || 0,
-      deliveryWithdrawalLimit: Number(settings.deliveryWithdrawalLimit) ?? 100
+      deliveryCashLimit: Number(updatedSettings?.deliveryCashLimit) || 0,
+      deliveryWithdrawalLimit: Number.isFinite(parsedWithdrawalLimit) ? parsedWithdrawalLimit : 100
     });
   } catch (error) {
     console.error('Error updating delivery cash limit:', error);

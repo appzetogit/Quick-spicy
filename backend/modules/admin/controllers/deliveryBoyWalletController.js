@@ -165,12 +165,16 @@ export const updateDeliveryBoyWalletBalances = asyncHandler(async (req, res) => 
     return errorResponse(res, 400, 'Provide walletId or deliveryId');
   }
 
+  const updateFields = {
+    lastTransactionAt: new Date()
+  };
+
   if (hasPocketBalance) {
     const nextPocketBalance = Number(pocketBalance);
     if (!Number.isFinite(nextPocketBalance) || nextPocketBalance < 0) {
       return errorResponse(res, 400, 'pocketBalance must be a valid non-negative number');
     }
-    wallet.totalBalance = nextPocketBalance;
+    updateFields.totalBalance = nextPocketBalance;
   }
 
   if (hasCashInHand) {
@@ -178,20 +182,26 @@ export const updateDeliveryBoyWalletBalances = asyncHandler(async (req, res) => 
     if (!Number.isFinite(nextCashInHand) || nextCashInHand < 0) {
       return errorResponse(res, 400, 'cashInHand must be a valid non-negative number');
     }
-    wallet.cashInHand = nextCashInHand;
+    updateFields.cashInHand = nextCashInHand;
   }
 
-  wallet.lastTransactionAt = new Date();
-  await wallet.save();
+  const updatedWallet = await DeliveryWallet.findByIdAndUpdate(
+    wallet._id,
+    { $set: updateFields },
+    {
+      new: true,
+      runValidators: true
+    }
+  );
 
   const settings = await BusinessSettings.getSettings().catch(() => null);
   const availableCashLimit = Number(settings?.deliveryCashLimit) || 0;
-  const currentCashInHand = Number(wallet.cashInHand) || 0;
+  const currentCashInHand = Number(updatedWallet?.cashInHand) || 0;
 
   return successResponse(res, 200, 'Delivery boy wallet updated successfully', {
-    walletId: wallet._id,
-    deliveryId: wallet.deliveryId,
-    pocketBalance: Number(wallet.totalBalance) || 0,
+    walletId: updatedWallet._id,
+    deliveryId: updatedWallet.deliveryId,
+    pocketBalance: Number(updatedWallet.totalBalance) || 0,
     cashInHand: currentCashInHand,
     remainingCashLimit: Math.max(0, availableCashLimit - currentCashInHand),
     availableCashLimit,
