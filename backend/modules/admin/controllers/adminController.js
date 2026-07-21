@@ -3562,6 +3562,8 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       zoneId,
       endDate,
       minOrderValue = 0,
+      productScope = "all",
+      selectedProducts = [],
     } = req.body;
 
     if (!couponCode || typeof couponCode !== "string") {
@@ -3711,6 +3713,55 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       restaurants = selectedRestaurants;
     }
 
+    if (!["all", "selected"].includes(productScope)) {
+      return errorResponse(res, 400, "productScope must be all or selected");
+    }
+
+    let menuItems = [];
+    if (productScope === "selected") {
+      if (!Array.isArray(selectedProducts) || selectedProducts.length === 0) {
+        return errorResponse(
+          res,
+          400,
+          "At least one product is required when product scope is selected",
+        );
+      }
+
+      const activeRestaurantIds = restaurants.map((r) => r._id);
+      const menus = await Menu.find({
+        restaurant: { $in: activeRestaurantIds },
+        isActive: true,
+      }).lean();
+
+      const allItemsInMenus = [];
+      menus.forEach((menu) => {
+        const rId = String(menu.restaurant);
+        menu.sections?.forEach((section) => {
+          section.items?.forEach((item) => {
+            allItemsInMenus.push({ ...item, restaurantId: rId });
+          });
+          section.subsections?.forEach((sub) => {
+            sub.items?.forEach((item) => {
+              allItemsInMenus.push({ ...item, restaurantId: rId });
+            });
+          });
+        });
+      });
+
+      const selectedProdStrings = selectedProducts.map(String);
+      menuItems = allItemsInMenus.filter((item) =>
+        selectedProdStrings.includes(String(item.id)),
+      );
+
+      if (menuItems.length === 0) {
+        return errorResponse(
+          res,
+          404,
+          "None of the selected products were found in the restaurant menus",
+        );
+      }
+    }
+
     let parsedEndDate = null;
     if (endDate) {
       parsedEndDate = new Date(endDate);
@@ -3725,13 +3776,60 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
     const createdOffers = [];
 
     for (const restaurant of restaurants) {
-      const originalPrice = discountType === "percentage" ? 100 : parsedDiscountValue;
-      const discountPercentage =
-        discountType === "percentage" ? Math.min(parsedDiscountValue, 100) : 100;
-      const discountedPrice =
-        discountType === "percentage"
-          ? Math.max(0, originalPrice - (originalPrice * discountPercentage) / 100)
-          : 0;
+      let offerItems = [];
+      if (productScope === "selected") {
+        const currentRestaurantMenuItems = menuItems.filter(
+          (item) => String(item.restaurantId) === String(restaurant._id),
+        );
+
+        offerItems = currentRestaurantMenuItems.map((item) => {
+          const originalPrice = item.price || 0;
+          const discountPercentage =
+            discountType === "percentage" ? Math.min(parsedDiscountValue, 100) : 100;
+          const discountedPrice =
+            discountType === "percentage"
+              ? Math.max(0, originalPrice - (originalPrice * discountPercentage) / 100)
+              : Math.max(0, originalPrice - parsedDiscountValue);
+
+          return {
+            itemId: String(item.id),
+            itemName: item.name || "Unknown Product",
+            originalPrice,
+            discountPercentage,
+            discountedPrice,
+            couponCode: normalizedCode,
+            image: item.image || "",
+            isVeg: item.foodType === "Veg",
+            showInCart: true,
+          };
+        });
+      } else {
+        const originalPrice = discountType === "percentage" ? 100 : parsedDiscountValue;
+        const discountPercentage =
+          discountType === "percentage" ? Math.min(parsedDiscountValue, 100) : 100;
+        const discountedPrice =
+          discountType === "percentage"
+            ? Math.max(0, originalPrice - (originalPrice * discountPercentage) / 100)
+            : 0;
+
+        offerItems = [
+          {
+            itemId: `admin-coupon-${normalizedCode}-${Date.now()}`,
+            itemName: "All Items",
+            originalPrice,
+            discountPercentage,
+            discountedPrice,
+            couponCode: normalizedCode,
+            image: "",
+            isVeg: false,
+            showInCart: true,
+          },
+        ];
+      }
+
+      if (productScope === "selected" && offerItems.length === 0) {
+        continue;
+      }
 
       const offer = await Offer.create({
         restaurant: restaurant._id,
@@ -3746,19 +3844,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         minOrderValue: parsedMinOrderValue,
         maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
         status: "active",
-        items: [
-          {
-            itemId: `admin-coupon-${normalizedCode}-${Date.now()}`,
-            itemName: "All Items",
-            originalPrice,
-            discountPercentage,
-            discountedPrice,
-            couponCode: normalizedCode,
-            image: "",
-            isVeg: false,
-            showInCart: true,
-          },
-        ],
+        items: offerItems,
       });
 
       createdOffers.push({

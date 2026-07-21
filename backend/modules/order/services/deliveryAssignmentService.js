@@ -243,9 +243,16 @@ async function filterOutBusyDeliveryPartners(deliveryPartners = []) {
     return [];
   }
 
+  // Only consider orders updated within the last 1 hour as "active/blocking".
+  // Orders older than 1 hour are treated as stale — the partner is freed up
+  // to receive new orders even if the old order wasn't marked delivered.
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  const oneHourAgo = new Date(Date.now() - ONE_HOUR_MS);
+
   const activeOrders = await Order.find({
     deliveryPartnerId: { $in: partnerIds },
-    status: { $nin: ['delivered', 'cancelled'] }
+    status: { $nin: ['delivered', 'cancelled'] },
+    updatedAt: { $gte: oneHourAgo }
   })
     .select('deliveryPartnerId')
     .lean();
@@ -262,7 +269,7 @@ async function filterOutBusyDeliveryPartners(deliveryPartners = []) {
   });
 
   if (freePartners.length !== deliveryPartners.length) {
-    console.log(`🚫 Filtered ${deliveryPartners.length - freePartners.length} busy delivery partner(s) already handling active orders`);
+    console.log(`🚫 Filtered ${deliveryPartners.length - freePartners.length} busy delivery partner(s) with active orders (updated within last 1 hour)`);
   }
 
   return freePartners;

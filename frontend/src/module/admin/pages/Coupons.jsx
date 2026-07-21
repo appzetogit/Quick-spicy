@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Search } from "lucide-react"
 import { adminAPI } from "@/lib/api"
 const debugLog = (...args) => {}
@@ -32,7 +32,14 @@ export default function Coupons() {
     restaurantIds: [],
     zoneId: "",
     endDate: "",
+    productScope: "all",
+    selectedProducts: [],
   })
+
+  const [availableProducts, setAvailableProducts] = useState([])
+  const [loadingProducts, setLoadingProducts] = useState(false)
+  const [productSearch, setProductSearch] = useState("")
+  const [showProductSuggestions, setShowProductSuggestions] = useState(false)
 
   const fetchOffers = useCallback(async () => {
     try {
@@ -119,10 +126,56 @@ export default function Coupons() {
       restaurantIds: [],
       zoneId: "",
       endDate: "",
+      productScope: "all",
+      selectedProducts: [],
     })
     setRestaurantSearch("")
     setShowRestaurantSuggestions(false)
+    setProductSearch("")
+    setShowProductSuggestions(false)
   }
+
+  useEffect(() => {
+    if (formData.restaurantScope === "selected" && formData.restaurantIds.length === 1) {
+      const fetchProducts = async () => {
+        try {
+          setLoadingProducts(true)
+          const restaurantId = formData.restaurantIds[0]
+          const response = await adminAPI.getRestaurantMenuById(restaurantId)
+          if (response?.data?.success && response.data.data?.menu) {
+            const menu = response.data.data.menu
+            const items = []
+            menu.sections?.forEach(section => {
+              section.items?.forEach(item => {
+                items.push({ id: item.id, name: item.name, price: item.price })
+              })
+              section.subsections?.forEach(sub => {
+                sub.items?.forEach(item => {
+                  items.push({ id: item.id, name: item.name, price: item.price })
+                })
+              })
+            })
+            setAvailableProducts(items)
+          } else {
+            setAvailableProducts([])
+          }
+        } catch (err) {
+          debugError("Error fetching restaurant menu for coupon:", err)
+          setAvailableProducts([])
+        } finally {
+          setLoadingProducts(false)
+        }
+      }
+      fetchProducts()
+    } else {
+      setAvailableProducts([])
+      setFormData(prev => ({
+        ...prev,
+        productScope: "all",
+        selectedProducts: []
+      }))
+    }
+  }, [formData.restaurantIds, formData.restaurantScope])
 
   const filteredRestaurants = useMemo(() => {
     if (!formData.zoneId) return restaurants
@@ -209,6 +262,16 @@ export default function Coupons() {
       return
     }
 
+    if (
+      formData.restaurantScope === "selected" &&
+      formData.restaurantIds.length === 1 &&
+      formData.productScope === "selected" &&
+      formData.selectedProducts.length === 0
+    ) {
+      setSubmitError("Please select at least one product")
+      return
+    }
+
     if (formData.endDate && formData.endDate < today) {
       setSubmitError("Expiry date cannot be in the past")
       return
@@ -227,6 +290,8 @@ export default function Coupons() {
         restaurantIds: formData.restaurantScope === "selected" ? formData.restaurantIds : undefined,
         zoneId: formData.zoneId || undefined,
         endDate: formData.endDate || undefined,
+        productScope: formData.restaurantScope === "selected" && formData.restaurantIds.length === 1 ? formData.productScope : "all",
+        selectedProducts: formData.restaurantScope === "selected" && formData.restaurantIds.length === 1 && formData.productScope === "selected" ? formData.selectedProducts : undefined,
       })
 
       setSubmitSuccess("Coupon created successfully")
@@ -510,6 +575,7 @@ export default function Coupons() {
                           if (submitSuccess) setSubmitSuccess("")
                         }}
                         onFocus={() => setShowRestaurantSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowRestaurantSuggestions(false), 200)}
                         placeholder="Search restaurant by name, phone, or email"
                         className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
@@ -564,6 +630,119 @@ export default function Coupons() {
                       <p className="mt-1 text-xs text-green-600">
                         {formData.restaurantIds.length} restaurant{formData.restaurantIds.length > 1 ? "s" : ""} selected
                       </p>
+                    )}
+
+                    {formData.restaurantIds.length === 1 && (
+                      <div className="mt-3 border-t border-slate-200 pt-3">
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Offer Scope</label>
+                        <select
+                          value={formData.productScope}
+                          onChange={(e) => {
+                            const nextProductScope = e.target.value
+                            setFormData((prev) => ({
+                              ...prev,
+                              productScope: nextProductScope,
+                              selectedProducts: [],
+                            }))
+                            setProductSearch("")
+                            setShowProductSuggestions(false)
+                            if (submitError) setSubmitError("")
+                            if (submitSuccess) setSubmitSuccess("")
+                          }}
+                          className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="all">All Products (Default)</option>
+                          <option value="selected">Selected Products</option>
+                        </select>
+
+                        {formData.productScope === "selected" && (
+                          <div className="mt-3">
+                            <label className="block text-xs font-semibold text-slate-600 mb-1">Select Products</label>
+                            {formData.selectedProducts.length > 0 && (
+                              <div className="mb-2 flex flex-wrap gap-2">
+                                {formData.selectedProducts.map((prodId) => {
+                                  const product = availableProducts.find((p) => String(p.id) === String(prodId))
+                                  if (!product) return null
+
+                                  return (
+                                    <span
+                                      key={prodId}
+                                      className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                                    >
+                                      {product.name} (₹{product.price})
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData((prev) => ({
+                                            ...prev,
+                                            selectedProducts: prev.selectedProducts.filter((id) => String(id) !== String(prodId)),
+                                          }))
+                                        }}
+                                        className="text-blue-700 hover:text-blue-900"
+                                      >
+                                        ×
+                                      </button>
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            )}
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={productSearch}
+                                onChange={(e) => {
+                                  setProductSearch(e.target.value)
+                                  setShowProductSuggestions(true)
+                                }}
+                                onFocus={() => setShowProductSuggestions(true)}
+                                onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
+                                placeholder={loadingProducts ? "Loading products..." : "Search products by name"}
+                                disabled={loadingProducts}
+                                className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              />
+
+                              {showProductSuggestions && !loadingProducts && (
+                                <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                                  {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length > 0 ? (
+                                    availableProducts
+                                      .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                      .slice(0, 20)
+                                      .map((product) => (
+                                        <button
+                                          key={product.id}
+                                          type="button"
+                                          onClick={() => {
+                                            const alreadySelected = formData.selectedProducts.includes(product.id)
+                                            if (alreadySelected) {
+                                              setShowProductSuggestions(false)
+                                              setProductSearch("")
+                                              return
+                                            }
+
+                                            setFormData((prev) => ({
+                                              ...prev,
+                                              selectedProducts: [...prev.selectedProducts, product.id],
+                                            }))
+                                            setProductSearch("")
+                                            setShowProductSuggestions(true)
+                                          }}
+                                          className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50 text-sm font-medium text-slate-900"
+                                        >
+                                          {product.name} (₹{product.price})
+                                        </button>
+                                      ))
+                                  ) : (
+                                    <div className="px-3 py-2 text-sm text-slate-500">
+                                      No products found
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}

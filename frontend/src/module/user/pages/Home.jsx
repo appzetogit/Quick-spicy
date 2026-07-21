@@ -2,7 +2,7 @@ import { useSearchParams, Link, useNavigate } from "react-router-dom"
 import React, { useRef, useEffect, useState, useMemo, useCallback } from "react"
 import { createPortal } from "react-dom"
 import Lenis from "lenis"
-import { Star, Clock, MapPin, Heart, Search, Tag, Flame, ShoppingBag, ShoppingCart, Mic, SlidersHorizontal, CheckCircle2, Bookmark, BadgePercent, X, ArrowDownUp, Timer, CalendarClock, ShieldCheck, IndianRupee, UtensilsCrossed, Leaf, AlertCircle, Loader2, Plus, Check, Share2 } from "lucide-react"
+import { Star, Clock, MapPin, Heart, Search, Tag, Flame, ShoppingBag, ShoppingCart, Mic, SlidersHorizontal, CheckCircle2, Bookmark, BadgePercent, X, ArrowDownUp, Timer, CalendarClock, ShieldCheck, IndianRupee, UtensilsCrossed, Leaf, AlertCircle, Loader2, Plus, Check, Share2, ChevronDown } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import Footer from "../components/Footer"
 import AddToCartButton from "../components/AddToCartButton"
@@ -1169,27 +1169,31 @@ export default function Home() {
   }, [])
 
   const renderZoneSelectorControl = () => (
-    <div className="ml-auto flex w-full max-w-[170px] items-center justify-end gap-1.5">
-      <span className="text-[9px] font-semibold uppercase tracking-[0.18em] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        Zone
-      </span>
-      <div className="min-w-0 flex-1">
+    <div className="flex items-center gap-2 bg-white dark:bg-[#151515] hover:bg-gray-50 dark:hover:bg-[#1d1d1d] border border-gray-200 dark:border-gray-800 rounded-full px-4 py-2 shadow-sm transition-all duration-300">
+      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+        <MapPin className="h-3.5 w-3.5 text-[#EB590E]" strokeWidth={2.5} />
+        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+          Delivery Zone:
+        </span>
+      </div>
+      <div className="relative flex items-center min-w-[120px]">
         <select
           value={zoneSelection.mode === "manual" && zoneSelection.zoneId ? zoneSelection.zoneId : "auto"}
           onChange={handleZoneSelectionChange}
           disabled={loadingAvailableZones}
-          className="w-full border-0 bg-transparent px-0 py-0 text-xs font-medium text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0"
+          className="w-full pr-6 border-0 bg-transparent py-0 pl-0 text-xs font-bold text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0 cursor-pointer appearance-none"
           aria-label="Choose delivery zone"
         >
-          <option value="auto">
+          <option value="auto" className="bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
             {zoneLoading ? "Detecting..." : "Auto detect"}
           </option>
           {availableZones.map((item) => (
-            <option key={item._id} value={item._id}>
+            <option key={item._id} value={item._id} className="bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
               {item.name || item.zoneName || item.serviceLocation || "Unnamed zone"}
             </option>
           ))}
         </select>
+        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
       </div>
     </div>
   )
@@ -2068,10 +2072,16 @@ export default function Home() {
                   aria-label="Toggle Veg Mode"
                   className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
                 />
-              </motion.div>
-            </div>
-            <div className="pt-2">
-              {renderZoneSelectorControl()}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-900 pt-3">
+              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-[#EB590E] animate-pulse flex-shrink-0"></span>
+                <span className="text-xs font-semibold">
+                  {zoneSelection.mode === "manual" ? "Currently showing restaurants in selected zone" : "Automatically detecting restaurants in your zone"}
+                </span>
+              </div>
+              <div>
+                {renderZoneSelectorControl()}
+              </div>
             </div>
           </div>
         </motion.div>
@@ -2228,10 +2238,17 @@ export default function Home() {
                     className="data-[state=checked]:bg-green-600 data-[state=unchecked]:bg-gray-300 dark:data-[state=unchecked]:bg-gray-600 w-9 h-4 sm:w-10 sm:h-5 lg:w-12 lg:h-6 shadow-md [&_[data-slot=switch-thumb]]:bg-white [&_[data-slot=switch-thumb]]:h-3 [&_[data-slot=switch-thumb]]:w-3 sm:[&_[data-slot=switch-thumb]]:h-4 sm:[&_[data-slot=switch-thumb]]:w-4 lg:[&_[data-slot=switch-thumb]]:h-5 lg:[&_[data-slot=switch-thumb]]:w-5 [&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 sm:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-5 lg:[&_[data-slot=switch-thumb]]:data-[state=checked]:translate-x-6 [&_[data-slot=switch-thumb]]:data-[state=unchecked]:translate-x-0"
                   />
                 </motion.div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-gray-100 dark:border-gray-900 pt-3">
+              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
+                <span className="w-2 h-2 rounded-full bg-[#EB590E] animate-pulse flex-shrink-0"></span>
+                <span className="text-xs font-semibold">
+                  {zoneSelection.mode === "manual" ? "Currently showing restaurants in selected zone" : "Automatically detecting restaurants in your zone"}
+                </span>
               </div>
-              <div className="pt-2">
+              <div>
                 {renderZoneSelectorControl()}
               </div>
+            </div>
             </div>
           </motion.div>
         </div>

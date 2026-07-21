@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Search, Trash2, Loader2, Eye, Pencil, Plus, Save, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
@@ -23,10 +23,13 @@ export default function FoodsList() {
   const CUSTOM_CATEGORY_VALUE = "__custom_category__"
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedRestaurant, setSelectedRestaurant] = useState("all")
+  const [selectedZone, setSelectedZone] = useState("all")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedStockStatus, setSelectedStockStatus] = useState("all")
   const [foods, setFoods] = useState([])
   const [restaurantsForFilter, setRestaurantsForFilter] = useState([])
+  const [allRestaurants, setAllRestaurants] = useState([])
+  const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
   const [selectedFood, setSelectedFood] = useState(null)
@@ -65,6 +68,20 @@ export default function FoodsList() {
     return `${url}${url.includes("?") ? "&" : "?"}v=${imageVersion}`
   }
 
+  useEffect(() => {
+    const fetchZones = async () => {
+      try {
+        const response = await adminAPI.getZones({ page: 1, limit: 500, isActive: true, summary: "dropdown" })
+        if (response?.data?.success) {
+          setZones(response.data.data.zones || [])
+        }
+      } catch (err) {
+        debugError("Error fetching zones:", err)
+      }
+    }
+    fetchZones()
+  }, [])
+
   const fetchAllFoods = useCallback(async () => {
     try {
       setLoading(true)
@@ -90,7 +107,7 @@ export default function FoodsList() {
         }
       })
       const restaurants = Array.from(restaurantsMap.values())
-      setRestaurantsForFilter(
+       setRestaurantsForFilter(
         restaurants
           .map((restaurant) => ({
             id: String(restaurant?._id || restaurant?.id || ""),
@@ -99,6 +116,7 @@ export default function FoodsList() {
           .filter((restaurant) => restaurant.id)
           .sort((a, b) => a.name.localeCompare(b.name))
       )
+      setAllRestaurants(restaurants)
 
       if (restaurants.length === 0) {
         setFoods([])
@@ -109,55 +127,58 @@ export default function FoodsList() {
 
       for (const restaurant of restaurants) {
         try {
-          const restaurantId = restaurant._id || restaurant.id
-          const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
-          const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
-
-          if (menu && Array.isArray(menu.sections)) {
-            toArray(menu.sections).forEach((section) => {
-              toArray(section.items).forEach((item) => {
-                allFoods.push({
-                  id: item.id || `${restaurantId}-${section.id}-${item.name}`,
-                  _id: item._id,
-                  name: item.name || "Unnamed Item",
-                  image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                  priority: "Normal",
-                  status: item.isAvailable !== false && item.approvalStatus !== "rejected",
-                  restaurantId,
-                  restaurantName: restaurant.name || "Unknown Restaurant",
-                  sectionId: section.id,
-                  sectionName: section.name || "Unknown Section",
-                  price: item.price || 0,
-                  foodType: item.foodType || "Non-Veg",
-                  approvalStatus: item.approvalStatus || "pending",
-                  originalItem: item,
-                })
-              })
-
-              toArray(section.subsections).forEach((subsection) => {
-                toArray(subsection.items).forEach((item) => {
-                  allFoods.push({
-                    id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
-                    _id: item._id,
-                    name: item.name || "Unnamed Item",
-                    image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                    priority: "Normal",
-                    status: item.isAvailable !== false && item.approvalStatus !== "rejected",
-                    restaurantId,
-                    restaurantName: restaurant.name || "Unknown Restaurant",
-                    sectionId: section.id,
-                    sectionName: section.name || "Unknown Section",
-                    subsectionId: subsection.id,
-                    subsectionName: subsection.name || "Unknown Subsection",
-                    price: item.price || 0,
-                    foodType: item.foodType || "Non-Veg",
-                    approvalStatus: item.approvalStatus || "pending",
-                    originalItem: item,
-                  })
-                })
-              })
-            })
-          }
+           const restaurantId = restaurant._id || restaurant.id
+           const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
+           const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
+           const restZoneId = restaurant.zoneId?._id || restaurant.zoneId || restaurant.restaurantZoneId || ""
+ 
+           if (menu && Array.isArray(menu.sections)) {
+             toArray(menu.sections).forEach((section) => {
+               toArray(section.items).forEach((item) => {
+                 allFoods.push({
+                   id: item.id || `${restaurantId}-${section.id}-${item.name}`,
+                   _id: item._id,
+                   name: item.name || "Unnamed Item",
+                   image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
+                   priority: "Normal",
+                   status: item.isAvailable !== false && item.approvalStatus !== "rejected",
+                   restaurantId,
+                   restaurantName: restaurant.name || "Unknown Restaurant",
+                   zoneId: restZoneId,
+                   sectionId: section.id,
+                   sectionName: section.name || "Unknown Section",
+                   price: item.price || 0,
+                   foodType: item.foodType || "Non-Veg",
+                   approvalStatus: item.approvalStatus || "pending",
+                   originalItem: item,
+                 })
+               })
+ 
+               toArray(section.subsections).forEach((subsection) => {
+                 toArray(subsection.items).forEach((item) => {
+                   allFoods.push({
+                     id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
+                     _id: item._id,
+                     name: item.name || "Unnamed Item",
+                     image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
+                     priority: "Normal",
+                     status: item.isAvailable !== false && item.approvalStatus !== "rejected",
+                     restaurantId,
+                     restaurantName: restaurant.name || "Unknown Restaurant",
+                     zoneId: restZoneId,
+                     sectionId: section.id,
+                     sectionName: section.name || "Unknown Section",
+                     subsectionId: subsection.id,
+                     subsectionName: subsection.name || "Unknown Subsection",
+                     price: item.price || 0,
+                     foodType: item.foodType || "Non-Veg",
+                     approvalStatus: item.approvalStatus || "pending",
+                     originalItem: item,
+                   })
+                 })
+               })
+             })
+           }
         } catch (error) {
           debugWarn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
         }
@@ -231,6 +252,10 @@ export default function FoodsList() {
       )
     }
 
+    if (selectedZone !== "all") {
+      result = result.filter((food) => String(food.zoneId) === selectedZone)
+    }
+
     if (selectedRestaurant !== "all") {
       result = result.filter((food) => String(food.restaurantId) === selectedRestaurant)
     }
@@ -250,7 +275,7 @@ export default function FoodsList() {
 
     result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
     return result
-  }, [foods, searchQuery, selectedRestaurant, selectedCategory, selectedStockStatus])
+  }, [foods, searchQuery, selectedZone, selectedRestaurant, selectedCategory, selectedStockStatus])
 
   const totalPages = useMemo(() => {
     if (filteredFoods.length === 0) return 1
@@ -264,7 +289,7 @@ export default function FoodsList() {
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedRestaurant, selectedCategory, selectedStockStatus, pageSize])
+  }, [searchQuery, selectedZone, selectedRestaurant, selectedCategory, selectedStockStatus, pageSize])
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -273,8 +298,28 @@ export default function FoodsList() {
   }, [currentPage, totalPages])
 
   const restaurantOptions = useMemo(() => {
-    return restaurantsForFilter
-  }, [restaurantsForFilter])
+    const list = allRestaurants
+      .map((restaurant) => ({
+        id: String(restaurant?._id || restaurant?.id || ""),
+        name: restaurant?.name || "Unknown Restaurant",
+        zoneId: restaurant?.zoneId?._id || restaurant?.zoneId || restaurant?.restaurantZoneId || "",
+      }))
+      .filter((restaurant) => restaurant.id)
+      .sort((a, b) => a.name.localeCompare(b.name))
+
+    if (selectedZone === "all") return list
+    return list.filter((r) => String(r.zoneId) === selectedZone)
+  }, [allRestaurants, selectedZone])
+
+  useEffect(() => {
+    if (selectedZone === "all") return
+    if (selectedRestaurant !== "all") {
+      const rest = restaurantOptions.find((r) => r.id === selectedRestaurant)
+      if (!rest) {
+        setSelectedRestaurant("all")
+      }
+    }
+  }, [selectedZone, selectedRestaurant, restaurantOptions])
 
   const categoryFilterOptions = useMemo(() => {
     const uniqueCategories = new Map()
@@ -674,6 +719,18 @@ export default function FoodsList() {
               {restaurantOptions.map((restaurant) => (
                 <option key={restaurant.id} value={restaurant.id}>
                   {restaurant.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedZone}
+              onChange={(e) => setSelectedZone(e.target.value)}
+              className="px-4 py-2.5 min-w-[180px] text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400"
+            >
+              <option value="all">All Zones</option>
+              {zones.map((zone) => (
+                <option key={zone._id} value={zone._id}>
+                  {zone.name || zone.zoneName}
                 </option>
               ))}
             </select>

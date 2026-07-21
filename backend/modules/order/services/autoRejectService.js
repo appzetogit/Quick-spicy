@@ -62,20 +62,33 @@ export async function processAutoRejectOrders() {
 
           console.log(`✅ Order ${currentOrder.orderId} automatically rejected (elapsed: ${Math.floor(elapsedMs / 1000)}s >= ${ACCEPT_TIME_LIMIT_SECONDS}s)`);
 
-          // Calculate refund amount and automatically process wallet refund if wallet payment
+          // Calculate refund amount and automatically process refund for all payment methods
           try {
-            const refundDetails = await calculateCancellationRefund(
-              currentOrder._id,
-              'Order not accepted within time limit. Restaurant did not respond in time.'
-            );
-            console.log(`✅ Cancellation refund calculated for order ${currentOrder.orderId}`);
-            
             const paymentMethod = currentOrder.payment?.method;
-            if (paymentMethod === 'wallet') {
-              const { processWalletRefund } = await import('./cancellationRefundService.js');
-              const refundAmount = refundDetails?.refundAmount ?? currentOrder.pricing?.total;
-              await processWalletRefund(currentOrder._id, null, refundAmount);
-              console.log(`✅ Automatic wallet refund processed for auto-rejected order ${currentOrder.orderId} of amount ${refundAmount}`);
+
+            if (paymentMethod === 'cash') {
+              // COD orders — no payment was collected, so no refund needed
+              console.log(`ℹ️ Order ${currentOrder.orderId} was COD — no refund needed`);
+            } else {
+              const refundDetails = await calculateCancellationRefund(
+                currentOrder._id,
+                'Order not accepted within time limit. Restaurant did not respond in time.'
+              );
+              console.log(`✅ Cancellation refund calculated for order ${currentOrder.orderId}`);
+
+              if (paymentMethod === 'wallet') {
+                const { processWalletRefund } = await import('./cancellationRefundService.js');
+                const refundAmount = refundDetails?.refundAmount ?? currentOrder.pricing?.total;
+                await processWalletRefund(currentOrder._id, null, refundAmount);
+                console.log(`✅ Automatic wallet refund processed for auto-rejected order ${currentOrder.orderId} of amount ${refundAmount}`);
+              } else if (paymentMethod === 'cashfree') {
+                const { processCashfreeRefund } = await import('./cancellationRefundService.js');
+                await processCashfreeRefund(currentOrder._id, null);
+                console.log(`✅ Automatic Cashfree refund processed for auto-rejected order ${currentOrder.orderId}`);
+              } else {
+                // Unknown/other payment method — log it but still calculate refund for admin review
+                console.warn(`⚠️ Unknown payment method "${paymentMethod}" for order ${currentOrder.orderId} — refund calculated but not auto-processed`);
+              }
             }
           } catch (refundError) {
             console.error(`❌ Error calculating/processing cancellation refund for order ${currentOrder.orderId}:`, refundError);

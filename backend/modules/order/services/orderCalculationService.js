@@ -358,17 +358,26 @@ export const calculateOrderPricing = async ({
               // Treat date-only coupon expiry as end-of-day; otherwise ignore expired offers.
             } else {
 
-              // Find the specific item coupon
-              const couponItem = offer.items.find(item => item.couponCode === couponCode);
+              // Find all specific item coupons matching the code
+              const couponItems = offer.items.filter(item => item.couponCode === couponCode);
               
-              if (couponItem) {
+              if (couponItems.length > 0) {
+                const globalCouponItem = couponItems.find(item => 
+                  item.itemId === 'all' ||
+                  (typeof item.itemId === 'string' && item.itemId.startsWith('admin-coupon-')) ||
+                  item.itemName === 'All Items'
+                );
+
+                const isGlobalCoupon = !!globalCouponItem;
+                const couponItem = globalCouponItem || couponItems[0]; // Reference item for metadata
+
                 // Check if coupon is valid for items in cart
                 const cartItemIds = resolvedItems.map(item => item.itemId);
-                const isGlobalCoupon =
-                  couponItem.itemId === 'all' ||
-                  (typeof couponItem.itemId === 'string' && couponItem.itemId.startsWith('admin-coupon-')) ||
-                  couponItem.itemName === 'All Items';
-                const isValidForCart = isGlobalCoupon || (couponItem.itemId && cartItemIds.includes(couponItem.itemId));
+                const validCouponItemsInCart = isGlobalCoupon 
+                  ? couponItems 
+                  : couponItems.filter(item => cartItemIds.includes(item.itemId));
+
+                const isValidForCart = isGlobalCoupon || validCouponItemsInCart.length > 0;
                 
                 // Check minimum order value
                 const minOrderMet = !offer.minOrderValue || subtotal >= offer.minOrderValue;
@@ -387,23 +396,32 @@ export const calculateOrderPricing = async ({
                     }
                     discount = Math.min(Math.max(discount, 0), subtotal);
                   } else {
-                    // Item-specific coupon applies only on matching item
-                    const itemInCart = resolvedItems.find(item => item.itemId === couponItem.itemId);
-                    if (itemInCart) {
-                      const itemQuantity = itemInCart.quantity || 1;
-                      
-                      // Calculate discount per item
-                      const discountPerItem = couponItem.originalPrice - couponItem.discountedPrice;
-                      
-                      // Apply discount to all quantities of this item
-                      discount = Math.round(discountPerItem * itemQuantity);
-                      
-                      // Ensure discount doesn't exceed item subtotal
-                      const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
-                      discount = Math.min(discount, itemSubtotal);
+                    // Item-specific coupon: sum up discounts for all matching items in the cart
+                    discount = 0;
+                    for (const cItem of validCouponItemsInCart) {
+                      const itemInCart = resolvedItems.find(item => item.itemId === cItem.itemId);
+                      if (itemInCart) {
+                        const itemQuantity = itemInCart.quantity || 1;
+                        
+                        let itemDiscountVal = 0;
+                        if (offer.discountType === 'percentage') {
+                          itemDiscountVal = (itemInCart.price || 0) * ((cItem.discountPercentage || 0) / 100);
+                        } else {
+                          itemDiscountVal = cItem.originalPrice - cItem.discountedPrice;
+                        }
+                        
+                        const itemDiscountSum = Math.round(itemDiscountVal * itemQuantity);
+                        const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
+                        discount += Math.min(itemDiscountSum, itemSubtotal);
+                      }
+                    }
+
+                    // Apply max limit on the total coupon discount if specified
+                    if (offer.discountType === 'percentage' && Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
+                      discount = Math.min(discount, offer.maxLimit);
                     }
                   }
-
+                  
                   appliedCoupon = {
                     code: couponCode,
                     discount: discount,
@@ -411,8 +429,8 @@ export const calculateOrderPricing = async ({
                     maxDiscount: offer.maxLimit ?? null,
                     minOrder: offer.minOrderValue || 0,
                     type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
-                    itemId: couponItem.itemId,
-                    itemName: couponItem.itemName,
+                    itemId: isGlobalCoupon ? 'all' : validCouponItemsInCart.map(item => item.itemId).join(','),
+                    itemName: isGlobalCoupon ? 'All Items' : validCouponItemsInCart.map(item => item.itemName).join(','),
                     isGlobalCoupon,
                     originalPrice: couponItem.originalPrice,
                     discountedPrice: couponItem.discountedPrice,

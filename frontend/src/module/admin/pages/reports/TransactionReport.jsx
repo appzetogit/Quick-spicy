@@ -140,16 +140,61 @@ export default function TransactionReport() {
 
   const filteredTransactions = transactions
 
-  const handleExport = (format) => {
-    if (filteredTransactions.length === 0) {
-      alert("No data to export")
-      return
-    }
-    switch (format) {
-      case "csv": exportTransactionReportToCSV(filteredTransactions); break
-      case "excel": exportTransactionReportToExcel(filteredTransactions); break
-      case "pdf": exportTransactionReportToPDF(filteredTransactions); break
-      case "json": exportTransactionReportToJSON(filteredTransactions); break
+  const handleExport = async (format) => {
+    try {
+      toast.loading("Preparing data for export...")
+      
+      let fromDate = null
+      let toDate = null
+      const now = new Date()
+      
+      if (filters.time === "Today") {
+        fromDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        toDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59)
+      } else if (filters.time === "This Week") {
+        const dayOfWeek = now.getDay()
+        const diff = now.getDate() - dayOfWeek
+        fromDate = new Date(now.getFullYear(), now.getMonth(), diff)
+        toDate = new Date(now.getFullYear(), now.getMonth(), diff + 6, 23, 59, 59)
+      } else if (filters.time === "This Month") {
+        fromDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      }
+
+      const params = {
+        zone: filters.zone !== "all" ? filters.zone : undefined,
+        restaurant: filters.restaurant !== "all" ? filters.restaurant : undefined,
+        fromDate: fromDate ? fromDate.toISOString() : undefined,
+        toDate: toDate ? toDate.toISOString() : undefined,
+        search: searchQuery || undefined,
+        page: 1,
+        limit: 1000000 // Retrieve all records
+      }
+
+      const response = await adminAPI.getTransactionReport(params)
+      toast.dismiss()
+
+      if (response?.data?.success && response.data.data?.transactions) {
+        const allTransactions = response.data.data.transactions
+        if (allTransactions.length === 0) {
+          toast.error("No data to export")
+          return
+        }
+
+        switch (format) {
+          case "csv": exportTransactionReportToCSV(allTransactions); break
+          case "excel": exportTransactionReportToExcel(allTransactions); break
+          case "pdf": exportTransactionReportToPDF(allTransactions); break
+          case "json": exportTransactionReportToJSON(allTransactions); break
+        }
+        toast.success("Export started successfully")
+      } else {
+        toast.error(response?.data?.message || "Failed to fetch all records for export")
+      }
+    } catch (err) {
+      toast.dismiss()
+      debugError("Error exporting transaction report:", err)
+      toast.error("Failed to export report")
     }
   }
 
