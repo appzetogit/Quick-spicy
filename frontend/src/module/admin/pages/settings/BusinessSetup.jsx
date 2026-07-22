@@ -1,4 +1,4 @@
-﻿import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Info, Phone, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { adminAPI } from "@/lib/api";
@@ -33,6 +33,7 @@ export default function BusinessSetup() {
     state: "",
     pincode: "",
     region: "",
+    adminOtpRequired: true,
   });
 
   // Fetch business settings on mount
@@ -56,6 +57,7 @@ export default function BusinessSetup() {
           state: settings.state || "",
           pincode: settings.pincode || "",
           region: settings.region || "India",
+          adminOtpRequired: settings.adminOtpRequired !== false,
         });
 
         // Set logo and favicon previews if they exist
@@ -164,6 +166,7 @@ export default function BusinessSetup() {
         state: formData.state.trim(),
         pincode: formData.pincode.trim(),
         region: formData.region,
+        adminOtpRequired: formData.adminOtpRequired,
       };
 
       // Prepare files
@@ -257,6 +260,36 @@ export default function BusinessSetup() {
       </div>
 
       <div className="space-y-4">
+        {/* Security & Authentication Card */}
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+              <span>Admin Security & Authentication</span>
+            </h3>
+            <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-medium ${formData.adminOtpRequired ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-amber-100 text-amber-700 border border-amber-200'}`}>
+              {formData.adminOtpRequired ? "OTP Verification Active" : "OTP Disabled (Direct Login)"}
+            </span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3.5 rounded-lg border border-slate-200 bg-slate-50/60 gap-3">
+            <div>
+              <p className="text-xs font-semibold text-slate-800">Admin Login OTP Requirement</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                When enabled, admins must enter a 6-digit OTP sent via SMS/Email to log in. When disabled, admins log in directly using email and password.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={formData.adminOtpRequired}
+                onChange={(e) => setFormData((prev) => ({ ...prev, adminOtpRequired: e.target.checked }))}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
         {/* Company info */}
         <div className="bg-white rounded-lg shadow-sm border border-slate-200">
           {/* Company information */}

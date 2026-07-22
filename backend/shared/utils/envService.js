@@ -226,19 +226,16 @@ export async function getSMTPCredentials() {
 
 /**
  * Get SMS Hub India credentials
- * @returns {Promise<Object>} { apiKey, senderId }
+ * @returns {Promise<Object>} { apiKey, senderId, entityId }
  */
 export async function getSMSHubIndiaCredentials() {
   return {
     apiKey: await getEnvVar("SMSINDIAHUB_API_KEY"),
     senderId: await getEnvVar("SMSINDIAHUB_SENDER_ID"),
+    entityId: await getEnvVar("SMSINDIAHUB_ENTITY_ID"),
   };
 }
 
-/**
- * Get Google Maps API Key
- * @returns {Promise<string>} Google Maps API Key
- */
 export async function getGoogleMapsApiKey() {
   return await getEnvVar("VITE_GOOGLE_MAPS_API_KEY");
 }

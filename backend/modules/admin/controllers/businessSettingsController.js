@@ -78,6 +78,7 @@ export const updateBusinessSettings = asyncHandler(async (req, res) => {
       orderSmsPhoneNumber,
       region,
       maintenanceMode,
+      adminOtpRequired,
     } = req.body;
 
     // Get existing settings
@@ -126,13 +127,14 @@ export const updateBusinessSettings = asyncHandler(async (req, res) => {
     if (maintenanceMode !== undefined) {
       settings.maintenanceMode.isEnabled = maintenanceMode.isEnabled || false;
       if (maintenanceMode.startDate) {
-        settings.maintenanceMode.startDate = new Date(
-          maintenanceMode.startDate,
-        );
+        settings.maintenanceMode.startDate = new Date(maintenanceMode.startDate);
       }
       if (maintenanceMode.endDate) {
         settings.maintenanceMode.endDate = new Date(maintenanceMode.endDate);
       }
+    }
+    if (adminOtpRequired !== undefined) {
+      settings.adminOtpRequired = Boolean(adminOtpRequired);
     }
 
     // Handle logo upload

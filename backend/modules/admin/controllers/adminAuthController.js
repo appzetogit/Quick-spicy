@@ -1,4 +1,5 @@
 import Admin from '../models/Admin.js';
+import BusinessSettings from '../models/BusinessSettings.js';
 import jwtService from '../../auth/services/jwtService.js';
 import otpService from '../../auth/services/otpService.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
@@ -100,6 +101,34 @@ export const adminLogin = asyncHandler(async (req, res) => {
 
   if (!isPasswordValid) {
     return errorResponse(res, 401, 'Invalid email or password');
+  }
+
+  // Check if Admin OTP is required in Business Settings
+  const settings = await BusinessSettings.getSettings();
+  const isOtpRequired = settings?.adminOtpRequired !== false;
+
+  if (!isOtpRequired) {
+    await admin.updateLastLogin();
+    const sessionId = randomUUID();
+    const tokens = jwtService.generateTokens(buildAdminTokenPayload(admin, sessionId));
+    await createAdminSession({
+      admin,
+      sessionId,
+      refreshToken: tokens.refreshToken,
+      req,
+      sessionContext: req.body?.sessionContext,
+    });
+    setAuthCookies(res, 'admin', tokens);
+
+    const adminResponse = admin.toObject();
+    delete adminResponse.password;
+
+    logger.info(`Admin logged in without OTP (OTP disabled): ${admin._id}`, { email: admin.email });
+
+    return successResponse(res, 200, 'Login successful', {
+      requiresOtp: false,
+      admin: adminResponse,
+    });
   }
 
   const otpTarget = getAdminOtpTarget(admin);

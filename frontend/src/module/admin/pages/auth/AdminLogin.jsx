@@ -99,6 +99,13 @@ export default function AdminLogin() {
     const response = await adminAPI.login(email, password);
     const data = response?.data?.data || response?.data;
 
+    if (!data?.requiresOtp && data?.admin) {
+      setAuthData("admin", null, data.admin);
+      window.dispatchEvent(new Event("adminAuthChanged"));
+      navigate("/admin", { replace: true });
+      return { directLogin: true };
+    }
+
     if (!data?.requiresOtp) {
       throw new Error("OTP challenge was not created. Please try again.");
     }

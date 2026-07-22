@@ -5,9 +5,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 /**
- * SMSIndia Hub SMS Service for DriveOn
+ * SMSIndia Hub SMS Service
  * Handles OTP sending via SMSIndia Hub API
- * Same service as CreateBharat project
  */
 class SMSIndiaHubService {
   constructor() {
@@ -50,19 +49,24 @@ class SMSIndiaHubService {
 
     const apiKeyFromDb = creds.apiKey?.trim();
     const senderIdFromDb = creds.senderId?.trim();
+    const entityIdFromDb = creds.entityId?.trim();
     const apiKeyFromEnv = process.env.SMSINDIAHUB_API_KEY?.trim();
     const senderIdFromEnv = process.env.SMSINDIAHUB_SENDER_ID?.trim();
+    const entityIdFromEnv = process.env.SMSINDIAHUB_ENTITY_ID?.trim();
 
     const apiKey = apiKeyFromDb || apiKeyFromEnv || null;
     const senderId = senderIdFromDb || senderIdFromEnv || null;
+    const entityId = entityIdFromDb || entityIdFromEnv || null;
 
     // Keep latest resolved creds in-memory to reduce churn.
     this.apiKey = apiKey;
     this.senderId = senderId;
+    this.entityId = entityId;
 
     return {
       apiKey,
       senderId,
+      entityId,
       source: apiKeyFromDb || senderIdFromDb ? "admin_panel" : "dotenv",
     };
   }
@@ -126,7 +130,7 @@ class SMSIndiaHubService {
    */
   async sendOTP(phone, otp, purpose = 'register') {
     try {
-      const { apiKey, senderId, source } = await this.resolveCredentials();
+      const { apiKey, senderId, entityId, source } = await this.resolveCredentials();
 
       if (!apiKey || !senderId) {
         console.error("❌ SMSIndia Hub Configuration Error:");
@@ -156,15 +160,13 @@ class SMSIndiaHubService {
         );
       }
 
-      // SMSIndia Hub requires DLT registered templates for transactional SMS
-      // The message text MUST match the registered DLT template EXACTLY
       // Check if custom message template is provided (must match registered DLT template exactly)
       const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
 
       // Check if template ID is provided (for DLT registered templates)
       const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
 
-      // Never use promotional route in production for OTPs. Promotional routes are frequently delayed.
+      // Never use promotional route in production for OTPs.
       const isProd = process.env.NODE_ENV === "production";
       const usePromotional =
         !isProd && process.env.SMSINDIAHUB_USE_PROMOTIONAL === "true";
@@ -183,14 +185,10 @@ class SMSIndiaHubService {
         .replace(/_/g, "-");
       
       // For transactional SMS (DLT), message must match registered template EXACTLY
-      // Use fixed template text that matches DLT registration, regardless of purpose
-      // Based on working template: "Welcome to the DriveOn powered by SMSINDIAHUB. Your OTP for registration is {otp}"
       let message;
       if (customTemplate) {
-        // Use custom template with OTP replacement only (don't change purpose text for DLT)
         message = customTemplate.replace('{otp}', otp);
       } else if (usePromotional) {
-        // For promotional SMS, we can use dynamic purpose text
         let purposeText = 'registration';
         if (normalizedPurpose === 'login') {
           purposeText = 'login';
@@ -201,28 +199,42 @@ class SMSIndiaHubService {
         message = `Welcome to the ${companyName} powered by SMSINDIAHUB. Your OTP for ${purposeText} is ${otp}`;
       } else {
         // For transactional SMS, use fixed template text that matches DLT registration
-        // IMPORTANT: This must match the registered DLT template exactly
         const companyName = await this.getCompanyName();
         message = `Welcome to the ${companyName} powered by SMSINDIAHUB. Your OTP for registration is ${otp}`;
       }
       
-      // Build the API URL with query parameters (same format as RentYatra)
+      // Build the API URL with query parameters
       const params = new URLSearchParams({
         APIKey: apiKey,
         msisdn: normalizedPhone,
         sid: senderId,
         msg: message,
-        fl: "0", // Flash message flag (0 = normal SMS)
-        dc: "0", // Delivery confirmation (0 = no confirmation)
-        gwid: gatewayId, // Gateway ID (2 = transactional, same as RentYatra)
+        fl: "0",
+        dc: "0",
+        gwid: gatewayId,
       });
       
-      // Add template ID if provided (required for some DLT templates)
       if (templateId) {
         params.append('templateid', templateId);
       }
+      if (entityId) {
+        params.append('entityid', entityId);
+      }
 
       const apiUrl = `${this.baseUrl}?${params.toString()}`;
+      const maskedApiKey = apiKey ? `${apiKey.substring(0, 4)}...${apiKey.slice(-4)}` : '(none)';
+      const maskedUrl = apiUrl.replace(apiKey, maskedApiKey);
+
+      console.log("📱 [SMSIndiaHub Request URL]:", maskedUrl);
+      console.log("📱 [SMSIndiaHub Parameters]:", {
+        msisdn: normalizedPhone,
+        sid: senderId,
+        gwid: gatewayId,
+        templateid: templateId || undefined,
+        entityid: entityId || undefined,
+        message,
+      });
+
       const startedAt = Date.now();
 
       // Make GET request to SMSIndia Hub API
@@ -232,7 +244,7 @@ class SMSIndiaHubService {
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         },
-        timeout: 8000, // keep OTP path snappy
+        timeout: 8000,
       });
 
       const requestMs = Date.now() - startedAt;
@@ -249,7 +261,7 @@ class SMSIndiaHubService {
       
       console.log("📱 SMSIndia Hub Response Text:", responseText);
       
-      // Try to parse as JSON first (SMSIndia Hub sometimes returns JSON)
+      // Try to parse as JSON first
       let parsedResponse = null;
       if (typeof responseData === "string") {
         try {
@@ -261,7 +273,7 @@ class SMSIndiaHubService {
         parsedResponse = responseData;
       }
       
-      // Check JSON response for error codes (like ErrorCode: "006" for template error)
+      // Check JSON response for error codes
       if (parsedResponse && typeof parsedResponse === "object") {
         if (parsedResponse.ErrorCode === "000" && parsedResponse.ErrorMessage === "Done") {
           console.log("✅ SMS sent successfully - JSON success response");
@@ -286,8 +298,9 @@ class SMSIndiaHubService {
         }
       }
       
-      // Check for success indicators in text response (same logic as RentYatra)
-      if (responseText.includes('success') || responseText.includes('sent') || responseText.includes('accepted')) {
+      // Check for success/error indicators in text response (case-insensitive)
+      const responseTextLower = responseText.toLowerCase();
+      if (responseTextLower.includes('success') || responseTextLower.includes('sent') || responseTextLower.includes('accepted')) {
         console.log("✅ SMS sent successfully - success indicator found in text");
         return {
           success: true,
@@ -299,12 +312,12 @@ class SMSIndiaHubService {
           provider: 'SMSIndia Hub',
           response: responseText
         };
-      } else if (responseText.includes('error') || responseText.includes('failed') || responseText.includes('invalid')) {
+      } else if (responseTextLower.includes('error') || responseTextLower.includes('failed') || responseTextLower.includes('invalid') || responseTextLower.includes('not valid')) {
         console.error("❌ SMS failed - error indicator found in text:", responseText);
         throw new Error(`SMSIndia Hub API error: ${responseText}`);
       } else {
-        // If we can't determine success/failure from response, assume success if we got a response (same as RentYatra)
-        console.log("⚠️ Ambiguous response - assuming success (same as RentYatra)");
+        // If we can't determine success/failure, assume success
+        console.log("⚠️ Ambiguous response - assuming success");
         return {
           success: true,
           messageId: `sms_${Date.now()}`,
@@ -394,7 +407,6 @@ class SMSIndiaHubService {
         process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
 
       // Try transactional first, then fallback to promotional.
-      // OTP and strict DLT templates typically use transactional route; custom alerts often require promotional route.
       const gatewayOrder =
         Array.isArray(options?.gatewayOrder) && options.gatewayOrder.length > 0
           ? options.gatewayOrder.map((g) => String(g))
@@ -441,8 +453,6 @@ class SMSIndiaHubService {
             parsedResponse = rawResponse;
           }
 
-          // SMSIndia Hub success JSON commonly includes:
-          // { ErrorCode: "000", ErrorMessage: "Done", ... }
           if (parsedResponse && typeof parsedResponse === "object") {
             const errorCode = String(parsedResponse.ErrorCode || "");
             const errorMessage = String(parsedResponse.ErrorMessage || "");
@@ -467,7 +477,8 @@ class SMSIndiaHubService {
 
           if (
             responseText.includes("failed") ||
-            responseText.includes("invalid")
+            responseText.includes("invalid") ||
+            responseText.includes("not valid")
           ) {
             throw new Error(`SMSIndia Hub API error: ${responseText}`);
           }
@@ -502,22 +513,12 @@ class SMSIndiaHubService {
       const { apiKey, senderId } = await this.resolveCredentials();
 
       if (!apiKey || !senderId) {
-        console.error("❌ SMSIndia Hub Configuration Error:");
-        console.error(
-          "   SMSINDIAHUB_API_KEY:",
-          apiKey ? "✓ Set" : "✗ Missing"
-        );
-        console.error(
-          "   SMSINDIAHUB_SENDER_ID:",
-          senderId ? "✓ Set" : "✗ Missing"
-        );
         throw new Error(
           "SMSIndia Hub not configured. Set SMSINDIAHUB_API_KEY and SMSINDIAHUB_SENDER_ID from Admin > System Addons (or .env fallback)."
         );
       }
 
-      // Test with a simple SMS to verify connection
-      const testPhone = "919109992290"; // Use a test phone number
+      const testPhone = "919109992290";
       const testMessage =
         "Test message from DriveOn. SMS service is working correctly.";
 
@@ -565,17 +566,11 @@ class SMSIndiaHubService {
       const { apiKey } = await this.resolveCredentials();
 
       if (!apiKey) {
-        console.error("❌ SMSIndia Hub Configuration Error:");
-        console.error(
-          "   SMSINDIAHUB_API_KEY:",
-          apiKey ? "✓ Set" : "✗ Missing"
-        );
         throw new Error(
           "SMSIndia Hub not configured. Set SMSINDIAHUB_API_KEY from Admin > System Addons (or .env fallback)."
         );
       }
 
-      // SMSIndia Hub balance API endpoint
       const balanceUrl = `http://cloud.smsindiahub.in/vendorsms/checkbalance.aspx?APIKey=${apiKey}`;
 
       const response = await axios.get(balanceUrl, {
@@ -589,7 +584,6 @@ class SMSIndiaHubService {
 
       const responseText = response.data.toString();
 
-      // Parse balance from response (SMSIndia Hub typically returns balance as text)
       const balanceMatch = responseText.match(/(\d+\.?\d*)/);
       const balance = balanceMatch ? parseFloat(balanceMatch[1]) : 0;
 

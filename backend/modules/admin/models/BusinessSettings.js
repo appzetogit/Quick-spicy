@@ -101,6 +101,11 @@ const businessSettingsSchema = new mongoose.Schema(
       default: 100,
       min: 0,
     },
+    // Admin OTP requirement toggle (true = require OTP on login, false = direct password login)
+    adminOtpRequired: {
+      type: Boolean,
+      default: true,
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
