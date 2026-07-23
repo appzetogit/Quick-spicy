@@ -744,6 +744,12 @@ export default function Coupons() {
                         )}
                       </div>
                     )}
+
+                    {formData.restaurantIds.length > 1 && (
+                      <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Product selection is available when exactly one restaurant is selected. For multiple restaurants, the coupon will apply to all products in each selected restaurant.
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -816,6 +822,7 @@ export default function Coupons() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Restaurant</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Zone</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Dish</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Offer Scope</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Coupon Code</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Customer Scope</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Discount</th>
@@ -840,6 +847,15 @@ export default function Coupons() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="text-sm text-slate-700">{offer.dishName}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          offer.productScope === "selected"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-slate-100 text-slate-700"
+                        }`}>
+                          {offer.productScope === "selected" ? "Selected Products" : "All Products"}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm font-mono font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">

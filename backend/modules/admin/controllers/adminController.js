@@ -3501,6 +3501,8 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             couponCode: item.couponCode || "N/A",
             discountType: offer.discountType || "percentage",
             customerGroup: offer.customerGroup || "all",
+            restaurantScope: offer.restaurantScope || "all",
+            productScope: offer.productScope || (item.itemName === "All Items" ? "all" : "selected"),
             discountPercentage: item.discountPercentage || 0,
             maxDiscount: offer.maxLimit ?? null,
             minOrderValue: offer.minOrderValue || 0,
@@ -3836,6 +3838,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         goalId: "grow-customers",
         discountType,
         customerGroup,
+        restaurantScope,
         offerPreference: "all",
         offerDays: "all",
         startDate: now,
@@ -3843,6 +3846,11 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         targetMealtime: "all",
         minOrderValue: parsedMinOrderValue,
         maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
+        productScope: productScope === "selected" ? "selected" : "all",
+        selectedProductIds:
+          productScope === "selected"
+            ? offerItems.map((item) => String(item.itemId || "").trim()).filter(Boolean)
+            : [],
         status: "active",
         items: offerItems,
       });

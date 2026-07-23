@@ -118,6 +118,29 @@ export default function FeedNavbar({ className = "" }) {
     e?.stopPropagation?.();
 
     const next = !isOnline;
+
+    if (next) {
+      try {
+        const response = await deliveryAPI.getProfile();
+        const profile = response?.data?.data?.profile;
+        const status = String(profile?.status || '').toLowerCase();
+        const isEligible = profile?.isActive === true && (status === "approved" || status === "active");
+
+        if (!isEligible) {
+          localStorage.setItem(LS_KEY, JSON.stringify(false));
+          window.dispatchEvent(new CustomEvent('onlineStatusChanged'));
+          setIsOnline(false);
+          toast.error(
+            status === "blocked"
+              ? "Your profile is not approved. Please reverify with admin."
+              : "Your profile is still under verification. You can go online only after admin approval."
+          );
+          return;
+        }
+      } catch (error) {
+        debugError('❌ Error verifying delivery profile before going online:', error);
+      }
+    }
     
     // Update state immediately for better UX
     setIsOnline(next);

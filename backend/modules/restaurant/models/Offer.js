@@ -71,6 +71,20 @@ const offerSchema = new mongoose.Schema(
       type: Number,
       default: null,
     },
+    restaurantScope: {
+      type: String,
+      enum: ['all', 'selected'],
+      default: 'all',
+    },
+    productScope: {
+      type: String,
+      enum: ['all', 'selected'],
+      default: 'all',
+    },
+    selectedProductIds: {
+      type: [String],
+      default: [],
+    },
     // Status
     status: {
       type: String,

@@ -5479,6 +5479,11 @@ export default function DeliveryHome() {
       return
     }
 
+    if (deliveryStatus === 'pending' || deliveryStatus === 'blocked') {
+      debugLog('⏭️ Delivery partner is not approved, skipping order fetch')
+      return
+    }
+
     if (showNewOrderPopup || hasInProgressOrder()) {
       debugLog('⏭️ Skipping order fetch because rider already has an active/pending popup order')
       return
@@ -5659,7 +5664,7 @@ export default function DeliveryHome() {
       debugError('❌ Error fetching assigned orders:', error)
       // Don't show error to user, just log it
     }
-  }, [isOnline, showNewOrderPopup, hasInProgressOrder, calculateTimeAway, shouldSkipIncomingPopup, markIncomingPopupShown, playNotificationSound])
+  }, [isOnline, deliveryStatus, showNewOrderPopup, hasInProgressOrder, calculateTimeAway, shouldSkipIncomingPopup, markIncomingPopupShown, playNotificationSound])
 
   // Fetch assigned orders when delivery person goes online
   useEffect(() => {
@@ -5734,6 +5739,18 @@ export default function DeliveryHome() {
           // Store delivery partner status first
           if (profile?.status) {
             setDeliveryStatus(profile.status)
+          }
+
+          const normalizedStatus = String(profile?.status || '').toLowerCase()
+          const isEligibleForOrders =
+            profile?.isActive === true && (normalizedStatus === 'approved' || normalizedStatus === 'active')
+
+          if (!isEligibleForOrders) {
+            setIsOnline(false)
+            isOnlineRef.current = false
+            localStorage.setItem(LS_KEY, JSON.stringify(false))
+            localStorage.setItem('delivery_online_status', 'false')
+            window.dispatchEvent(new CustomEvent('onlineStatusChanged'))
           }
           
           // Store rejection reason if status is blocked

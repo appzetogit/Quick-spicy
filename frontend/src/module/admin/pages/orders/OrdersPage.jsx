@@ -36,6 +36,9 @@ const statusConfig = {
   "offline-payments": { title: "Offline Payments", color: "slate", icon: Package },
 }
 
+const REPORT_EXPORT_FETCH_LIMIT = 10000
+const DEFAULT_FETCH_LIMIT = 50
+
 export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
   const [orders, setOrders] = useState([])
@@ -371,9 +374,10 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       if (!silent) setIsLoading(true)
       if (!silent) setLoadError("")
+      const requestedLimit = statusKey === "delivered" ? REPORT_EXPORT_FETCH_LIMIT : DEFAULT_FETCH_LIMIT
       const params = {
         page: 1,
-        limit: 50,
+        limit: requestedLimit,
         _t: Date.now(),
         zone: appliedFilters.zone || undefined,
         status:

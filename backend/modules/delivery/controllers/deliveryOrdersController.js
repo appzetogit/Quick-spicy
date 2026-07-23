@@ -19,6 +19,10 @@ import {
   upsertActiveOrderTracking,
   removeActiveOrderTracking
 } from '../services/firebaseRealtimeTrackingService.js';
+import {
+  canDeliveryReceiveOrders,
+  getDeliveryVerificationBlockMessage
+} from '../utils/verification.js';
 import mongoose from 'mongoose';
 import winston from 'winston';
 
@@ -446,6 +450,12 @@ export const getOrders = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
     const { status, page = 1, limit = 20, includeDelivered, discover } = req.query;
+    const isDiscoverMode = discover === 'true' || discover === true;
+
+    if (isDiscoverMode && !canDeliveryReceiveOrders(delivery)) {
+      return errorResponse(res, 403, getDeliveryVerificationBlockMessage(delivery));
+    }
+
     const cashLimitState = await getDeliveryCashLimitState(delivery._id);
     const hasActiveAssignedOrder = Boolean(
       await Order.exists({
@@ -459,7 +469,6 @@ export const getOrders = asyncHandler(async (req, res) => {
     );
 
     // Build query
-    const isDiscoverMode = discover === 'true' || discover === true;
     const query = isDiscoverMode
       ? {
           $or: [
@@ -623,6 +632,11 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     // Check if order is assigned to this delivery partner OR if they were notified
     const orderDeliveryPartnerId = order.deliveryPartnerId?.toString();
     const currentDeliveryId = delivery._id.toString();
+    const isAssignedToCurrentDelivery = orderDeliveryPartnerId === currentDeliveryId;
+
+    if (!isAssignedToCurrentDelivery && !canDeliveryReceiveOrders(delivery)) {
+      return errorResponse(res, 403, getDeliveryVerificationBlockMessage(delivery));
+    }
     
     // Helper function to normalize ID for comparison (handles ObjectId, string, etc.)
     const normalizeId = (id) => {
@@ -637,7 +651,7 @@ export const getOrderDetails = asyncHandler(async (req, res) => {
     const validAcceptanceStatuses = DELIVERY_OPEN_ACCEPT_STATUSES;
     
     // If order is assigned to this delivery partner, allow access
-    if (orderDeliveryPartnerId === currentDeliveryId) {
+    if (isAssignedToCurrentDelivery) {
       // Order is assigned, proceed
       console.log(`✅ Order ${order.orderId} is assigned to current delivery partner ${currentDeliveryId}`);
     } else if (!orderDeliveryPartnerId) {
@@ -716,6 +730,10 @@ export const acceptOrder = asyncHandler(async (req, res) => {
     const delivery = req.delivery;
     const { orderId } = req.params;
     const { currentLat, currentLng } = req.body; // Delivery boy's current location
+
+    if (!canDeliveryReceiveOrders(delivery)) {
+      return errorResponse(res, 403, getDeliveryVerificationBlockMessage(delivery));
+    }
 
     // Validate orderId
     if (!orderId || (typeof orderId !== 'string' && typeof orderId !== 'object')) {

@@ -10,6 +10,10 @@ import {
   syncDeliveryPartnerPresence,
   updateActiveOrderLocation
 } from '../services/firebaseRealtimeTrackingService.js';
+import {
+  canDeliveryReceiveOrders,
+  getDeliveryVerificationBlockMessage
+} from '../utils/verification.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -159,6 +163,12 @@ export const updateLocation = asyncHandler(async (req, res) => {
 
     // Update online status if provided
     if (typeof isOnline === 'boolean') {
+      if (isOnline === true && !canDeliveryReceiveOrders(delivery)) {
+        await Delivery.findByIdAndUpdate(delivery._id, {
+          $set: { 'availability.isOnline': false }
+        });
+        return errorResponse(res, 403, getDeliveryVerificationBlockMessage(delivery));
+      }
       updateData['availability.isOnline'] = isOnline;
     }
 
