@@ -95,9 +95,9 @@ class SMSIndiaHubService {
     try {
       const BusinessSettings = (await import('../../admin/models/BusinessSettings.js')).default;
       const settings = await BusinessSettings.getSettings();
-      return settings?.companyName || 'Appzeto Food';
+      return settings?.companyName || 'Indiankart';
     } catch (error) {
-      return 'Appzeto Food';
+      return 'Indiankart';
     }
   }
 

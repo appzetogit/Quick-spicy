@@ -21,7 +21,7 @@ export const getBusinessSettingsPublic = asyncHandler(async (req, res) => {
       200,
       "Business settings retrieved successfully",
       {
-        companyName: settings?.companyName || "Appzeto Food",
+        companyName: settings?.companyName || "Indiankart",
         logo: settings?.logo || { url: "", publicId: "" },
         favicon: settings?.favicon || { url: "", publicId: "" },
       },
@@ -34,7 +34,7 @@ export const getBusinessSettingsPublic = asyncHandler(async (req, res) => {
       200,
       "Business settings retrieved successfully",
       {
-        companyName: "Appzeto Food",
+        companyName: "Indiankart",
         logo: { url: "", publicId: "" },
         favicon: { url: "", publicId: "" },
       },
