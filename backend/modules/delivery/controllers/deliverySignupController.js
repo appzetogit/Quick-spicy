@@ -161,6 +161,10 @@ export const submitSignupDocuments = asyncHandler(async (req, res) => {
       drivingLicensePhoto: drivingLicensePhoto.url ? 'Uploaded' : 'Missing'
     });
 
+    // Already-approved riders re-submitting documents must NOT be demoted back to
+    // pending (that is what re-showed the "verification in 24 hours" banner to them).
+    const isAlreadyApproved = ['approved', 'active'].includes(String(delivery.status || '').toLowerCase());
+
     // Update delivery profile with documents
     // Store all documents in database with Cloudinary URLs
     const updateData = {
@@ -177,23 +181,23 @@ export const submitSignupDocuments = asyncHandler(async (req, res) => {
         aadhar: {
           ...delivery.documents?.aadhar,
           document: aadharPhoto.url,
-          verified: false // Will be verified by admin later
+          verified: isAlreadyApproved // Re-verify only for not-yet-approved riders
         },
         // PAN card document
         pan: {
           ...delivery.documents?.pan,
           document: panPhoto.url,
-          verified: false // Will be verified by admin later
+          verified: isAlreadyApproved
         },
         // Driving license document
         drivingLicense: {
           ...delivery.documents?.drivingLicense,
           document: drivingLicensePhoto.url,
-          verified: false // Will be verified by admin later
+          verified: isAlreadyApproved
         }
       },
       // Mark signup as complete - status remains pending until admin approval
-      status: 'pending'
+      status: isAlreadyApproved ? delivery.status : 'pending'
     };
 
     const updatedDelivery = await Delivery.findByIdAndUpdate(
