@@ -50,24 +50,41 @@ class SMSIndiaHubService {
     const apiKeyFromDb = creds.apiKey?.trim();
     const senderIdFromDb = creds.senderId?.trim();
     const entityIdFromDb = creds.entityId?.trim();
+    const templateIdFromDb = creds.templateId?.trim();
+    const messageTemplateFromDb = creds.messageTemplate?.trim();
     const apiKeyFromEnv = process.env.SMSINDIAHUB_API_KEY?.trim();
     const senderIdFromEnv = process.env.SMSINDIAHUB_SENDER_ID?.trim();
     const entityIdFromEnv = process.env.SMSINDIAHUB_ENTITY_ID?.trim();
+    const templateIdFromEnv = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
+    const messageTemplateFromEnv = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
 
     const apiKey = apiKeyFromDb || apiKeyFromEnv || null;
     const senderId = senderIdFromDb || senderIdFromEnv || null;
     const entityId = entityIdFromDb || entityIdFromEnv || null;
+    const templateId = templateIdFromDb || templateIdFromEnv || null;
+    const messageTemplate = messageTemplateFromDb || messageTemplateFromEnv || null;
 
     // Keep latest resolved creds in-memory to reduce churn.
     this.apiKey = apiKey;
     this.senderId = senderId;
     this.entityId = entityId;
+    this.templateId = templateId;
+    this.messageTemplate = messageTemplate;
 
     return {
       apiKey,
       senderId,
       entityId,
-      source: apiKeyFromDb || senderIdFromDb ? "admin_panel" : "dotenv",
+      templateId,
+      messageTemplate,
+      source:
+        apiKeyFromDb ||
+        senderIdFromDb ||
+        entityIdFromDb ||
+        templateIdFromDb ||
+        messageTemplateFromDb
+          ? "admin_panel"
+          : "dotenv",
     };
   }
 
@@ -130,7 +147,14 @@ class SMSIndiaHubService {
    */
   async sendOTP(phone, otp, purpose = 'register') {
     try {
-      const { apiKey, senderId, entityId, source } = await this.resolveCredentials();
+      const {
+        apiKey,
+        senderId,
+        entityId,
+        templateId,
+        messageTemplate,
+        source,
+      } = await this.resolveCredentials();
 
       if (!apiKey || !senderId) {
         console.error("❌ SMSIndia Hub Configuration Error:");
@@ -160,12 +184,6 @@ class SMSIndiaHubService {
         );
       }
 
-      // Check if custom message template is provided (must match registered DLT template exactly)
-      const customTemplate = process.env.SMSINDIAHUB_MESSAGE_TEMPLATE?.trim();
-
-      // Check if template ID is provided (for DLT registered templates)
-      const templateId = process.env.SMSINDIAHUB_TEMPLATE_ID?.trim();
-
       // Never use promotional route in production for OTPs.
       const isProd = process.env.NODE_ENV === "production";
       const usePromotional =
@@ -186,8 +204,10 @@ class SMSIndiaHubService {
       
       // For transactional SMS (DLT), message must match registered template EXACTLY
       let message;
-      if (customTemplate) {
-        message = customTemplate.replace('{otp}', otp);
+      if (messageTemplate) {
+        message = messageTemplate
+          .replaceAll('{companyName}', await this.getCompanyName())
+          .replaceAll('{otp}', otp);
       } else if (usePromotional) {
         let purposeText = 'registration';
         if (normalizedPurpose === 'login') {

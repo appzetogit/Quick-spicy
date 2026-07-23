@@ -27,6 +27,9 @@ export const ENV_VARIABLE_KEYS = [
   'SMTP_PASS',
   'SMSINDIAHUB_API_KEY',
   'SMSINDIAHUB_SENDER_ID',
+  'SMSINDIAHUB_ENTITY_ID',
+  'SMSINDIAHUB_TEMPLATE_ID',
+  'SMSINDIAHUB_MESSAGE_TEMPLATE',
   'SMSINDIAHUB_ORDER_ALERT_TEMPLATE_ID',
   'SMSINDIAHUB_ORDER_ALERT_TEMPLATE',
   'VITE_GOOGLE_MAPS_API_KEY'
@@ -166,6 +169,21 @@ const environmentVariableSchema = new mongoose.Schema(
       trim: true
     },
     SMSINDIAHUB_SENDER_ID: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    SMSINDIAHUB_ENTITY_ID: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    SMSINDIAHUB_TEMPLATE_ID: {
+      type: String,
+      default: '',
+      trim: true
+    },
+    SMSINDIAHUB_MESSAGE_TEMPLATE: {
       type: String,
       default: '',
       trim: true

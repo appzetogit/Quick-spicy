@@ -226,13 +226,15 @@ export async function getSMTPCredentials() {
 
 /**
  * Get SMS Hub India credentials
- * @returns {Promise<Object>} { apiKey, senderId, entityId }
+ * @returns {Promise<Object>} { apiKey, senderId, entityId, templateId, messageTemplate }
  */
 export async function getSMSHubIndiaCredentials() {
   return {
     apiKey: await getEnvVar("SMSINDIAHUB_API_KEY"),
     senderId: await getEnvVar("SMSINDIAHUB_SENDER_ID"),
     entityId: await getEnvVar("SMSINDIAHUB_ENTITY_ID"),
+    templateId: await getEnvVar("SMSINDIAHUB_TEMPLATE_ID"),
+    messageTemplate: await getEnvVar("SMSINDIAHUB_MESSAGE_TEMPLATE"),
   };
 }
 
