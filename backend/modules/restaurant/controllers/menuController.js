@@ -51,6 +51,31 @@ const sortNewestFirst = (items = []) =>
 
 const normalizeCategoryKey = (value) => String(value || '').trim().toLowerCase();
 
+const normalizeStockValue = (value) => {
+  if (value === undefined || value === null || value === '') {
+    return 'Unlimited';
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return 'Unlimited';
+    if (trimmed.toLowerCase() === 'unlimited') return 'Unlimited';
+
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, Math.floor(parsed));
+    }
+
+    return 'Unlimited';
+  }
+
+  if (Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+
+  return 'Unlimited';
+};
+
 const buildCategoryItemCountMap = (sections = []) => {
   const counts = new Map();
 
@@ -332,7 +357,7 @@ export const updateMenu = asyncHandler(async (req, res) => {
           rating: item.rating ?? 0.0,
           reviews: item.reviews ?? 0,
           price: item.price || 0,
-          stock: item.stock || "Unlimited",
+          stock: normalizeStockValue(item.stock),
           discount: item.discount || null,
           originalPrice: item.originalPrice || null,
           foodType: item.foodType || "Non-Veg",
@@ -347,7 +372,7 @@ export const updateMenu = asyncHandler(async (req, res) => {
             id: String(v.id || Date.now() + Math.random()),
             name: v.name || "",
             price: v.price || 0,
-            stock: v.stock || "Unlimited",
+            stock: normalizeStockValue(v.stock),
           })) : [],
           tags: Array.isArray(item.tags) ? item.tags : [],
           nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
@@ -397,7 +422,7 @@ export const updateMenu = asyncHandler(async (req, res) => {
               rating: item.rating ?? 0.0,
               reviews: item.reviews ?? 0,
               price: item.price || 0,
-              stock: item.stock || "Unlimited",
+              stock: normalizeStockValue(item.stock),
               discount: item.discount || null,
               originalPrice: item.originalPrice || null,
               foodType: item.foodType || "Non-Veg",
@@ -412,7 +437,7 @@ export const updateMenu = asyncHandler(async (req, res) => {
                 id: String(v.id || Date.now() + Math.random()),
                 name: v.name || "",
                 price: v.price || 0,
-                stock: v.stock || "Unlimited",
+                stock: normalizeStockValue(v.stock),
               })) : [],
               tags: Array.isArray(item.tags) ? item.tags : [],
               nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
@@ -603,7 +628,7 @@ export const addItemToSection = asyncHandler(async (req, res) => {
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
     price: parsedPrice,
-    stock: item.stock || "Unlimited",
+    stock: normalizeStockValue(item.stock),
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
     foodType: item.foodType || "Non-Veg",
@@ -618,7 +643,7 @@ export const addItemToSection = asyncHandler(async (req, res) => {
       id: String(v.id || Date.now() + Math.random()),
       name: v.name || "",
       price: Number(v.price) || 0,
-      stock: v.stock || "Unlimited",
+      stock: normalizeStockValue(v.stock),
     })) : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
     nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
@@ -753,7 +778,7 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
     rating: item.rating ?? 0.0,
     reviews: item.reviews ?? 0,
     price: parsedPrice,
-    stock: item.stock || "Unlimited",
+    stock: normalizeStockValue(item.stock),
     discount: item.discount || null,
     originalPrice: item.originalPrice || null,
     foodType: item.foodType || "Non-Veg",
@@ -768,7 +793,7 @@ export const addItemToSubsection = asyncHandler(async (req, res) => {
       id: String(v.id || Date.now() + Math.random()),
       name: v.name || "",
       price: Number(v.price) || 0,
-      stock: v.stock || "Unlimited",
+      stock: normalizeStockValue(v.stock),
     })) : [],
     tags: Array.isArray(item.tags) ? item.tags : [],
     nutrition: Array.isArray(item.nutrition) ? item.nutrition : [],
