@@ -132,11 +132,11 @@ export default function OrdersTable({
     )
   }
   
-  // Reset to page 1 when orders change
+  // Keep the current page when the list changes (live order updates arrive constantly);
+  // only pull back when the page no longer exists.
   useEffect(() => {
-    const resetPageTimer = window.setTimeout(() => setCurrentPage(1), 0)
-    return () => window.clearTimeout(resetPageTimer)
-  }, [orders.length])
+    setCurrentPage((prev) => Math.min(prev, Math.max(1, totalPages)))
+  }, [totalPages])
   
   const paginatedOrders = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage
