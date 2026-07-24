@@ -339,6 +339,12 @@ export default function OrdersPage({ statusKey = "all" }) {
 
   const normalizedOrders = useMemo(() => orders, [orders])
 
+  // Export date range prompt: exports pull their own server-side range so the report
+  // is never capped by what the table currently has loaded.
+  const [exportFormat, setExportFormat] = useState(null)
+  const [exportRange, setExportRange] = useState({ fromDate: "", toDate: "" })
+  const [isExporting, setIsExporting] = useState(false)
+
   const {
     searchQuery,
     setSearchQuery,
@@ -367,6 +373,52 @@ export default function OrdersPage({ statusKey = "all" }) {
     toggleColumn,
     resetColumns,
   } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones)
+
+  const runExport = useCallback(async () => {
+    const { fromDate, toDate } = exportRange
+    if (!fromDate || !toDate) {
+      toast.error("Select both a From and To date.")
+      return
+    }
+    if (new Date(fromDate) > new Date(toDate)) {
+      toast.error("From date must be on or before To date.")
+      return
+    }
+
+    try {
+      setIsExporting(true)
+      const response = await adminAPI.getOrders({
+        page: 1,
+        limit: REPORT_EXPORT_FETCH_LIMIT,
+        fromDate,
+        toDate,
+        zone: appliedFilters.zone || undefined,
+        status:
+          statusKey === "all"
+            ? undefined
+            : statusKey === "restaurant-cancelled" || statusKey === "admin-cancelled"
+              ? "cancelled"
+              : statusKey,
+        cancelledBy:
+          statusKey === "restaurant-cancelled" ? "restaurant" : statusKey === "admin-cancelled" ? "admin" : undefined,
+      })
+
+      const rows = response.data?.data?.orders || []
+      if (!rows.length) {
+        toast.error("No orders found in that date range.")
+        return
+      }
+
+      handleExport(exportFormat, rows)
+      toast.success(`Exported ${rows.length} orders.`)
+      setExportFormat(null)
+    } catch (error) {
+      debugError("Export failed:", error)
+      toast.error("Could not build the report. Please try again.")
+    } finally {
+      setIsExporting(false)
+    }
+  }, [exportRange, exportFormat, appliedFilters.zone, statusKey, handleExport])
 
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
@@ -1000,7 +1052,7 @@ export default function OrdersPage({ statusKey = "all" }) {
         setSearchQuery={setSearchQuery}
         onFilterClick={() => setIsFilterOpen(true)}
         activeFiltersCount={activeFiltersCount}
-        onExport={handleExport}
+        onExport={(format) => setExportFormat(format)}
         onSettingsClick={() => setIsSettingsOpen(true)}
       />
       <div className="mb-4 rounded-xl border border-slate-200 bg-white p-4">
@@ -1069,6 +1121,59 @@ export default function OrdersPage({ statusKey = "all" }) {
         restaurants={restaurants}
         zones={orderZoneOptions}
       />
+      {exportFormat && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-slate-900">
+              Export {exportFormat.toUpperCase()} report
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Choose the date range to include. All orders in this range are exported, not just
+              the ones currently listed.
+            </p>
+            <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">From Date</span>
+                <input
+                  type="date"
+                  value={exportRange.fromDate}
+                  max={exportRange.toDate || undefined}
+                  onChange={(e) => setExportRange((prev) => ({ ...prev, fromDate: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-medium text-slate-700">To Date</span>
+                <input
+                  type="date"
+                  value={exportRange.toDate}
+                  min={exportRange.fromDate || undefined}
+                  onChange={(e) => setExportRange((prev) => ({ ...prev, toDate: e.target.value }))}
+                  className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                />
+              </label>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setExportFormat(null)}
+                disabled={isExporting}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={runExport}
+                disabled={isExporting}
+                className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              >
+                {isExporting ? "Preparing…" : "Download"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <SettingsDialog
         isOpen={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}

@@ -351,7 +351,10 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
     setDraftFilters(defaultFilters)
   }
 
-  const handleExport = (format) => {
+  // rowsOverride lets the caller export a server-fetched date range instead of the
+  // page's currently loaded (and paginated) rows.
+  const handleExport = (format, rowsOverride) => {
+    const rows = Array.isArray(rowsOverride) ? rowsOverride : filteredOrders
     const selectedZoneName = filters.zone
       ? zoneOptions.find((zone) => zone.id === filters.zone)?.name
       : ""
@@ -366,16 +369,16 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       .replace(/^_+|_+$/g, "")
     switch (format) {
       case "csv":
-        exportToCSV(filteredOrders, filename)
+        exportToCSV(rows, filename)
         break
       case "excel":
-        exportToExcel(filteredOrders, filename)
+        exportToExcel(rows, filename)
         break
       case "pdf":
-        exportToPDF(filteredOrders, filename)
+        exportToPDF(rows, filename)
         break
       case "json":
-        exportToJSON(filteredOrders, filename)
+        exportToJSON(rows, filename)
         break
       default:
         break
