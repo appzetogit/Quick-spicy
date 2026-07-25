@@ -98,7 +98,8 @@ export const getComplaintDetails = asyncHandler(async (req, res) => {
     const restaurantId = req.restaurant._id;
 
     const complaint = await RestaurantComplaint.findById(id)
-      .populate('orderId')
+      // Bare populate returned the whole order, including the customer's delivery OTP.
+      .populate({ path: 'orderId', select: '-deliveryVerification.dropOtp.code' })
       .populate('customerId', 'name phone email')
       .lean();
 

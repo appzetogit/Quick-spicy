@@ -1,4 +1,5 @@
 import express from "express";
+import { errorResponse } from "../../../shared/utils/response.js";
 import {
   getAllWithdrawalRequests,
   approveWithdrawalRequest,
@@ -244,6 +245,31 @@ console.log("📦 Loading adminRoutes.js - All routes will be registered");
 
 // All admin routes require admin authentication
 router.use(authenticateAdmin);
+
+// Moderators are read-only apart from day-to-day order handling.
+//
+// Only a handful of the ~174 routes below carry an explicit role guard, which left a
+// moderator able to issue refunds, rewrite commissions, change business settings and
+// delete restaurants. This is written as one default-deny rule rather than 160-odd
+// per-route annotations so that a newly added mutating route is closed to moderators
+// by default instead of silently open - the failure mode that created this hole.
+const MODERATOR_ALLOWED_WRITES = [
+  /^\/orders\/[^/]+\/(accept|reject|ready|delivered)$/,
+  /^\/profile$/,
+  /^\/settings\/change-password$/,
+];
+
+router.use((req, res, next) => {
+  if (req.user?.role !== "moderator") return next();
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+  if (MODERATOR_ALLOWED_WRITES.some((allowed) => allowed.test(req.path))) return next();
+
+  return errorResponse(
+    res,
+    403,
+    "Access denied. Moderators cannot perform this action - ask a super admin or admin.",
+  );
+});
 
 // Debug middleware - log ALL requests to help debug routing
 router.use((req, res, next) => {

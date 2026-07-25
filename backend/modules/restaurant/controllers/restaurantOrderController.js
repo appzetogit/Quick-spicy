@@ -104,7 +104,14 @@ export const getRestaurantOrders = asyncHandler(async (req, res) => {
       status: status || 'all'
     });
 
+    // The drop OTP is the customer's proof of delivery. A restaurant that can read it
+    // could hand it to a rider to close an order that was never delivered, so it is
+    // excluded from every restaurant-facing read.
+    // ponytail: excluded per query. Model-level `select: false` would cover future
+    // readers too, but the customer view and the rider's verify both read this field,
+    // so flipping it needs those updated in the same change.
     const orders = await Order.find(query)
+      .select('-deliveryVerification.dropOtp.code')
       .populate('userId', 'name email phone')
       .sort({ createdAt: -1 })
       .limit(parseInt(limit))
@@ -223,6 +230,7 @@ export const getRestaurantOrderById = asyncHandler(async (req, res) => {
         _id: id,
         restaurantId: { $in: restaurantIdVariations }
       })
+        .select('-deliveryVerification.dropOtp.code')
         .populate('userId', 'name email phone')
         .lean();
     }
@@ -233,6 +241,7 @@ export const getRestaurantOrderById = asyncHandler(async (req, res) => {
         orderId: id,
         restaurantId: { $in: restaurantIdVariations }
       })
+        .select('-deliveryVerification.dropOtp.code')
         .populate('userId', 'name email phone')
         .lean();
     }
@@ -967,6 +976,7 @@ export const markOrderReady = asyncHandler(async (req, res) => {
     // Populate order for notifications.
     // Order.restaurantId is a String field, so avoid populate() on that path.
     const populatedOrder = await Order.findById(order._id)
+      .select('-deliveryVerification.dropOtp.code')
       .populate('userId', 'name phone')
       .populate('deliveryPartnerId', 'name phone')
       .lean();
