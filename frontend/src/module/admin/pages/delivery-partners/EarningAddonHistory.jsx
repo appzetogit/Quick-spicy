@@ -241,9 +241,8 @@ export default function EarningAddonHistory() {
       
       let totalCompletions = 0
       let checkedCount = 0
-      
-      // Check each delivery partner
-      for (const partner of partners) {
+
+      const checkPartner = async (partner) => {
         try {
           const response = await adminAPI.checkEarningAddonCompletions(partner._id, true)
           if (response.data.success) {
@@ -257,6 +256,13 @@ export default function EarningAddonHistory() {
         } catch (error) {
           debugError(`Error checking ${partner.name}:`, error)
         }
+      }
+
+      // Checked in parallel batches - one partner at a time meant a round-trip per
+      // partner, so this took minutes on a large roster.
+      const CHECK_CONCURRENCY = 8
+      for (let i = 0; i < partners.length; i += CHECK_CONCURRENCY) {
+        await Promise.all(partners.slice(i, i + CHECK_CONCURRENCY).map(checkPartner))
       }
       
       debugLog(`✅ Checked ${checkedCount} delivery partners, found ${totalCompletions} new completions`)

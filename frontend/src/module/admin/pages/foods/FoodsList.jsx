@@ -123,9 +123,10 @@ export default function FoodsList() {
         return
       }
 
-      const allFoods = []
-
-      for (const restaurant of restaurants) {
+      // Menus are fetched in parallel batches below. Loading them one restaurant at a
+      // time meant waiting on N sequential round-trips before anything rendered.
+      const loadRestaurantFoods = async (restaurant) => {
+        const allFoods = []
         try {
            const restaurantId = restaurant._id || restaurant.id
            const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
@@ -182,6 +183,17 @@ export default function FoodsList() {
         } catch (error) {
           debugWarn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
         }
+        return allFoods
+      }
+
+      // Batched rather than one big Promise.all so a few hundred restaurants don't
+      // fire a few hundred simultaneous requests at the API.
+      const MENU_FETCH_CONCURRENCY = 8
+      const allFoods = []
+      for (let i = 0; i < restaurants.length; i += MENU_FETCH_CONCURRENCY) {
+        const batch = restaurants.slice(i, i + MENU_FETCH_CONCURRENCY)
+        const batchResults = await Promise.all(batch.map(loadRestaurantFoods))
+        batchResults.forEach((foods) => allFoods.push(...foods))
       }
 
       allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
