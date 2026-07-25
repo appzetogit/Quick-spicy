@@ -151,27 +151,36 @@ export const adminLogin = asyncHandler(async (req, res) => {
       email: admin.email
     });
   } catch (otpErr) {
-    logger.warn(`OTP send failed during admin login, falling back to direct login: ${otpErr.message}`);
-    
-    await admin.updateLastLogin();
-    const sessionId = randomUUID();
-    const tokens = jwtService.generateTokens(buildAdminTokenPayload(admin, sessionId));
-    await createAdminSession({
-      admin,
-      sessionId,
-      refreshToken: tokens.refreshToken,
-      req,
-      sessionContext: req.body?.sessionContext,
+    // Never fall back to a direct login here. Sending the OTP is what proves the
+    // second factor, and SMS delivery is attacker-influenceable (a stolen password
+    // plus an exhausted SMS quota would otherwise walk straight past OTP).
+    logger.warn(`Admin login OTP send failed on ${otpTarget.channel}: ${otpErr.message}`, {
+      adminId: admin._id.toString(),
+      email: admin.email
     });
-    setAuthCookies(res, 'admin', tokens);
 
-    const adminResponse = admin.toObject();
-    delete adminResponse.password;
+    // If SMS failed and we have an email on file, try that before giving up, so a
+    // dead SMS gateway does not lock admins out of the panel.
+    if (otpTarget.channel === 'phone' && admin.email) {
+      try {
+        await otpService.generateAndSendOTP(null, 'admin-login', admin.email);
 
-    return successResponse(res, 200, 'Login successful', {
-      requiresOtp: false,
-      admin: adminResponse,
-    });
+        logger.info(`Admin login OTP sent via email fallback: ${admin._id}`, { email: admin.email });
+
+        return successResponse(res, 200, 'OTP sent successfully', {
+          requiresOtp: true,
+          channel: 'email',
+          maskedTarget: maskEmail(admin.email),
+          email: admin.email
+        });
+      } catch (emailErr) {
+        logger.error(`Admin login OTP email fallback also failed: ${emailErr.message}`, {
+          adminId: admin._id.toString()
+        });
+      }
+    }
+
+    return errorResponse(res, 503, 'Could not send your login code right now. Please try again shortly.');
   }
 });
 
