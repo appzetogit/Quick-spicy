@@ -37,6 +37,12 @@ const statusConfig = {
 }
 
 const REPORT_EXPORT_FETCH_LIMIT = 10000
+// ponytail: table loads a fixed window of recent orders and paginates client-side.
+// The 15s poll refetches this whole window, so a large value is what made the page
+// crawl. Move to server-side pagination (pass `page` through to the API) if the
+// window ever needs to be bigger. Exports are unaffected - they fetch their own
+// date range server-side.
+const TABLE_FETCH_LIMIT = 500
 
 export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
@@ -425,9 +431,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       if (!silent) setIsLoading(true)
       if (!silent) setLoadError("")
-      // Load the full set for every status so client-side pagination can page through
-      // all orders, not just the first 50.
-      const requestedLimit = REPORT_EXPORT_FETCH_LIMIT
+      const requestedLimit = TABLE_FETCH_LIMIT
       const params = {
         page: 1,
         limit: requestedLimit,
