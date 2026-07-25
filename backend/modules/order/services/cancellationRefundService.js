@@ -888,6 +888,15 @@ export const processWalletRefund = async (orderId, adminId = null, refundAmount 
       throw new Error('This function can only process wallet refunds. Wallet payments do not use Razorpay.');
     }
     
+    // Never refund an order that was never actually paid for. createOrder persists the
+    // order before the wallet balance check, so a user with an empty wallet can leave
+    // behind a pending order that was never debited - refunding it would credit money
+    // that was never taken. Guarding here covers every refund caller, not just cancel.
+    if (order.payment?.status !== 'completed') {
+      console.error('❌ [processWalletRefund] Order payment never completed:', order.payment?.status);
+      throw new Error('Cannot refund an order whose payment was never completed');
+    }
+
     // Ensure no Razorpay payment ID exists (wallet payments are direct, no Razorpay involved)
     if (order.payment?.razorpayPaymentId) {
       console.warn('⚠️ [processWalletRefund] Warning: Wallet payment has Razorpay payment ID. This should not happen for wallet payments.');

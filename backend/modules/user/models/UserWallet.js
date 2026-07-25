@@ -380,9 +380,76 @@ userWalletSchema.statics.atomicCreditWallet = async function(userId, {
 };
 
 /**
+ * Atomically debit an order payment, failing when the balance is insufficient.
+ *
+ * Unlike atomicDebitWallet (which caps the deduction at the available balance,
+ * suiting refunds), this refuses to debit at all unless the full amount is
+ * available. The balance check lives in the update filter, so concurrent order
+ * payments cannot each read the same balance and all pass - only one wins.
+ *
+ * @param {ObjectId} userId - User ID
+ * @param {Object} params
+ * @param {number} params.amount - Amount to deduct
+ * @param {ObjectId} params.orderId - Order being paid for (idempotency key)
+ * @param {string} params.description - Transaction description
+ * @returns {Object} { ok: boolean, reason: string|null, balance: number|null }
+ */
+userWalletSchema.statics.atomicDebitForOrder = async function(userId, { amount, orderId, description }) {
+  if (!userId || !orderId) {
+    throw new Error('atomicDebitForOrder: userId and orderId are required');
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new Error(`atomicDebitForOrder: invalid amount ${amount}`);
+  }
+
+  await this.findOrCreateByUserId(userId);
+
+  const updated = await this.findOneAndUpdate(
+    {
+      userId,
+      balance: { $gte: amount },
+      // Idempotency: never debit the same order twice.
+      transactions: { $not: { $elemMatch: { orderId, type: 'deduction' } } }
+    },
+    {
+      $inc: { balance: -amount, totalSpent: amount },
+      $push: {
+        transactions: {
+          _id: new mongoose.Types.ObjectId(),
+          amount,
+          type: 'deduction',
+          status: 'Completed',
+          description,
+          paymentMethod: 'wallet',
+          orderId,
+          createdAt: new Date()
+        }
+      }
+    },
+    { new: true }
+  );
+
+  if (updated) {
+    return { ok: true, reason: null, balance: updated.balance };
+  }
+
+  // Distinguish "already paid" from "not enough money" for the caller's error message.
+  const current = await this.findOne({ userId }).lean();
+  const alreadyDebited = (current?.transactions || []).some(
+    (t) => t.type === 'deduction' && String(t.orderId || '') === String(orderId)
+  );
+
+  return {
+    ok: alreadyDebited,
+    reason: alreadyDebited ? 'already_debited' : 'insufficient_balance',
+    balance: current?.balance ?? 0
+  };
+};
+
+/**
  * Atomically debit wallet balance using $inc and $push.
  * Prevents race conditions and ensures idempotency via paymentId check.
- * 
+ *
  * @param {ObjectId} userId - User ID
  * @param {Object} params - Debit parameters
  * @param {number} params.amount - Amount to deduct

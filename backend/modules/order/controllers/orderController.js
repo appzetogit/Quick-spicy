@@ -915,59 +915,44 @@ export const createOrder = async (req, res) => {
     // For wallet payments, check balance and deduct before creating order
     if (normalizedPaymentMethod === 'wallet') {
       try {
-        // Find or create wallet
-        const wallet = await UserWallet.findOrCreateByUserId(userId);
-        
-        // Check if sufficient balance
-        if (order.pricing.total > wallet.balance) {
+        // Balance check and deduction happen in one atomic update. Reading the balance
+        // and then writing it back let concurrent orders each see the same balance and
+        // all pass the check, spending the same money several times over.
+        const debit = await UserWallet.atomicDebitForOrder(userId, {
+          amount: order.pricing.total,
+          orderId: order._id,
+          description: `Order payment - Order #${order.orderId}`
+        });
+
+        if (!debit.ok) {
+          // Nothing was charged, so don't leave a dangling unpaid order behind for a
+          // later cancellation to "refund" money that was never taken.
+          await Order.deleteOne({ _id: order._id });
+
           return res.status(400).json({
             success: false,
             message: 'Insufficient wallet balance',
             data: {
               required: order.pricing.total,
-              available: wallet.balance,
-              shortfall: order.pricing.total - wallet.balance
+              available: debit.balance,
+              shortfall: order.pricing.total - debit.balance
             }
           });
         }
 
-        // Check if transaction already exists for this order (prevent duplicate)
-        const existingTransaction = wallet.transactions.find(
-          t => t.orderId && t.orderId.toString() === order._id.toString() && t.type === 'deduction'
-        );
+        // Mirror the new balance onto the User model (kept for backward compatibility).
+        const User = (await import('../../auth/models/User.js')).default;
+        await User.findByIdAndUpdate(userId, {
+          'wallet.balance': debit.balance,
+          'wallet.currency': 'INR'
+        });
 
-        if (existingTransaction) {
-          logger.warn('⚠️ Wallet payment already processed for this order', {
-            orderId: order.orderId,
-            transactionId: existingTransaction._id
-          });
-        } else {
-          // Deduct money from wallet
-          const transaction = wallet.addTransaction({
-            amount: order.pricing.total,
-            type: 'deduction',
-            status: 'Completed',
-            description: `Order payment - Order #${order.orderId}`,
-            orderId: order._id
-          });
-
-          await wallet.save();
-
-          // Update user's wallet balance in User model (for backward compatibility)
-          const User = (await import('../../auth/models/User.js')).default;
-          await User.findByIdAndUpdate(userId, {
-            'wallet.balance': wallet.balance,
-            'wallet.currency': wallet.currency
-          });
-
-          logger.info('✅ Wallet payment deducted for order:', {
-            orderId: order.orderId,
-            userId: userId,
-            amount: order.pricing.total,
-            transactionId: transaction._id,
-            newBalance: wallet.balance
-          });
-        }
+        logger.info('✅ Wallet payment deducted for order:', {
+          orderId: order.orderId,
+          userId: userId,
+          amount: order.pricing.total,
+          newBalance: debit.balance
+        });
 
         // Create payment record
         try {
@@ -1039,7 +1024,7 @@ export const createOrder = async (req, res) => {
             },
             cashfree: null,
             wallet: {
-              balance: wallet.balance,
+              balance: debit.balance,
               deducted: order.pricing.total
             }
           }
