@@ -1,4 +1,3 @@
-import { useState, useEffect, useMemo } from "react"
 import { Eye, Download, ArrowUpDown, Loader2, Check, X, Trash2 } from "lucide-react"
 
 const extractCoordinates = (location) => {
@@ -85,10 +84,12 @@ export default function OrdersTable({
   readyLoadingOrderId,
   deliveredLoadingOrderId,
   deletingOrderId,
+  currentPage,
+  totalPages,
+  totalOrders,
+  itemsPerPage,
+  onPageChange,
 }) {
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 10
-  const totalPages = Math.ceil(orders.length / itemsPerPage)
 
   const isOrderAcceptable = (order) => {
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
@@ -132,17 +133,8 @@ export default function OrdersTable({
     )
   }
   
-  // Keep the current page when the list changes (live order updates arrive constantly);
-  // only pull back when the page no longer exists.
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, Math.max(1, totalPages)))
-  }, [totalPages])
-  
-  const paginatedOrders = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage
-    const end = start + itemsPerPage
-    return orders.slice(start, end)
-  }, [orders, currentPage])
+  // The server returns exactly the current page, so render it as-is.
+  const paginatedOrders = orders
 
   const formatRestaurantName = (name) => {
     if (name === "Cafe Monarch") return "Café Monarch"
@@ -629,12 +621,12 @@ export default function OrdersTable({
         <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
           <div className="text-sm text-slate-600">
             Showing <span className="font-semibold">{(currentPage - 1) * itemsPerPage + 1}</span> to{" "}
-            <span className="font-semibold">{Math.min(currentPage * itemsPerPage, orders.length)}</span> of{" "}
-            <span className="font-semibold">{orders.length}</span> orders
+            <span className="font-semibold">{Math.min(currentPage * itemsPerPage, totalOrders)}</span> of{" "}
+            <span className="font-semibold">{totalOrders}</span> orders
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              onClick={() => onPageChange(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
@@ -655,7 +647,7 @@ export default function OrdersTable({
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
+                    onClick={() => onPageChange(pageNum)}
                     className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all ${
                       currentPage === pageNum
                         ? "bg-emerald-500 text-white shadow-md"
@@ -668,7 +660,7 @@ export default function OrdersTable({
               })}
             </div>
             <button
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className="px-3 py-1.5 text-sm font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >

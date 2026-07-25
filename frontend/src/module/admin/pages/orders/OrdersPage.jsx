@@ -37,12 +37,9 @@ const statusConfig = {
 }
 
 const REPORT_EXPORT_FETCH_LIMIT = 10000
-// ponytail: table loads a fixed window of recent orders and paginates client-side.
-// The 15s poll refetches this whole window, so a large value is what made the page
-// crawl. Move to server-side pagination (pass `page` through to the API) if the
-// window ever needs to be bigger. Exports are unaffected - they fetch their own
-// date range server-side.
-const TABLE_FETCH_LIMIT = 500
+// Rows per page. The server returns exactly one page, so the poll stays cheap
+// regardless of how many orders exist.
+const PAGE_SIZE = 10
 
 export default function OrdersPage({ statusKey = "all" }) {
   const config = statusConfig[statusKey] || statusConfig["all"]
@@ -344,6 +341,11 @@ export default function OrdersPage({ statusKey = "all" }) {
 
   const normalizedOrders = useMemo(() => orders, [orders])
 
+  // Server-side pagination: the table renders exactly the page the server returned.
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalOrders, setTotalOrders] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+
   // Export date range prompt: exports pull their own server-side range so the report
   // is never capped by what the table currently has loaded.
   const [exportFormat, setExportFormat] = useState(null)
@@ -377,7 +379,35 @@ export default function OrdersPage({ statusKey = "all" }) {
     handlePrintOrder,
     toggleColumn,
     resetColumns,
-  } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones)
+  } = useOrdersManagement(normalizedOrders, statusKey, config.title, zones, true)
+
+  // Search now hits the server, so debounce it instead of querying per keystroke.
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Status + filters + search, shared by the table fetch and the export fetch so both
+  // always describe the same set of orders.
+  const buildOrderQuery = useCallback(() => ({
+    status:
+      statusKey === "all"
+        ? undefined
+        : statusKey === "restaurant-cancelled" || statusKey === "admin-cancelled"
+          ? "cancelled"
+          : statusKey,
+    cancelledBy:
+      statusKey === "restaurant-cancelled" ? "restaurant" : statusKey === "admin-cancelled" ? "admin" : undefined,
+    search: debouncedSearch || undefined,
+    zone: appliedFilters.zone || undefined,
+    restaurant: appliedFilters.restaurant || undefined,
+    paymentStatus: appliedFilters.paymentStatus || undefined,
+    minAmount: appliedFilters.minAmount || undefined,
+    maxAmount: appliedFilters.maxAmount || undefined,
+    fromDate: appliedFilters.fromDate || undefined,
+    toDate: appliedFilters.toDate || undefined,
+  }), [statusKey, debouncedSearch, appliedFilters])
 
   const runExport = useCallback(async () => {
     const { fromDate, toDate } = exportRange
@@ -393,19 +423,11 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       setIsExporting(true)
       const response = await adminAPI.getOrders({
+        ...buildOrderQuery(),
         page: 1,
         limit: REPORT_EXPORT_FETCH_LIMIT,
         fromDate,
         toDate,
-        zone: appliedFilters.zone || undefined,
-        status:
-          statusKey === "all"
-            ? undefined
-            : statusKey === "restaurant-cancelled" || statusKey === "admin-cancelled"
-              ? "cancelled"
-              : statusKey,
-        cancelledBy:
-          statusKey === "restaurant-cancelled" ? "restaurant" : statusKey === "admin-cancelled" ? "admin" : undefined,
       })
 
       const rows = response.data?.data?.orders || []
@@ -423,7 +445,7 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       setIsExporting(false)
     }
-  }, [exportRange, exportFormat, appliedFilters.zone, statusKey, handleExport])
+  }, [exportRange, exportFormat, buildOrderQuery, handleExport])
 
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
@@ -431,25 +453,22 @@ export default function OrdersPage({ statusKey = "all" }) {
     try {
       if (!silent) setIsLoading(true)
       if (!silent) setLoadError("")
-      const requestedLimit = TABLE_FETCH_LIMIT
       const params = {
-        page: 1,
-        limit: requestedLimit,
+        ...buildOrderQuery(),
+        page: currentPage,
+        limit: PAGE_SIZE,
         _t: Date.now(),
-        zone: appliedFilters.zone || undefined,
-        status:
-          statusKey === "all"
-            ? undefined
-            : statusKey === "restaurant-cancelled" || statusKey === "admin-cancelled"
-              ? "cancelled"
-              : statusKey,
-        cancelledBy: statusKey === "restaurant-cancelled" ? "restaurant" : statusKey === "admin-cancelled" ? "admin" : undefined,
       }
 
       const response = await adminAPI.getOrders(params)
 
       if (response.data?.success && response.data?.data?.orders) {
         const nextOrders = response.data.data.orders
+        const pagination = response.data.data.pagination
+        if (pagination) {
+          setTotalOrders(pagination.total || 0)
+          setTotalPages(Math.max(1, pagination.pages || 1))
+        }
         const newestOrder = [...nextOrders]
           .filter((order) => order?.createdAt)
           .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0]
@@ -510,7 +529,13 @@ export default function OrdersPage({ statusKey = "all" }) {
     } finally {
       if (!silent) setIsLoading(false)
     }
-  }, [statusKey, appliedFilters.zone, playDefaultRing, showBrowserNotification, startAlertLoop])
+  }, [statusKey, buildOrderQuery, currentPage, playDefaultRing, showBrowserNotification, startAlertLoop])
+
+  // A changed filter/search/status makes the current page number meaningless - go back
+  // to page 1 so the user lands on results rather than an empty tail page.
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [statusKey, buildOrderQuery])
 
   useEffect(() => {
     isFirstLoadRef.current = true
@@ -1051,8 +1076,8 @@ export default function OrdersPage({ statusKey = "all" }) {
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden">
       <OrdersTopbar 
-        title={config.title} 
-        count={count} 
+        title={config.title}
+        count={totalOrders}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onFilterClick={() => setIsFilterOpen(true)}
@@ -1213,6 +1238,11 @@ export default function OrdersPage({ statusKey = "all" }) {
         readyLoadingOrderId={markingReadyOrderId}
         deliveredLoadingOrderId={markingDeliveredOrderId}
         deletingOrderId={deletingOrderId}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalOrders={totalOrders}
+        itemsPerPage={PAGE_SIZE}
+        onPageChange={setCurrentPage}
       />
     </div>
   )

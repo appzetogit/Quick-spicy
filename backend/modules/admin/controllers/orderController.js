@@ -125,7 +125,9 @@ export const getOrders = asyncHandler(async (req, res) => {
       paymentStatus,
       zone,
       customer,
-      cancelledBy
+      cancelledBy,
+      minAmount,
+      maxAmount
     } = req.query;
 
     // Build query
@@ -195,6 +197,17 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Payment status filter
     if (paymentStatus) {
       query['payment.status'] = paymentStatus.toLowerCase();
+    }
+
+    // Amount range filter
+    const parsedMinAmount = Number(minAmount);
+    const parsedMaxAmount = Number(maxAmount);
+    const hasMinAmount = minAmount !== undefined && minAmount !== '' && Number.isFinite(parsedMinAmount);
+    const hasMaxAmount = maxAmount !== undefined && maxAmount !== '' && Number.isFinite(parsedMaxAmount);
+    if (hasMinAmount || hasMaxAmount) {
+      query['pricing.total'] = {};
+      if (hasMinAmount) query['pricing.total'].$gte = parsedMinAmount;
+      if (hasMaxAmount) query['pricing.total'].$lte = parsedMaxAmount;
     }
 
     // Date range filter

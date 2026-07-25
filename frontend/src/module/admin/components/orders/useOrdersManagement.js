@@ -185,7 +185,10 @@ const resolveInvoicePricing = (order, items = []) => {
   }
 }
 
-export function useOrdersManagement(orders, statusKey, title, zones = []) {
+// serverFiltered: the caller already applied search/filters in the API query, so the
+// rows handed in are one finished page - re-filtering them client-side would only
+// drop valid rows.
+export function useOrdersManagement(orders, statusKey, title, zones = [], serverFiltered = false) {
   const [searchQuery, setSearchQuery] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
@@ -250,6 +253,8 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
 
   // Apply search and filters
   const filteredOrders = useMemo(() => {
+    if (serverFiltered) return orders
+
     let result = [...orders]
 
     // Apply search query
