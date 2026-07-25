@@ -809,6 +809,9 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   // Update password
   user.password = newPassword; // Will be hashed by pre-save hook
+  // Resetting a password is what someone does after a compromise, so every existing
+  // session must die with it - otherwise a stolen token outlives the reset.
+  user.tokenVersion = (user.tokenVersion || 0) + 1;
   await user.save();
 
   logger.info(`Password reset successful for user: ${user._id}`, {
@@ -1040,6 +1043,22 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       role: userRole,
       $or: [{ googleId: firebaseUid }, { email }],
     });
+
+    // Matching an existing account on email alone is an account takeover if the
+    // provider never verified that address - anyone who registers the victim's email
+    // through another enabled Firebase provider would be handed their account.
+    const isEmailOnlyMatch = user && !user.googleId;
+    if (isEmailOnlyMatch && !emailVerified) {
+      logger.warn("Firebase login blocked: unverified email matched an existing account", {
+        uid: firebaseUid,
+        email,
+      });
+      return errorResponse(
+        res,
+        403,
+        "This email is already registered. Please verify your email with Google before signing in, or log in with your password.",
+      );
+    }
 
     if (user) {
       // If user exists but googleId not linked yet, link it

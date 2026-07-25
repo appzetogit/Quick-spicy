@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import DeliveryWallet from '../models/DeliveryWallet.js';
@@ -342,35 +343,41 @@ export const createWithdrawalRequest = asyncHandler(async (req, res) => {
     }
 
     // Withdrawal is based on totalBalance only. No connection to cash-in-hand (COD collected).
-    const availableForWithdrawal = Number(wallet.totalBalance) || 0;
-    if (amount > availableForWithdrawal) {
-      return errorResponse(res, 400, `Insufficient balance. Available balance: ₹${availableForWithdrawal.toFixed(2)}`);
+    // The balance check and the deduction must happen in ONE atomic update. Reading the
+    // balance and writing it back let a rider fire N concurrent requests that all read
+    // the same balance, all pass, and all queue a full-balance payout for admin approval.
+    const withdrawalTxId = new mongoose.Types.ObjectId();
+    const debited = await DeliveryWallet.findOneAndUpdate(
+      { _id: wallet._id, totalBalance: { $gte: amount } },
+      {
+        $inc: { totalBalance: -amount },
+        $push: {
+          transactions: {
+            _id: withdrawalTxId,
+            amount: amount,
+            type: 'withdrawal',
+            status: 'Pending',
+            description: `Withdrawal request via ${paymentMethod}`,
+            paymentMethod: paymentMethod,
+            createdAt: new Date(),
+            metadata: {
+              bankDetails: bankDetails || null,
+              upiId: resolvedUpiId || null
+            }
+          }
+        }
+      },
+      { new: true }
+    );
+
+    if (!debited) {
+      const current = await DeliveryWallet.findById(wallet._id).select('totalBalance').lean();
+      const available = Number(current?.totalBalance) || 0;
+      return errorResponse(res, 400, `Insufficient balance. Available balance: ₹${available.toFixed(2)}`);
     }
-    // Withdrawal allowed only when withdrawable >= limit (enforced via min amount check above)
 
-    // Create withdrawal transaction (Pending)
-    wallet.addTransaction({
-      amount: amount,
-      type: 'withdrawal',
-      status: 'Pending',
-      description: `Withdrawal request via ${paymentMethod}`,
-      paymentMethod: paymentMethod,
-      metadata: {
-        bankDetails: bankDetails || null,
-        upiId: resolvedUpiId || null
-      }
-    });
-
-    // Deduct balance on request create (refund on reject)
-    wallet.totalBalance = Math.max(0, (wallet.totalBalance || 0) - amount);
-    await wallet.save();
-
-    // Use the last transaction (the one we just added). Plain-object push has no _id; Mongoose assigns _id to the array element.
-    const lastTx = wallet.transactions[wallet.transactions.length - 1];
-    const transactionId = lastTx?._id;
-    if (!transactionId) {
-      return errorResponse(res, 500, 'Failed to create withdrawal: transaction id missing');
-    }
+    wallet = debited;
+    const transactionId = withdrawalTxId;
 
     const deliveryName = delivery.name || 'Delivery Partner';
     const deliveryIdString = delivery.deliveryId || delivery._id?.toString?.() || 'N/A';

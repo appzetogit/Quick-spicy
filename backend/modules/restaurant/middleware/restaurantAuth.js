@@ -54,37 +54,33 @@ export const authenticate = async (req, res, next) => {
     // Allow inactive restaurants to access onboarding and profile routes
     // They need to complete onboarding even if not yet approved by admin
     // Only block inactive restaurants from accessing other restricted routes
-    const requestPath = req.originalUrl || req.url || '';
     const reqPath = req.path || '';
     const baseUrl = req.baseUrl || '';
-    
-    // Check for onboarding routes (can be /onboarding or /api/restaurant/onboarding)
-    const isOnboardingRoute = requestPath.includes('/onboarding') || reqPath === '/onboarding' || reqPath.includes('onboarding');
-    
-    // Check for profile/auth routes
-    // Note: /auth/me and /auth/reverify are handled by restaurantAuthRoutes mounted at /auth, so:
-    // - Full path: /api/restaurant/auth/me or /api/restaurant/auth/reverify
-    // - reqPath: /me or /reverify (relative to /auth mount point)
-    // - baseUrl: /auth (if mounted)
-    // /owner/me is directly under /api/restaurant, so reqPath would be /owner/me
-    const isProfileRoute = requestPath.includes('/auth/me') || requestPath.includes('/auth/reverify') || 
-                          requestPath.includes('/owner/me') || 
-                          reqPath === '/me' || reqPath === '/reverify' || reqPath === '/owner/me' ||
-                          (baseUrl.includes('/auth') && (reqPath === '/me' || reqPath === '/reverify'));
-    
-    // Check for menu routes - restaurants need to access menu even when inactive
-    // They might need to set up menu during onboarding or after approval
-    // Routes: /api/restaurant/menu, /api/restaurant/menu/section, /api/restaurant/menu/item/schedule, etc.
-    const isMenuRoute = requestPath.includes('/menu') || 
-                       reqPath === '/menu' || 
-                       reqPath.startsWith('/menu/') ||
-                       baseUrl.includes('/menu');
-    
-    // Check for inventory routes - restaurants need to manage inventory even when inactive
-    // Routes: /api/restaurant/inventory
-    const isInventoryRoute = requestPath.includes('/inventory') || 
-                            reqPath === '/inventory' ||
-                            reqPath.startsWith('/inventory/');
+
+    // Match on the routed path only. req.originalUrl carries the query string too, so
+    // matching against it let a deactivated restaurant re-open blocked endpoints just
+    // by appending ?x=/menu. Never reintroduce originalUrl here.
+    const requestPath = `${baseUrl}${reqPath}`.replace(/\/+$/, '') || '/';
+
+    // Exact segment match: '/menu' and '/menu/item' allow, '/wallet' never does,
+    // regardless of what the query string says.
+    const allowsPrefix = (prefix) => requestPath === prefix || requestPath.endsWith(prefix) || requestPath.includes(`${prefix}/`);
+
+    const isOnboardingRoute = allowsPrefix('/onboarding');
+
+    // /auth/me and /auth/reverify live under the /auth mount, so reqPath is /me or
+    // /reverify there. /owner/me sits directly under /api/restaurant.
+    const isProfileRoute =
+      allowsPrefix('/auth/me') ||
+      allowsPrefix('/auth/reverify') ||
+      allowsPrefix('/owner/me') ||
+      reqPath === '/me' ||
+      reqPath === '/reverify';
+
+    // Restaurants still need menu and inventory access while inactive so they can
+    // finish setup before approval.
+    const isMenuRoute = allowsPrefix('/menu');
+    const isInventoryRoute = allowsPrefix('/inventory');
     
     // Debug logging for inactive restaurants
     if (!restaurant.isActive) {

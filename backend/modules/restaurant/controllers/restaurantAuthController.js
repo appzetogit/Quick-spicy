@@ -746,6 +746,8 @@ export const resetPassword = asyncHandler(async (req, res) => {
 
   // Update password
   restaurant.password = newPassword; // Will be hashed by pre-save hook
+  // Kill existing sessions - a password reset must not leave a stolen token valid.
+  restaurant.tokenVersion = (restaurant.tokenVersion || 0) + 1;
   await restaurant.save();
 
   logger.info(`Password reset successful for restaurant: ${restaurant._id}`, { email, restaurantId: restaurant._id });
