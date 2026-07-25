@@ -369,19 +369,15 @@ export function useOrdersManagement(orders, statusKey, title, zones = []) {
       .replace(/^_+|_+$/g, "")
     switch (format) {
       case "csv":
-        exportToCSV(rows, filename)
-        break
+        return exportToCSV(rows, filename)
       case "excel":
-        exportToExcel(rows, filename)
-        break
+        return exportToExcel(rows, filename)
       case "pdf":
-        exportToPDF(rows, filename)
-        break
+        return exportToPDF(rows, filename) // async - caller awaits
       case "json":
-        exportToJSON(rows, filename)
-        break
+        return exportToJSON(rows, filename)
       default:
-        break
+        return undefined
     }
   }
 
