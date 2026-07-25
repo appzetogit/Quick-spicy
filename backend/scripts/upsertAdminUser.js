@@ -20,11 +20,17 @@ const connectDB = async () => {
 };
 
 const upsertAdmin = async () => {
+  // No password fallback - a default here is a publicly known admin password.
+  if (!process.env.SECOND_ADMIN_PASSWORD) {
+    console.error("SECOND_ADMIN_PASSWORD is required. Run: SECOND_ADMIN_PASSWORD='<strong-password>' node scripts/upsertAdminUser.js");
+    process.exit(1);
+  }
+
   const adminData = {
     name: "Appzeto Admin",
     email: process.env.SECOND_ADMIN_EMAIL || "appzeto@gmail.com",
     phone: "7223077890",
-    password: process.env.SECOND_ADMIN_PASSWORD || "admin@#123",
+    password: process.env.SECOND_ADMIN_PASSWORD,
     role: "admin",
     isActive: true,
     phoneVerified: true,
