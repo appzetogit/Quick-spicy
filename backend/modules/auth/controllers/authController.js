@@ -464,6 +464,18 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         if (phone && !user.phoneVerified) {
           user.phoneVerified = true;
           await user.save();
+
+          // This is the first proof the number belongs to them, so it is where the
+          // signup bonus and any pending referral reward are earned. Both helpers are
+          // idempotent, so a later verification cannot pay twice.
+          await applyNewUserWalletCredit(user);
+
+          if (user.referredBy && !user.referralRewardGranted) {
+            const pendingReferrer = await User.findById(user.referredBy);
+            if (pendingReferrer) {
+              await applyReferralReward({ newUser: user, referrer: pendingReferrer });
+            }
+          }
         }
         // Could add email verification status update here if needed
       }
@@ -621,10 +633,13 @@ export const register = asyncHandler(async (req, res) => {
       : {}),
   });
 
-  await applyNewUserWalletCredit(user);
-
+  // No signup bonus and no referral payout until the phone is actually verified.
+  // Paying at registration meant anyone could farm both with throwaway emails and
+  // made-up phone numbers, since nothing here proves the number is theirs.
+  // Record the pending referrer so the reward can be paid on verification.
   if (referrer) {
-    await applyReferralReward({ newUser: user, referrer });
+    user.referredBy = referrer._id;
+    await user.save();
   }
 
   logger.info(`New user registered via email: ${user._id}`, {
@@ -716,6 +731,17 @@ export const login = asyncHandler(async (req, res) => {
 
   if (!isPasswordValid) {
     return errorResponse(res, 401, "Invalid email or password");
+  }
+
+  // Registration tells the user to verify their phone before logging in, but nothing
+  // enforced it - a correct password alone issued a full session, so the phone on the
+  // account was never proven to belong to them. Enforce it here, after the password
+  // check so this reveals nothing to someone guessing credentials.
+  if (user.phone && !user.phoneVerified) {
+    // Lands under `errors` in the response body - that is errorResponse's 4th arg.
+    return errorResponse(res, 403, "Please verify your phone number with OTP before logging in.", {
+      requiresPhoneVerification: true,
+    });
   }
 
   await ensureReferralCodeForUser(user);
