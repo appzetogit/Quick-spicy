@@ -1,6 +1,7 @@
 import { toast } from "sonner";
 import { userAPI, restaurantAPI, deliveryAPI, adminAPI } from "@/lib/api";
 import { initializeApp, getApp, getApps } from "firebase/app";
+import { isModuleAuthenticated } from "@/lib/utils/auth";
 import fallbackNotificationSound from "@/assets/audio/alert.mp3";
 
 const pushNotificationSoundPath = "/zomato_sms.mp3";
@@ -720,8 +721,8 @@ export async function registerWebPushForCurrentModule(pathname = window.location
 
   initPushNotificationClient();
 
-  const accessToken = localStorage.getItem(`${moduleName}_accessToken`);
-  if (!accessToken) return;
+  const hasModuleSession = isModuleAuthenticated(moduleName);
+  if (!hasModuleSession) return;
 
   // Flutter WebView fallback: register native token when available.
   // This keeps restaurant/delivery FCM alerts working even when Web Push APIs are limited.
