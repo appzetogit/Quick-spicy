@@ -584,17 +584,21 @@ async function registerNativeWebViewFcmToken(moduleName) {
   if (!isFlutterWebView()) return;
 
   const handlerNames = ["getFcmToken", "getFCMToken", "getPushToken", "getFirebaseToken"];
+  const attempts = [];
   for (const handlerName of handlerNames) {
     try {
       const token = await window.flutter_inappwebview.callHandler(handlerName, { module: moduleName });
       const normalizedToken = String(token || "").trim();
-      if (normalizedToken.length < 20) continue;
-
-      const lastSavedToken = getSavedToken(moduleName);
-      if (lastSavedToken !== normalizedToken) {
-        await saveTokenByModule(moduleName, normalizedToken);
-        setSavedToken(moduleName, normalizedToken);
+      if (normalizedToken.length < 20) {
+        attempts.push(`${handlerName}: no token returned`);
+        continue;
       }
+
+      // Always save, even when the token matches the local cache. The cache only records
+      // what this device last sent, not what the server still holds. Skipping the save on a
+      // cache hit is how riders end up pinned to a dead server-side token forever.
+      await saveTokenByModule(moduleName, normalizedToken);
+      setSavedToken(moduleName, normalizedToken);
 
       pushDebugLog(PUSH_DEBUG_PREFIX, "Registered native WebView FCM token", {
         moduleName,
@@ -602,10 +606,17 @@ async function registerNativeWebViewFcmToken(moduleName) {
         tokenPreview: `${normalizedToken.slice(0, 12)}...`,
       });
       return;
-    } catch {
-      // Try next handler.
+    } catch (error) {
+      attempts.push(`${handlerName}: ${error?.message || "handler threw"}`);
     }
   }
+
+  // Reaching here means the native side answered nothing. Without this the failure is silent
+  // and indistinguishable from push working correctly.
+  pushDebugWarn(PUSH_DEBUG_PREFIX, "No native FCM handler returned a token", {
+    moduleName,
+    attempts,
+  });
 }
 
 async function showBrowserNotification({ title, body, image, notificationKey }) {
