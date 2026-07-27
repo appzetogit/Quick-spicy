@@ -31,9 +31,52 @@ const firebaseTrackingSyncStateByDelivery = new Map();
 const SOCKET_SYNC_INTERVAL_MS = 3000;
 const FIREBASE_SYNC_INTERVAL_MS = 10000;
 
+// Fixes less confident than this are dropped rather than moving the rider. Phone GPS
+// degrades badly indoors and between buildings, and those readings are what make the
+// marker teleport across the map. 50m keeps normal street-level fixes on a mid-range
+// Android while rejecting the wild ones.
+// ponytail: fixed threshold, revisit per-device or speed-aware filtering if riders in
+// dense areas report a laggy marker.
+const MAX_ACCEPTED_ACCURACY_METERS = 50;
+
+// Below this, treat movement as GPS noise. A parked rider otherwise jitters in place and
+// writes to the database on every poll.
+const MIN_MOVEMENT_METERS = 10;
+
 function toFiniteNumber(value) {
   const num = Number(value);
   return Number.isFinite(num) ? num : null;
+}
+
+/**
+ * Decide whether a GPS fix should move the rider marker.
+ *
+ * Phones report accuracy anywhere from 5m to several kilometres, worst indoors and between
+ * buildings, and those low-confidence fixes are what make the marker teleport across the
+ * map. Sub-threshold movement is rejected separately so a parked rider stops jittering in
+ * place and writing to the database on every poll.
+ *
+ * A rejected fix still refreshes the heartbeat: the rider stays online, they just don't move.
+ */
+export function evaluateLocationFix({ accuracy, latitude, longitude, previousCoordinates }) {
+  const reportedAccuracy = toFiniteNumber(accuracy);
+  if (reportedAccuracy !== null && reportedAccuracy > MAX_ACCEPTED_ACCURACY_METERS) {
+    return { accept: false, reason: 'low-accuracy' };
+  }
+
+  const hasPrevious = Array.isArray(previousCoordinates) && previousCoordinates.length === 2;
+  if (!hasPrevious) {
+    return { accept: true, reason: 'first-fix' };
+  }
+
+  const movedMeters =
+    calculateDistanceKm(previousCoordinates[1], previousCoordinates[0], latitude, longitude) * 1000;
+
+  if (movedMeters < MIN_MOVEMENT_METERS) {
+    return { accept: false, reason: 'below-movement-threshold', movedMeters };
+  }
+
+  return { accept: true, reason: 'moved', movedMeters };
 }
 
 function calculateDistanceKm(lat1, lng1, lat2, lng2) {
@@ -154,11 +197,23 @@ export const updateLocation = asyncHandler(async (req, res) => {
 
     // Update location only if both latitude and longitude are provided
     if (typeof latitude === 'number' && typeof longitude === 'number') {
-      updateData['availability.currentLocation'] = {
-        type: 'Point',
-        coordinates: [longitude, latitude] // MongoDB uses [longitude, latitude]
-      };
-      updateData['availability.lastLocationUpdate'] = new Date();
+      const { accept } = evaluateLocationFix({
+        accuracy,
+        latitude,
+        longitude,
+        previousCoordinates: delivery.availability?.currentLocation?.coordinates,
+      });
+
+      if (!accept) {
+        // Keep the heartbeat fresh so the rider still counts as online; just don't move them.
+        updateData['availability.lastLocationUpdate'] = new Date();
+      } else {
+        updateData['availability.currentLocation'] = {
+          type: 'Point',
+          coordinates: [longitude, latitude] // MongoDB uses [longitude, latitude]
+        };
+        updateData['availability.lastLocationUpdate'] = new Date();
+      }
     }
 
     // Update online status if provided
