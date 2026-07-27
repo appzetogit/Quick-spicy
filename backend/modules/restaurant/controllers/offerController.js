@@ -199,7 +199,7 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
   // Platform offers switch is off: report no coupons rather than showing ones that
   // checkout would refuse to apply.
   if (!(await areOffersEnabled())) {
-    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [] });
+    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [], total: 0 });
   }
 
   const restaurantId = req.restaurant._id;
@@ -319,7 +319,7 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
   // Platform offers switch is off: report no coupons rather than showing ones that
   // checkout would refuse to apply.
   if (!(await areOffersEnabled())) {
-    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [] });
+    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [], total: 0 });
   }
 
   const { itemId, restaurantId } = req.params;
@@ -447,7 +447,14 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
 export const getPublicOffers = asyncHandler(async (req, res) => {
   try {
     if (!(await areOffersEnabled())) {
-      return successResponse(res, 200, 'Offers are currently disabled', { offers: [] });
+      // Must mirror the success payload below: clients read allOffers/groupedByOffer,
+      // and returning a different shape would leave them with undefined rather than
+      // an empty list while offers are paused.
+      return successResponse(res, 200, 'Offers are currently disabled', {
+        allOffers: [],
+        groupedByOffer: {},
+        total: 0,
+      });
     }
 
     console.log('[PUBLIC-OFFERS] Request received');
