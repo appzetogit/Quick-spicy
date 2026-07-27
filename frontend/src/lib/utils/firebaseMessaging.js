@@ -549,8 +549,11 @@ function setSavedToken(moduleName, token) {
   localStorage.setItem(`${tokenCachePrefix}${moduleName}`, token);
 }
 
-async function saveTokenByModule(moduleName, token) {
-  const isNativeWebView = isFlutterWebView();
+async function saveTokenByModule(moduleName, token, { native = null } = {}) {
+  // webview_flutter injects no globals, so isFlutterWebView() is false inside those
+  // builds even though we are in a WebView. Callers that know they hold a native
+  // token must say so, or it gets filed as a web token and never reaches the device.
+  const isNativeWebView = native === null ? isFlutterWebView() : native;
   const source = isNativeWebView ? "flutter-webview" : "web";
   const platform = isNativeWebView ? "flutter-webview" : "web";
   const channel = isNativeWebView ? "mobile" : "web";
@@ -578,6 +581,50 @@ async function saveTokenByModule(moduleName, token) {
   if (moduleName === "user") {
     await userAPI.saveFcmToken(token, { platform, channel, deviceId, source });
   }
+}
+
+// Entry point for any WebView host, regardless of which Flutter plugin it uses:
+//   evaluateJavascript("window.quickSpicySetFcmToken('<token>')")
+// The flutter_inappwebview bridge below only exists in builds using that package;
+// webview_flutter builds have no bridge at all and would otherwise never register.
+// Native pushes the token to us here instead of us having to pull it from native.
+if (typeof window !== "undefined") {
+  window.quickSpicySetFcmToken = async (token, moduleName = null) => {
+    const normalizedToken = String(token || "").trim();
+    const resolvedModule = moduleName || normalizeModuleFromPath(window.location.pathname);
+
+    if (normalizedToken.length < 20) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Native FCM token rejected as too short", {
+        resolvedModule,
+        length: normalizedToken.length,
+      });
+      return false;
+    }
+
+    // Saving before login would 401, and the host may call this at app start.
+    if (!isModuleAuthenticated(resolvedModule)) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Native FCM token arrived before login; will register after auth", {
+        resolvedModule,
+      });
+      return false;
+    }
+
+    try {
+      await saveTokenByModule(resolvedModule, normalizedToken, { native: true });
+      setSavedToken(resolvedModule, normalizedToken);
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Saved native FCM token from WebView host", {
+        resolvedModule,
+        tokenPreview: `${normalizedToken.slice(0, 12)}...`,
+      });
+      return true;
+    } catch (error) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Failed to save native FCM token from WebView host", {
+        resolvedModule,
+        error,
+      });
+      return false;
+    }
+  };
 }
 
 async function registerNativeWebViewFcmToken(moduleName) {
