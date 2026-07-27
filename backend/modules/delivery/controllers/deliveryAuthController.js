@@ -416,6 +416,19 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
 
   const normalizedToken = String(token).trim();
   const resolvedChannel = resolveFcmChannel(channel, platform, req.headers);
+  logger.info('Delivery FCM token registration requested', {
+    deliveryId: req.delivery?._id?.toString?.() || String(req.delivery?._id || ''),
+    phone: req.delivery?.phone || '',
+    platform,
+    channel,
+    resolvedChannel,
+    source,
+    deviceId,
+    tokenPreview: `${normalizedToken.slice(0, 12)}...${normalizedToken.slice(-6)}`,
+    hasExistingWebToken: Boolean(req.delivery?.fcmtokenweb),
+    hasExistingMobileToken: Boolean(req.delivery?.fcmtokenmobile),
+    notificationDeviceCount: Array.isArray(req.delivery?.notificationDevices) ? req.delivery.notificationDevices.length : 0,
+  });
 
   const updatedDelivery = await persistDeliveryNotificationState(req.delivery._id, async (delivery) => {
     if (resolvedChannel === 'both') {
@@ -450,6 +463,15 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
   if (!updatedDelivery) {
     return errorResponse(res, 404, 'Delivery partner not found');
   }
+
+  logger.info('Delivery FCM token saved successfully', {
+    deliveryId: req.delivery?._id?.toString?.() || String(req.delivery?._id || ''),
+    phone: req.delivery?.phone || '',
+    resolvedChannel,
+    hasWebToken: Boolean(updatedDelivery.fcmtokenweb),
+    hasMobileToken: Boolean(updatedDelivery.fcmtokenmobile),
+    notificationDeviceCount: Array.isArray(updatedDelivery.notificationDevices) ? updatedDelivery.notificationDevices.length : 0,
+  });
 
   return successResponse(res, 200, 'FCM token saved successfully', {
     channel: resolvedChannel,
