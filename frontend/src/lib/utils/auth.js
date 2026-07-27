@@ -256,15 +256,19 @@ export function setAuthData(module, token, user, refreshToken = null) {
 
     primaryStorage.setItem(authKey, 'true');
 
-    if (module !== "admin") {
-      primaryStorage.removeItem(tokenKey);
-      primaryStorage.removeItem(refreshTokenKey);
-      sessionStorage.removeItem(tokenKey);
-      sessionStorage.removeItem(refreshTokenKey);
+    // A real token here is the scoped push-registration token that the rider APK reads
+    // from localStorage to register its native FCM token. Session auth still rides on the
+    // httpOnly cookie, so web callers pass the "cookie-session" placeholder and nothing
+    // is stored. Refresh tokens are never persisted client-side under either path.
+    if (token && token !== "cookie-session") {
+      primaryStorage.setItem(tokenKey, token);
     } else {
       primaryStorage.removeItem(tokenKey);
-      primaryStorage.removeItem(refreshTokenKey);
+      sessionStorage.removeItem(tokenKey);
     }
+
+    primaryStorage.removeItem(refreshTokenKey);
+    sessionStorage.removeItem(refreshTokenKey);
     
     if (user) {
       try {

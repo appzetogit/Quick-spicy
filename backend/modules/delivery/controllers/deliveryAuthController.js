@@ -232,8 +232,23 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     delivery.lastLogin = new Date();
     await delivery.save();
 
-    // Return access token and delivery boy info
+    // The rider APK registers its native FCM token by calling the API directly and reads
+    // this value out of localStorage to authorise that call. Cookies cannot reach it: the
+    // native HTTP client does not share the WebView cookie jar. Dropping this token during
+    // the cookie migration is what silently stopped rider push notifications.
+    //
+    // This is deliberately NOT the session access token. It carries scope 'fcm', which the
+    // delivery auth middleware will only accept on the FCM registration route. Anything
+    // that scrapes it out of localStorage can register a push token and nothing else: no
+    // wallet, no orders, no profile. Session auth for web clients stays cookie-only.
+    const pushRegistrationToken = jwtService.generateAccessToken({
+      userId: delivery._id.toString(),
+      role: 'delivery',
+      scope: 'fcm',
+    });
+
     return successResponse(res, 200, 'Authentication successful', {
+      accessToken: pushRegistrationToken,
       user: {
         id: delivery._id,
         deliveryId: delivery.deliveryId,

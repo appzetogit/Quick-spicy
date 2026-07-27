@@ -44,6 +44,17 @@ export const authenticate = async (req, res, next) => {
       return errorResponse(res, 403, 'Invalid token. Delivery access required.');
     }
 
+    // Scoped push-registration tokens live in localStorage so the rider APK can read them,
+    // which puts them within reach of any script on the page. Confine them to the one route
+    // they exist for, so a stolen one cannot touch wallets, orders or profile data.
+    if (decoded.scope === 'fcm' && !String(req.originalUrl || '').includes('/fcm-token')) {
+      console.warn('🔒 Delivery push-scoped token rejected outside FCM route', {
+        path: req.originalUrl,
+        deliveryId: decoded.userId,
+      });
+      return errorResponse(res, 403, 'This token may only be used to register push tokens.');
+    }
+
     // Get delivery boy from database
     const delivery = await Delivery.findById(decoded.userId).select('-password -refreshToken');
     

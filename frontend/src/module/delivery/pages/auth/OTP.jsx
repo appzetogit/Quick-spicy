@@ -206,7 +206,7 @@ export default function DeliveryOTP() {
         // Store auth data using utility function
         try {
           debugLog("Storing auth data for signup flow:", { hasUser: !!user })
-          storeAuthData("delivery", "cookie-session", user)
+          storeAuthData("delivery", data?.accessToken || "cookie-session", user)
           debugLog("Auth data stored successfully for signup")
         } catch (storageError) {
           debugError("Failed to store authentication data:", storageError)
@@ -248,7 +248,7 @@ export default function DeliveryOTP() {
       // The setAuthData function includes error handling and verification
       try {
         debugLog("Storing auth data for delivery:", { hasUser: !!user })
-        storeAuthData("delivery", "cookie-session", user)
+        storeAuthData("delivery", data?.accessToken || "cookie-session", user)
         debugLog("Auth data stored successfully")
       } catch (storageError) {
         debugError("Failed to store authentication data:", storageError)
@@ -345,7 +345,7 @@ export default function DeliveryOTP() {
       // The setAuthData function includes error handling and verification
       try {
         debugLog("Storing auth data for delivery (with name):", { hasUser: !!user })
-        storeAuthData("delivery", "cookie-session", user)
+        storeAuthData("delivery", data?.accessToken || "cookie-session", user)
         debugLog("Auth data stored successfully")
       } catch (storageError) {
         debugError("Failed to store authentication data:", storageError)
