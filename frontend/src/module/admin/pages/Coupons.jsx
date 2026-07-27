@@ -676,6 +676,18 @@ export default function Coupons() {
                       </p>
                     )}
 
+                    {/* Product lists belong to a single restaurant's menu, so limiting an
+                        offer to specific products only makes sense for one restaurant. Say
+                        so, rather than silently hiding the control and defaulting to all
+                        products, which reads as the feature not existing. */}
+                    {formData.restaurantIds.length !== 1 && (
+                      <p className="mt-3 text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                        {formData.restaurantIds.length === 0
+                          ? "Select one restaurant to limit this offer to specific products."
+                          : "This offer will apply to all products. To pick specific products, select exactly one restaurant."}
+                      </p>
+                    )}
+
                     {formData.restaurantIds.length === 1 && (
                       <div className="mt-3 border-t border-slate-200 pt-3">
                         <label className="block text-xs font-semibold text-slate-600 mb-1">Offer Scope</label>
