@@ -39,6 +39,14 @@ const businessSettingsSchema = new mongoose.Schema(
       trim: true,
       default: "",
     },
+    // Platform-wide kill switch for promotional offers, toggled from the admin coupons page.
+    // Deliberately a single flag rather than a bulk write over every Offer document: turning
+    // it back on must not resurrect coupons an admin had individually disabled or that have
+    // since expired, and each offer keeps its own status untouched.
+    offersEnabled: {
+      type: Boolean,
+      default: true,
+    },
     state: {
       type: String,
       trim: true,

@@ -33,6 +33,8 @@ import {
   reverifyRestaurant,
   deleteRestaurant,
   getAllOffers,
+  getOffersSwitch,
+  updateOffersSwitch,
   createAdminOffer,
   updateOfferCartVisibility,
   getRestaurantAnalytics,
@@ -450,6 +452,8 @@ router.post("/food-approvals/:id/approve", approveFoodItem);
 router.post("/food-approvals/:id/reject", rejectFoodItem);
 
 // Offers Management
+router.get("/offers/switch", getOffersSwitch);
+router.put("/offers/switch", updateOffersSwitch);
 router.get("/offers", getAllOffers);
 router.post("/offers", createAdminOffer);
 router.patch("/offers/:offerId/items/:itemId/cart-visibility", updateOfferCartVisibility);

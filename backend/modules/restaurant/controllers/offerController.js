@@ -29,6 +29,7 @@ const getEffectiveOfferEndDate = (endDateValue) => {
 import mongoose from 'mongoose';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
+import { areOffersEnabled } from '../../../shared/utils/offersSwitch.js';
 
 // Create/Activate offer
 export const createOffer = asyncHandler(async (req, res) => {
@@ -195,6 +196,12 @@ export const deleteOffer = asyncHandler(async (req, res) => {
 
 // Get coupons for a specific item/dish
 export const getCouponsByItemId = asyncHandler(async (req, res) => {
+  // Platform offers switch is off: report no coupons rather than showing ones that
+  // checkout would refuse to apply.
+  if (!(await areOffersEnabled())) {
+    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [] });
+  }
+
   const restaurantId = req.restaurant._id;
   const { itemId } = req.params;
 
@@ -309,6 +316,12 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
 
 // Get coupons for a specific item/dish (PUBLIC - for user cart)
 export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
+  // Platform offers switch is off: report no coupons rather than showing ones that
+  // checkout would refuse to apply.
+  if (!(await areOffersEnabled())) {
+    return successResponse(res, 200, 'Offers are currently disabled', { coupons: [] });
+  }
+
   const { itemId, restaurantId } = req.params;
 
   console.log(`[COUPONS-PUBLIC] Request received for itemId: ${itemId}, restaurantId: ${restaurantId}`);
@@ -433,6 +446,10 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
 // Get all active offers with restaurant and dish details (PUBLIC - for user offers page)
 export const getPublicOffers = asyncHandler(async (req, res) => {
   try {
+    if (!(await areOffersEnabled())) {
+      return successResponse(res, 200, 'Offers are currently disabled', { offers: [] });
+    }
+
     console.log('[PUBLIC-OFFERS] Request received');
     const now = new Date();
     

@@ -2,6 +2,7 @@ import Restaurant from '../../restaurant/models/Restaurant.js';
 import Offer from '../../restaurant/models/Offer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
 import Menu from '../../restaurant/models/Menu.js';
+import { areOffersEnabled } from '../../../shared/utils/offersSwitch.js';
 import mongoose from 'mongoose';
 
 const getEffectiveOfferEndDate = (endDateValue) => {
@@ -332,7 +333,12 @@ export const calculateOrderPricing = async ({
     let discount = 0;
     let appliedCoupon = null;
     
-    if (couponCode && restaurant) {
+    // Honour the platform offers kill switch here too, not just in the listing endpoints.
+    // A customer holding a coupon code could otherwise still redeem it at checkout while
+    // offers were supposedly paused.
+    const offersCurrentlyEnabled = await areOffersEnabled();
+
+    if (couponCode && restaurant && offersCurrentlyEnabled) {
       try {
         // Get restaurant ObjectId
         let restaurantObjectId = restaurant._id;

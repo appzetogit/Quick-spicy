@@ -1,3 +1,4 @@
+import BusinessSettings from "../models/BusinessSettings.js";
 import Admin from "../models/Admin.js";
 import Order from "../../order/models/Order.js";
 import Restaurant from "../../restaurant/models/Restaurant.js";
@@ -4746,4 +4747,46 @@ export const getCustomerWalletReport = asyncHandler(async (req, res) => {
       error.message || "Failed to fetch customer wallet report",
     );
   }
+});
+
+/**
+ * Read the platform-wide offers kill switch.
+ * GET /api/admin/offers/switch
+ */
+export const getOffersSwitch = asyncHandler(async (req, res) => {
+  const settings = await BusinessSettings.findOne().select("offersEnabled").lean();
+  return successResponse(res, 200, "Offers switch retrieved", {
+    offersEnabled: settings ? settings.offersEnabled !== false : true,
+  });
+});
+
+/**
+ * Toggle the platform-wide offers kill switch.
+ * PUT /api/admin/offers/switch  { enabled: boolean }
+ *
+ * Only this one flag changes. Individual Offer documents are never touched, so switching
+ * back on restores exactly the offers that were live before, without resurrecting ones an
+ * admin had disabled individually or that expired in the meantime.
+ */
+export const updateOffersSwitch = asyncHandler(async (req, res) => {
+  const { enabled } = req.body || {};
+  if (typeof enabled !== "boolean") {
+    return errorResponse(res, 400, "`enabled` must be true or false");
+  }
+
+  const settings = await BusinessSettings.findOneAndUpdate(
+    {},
+    { $set: { offersEnabled: enabled } },
+    { new: true, upsert: true, setDefaultsOnInsert: true },
+  )
+    .select("offersEnabled")
+    .lean();
+
+  logger.info(`Offers kill switch set to ${enabled ? "ON" : "OFF"}`, {
+    adminId: req.admin?._id?.toString?.() || "",
+  });
+
+  return successResponse(res, 200, `All offers ${enabled ? "enabled" : "disabled"}`, {
+    offersEnabled: settings.offersEnabled !== false,
+  });
 });

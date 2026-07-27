@@ -1335,6 +1335,14 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.OFFERS, { params });
   },
 
+  // Platform-wide offers kill switch, toggled from the coupons page.
+  getOffersSwitch: () => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.OFFERS_SWITCH);
+  },
+  updateOffersSwitch: (enabled) => {
+    return apiClient.put(API_ENDPOINTS.ADMIN.OFFERS_SWITCH, { enabled });
+  },
+
   // Create coupon offer from admin
   createAdminOffer: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.OFFERS, data);

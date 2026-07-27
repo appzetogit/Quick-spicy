@@ -12,6 +12,8 @@ export default function Coupons() {
   const [restaurantSearch, setRestaurantSearch] = useState("")
   const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false)
   const [offers, setOffers] = useState([])
+  const [offersEnabled, setOffersEnabled] = useState(true)
+  const [switchBusy, setSwitchBusy] = useState(false)
   const [page, setPage] = useState(1)
   const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 1 })
   const OFFERS_PER_PAGE = 50
@@ -83,6 +85,38 @@ export default function Coupons() {
   useEffect(() => {
     setPage(1)
   }, [searchQuery])
+
+  useEffect(() => {
+    adminAPI
+      .getOffersSwitch()
+      .then((res) => setOffersEnabled(res?.data?.data?.offersEnabled !== false))
+      .catch(() => {})
+  }, [])
+
+  const toggleAllOffers = async () => {
+    const next = !offersEnabled
+    if (
+      !next &&
+      !window.confirm(
+        "Turn OFF all offers?\n\nEvery coupon stops working for customers immediately, across the whole platform. Individual offer settings are preserved, so turning this back ON restores exactly what was live before.",
+      )
+    ) {
+      return
+    }
+
+    setSwitchBusy(true)
+    // Optimistic: the switch is the whole point of the control, so it should feel instant.
+    setOffersEnabled(next)
+    try {
+      const res = await adminAPI.updateOffersSwitch(next)
+      setOffersEnabled(res?.data?.data?.offersEnabled !== false)
+    } catch (err) {
+      setOffersEnabled(!next) // roll back so the UI never claims a state the server rejected
+      setError(err?.response?.data?.message || "Failed to update the offers switch")
+    } finally {
+      setSwitchBusy(false)
+    }
+  }
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -804,6 +838,50 @@ export default function Coupons() {
             <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
               {pagination.total} {pagination.total === 1 ? 'offer' : 'offers'}
             </span>
+          </div>
+
+          {/* Master switch: pauses every offer platform-wide without touching individual
+              offer settings, so turning it back on restores exactly what was live before. */}
+          <div
+            className={`flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3 rounded-xl border ${
+              offersEnabled ? "bg-emerald-50 border-emerald-200" : "bg-rose-50 border-rose-200"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span
+                className={`inline-flex w-2.5 h-2.5 rounded-full ${
+                  offersEnabled ? "bg-emerald-500" : "bg-rose-500"
+                }`}
+              />
+              <div>
+                <p className={`text-sm font-semibold ${offersEnabled ? "text-emerald-900" : "text-rose-900"}`}>
+                  All offers are {offersEnabled ? "ON" : "OFF"}
+                </p>
+                <p className={`text-xs ${offersEnabled ? "text-emerald-700" : "text-rose-700"}`}>
+                  {offersEnabled
+                    ? "Active offers are available to customers."
+                    : "All coupons are paused platform-wide. Individual offer settings are preserved."}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleAllOffers}
+              disabled={switchBusy}
+              role="switch"
+              aria-checked={offersEnabled}
+              aria-label="Enable or disable all offers"
+              className={`relative inline-flex h-7 w-14 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                offersEnabled ? "bg-emerald-500" : "bg-rose-500"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                  offersEnabled ? "translate-x-8" : "translate-x-1"
+                }`}
+              />
+            </button>
           </div>
 
           {loading ? (
