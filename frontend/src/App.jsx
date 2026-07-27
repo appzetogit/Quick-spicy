@@ -221,6 +221,24 @@ export default function App() {
     registerWebPushForCurrentModule(location.pathname)
   }, [location.pathname])
 
+  useEffect(() => {
+    const handleAuthDataChanged = () => {
+      registerWebPushForCurrentModule(window.location.pathname)
+    }
+
+    window.addEventListener("authDataChanged", handleAuthDataChanged)
+    window.addEventListener("deliveryAuthChanged", handleAuthDataChanged)
+    window.addEventListener("restaurantAuthChanged", handleAuthDataChanged)
+    window.addEventListener("userAuthChanged", handleAuthDataChanged)
+
+    return () => {
+      window.removeEventListener("authDataChanged", handleAuthDataChanged)
+      window.removeEventListener("deliveryAuthChanged", handleAuthDataChanged)
+      window.removeEventListener("restaurantAuthChanged", handleAuthDataChanged)
+      window.removeEventListener("userAuthChanged", handleAuthDataChanged)
+    }
+  }, [])
+
   return (
     <>
       <ScrollToTop />

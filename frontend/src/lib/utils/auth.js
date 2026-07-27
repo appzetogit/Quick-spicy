@@ -293,6 +293,17 @@ export function setAuthData(module, token, user, refreshToken = null) {
     }
 
     console.log(`[setAuthData] Successfully stored auth data for ${module}`);
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("authDataChanged", {
+          detail: {
+            module,
+            authenticated: true,
+          },
+        }),
+      );
+    }
   } catch (error) {
     // If quota exceeded, try to clear some space
     if (error.name === 'QuotaExceededError' || error.code === 22) {
