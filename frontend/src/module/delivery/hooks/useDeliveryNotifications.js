@@ -15,6 +15,23 @@ const resolveAudioSource = (source, cacheKey = 'delivery-alert') => {
   return `${source}${separator}devcache=${cacheKey}`;
 };
 
+// The backend sends estimatedEarnings as a breakdown object ({ basePayout, totalEarning,
+// commissionPerKm, ... }) while every UI site renders it as a number, which showed riders
+// ₹0 on the incoming-order popup. Flatten it once here, at the point orders enter the app,
+// rather than at each of the places that read it.
+const normalizeOrderEarnings = (order) => {
+  if (!order || typeof order !== 'object') return order;
+  const earnings = order.estimatedEarnings;
+  if (earnings && typeof earnings === 'object') {
+    return {
+      ...order,
+      estimatedEarnings: Number(earnings.totalEarning) || 0,
+      estimatedEarningsBreakdown: earnings,
+    };
+  }
+  return order;
+};
+
 const supportsBrowserNotifications = () =>
   typeof window !== 'undefined' && typeof Notification !== 'undefined';
 
@@ -288,10 +305,11 @@ export const useDeliveryNotifications = () => {
       if (!actionable) return;
 
       debugLog('🔄 Resync surfaced a pending order:', actionable?.orderId);
-      setNewOrder(actionable);
+      const normalized = normalizeOrderEarnings(actionable);
+      setNewOrder(normalized);
       // shouldProcessOrderAlert dedupes, so a resync that finds the order we are already
       // showing is a no-op rather than a repeated alarm.
-      handleIncomingOrderAlert(actionable);
+      handleIncomingOrderAlert(normalized);
     } catch (error) {
       debugWarn('Pending order resync failed:', error?.message);
     }
@@ -654,14 +672,16 @@ export const useDeliveryNotifications = () => {
       resyncPendingOrders();
     });
 
-    socketRef.current.on('new_order', (orderData) => {
+    socketRef.current.on('new_order', (rawOrder) => {
+      const orderData = normalizeOrderEarnings(rawOrder);
       debugLog('📦 New order received via socket:', orderData);
       setNewOrder(orderData);
       handleIncomingOrderAlert(orderData);
     });
 
     // Listen for priority-based order notifications (new_order_available)
-    socketRef.current.on('new_order_available', (orderData) => {
+    socketRef.current.on('new_order_available', (rawOrder) => {
+      const orderData = normalizeOrderEarnings(rawOrder);
       debugLog('📦 New order available (priority notification):', orderData);
       debugLog('📦 Notification phase:', orderData.phase || 'unknown');
       // Treat it the same as new_order for now - delivery boy can accept it

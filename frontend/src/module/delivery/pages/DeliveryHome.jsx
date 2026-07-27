@@ -2872,7 +2872,10 @@ export default function DeliveryHome() {
                 timeAway: selectedRestaurant?.timeAway || '0 mins',
                 dropDistance: selectedRestaurant?.dropDistance || '0 km',
                 pickupDistance: selectedRestaurant?.pickupDistance || '0 km',
-                estimatedEarnings: backendEarnings || selectedRestaurant?.estimatedEarnings || 0,
+                // earningsValue, not backendEarnings: the backend sends a breakdown object
+                // ({ basePayout, totalEarning, ... }) and the UI renders this as a number,
+                // so assigning the object here displayed the rider ₹0 for every order.
+                estimatedEarnings: earningsValue || selectedRestaurant?.estimatedEarnings || 0,
                 amount: earningsValue, // Also set amount for compatibility
                 customerName: order.userId?.name || selectedRestaurant?.customerName,
                 customerPhone: order.userId?.phone || selectedRestaurant?.customerPhone || null,
