@@ -12,6 +12,9 @@ export default function Coupons() {
   const [restaurantSearch, setRestaurantSearch] = useState("")
   const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false)
   const [offers, setOffers] = useState([])
+  const [page, setPage] = useState(1)
+  const [pagination, setPagination] = useState({ page: 1, limit: 50, total: 0, pages: 1 })
+  const OFFERS_PER_PAGE = 50
   const [restaurants, setRestaurants] = useState([])
   const [zones, setZones] = useState([])
   const [loading, setLoading] = useState(true)
@@ -45,10 +48,19 @@ export default function Coupons() {
     try {
       setLoading(true)
       setError(null)
-      const response = await adminAPI.getAllOffers({})
+      // Search goes to the server alongside the page: filtering only the rows already
+      // fetched would search a single page instead of the whole coupon list.
+      const response = await adminAPI.getAllOffers({
+        page,
+        limit: OFFERS_PER_PAGE,
+        ...(searchQuery.trim() ? { search: searchQuery.trim() } : {}),
+      })
 
       if (response?.data?.success) {
         setOffers(response.data.data.offers || [])
+        setPagination(
+          response.data.data.pagination || { page, limit: OFFERS_PER_PAGE, total: 0, pages: 1 },
+        )
       } else {
         setError("Failed to fetch offers")
       }
@@ -58,11 +70,19 @@ export default function Coupons() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [page, searchQuery])
 
+  // Debounced so typing a coupon code does not fire a request per keystroke.
   useEffect(() => {
-    fetchOffers()
-  }, [fetchOffers])
+    const timer = setTimeout(fetchOffers, searchQuery.trim() ? 350 : 0)
+    return () => clearTimeout(timer)
+  }, [fetchOffers, searchQuery])
+
+  // A new search restarts at page 1; staying on page 7 of the old result set would show
+  // an empty table for a search that actually matched.
+  useEffect(() => {
+    setPage(1)
+  }, [searchQuery])
 
   useEffect(() => {
     const fetchZones = async () => {
@@ -325,19 +345,9 @@ export default function Coupons() {
     }
   }
 
-  // Filter offers based on search query
-  const filteredOffers = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return offers
-    }
-    
-    const query = searchQuery.toLowerCase().trim()
-    return offers.filter(offer =>
-      offer.restaurantName?.toLowerCase().includes(query) ||
-      offer.dishName?.toLowerCase().includes(query) ||
-      offer.couponCode?.toLowerCase().includes(query)
-    )
-  }, [offers, searchQuery])
+  // The server already applied the search across every offer, so filtering again here would
+  // only narrow the current page and hide matches that live on other pages.
+  const filteredOffers = offers
 
   return (
     <div className="p-4 lg:p-6 bg-slate-50 min-h-screen">
@@ -792,7 +802,7 @@ export default function Coupons() {
               Offers List
             </h2>
             <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-              {filteredOffers.length} {filteredOffers.length === 1 ? 'offer' : 'offers'}
+              {pagination.total} {pagination.total === 1 ? 'offer' : 'offers'}
             </span>
           </div>
 
@@ -925,6 +935,45 @@ export default function Coupons() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {!loading && pagination.pages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-4 border-t border-slate-200">
+              <span className="text-sm text-slate-600">
+                Showing{" "}
+                <span className="font-semibold text-slate-900">
+                  {(pagination.page - 1) * pagination.limit + 1}
+                  {"-"}
+                  {Math.min(pagination.page * pagination.limit, pagination.total)}
+                </span>{" "}
+                of <span className="font-semibold text-slate-900">{pagination.total}</span>
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={pagination.page <= 1}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Previous
+                </button>
+
+                <span className="px-3 py-1.5 text-sm text-slate-600">
+                  Page <span className="font-semibold text-slate-900">{pagination.page}</span> of{" "}
+                  <span className="font-semibold text-slate-900">{pagination.pages}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.min(pagination.pages, p + 1))}
+                  disabled={pagination.page >= pagination.pages}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

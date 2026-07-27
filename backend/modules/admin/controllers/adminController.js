@@ -3445,19 +3445,21 @@ export const getAllOffers = asyncHandler(async (req, res) => {
       query.restaurant = restaurantId;
     }
 
-    // Calculate pagination
-    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const pageNumber = Math.max(1, parseInt(page) || 1);
+    const pageSize = Math.max(1, parseInt(limit) || 50);
+    const skip = (pageNumber - 1) * pageSize;
 
-    // Fetch offers with restaurant details
+    // Paginate after flattening, not before. Each offer expands into one row per item, so
+    // slicing offers at the database and then reporting a row count produced a page count
+    // that did not match the data: later pages came back empty. This route already loaded
+    // every matching offer a second time just to count rows, so reading them once here is
+    // no more work than before.
+    // ponytail: full scan per request, fine at admin scale; move to an aggregation with
+    // $unwind if the offer collection ever gets large enough to feel it.
     const offers = await Offer.find(query)
       .populate("restaurant", "name restaurantId zoneId zoneName")
       .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(parseInt(limit))
       .lean();
-
-    // Get total count
-    const total = await Offer.countDocuments(query);
 
     // Flatten offers to show each item separately
     const offerItems = [];
@@ -3487,7 +3489,8 @@ export const getAllOffers = asyncHandler(async (req, res) => {
           }
 
           offerItems.push({
-            sl: skip + offerItems.length + 1,
+            // Placeholder; renumbered after slicing so it reflects the row's real position.
+            sl: 0,
             offerId: offer._id.toString(),
             restaurantName: offer.restaurant?.name || "Unknown Restaurant",
             restaurantId:
@@ -3518,24 +3521,20 @@ export const getAllOffers = asyncHandler(async (req, res) => {
       }
     });
 
-    // If search was applied, we need to recalculate total
-    let filteredTotal = offerItems.length;
-    if (!search) {
-      // Count all items across all offers
-      const allOffers = await Offer.find(query).lean();
-      filteredTotal = allOffers.reduce(
-        (sum, offer) => sum + (offer.items?.length || 0),
-        0,
-      );
-    }
+    // offerItems now holds every row matching the query and search, so the total and the
+    // page count describe the same list the client is paging through.
+    const total = offerItems.length;
+    const pagedItems = offerItems
+      .slice(skip, skip + pageSize)
+      .map((item, index) => ({ ...item, sl: skip + index + 1 }));
 
     return successResponse(res, 200, "Offers retrieved successfully", {
-      offers: offerItems,
+      offers: pagedItems,
       pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: filteredTotal,
-        pages: Math.ceil(filteredTotal / parseInt(limit)),
+        page: pageNumber,
+        limit: pageSize,
+        total,
+        pages: Math.max(1, Math.ceil(total / pageSize)),
       },
     });
   } catch (error) {
