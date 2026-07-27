@@ -23,6 +23,16 @@ export const authenticate = async (req, res, next) => {
     }
 
     if (!token) {
+      // Rejections here are otherwise invisible: this returns before any controller
+      // logging runs, and nginx access logs are disabled. A client that posts an FCM
+      // token without credentials looks identical to a client that never posted at all.
+      console.warn('🔒 Delivery auth rejected: no token', {
+        path: req.originalUrl,
+        origin: req.headers.origin || '',
+        hasAuthHeader: Boolean(req.headers.authorization),
+        cookieNames: Object.keys(req.cookies || {}),
+        userAgent: String(req.headers['user-agent'] || '').slice(0, 120),
+      });
       return errorResponse(res, 401, 'No token provided');
     }
 
@@ -69,6 +79,12 @@ export const authenticate = async (req, res, next) => {
     
     next();
   } catch (error) {
+    console.warn('🔒 Delivery auth rejected: token invalid', {
+      path: req.originalUrl,
+      reason: error?.name === 'TokenExpiredError' ? 'expired' : error?.message || 'verify failed',
+      origin: req.headers.origin || '',
+      via: req.headers.authorization ? 'bearer' : 'cookie',
+    });
     return errorResponse(res, 401, error.message || 'Invalid token');
   }
 };
