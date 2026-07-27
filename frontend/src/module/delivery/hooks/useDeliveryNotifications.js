@@ -271,6 +271,59 @@ export const useDeliveryNotifications = () => {
     }
   }, [playNotificationSound, showBackgroundOrderNotification, startAlertLoop]);
 
+  // Socket delivery is best-effort: Socket.IO drops room emits when nobody is currently in
+  // the room, so an order dispatched while the rider was reconnecting is gone for good.
+  // Pull the authoritative list instead of assuming we caught the live event.
+  const resyncPendingOrders = useCallback(async () => {
+    try {
+      const response = await deliveryAPI.getOrders({ discover: true, limit: 5 });
+      const orders =
+        response?.data?.data?.orders ||
+        response?.data?.orders ||
+        (Array.isArray(response?.data?.data) ? response.data.data : []);
+
+      const actionable = (orders || []).find((order) =>
+        ['preparing', 'ready'].includes(String(order?.status || '').toLowerCase()),
+      );
+      if (!actionable) return;
+
+      debugLog('🔄 Resync surfaced a pending order:', actionable?.orderId);
+      setNewOrder(actionable);
+      // shouldProcessOrderAlert dedupes, so a resync that finds the order we are already
+      // showing is a no-op rather than a repeated alarm.
+      handleIncomingOrderAlert(actionable);
+    } catch (error) {
+      debugWarn('Pending order resync failed:', error?.message);
+    }
+  }, [handleIncomingOrderAlert]);
+
+  // A push tells us something happened but carries only a summary. Treat it as a trigger to
+  // re-read the real order, so the in-app alert fires even when the socket never delivered.
+  useEffect(() => {
+    const handlePushPayload = (payload) => {
+      const type = String(payload?.data?.type || payload?.type || '');
+      if (!type.startsWith('new_order')) return;
+      debugLog('🔔 Push relay triggering order resync:', type);
+      resyncPendingOrders();
+    };
+
+    const onServiceWorkerMessage = (event) => {
+      if (event?.data?.type === 'push-notification-received') {
+        handlePushPayload(event.data.payload);
+      }
+    };
+    const onNativePush = (event) => handlePushPayload(event?.detail);
+
+    const hasSW = typeof navigator !== 'undefined' && 'serviceWorker' in navigator;
+    if (hasSW) navigator.serviceWorker.addEventListener('message', onServiceWorkerMessage);
+    window.addEventListener('native-push-notification', onNativePush);
+
+    return () => {
+      if (hasSW) navigator.serviceWorker.removeEventListener('message', onServiceWorkerMessage);
+      window.removeEventListener('native-push-notification', onNativePush);
+    };
+  }, [resyncPendingOrders]);
+
   // Step 4: All effects (unconditional hook calls, conditional logic inside)
   useEffect(() => {
     if (!supportsBrowserNotifications()) return;
@@ -546,6 +599,9 @@ export const useDeliveryNotifications = () => {
         debugLog('📢 Joining delivery room with ID:', deliveryPartnerId);
         socketRef.current.emit('join-delivery', deliveryPartnerId);
       }
+
+      // Anything dispatched while we were disconnected was never queued for us. Catch up.
+      resyncPendingOrders();
     });
 
     socketRef.current.on('delivery-room-joined', (data) => {
@@ -594,6 +650,8 @@ export const useDeliveryNotifications = () => {
       if (deliveryPartnerId) {
         socketRef.current.emit('join-delivery', deliveryPartnerId);
       }
+
+      resyncPendingOrders();
     });
 
     socketRef.current.on('new_order', (orderData) => {
@@ -654,7 +712,7 @@ export const useDeliveryNotifications = () => {
         socketRef.current = null;
       }
     };
-  }, [deliveryPartnerId, handleIncomingOrderAlert, playNotificationSound, showBackgroundOrderNotification, startAlertLoop, stopAlertLoop]);
+  }, [deliveryPartnerId, handleIncomingOrderAlert, playNotificationSound, resyncPendingOrders, showBackgroundOrderNotification, startAlertLoop, stopAlertLoop]);
 
   // Helper functions
   const clearNewOrder = () => {
