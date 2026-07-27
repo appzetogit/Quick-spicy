@@ -1,7 +1,13 @@
 /* eslint-disable no-undef */
 
 const PUSH_DEBUG_PREFIX = "[push-sw]";
-const pushDebugLog = () => {};
+const pushDebugLog = (...args) => {
+  try {
+    console.log(...args);
+  } catch {
+    // Ignore service worker console issues.
+  }
+};
 
 const getNotificationKey = (payload) =>
   payload?.data?.notificationId ||
@@ -81,6 +87,7 @@ self.addEventListener("push", (event) => {
       try {
         payload = normalizePushPayload(event.data.json());
       } catch {
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Failed to parse push payload");
         return;
       }
 

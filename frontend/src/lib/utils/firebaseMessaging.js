@@ -27,9 +27,77 @@ let pushSoundUnlocked = false;
 let pushSoundContext = null;
 const PUSH_DEBUG_PREFIX = "[push-debug]";
 const notificationDedupWindowMs = 8000;
-const pushDebugLog = () => {};
-const pushDebugWarn = () => {};
+const pushDebugEvents = [];
+const maxPushDebugEvents = 60;
+const pushDebugStateKey = "push_debug_state";
+const pushDebugLog = (...args) => writePushDebugEvent("log", args);
+const pushDebugWarn = (...args) => writePushDebugEvent("warn", args);
 const clientDeviceIdStorageKey = "push_client_device_id";
+
+function toDebugSafeValue(value, depth = 0) {
+  if (depth > 3) return "[max-depth]";
+  if (value == null) return value;
+  if (typeof value === "string") {
+    if (value.length > 180) {
+      return `${value.slice(0, 40)}...${value.slice(-16)}`;
+    }
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  if (value instanceof Error) {
+    return {
+      name: value.name,
+      message: value.message,
+      stack: value.stack ? value.stack.split("\n").slice(0, 3).join(" | ") : "",
+    };
+  }
+  if (Array.isArray(value)) {
+    return value.slice(0, 8).map((item) => toDebugSafeValue(item, depth + 1));
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value).slice(0, 20);
+    return Object.fromEntries(entries.map(([key, item]) => [key, toDebugSafeValue(item, depth + 1)]));
+  }
+  return String(value);
+}
+
+function writePushDebugEvent(level, args = []) {
+  if (typeof window === "undefined") return;
+
+  const entry = {
+    time: new Date().toISOString(),
+    level,
+    args: args.map((arg) => toDebugSafeValue(arg)),
+    path: window.location.pathname,
+    permission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+  };
+
+  pushDebugEvents.push(entry);
+  if (pushDebugEvents.length > maxPushDebugEvents) {
+    pushDebugEvents.shift();
+  }
+
+  const state = {
+    latest: entry,
+    events: pushDebugEvents,
+    module: normalizeModuleFromPath(window.location.pathname),
+    userAgent: navigator.userAgent,
+    serviceWorkerSupported: "serviceWorker" in navigator,
+    pushManagerSupported: "PushManager" in window,
+    secureContext: window.isSecureContext,
+    flutterWebView: isFlutterWebView(),
+  };
+
+  window.__pushDebugState = state;
+  try {
+    sessionStorage.setItem(pushDebugStateKey, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures.
+  }
+
+  const consoleMethod = level === "warn" ? console.warn : console.log;
+  consoleMethod(...args);
+}
 
 function normalizeModuleFromPath(pathname = window.location.pathname) {
   if (pathname.startsWith("/restaurant") && !pathname.startsWith("/restaurants")) return "restaurant";
@@ -487,6 +555,14 @@ async function saveTokenByModule(moduleName, token) {
   const platform = isNativeWebView ? "flutter-webview" : "web";
   const channel = isNativeWebView ? "mobile" : "web";
   const deviceId = getClientDeviceId();
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Saving FCM token to backend", {
+    moduleName,
+    source,
+    platform,
+    channel,
+    deviceId,
+    tokenPreview: `${String(token || "").slice(0, 12)}...`,
+  });
 
   if (moduleName === "admin") {
     return;
@@ -694,10 +770,16 @@ async function attachForegroundListener(firebaseAppInstance) {
 
 export async function registerWebPushForCurrentModule(pathname = window.location.pathname) {
   const moduleName = normalizeModuleFromPath(pathname);
+  pushDebugLog(PUSH_DEBUG_PREFIX, "Starting push registration", {
+    pathname,
+    moduleName,
+    permission: typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+  });
 
   // Admin web push registration is intentionally disabled until a dedicated
   // admin FCM registration endpoint exists on the backend.
   if (moduleName === "admin") {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Skipping push registration for admin module");
     return;
   }
 
@@ -716,32 +798,55 @@ export async function registerWebPushForCurrentModule(pathname = window.location
     );
 
   if (isRestaurantSetupRoute) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Skipping push registration on restaurant setup route", { pathname });
     return;
   }
 
   initPushNotificationClient();
 
   const hasModuleSession = isModuleAuthenticated(moduleName);
-  if (!hasModuleSession) return;
+  if (!hasModuleSession) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Skipping push registration because module session is missing", {
+      moduleName,
+      pathname,
+    });
+    return;
+  }
 
   // Flutter WebView fallback: register native token when available.
   // This keeps restaurant/delivery FCM alerts working even when Web Push APIs are limited.
   await registerNativeWebViewFcmToken(moduleName);
-  if (isFlutterWebView()) return;
+  if (isFlutterWebView()) {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Flutter WebView detected; native token path attempted");
+    return;
+  }
 
-  if (!isSupportedBrowser() || !isSecureContextForPush()) return;
+  if (!isSupportedBrowser()) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Push registration skipped because browser APIs are unsupported");
+    return;
+  }
 
-  if (registrationInFlight) return registrationInFlight;
+  if (!isSecureContextForPush()) {
+    pushDebugWarn(PUSH_DEBUG_PREFIX, "Push registration skipped because context is not secure");
+    return;
+  }
+
+  if (registrationInFlight) {
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Push registration already in flight");
+    return registrationInFlight;
+  }
 
   registrationInFlight = (async () => {
     const firebasePublicEnv = await getFirebasePublicEnv();
     if (!firebasePublicEnv?.vapidKey) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "FCM web registration skipped: FIREBASE_VAPID_KEY missing");
       console.warn("FCM web registration skipped: FIREBASE_VAPID_KEY is missing in env setup.");
       return;
     }
 
     const app = getMessagingFirebaseApp(firebasePublicEnv);
     if (!app) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "FCM web registration skipped: Firebase public config incomplete");
       console.warn("FCM web registration skipped: Firebase public web config is incomplete.");
       return;
     }
@@ -751,11 +856,24 @@ export async function registerWebPushForCurrentModule(pathname = window.location
         ? await Notification.requestPermission()
         : Notification.permission;
 
-    if (permission !== "granted") return;
+    pushDebugLog(PUSH_DEBUG_PREFIX, "Notification permission resolved", {
+      moduleName,
+      permission,
+    });
+
+    if (permission !== "granted") {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Push registration stopped because permission was not granted", {
+        permission,
+      });
+      return;
+    }
 
     const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
     const supported = await isSupported().catch(() => false);
-    if (!supported) return;
+    if (!supported) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Firebase messaging reported unsupported browser");
+      return;
+    }
 
     const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
     pushDebugLog(PUSH_DEBUG_PREFIX, "Service worker registered for push", {
@@ -769,23 +887,28 @@ export async function registerWebPushForCurrentModule(pathname = window.location
       serviceWorkerRegistration: registration,
     });
 
-    if (!token) return;
+    if (!token) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "FCM token generation returned empty token");
+      return;
+    }
     pushDebugLog(PUSH_DEBUG_PREFIX, "FCM token resolved", {
       moduleName,
       tokenPreview: `${token.slice(0, 12)}...`,
     });
 
-    const lastSavedToken = getSavedToken(moduleName);
-    if (lastSavedToken === token) {
-      await attachForegroundListener(app);
-      return;
-    }
-
     await saveTokenByModule(moduleName, token);
     setSavedToken(moduleName, token);
+    pushDebugLog(PUSH_DEBUG_PREFIX, "FCM token saved successfully", {
+      moduleName,
+      tokenPreview: `${token.slice(0, 12)}...`,
+    });
     await attachForegroundListener(app);
   })()
     .catch((error) => {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "FCM web token registration failed", {
+        message: error?.message || String(error),
+        stack: error?.stack || "",
+      });
       console.warn("FCM web token registration failed:", error?.message || error);
     })
     .finally(() => {
