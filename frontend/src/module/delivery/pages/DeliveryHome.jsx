@@ -188,6 +188,11 @@ const mockRestaurants = [
  * @param {number} lng2 
  * @returns {number} Distance in meters
  */
+// Below this the rider is treated as stationary and the marker is not moved. GPS scatter on
+// a parked bike is routinely 3-8m, so anything smaller is noise rather than travel.
+// ponytail: fixed deadband, revisit if riders in slow traffic report a marker that lags.
+const MARKER_MOVE_DEADBAND_METERS = 8
+
 function haversineDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000 // Earth radius in meters
   const dLat = (lat2 - lat1) * Math.PI / 180
@@ -495,6 +500,7 @@ export default function DeliveryHome() {
   // Stable tracking system - Rapido/Uber style
   const locationHistoryRef = useRef([]) // Store last 5 valid GPS points for smoothing
   const lastValidLocationRef = useRef(null) // Last valid smoothed location
+  const lastRenderedLocationRef = useRef(null) // Where the marker is actually drawn, for the jitter deadband
   const lastLocationTimeRef = useRef(null) // Timestamp of last location update
   const smoothedLocationRef = useRef(null) // Current smoothed location
   const markerAnimationRef = useRef(null) // Track ongoing marker animation
@@ -2354,15 +2360,29 @@ export default function DeliveryHome() {
           setRiderLocation(smoothedLocation)
           lastLocationRef.current = smoothedLocation
           
+          // A parked rider still produces GPS points scattered across several metres, and
+          // the moving average drifts with them. Animating to every one of those is what
+          // makes the icon jitter in place. Hold the marker until the rider actually moves.
+          const renderedFrom = lastRenderedLocationRef.current
+          const movedSinceRender = renderedFrom
+            ? haversineDistance(renderedFrom[0], renderedFrom[1], smoothedLat, smoothedLng)
+            : Infinity
+          const riderActuallyMoved = movedSinceRender >= MARKER_MOVE_DEADBAND_METERS
+
           // Always update bike marker with latest smoothed location
           if (window.deliveryMapInstance) {
             if (bikeMarkerRef.current) {
-              // Marker exists - animate smoothly to new position
-              animateMarkerSmoothly(bikeMarkerRef.current, newSmoothedLocation, 1500, markerAnimationRef)
+              if (riderActuallyMoved) {
+                lastRenderedLocationRef.current = [smoothedLat, smoothedLng]
+                // Marker exists - animate smoothly to new position
+                animateMarkerSmoothly(bikeMarkerRef.current, newSmoothedLocation, 1500, markerAnimationRef)
+              }
+              // Heading still updates while parked so the bike can turn on the spot.
               if (heading !== null && heading !== undefined) {
                 createOrUpdateBikeMarker(smoothedLat, smoothedLng, heading, false, { updatePosition: false })
               }
             } else {
+              lastRenderedLocationRef.current = [smoothedLat, smoothedLng]
               // Marker doesn't exist yet, create it immediately with correct location
               debugLog('📍 Creating bike marker with smoothed location:', { lat: smoothedLat, lng: smoothedLng })
               createOrUpdateBikeMarker(smoothedLat, smoothedLng, heading, !isUserPanningRef.current)
@@ -10053,6 +10073,31 @@ selectedRestaurant?.lng || null,
               </motion.div>
             </motion.div>
           )}
+
+          {/* Recenter - snaps back to the rider and resumes auto-follow.
+              Distinct from the GPS refresh button below: that one re-reads the sensor and
+              only recenters when the rider is not panning, so once you drag the map there
+              was previously no way back. Sits higher and above the order sheet so it stays
+              reachable while an order is in progress. */}
+          <motion.button
+            onClick={() => {
+              const target = riderLocation || lastValidLocationRef.current || smoothedLocationRef.current
+              if (!target || !window.deliveryMapInstance) return
+              isUserPanningRef.current = false
+              window.deliveryMapInstance.panTo({ lat: target[0], lng: target[1] })
+              window.deliveryMapInstance.setZoom(18)
+            }}
+            className="absolute bottom-[15.5rem] right-3 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-50 transition-colors z-30"
+            whileTap={{ scale: 0.92 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25, mass: 0.5 }}
+            aria-label="Recenter map on my location"
+            title="Recenter"
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="text-gray-700">
+              <circle cx="12" cy="12" r="3.5" />
+              <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+            </svg>
+          </motion.button>
 
           {/* Floating Action Button - My Location */}
           <motion.button
