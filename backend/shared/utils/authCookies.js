@@ -15,11 +15,17 @@ const REFRESH_TOKEN_COOKIE_BY_ROLE = {
 const LEGACY_ACCESS_COOKIES = ["accessToken", "adminAccessToken"];
 const LEGACY_REFRESH_COOKIES = ["refreshToken"];
 
+// The frontend (Vercel) and this API (api.quickspicy.in) are different sites, so auth
+// cookies must be SameSite=None or the browser drops them on every cross-site XHR.
+// Browsers only accept SameSite=None together with Secure, so the two move as a pair.
+// Set CROSS_SITE_COOKIES=false for local http dev, where Secure cookies can't be set.
+const crossSiteCookies = process.env.CROSS_SITE_COOKIES !== "false";
+
 const buildCookieOptions = (maxAge = null) => {
   const options = {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: crossSiteCookies,
+    sameSite: crossSiteCookies ? "none" : "lax",
     path: "/",
   };
 
