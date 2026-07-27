@@ -868,7 +868,7 @@ export async function registerWebPushForCurrentModule(pathname = window.location
       return;
     }
 
-    const { getMessaging, getToken, isSupported } = await import("firebase/messaging");
+    const { getMessaging, getToken, deleteToken, isSupported } = await import("firebase/messaging");
     const supported = await isSupported().catch(() => false);
     if (!supported) {
       pushDebugWarn(PUSH_DEBUG_PREFIX, "Firebase messaging reported unsupported browser");
@@ -881,6 +881,23 @@ export async function registerWebPushForCurrentModule(pathname = window.location
       moduleName,
     });
     const messaging = getMessaging(app);
+
+    try {
+      const cachedToken = getSavedToken(moduleName);
+      if (cachedToken) {
+        pushDebugLog(PUSH_DEBUG_PREFIX, "Deleting previously cached FCM token before refresh", {
+          moduleName,
+          tokenPreview: `${cachedToken.slice(0, 12)}...`,
+        });
+        await deleteToken(messaging);
+        localStorage.removeItem(`${tokenCachePrefix}${moduleName}`);
+      }
+    } catch (error) {
+      pushDebugWarn(PUSH_DEBUG_PREFIX, "Failed to delete cached FCM token before refresh", {
+        moduleName,
+        message: error?.message || String(error),
+      });
+    }
 
     const token = await getToken(messaging, {
       vapidKey: firebasePublicEnv.vapidKey,
