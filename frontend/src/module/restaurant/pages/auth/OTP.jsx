@@ -216,7 +216,7 @@ export default function RestaurantOTP() {
 
       if (restaurant) {
         // Store auth data using utility function to ensure proper module-specific token storage
-        setRestaurantAuthData("restaurant", "cookie-session", restaurant)
+        setRestaurantAuthData("restaurant", data?.accessToken || "cookie-session", restaurant)
 
         try {
           await registerWebPushForCurrentModule("/restaurant")

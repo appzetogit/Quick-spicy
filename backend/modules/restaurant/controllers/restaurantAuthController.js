@@ -15,6 +15,7 @@ import {
   getRefreshTokenFromRequest,
   setAuthCookies,
 } from '../../../shared/utils/authCookies.js';
+import { mintPushScopedToken } from '../../../shared/utils/pushScopedToken.js';
 import winston from 'winston';
 
 /**
@@ -564,6 +565,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     // Return access token and restaurant info
     return successResponse(res, 200, 'Authentication successful', {
+      accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
       restaurant: {
         id: restaurant._id,
         restaurantId: restaurant.restaurantId,
@@ -700,6 +702,7 @@ export const login = asyncHandler(async (req, res) => {
   logger.info(`Restaurant logged in via email: ${restaurant._id}`, { email, restaurantId: restaurant._id });
 
   return successResponse(res, 200, 'Login successful', {
+    accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
     restaurant: {
       id: restaurant._id,
       restaurantId: restaurant.restaurantId,
@@ -1128,6 +1131,7 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
     setAuthCookies(res, 'restaurant', tokens);
 
     return successResponse(res, 200, 'Firebase Google authentication successful', {
+      accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
       restaurant: {
         id: restaurant._id,
         restaurantId: restaurant.restaurantId,

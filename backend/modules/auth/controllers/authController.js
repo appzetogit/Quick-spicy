@@ -20,6 +20,7 @@ import {
   setAuthCookies,
 } from "../../../shared/utils/authCookies.js";
 import winston from "winston";
+import { mintPushScopedToken } from "../../../shared/utils/pushScopedToken.js";
 import { randomInt } from "crypto";
 
 const logger = winston.createLogger({
@@ -495,6 +496,7 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     // Return access token and user info
     return successResponse(res, 200, "Authentication successful", {
+      accessToken: mintPushScopedToken(user._id, "user"),
       user: {
         id: user._id,
         name: user.name,
@@ -763,6 +765,7 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, 200, "Login successful", {
+    accessToken: mintPushScopedToken(user._id, "user"),
     user: {
       id: user._id,
       name: user.name,
@@ -1218,6 +1221,7 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       200,
       "Firebase Google authentication successful",
       {
+        accessToken: mintPushScopedToken(user._id, "user"),
         user: {
           id: user._id,
           name: user.name,

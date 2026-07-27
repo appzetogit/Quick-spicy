@@ -13,6 +13,7 @@ import {
   getRefreshTokenFromRequest,
   setAuthCookies,
 } from '../../../shared/utils/authCookies.js';
+import { mintPushScopedToken } from '../../../shared/utils/pushScopedToken.js';
 import winston from 'winston';
 
 const logger = winston.createLogger({
@@ -241,14 +242,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     // delivery auth middleware will only accept on the FCM registration route. Anything
     // that scrapes it out of localStorage can register a push token and nothing else: no
     // wallet, no orders, no profile. Session auth for web clients stays cookie-only.
-    const pushRegistrationToken = jwtService.generateAccessToken({
-      userId: delivery._id.toString(),
-      role: 'delivery',
-      scope: 'fcm',
-    });
-
     return successResponse(res, 200, 'Authentication successful', {
-      accessToken: pushRegistrationToken,
+      accessToken: mintPushScopedToken(delivery._id, 'delivery'),
       user: {
         id: delivery._id,
         deliveryId: delivery.deliveryId,

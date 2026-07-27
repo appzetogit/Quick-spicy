@@ -52,7 +52,7 @@ export default function RestaurantSignIn() {
       
       if (data.restaurant) {
         // Replace old token with new one (handles cross-module login)
-        setAuthData("restaurant", "cookie-session", data.restaurant)
+        setAuthData("restaurant", data?.accessToken || "cookie-session", data.restaurant)
 
         try {
           await registerWebPushForCurrentModule("/restaurant")

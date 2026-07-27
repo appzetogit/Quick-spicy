@@ -2,6 +2,7 @@ import jwtService from "../services/jwtService.js";
 import User from "../models/User.js";
 import { errorResponse } from "../../../shared/utils/response.js";
 import { getAccessTokenFromRequest } from "../../../shared/utils/authCookies.js";
+import { isPushScopeViolation } from "../../../shared/utils/pushScopedToken.js";
 
 /**
  * Authentication Middleware
@@ -28,6 +29,16 @@ export const authenticate = async (req, res, next) => {
 
     // Verify token
     const decoded = jwtService.verifyAccessToken(token);
+
+    // Push-scoped tokens live in localStorage so the native app can read them, which puts
+    // them within reach of page scripts. Confine them to FCM registration.
+    if (isPushScopeViolation(decoded, req.originalUrl)) {
+      console.warn("🔒 User push-scoped token rejected outside FCM route", {
+        path: req.originalUrl,
+        userId: decoded.userId,
+      });
+      return errorResponse(res, 403, "This token may only be used to register push tokens.");
+    }
 
     // Get user from database
     const user = await User.findById(decoded.userId).select("-password");

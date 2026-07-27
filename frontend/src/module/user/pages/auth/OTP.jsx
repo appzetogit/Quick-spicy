@@ -215,7 +215,7 @@ export default function OTP() {
       sessionStorage.removeItem("userAuthData")
 
       // Replace old token with new one (handles cross-module login)
-      setUserAuthData("user", "cookie-session", user)
+      setUserAuthData("user", data?.accessToken || "cookie-session", user)
 
       try {
         await registerWebPushForCurrentModule("/user")
@@ -294,7 +294,7 @@ export default function OTP() {
       sessionStorage.removeItem("userAuthData")
 
       // Replace old token with new one (handles cross-module login)
-      setUserAuthData("user", "cookie-session", user)
+      setUserAuthData("user", data?.accessToken || "cookie-session", user)
 
       try {
         await registerWebPushForCurrentModule("/user")

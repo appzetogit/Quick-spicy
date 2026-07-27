@@ -2,6 +2,7 @@ import jwtService from '../../auth/services/jwtService.js';
 import Delivery from '../models/Delivery.js';
 import { errorResponse } from '../../../shared/utils/response.js';
 import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
+import { isPushScopeViolation } from '../../../shared/utils/pushScopedToken.js';
 
 /**
  * Delivery Authentication Middleware
@@ -47,7 +48,7 @@ export const authenticate = async (req, res, next) => {
     // Scoped push-registration tokens live in localStorage so the rider APK can read them,
     // which puts them within reach of any script on the page. Confine them to the one route
     // they exist for, so a stolen one cannot touch wallets, orders or profile data.
-    if (decoded.scope === 'fcm' && !String(req.originalUrl || '').includes('/fcm-token')) {
+    if (isPushScopeViolation(decoded, req.originalUrl)) {
       console.warn('🔒 Delivery push-scoped token rejected outside FCM route', {
         path: req.originalUrl,
         deliveryId: decoded.userId,

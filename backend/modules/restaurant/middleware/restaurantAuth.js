@@ -2,6 +2,7 @@ import jwtService from '../../auth/services/jwtService.js';
 import Restaurant from '../models/Restaurant.js';
 import { errorResponse } from '../../../shared/utils/response.js';
 import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
+import { isPushScopeViolation } from '../../../shared/utils/pushScopedToken.js';
 
 /**
  * Restaurant Authentication Middleware
@@ -32,6 +33,16 @@ export const authenticate = async (req, res, next) => {
     // Ensure it's a restaurant token
     if (decoded.role !== 'restaurant') {
       return errorResponse(res, 403, 'Invalid token. Restaurant access required.');
+    }
+
+    // Push-scoped tokens live in localStorage so the native app can read them, which puts
+    // them within reach of page scripts. Confine them to FCM registration.
+    if (isPushScopeViolation(decoded, req.originalUrl)) {
+      console.warn('🔒 Restaurant push-scoped token rejected outside FCM route', {
+        path: req.originalUrl,
+        restaurantId: decoded.userId,
+      });
+      return errorResponse(res, 403, 'This token may only be used to register push tokens.');
     }
 
     // Get restaurant from database
