@@ -160,19 +160,16 @@ const io = new Server(httpServer, {
         console.log(`✅ Socket.IO: Allowing connection from: ${origin}`);
         callback(null, true);
       } else {
-        // In development, allow all localhost origins
-        if (process.env.NODE_ENV !== 'production') {
-          if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
-            console.log(`✅ Socket.IO: Allowing localhost connection from: ${origin}`);
-            return callback(null, true);
-          }
-          // Allow all origins in development for easier debugging
-          console.log(`⚠️ Socket.IO: Allowing connection from: ${origin} (development mode)`);
+        // Localhost only. The old fallback accepted every origin whenever NODE_ENV was not
+        // production, and this server runs with NODE_ENV=development, so any site could open
+        // a socket and receive live order traffic.
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+          console.log(`✅ Socket.IO: Allowing localhost connection from: ${origin}`);
           return callback(null, true);
-        } else {
-          console.error(`❌ Socket.IO: Blocking connection from: ${origin} (not in allowed list)`);
-          callback(new Error('Not allowed by CORS'));
         }
+
+        console.error(`❌ Socket.IO: Blocking connection from: ${origin} (not in allowed list)`);
+        callback(new Error('Not allowed by CORS'));
       }
     },
     methods: ['GET', 'POST', 'OPTIONS'],
@@ -544,7 +541,13 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
+    // Only localhost gets the development exemption. This previously accepted ANY origin
+    // whenever NODE_ENV was not production, and the production server runs with
+    // NODE_ENV=development, so every site on the internet could make credentialed requests
+    // against this API.
+    const isLocalhostOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+
+    if (allowedOrigins.indexOf(origin) !== -1 || isLocalhostOrigin) {
       callback(null, true);
     } else {
       console.warn(`⚠️ CORS blocked origin: ${origin}`);

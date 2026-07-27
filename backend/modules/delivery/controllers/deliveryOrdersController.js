@@ -2356,6 +2356,11 @@ export const completeDelivery = asyncHandler(async (req, res) => {
     }
 
     const orderIdForLog = updatedOrder.orderId || order.orderId || orderMongoId?.toString() || orderId;
+    // Function-scoped: the restaurant wallet block further down also needs this to dedupe
+    // transactions. It used to be declared inside the delivery-wallet try block, so the
+    // later reference threw ReferenceError and every restaurant payout for a completed
+    // delivery was skipped.
+    const orderIdForTransaction = orderMongoId?.toString ? orderMongoId.toString() : orderMongoId;
     console.log(`✅ Order ${orderIdForLog} marked as delivered by delivery partner ${delivery._id}`);
 
     const deliveryDoc = await Delivery.findById(delivery._id).select('availability').lean();
@@ -2464,7 +2469,6 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       let wallet = await DeliveryWallet.findOrCreateByDeliveryId(delivery._id);
       
       // Check if transaction already exists for this order
-      const orderIdForTransaction = orderMongoId?.toString ? orderMongoId.toString() : orderMongoId;
       const existingTransaction = wallet.transactions?.find(
         t => t.orderId && t.orderId.toString() === orderIdForTransaction && (t.type === 'payment' || t.type === 'tip')
       );
