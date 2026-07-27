@@ -388,15 +388,18 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       id: order._id.toString(),
       restaurantId: order.restaurantId,
       restaurantName: order.restaurantName,
-      restaurantLocation: restaurant?.location ? {
+      // Guard on coordinates, not on location: restaurants that were never geocoded carry a
+      // location object with no coordinates, and indexing it threw before any notification
+      // was sent. That silently killed rider dispatch for every order from such a restaurant.
+      restaurantLocation: restaurant?.location?.coordinates?.length >= 2 ? {
         latitude: restaurant.location.coordinates[1],
         longitude: restaurant.location.coordinates[0],
         address: restaurant.location.formattedAddress || restaurant.address || 'Restaurant address'
       } : null,
       customerLocation: {
-        latitude: order.address.location.coordinates[1],
-        longitude: order.address.location.coordinates[0],
-        address: order.address.formattedAddress || `${order.address.street}, ${order.address.city}` || 'Customer address'
+        latitude: order.address?.location?.coordinates?.[1] ?? null,
+        longitude: order.address?.location?.coordinates?.[0] ?? null,
+        address: order.address?.formattedAddress || `${order.address?.street}, ${order.address?.city}` || 'Customer address'
       },
       items: order.items.map(item => ({
         name: item.name,
