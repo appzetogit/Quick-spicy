@@ -376,6 +376,33 @@ const resolveFcmChannel = (channel = null, platform = 'web', headers = {}) => {
   return normalizeSharedFcmChannel(channel, platform, headers);
 };
 
+const persistDeliveryNotificationState = async (deliveryId, mutateFn) => {
+  const delivery = await Delivery.findById(deliveryId);
+  if (!delivery) {
+    return null;
+  }
+
+  await mutateFn(delivery);
+
+  const update = {
+    $set: {
+      notificationDevices: delivery.notificationDevices || [],
+      fcmtokenweb: delivery.fcmtokenweb || null,
+      fcmtokenmobile: delivery.fcmtokenmobile || null,
+    }
+  };
+
+  return Delivery.findByIdAndUpdate(
+    deliveryId,
+    update,
+    {
+      new: true,
+      runValidators: true,
+      select: 'fcmtokenweb fcmtokenmobile notificationDevices'
+    }
+  );
+};
+
 /**
  * Save/update FCM token for authenticated delivery partner
  * POST /api/delivery/auth/fcm-token
@@ -390,41 +417,45 @@ export const saveFcmToken = asyncHandler(async (req, res) => {
   const normalizedToken = String(token).trim();
   const resolvedChannel = resolveFcmChannel(channel, platform, req.headers);
 
-  if (resolvedChannel === 'both') {
-    upsertNotificationDevice(req.delivery, {
-      token: normalizedToken,
-      channel: 'web',
-      platform: 'web',
-      deviceId: deviceId ? `${deviceId}:web` : '',
-      source,
-      headers: req.headers,
-    });
-    upsertNotificationDevice(req.delivery, {
-      token: normalizedToken,
-      channel: 'mobile',
-      platform: String(platform || 'mobile').trim().toLowerCase(),
-      deviceId: deviceId ? `${deviceId}:mobile` : '',
-      source,
-      headers: req.headers,
-    });
-  } else {
-    upsertNotificationDevice(req.delivery, {
-      token: normalizedToken,
-      channel: resolvedChannel,
-      platform,
-      deviceId,
-      source,
-      headers: req.headers,
-    });
-  }
+  const updatedDelivery = await persistDeliveryNotificationState(req.delivery._id, async (delivery) => {
+    if (resolvedChannel === 'both') {
+      upsertNotificationDevice(delivery, {
+        token: normalizedToken,
+        channel: 'web',
+        platform: 'web',
+        deviceId: deviceId ? `${deviceId}:web` : '',
+        source,
+        headers: req.headers,
+      });
+      upsertNotificationDevice(delivery, {
+        token: normalizedToken,
+        channel: 'mobile',
+        platform: String(platform || 'mobile').trim().toLowerCase(),
+        deviceId: deviceId ? `${deviceId}:mobile` : '',
+        source,
+        headers: req.headers,
+      });
+    } else {
+      upsertNotificationDevice(delivery, {
+        token: normalizedToken,
+        channel: resolvedChannel,
+        platform,
+        deviceId,
+        source,
+        headers: req.headers,
+      });
+    }
+  });
 
-  await req.delivery.save();
+  if (!updatedDelivery) {
+    return errorResponse(res, 404, 'Delivery partner not found');
+  }
 
   return successResponse(res, 200, 'FCM token saved successfully', {
     channel: resolvedChannel,
-    fcmtokenweb: req.delivery.fcmtokenweb || null,
-    fcmtokenmobile: req.delivery.fcmtokenmobile || null,
-    notificationDevices: req.delivery.notificationDevices || [],
+    fcmtokenweb: updatedDelivery.fcmtokenweb || null,
+    fcmtokenmobile: updatedDelivery.fcmtokenmobile || null,
+    notificationDevices: updatedDelivery.notificationDevices || [],
   });
 });
 
@@ -437,25 +468,29 @@ export const removeFcmToken = asyncHandler(async (req, res) => {
   const normalizedToken = token ? String(token).trim() : null;
   const resolvedChannel = platform || channel ? resolveFcmChannel(channel, platform, req.headers) : null;
 
-  if (resolvedChannel === 'both' && !normalizedToken && !deviceId) {
-    req.delivery.notificationDevices = [];
-    req.delivery.fcmtokenweb = null;
-    req.delivery.fcmtokenmobile = null;
-  } else {
-    removeNotificationDevice(req.delivery, {
-      token: normalizedToken,
-      platform,
-      channel: resolvedChannel,
-      deviceId,
-      headers: req.headers,
-    });
+  const updatedDelivery = await persistDeliveryNotificationState(req.delivery._id, async (delivery) => {
+    if (resolvedChannel === 'both' && !normalizedToken && !deviceId) {
+      delivery.notificationDevices = [];
+      delivery.fcmtokenweb = null;
+      delivery.fcmtokenmobile = null;
+    } else {
+      removeNotificationDevice(delivery, {
+        token: normalizedToken,
+        platform,
+        channel: resolvedChannel,
+        deviceId,
+        headers: req.headers,
+      });
+    }
+  });
+
+  if (!updatedDelivery) {
+    return errorResponse(res, 404, 'Delivery partner not found');
   }
 
-  await req.delivery.save();
-
   return successResponse(res, 200, 'FCM token removed successfully', {
-    fcmtokenweb: req.delivery.fcmtokenweb || null,
-    fcmtokenmobile: req.delivery.fcmtokenmobile || null,
-    notificationDevices: req.delivery.notificationDevices || [],
+    fcmtokenweb: updatedDelivery.fcmtokenweb || null,
+    fcmtokenmobile: updatedDelivery.fcmtokenmobile || null,
+    notificationDevices: updatedDelivery.notificationDevices || [],
   });
 });
