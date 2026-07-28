@@ -793,7 +793,12 @@ export const createOrder = async (req, res) => {
       assignmentInfo: {
         restaurantId: assignedRestaurantId,
         zoneId: userDetectedZoneId,
-        zoneName: userDetectedZone?.name || userDetectedZone?.zoneName,
+        // Read the name from the same zone the id came from. This previously read
+        // userDetectedZone, which is null whenever the customer's address falls outside
+        // every zone polygon and effectiveUserZone falls back to the restaurant's zone.
+        // The order then carried a valid zoneId with no zoneName, and anything displaying
+        // the name showed the order as having no zone at all.
+        zoneName: effectiveUserZone?.name || effectiveUserZone?.zoneName || null,
         assignedBy: 'zone_match'
       },
       deliveryVerification: {
