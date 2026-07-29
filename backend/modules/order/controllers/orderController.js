@@ -669,12 +669,20 @@ export const createOrder = async (req, res) => {
     }
 
     const providedZoneId = String(req.body?.zoneId || '').trim();
-    const userDetectedZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
-    const providedZoneMatchesRestaurantZone = providedZoneId && providedZoneId === restaurantZone._id.toString();
-    const effectiveUserZone = userDetectedZone || (providedZoneMatchesRestaurantZone ? restaurantZone : null);
+
+    // The zone is resolved from the delivery coordinates alone. A client-supplied zoneId is
+    // never allowed to stand in for that.
+    //
+    // This previously fell back to the restaurant's zone whenever the address matched no
+    // zone but the client had selected the restaurant's zone, which let anyone place an
+    // order from anywhere simply by picking that zone in the app: the mismatch check below
+    // then compared the restaurant's zone against itself and always passed. In production
+    // this admitted orders with delivery addresses up to 648km outside the zone they were
+    // filed under, a third of which were later cancelled after the food had been cooked.
+    const effectiveUserZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
 
     if (!effectiveUserZone) {
-      logger.warn('⚠️ Order blocked: customer is outside active service zones', {
+      logger.warn('⚠️ Order blocked: delivery address is outside every active service zone', {
         userId,
         addressLat,
         addressLng,
@@ -683,7 +691,7 @@ export const createOrder = async (req, res) => {
       });
       return res.status(403).json({
         success: false,
-        message: 'Your delivery address is outside our active service zones.'
+        message: 'We do not deliver to this address yet. Please choose a delivery address inside one of our service areas.'
       });
     }
 
@@ -716,7 +724,9 @@ export const createOrder = async (req, res) => {
     logger.info('✅ Customer zone validated and matched with restaurant zone:', {
       zoneId: userDetectedZoneId,
       zoneName: effectiveUserZone?.name || effectiveUserZone?.zoneName,
-      usedRestaurantZoneFallback: !userDetectedZone && providedZoneMatchesRestaurantZone,
+      // Recorded so a client sending a zone that disagrees with its own coordinates is
+      // visible in the logs. It no longer affects whether the order is accepted.
+      clientZoneDisagreed: Boolean(providedZoneId && providedZoneId !== userDetectedZoneId),
       userId,
       restaurantId: restaurant._id?.toString() || restaurant.restaurantId
     });
