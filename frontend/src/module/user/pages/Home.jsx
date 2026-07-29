@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
+import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import offerImage from "@/assets/offerimage.png"
 import api, { restaurantAPI, zoneAPI } from "@/lib/api"
@@ -943,12 +944,14 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
-  // Zone follows the customer's detected location only. A manual override previously won
-  // here, which let someone browse and order from a zone hundreds of kilometres away; the
-  // restaurant then cooked food it could not deliver and had to cancel. Ordering to another
-  // location belongs in an explicit "order for someone else" flow keyed on the recipient's
-  // delivery address, not in a zone picker that silently changes what the catalogue means.
-  const effectiveZoneId = zoneId
+  // Zone follows the customer's detected location, except when they have explicitly said
+  // they are ordering for someone else and chosen that person's area. That choice is a
+  // deliberate, visible mode rather than the old silent zone picker, and it only changes
+  // what is shown: the order is still validated against the delivery address server-side.
+  const orderForOthers = useOrderForSomeoneElse()
+  const effectiveZoneId = orderForOthers.active && orderForOthers.zoneId
+    ? orderForOthers.zoneId
+    : zoneId
 
   // Fetch real categories from backend API
   useEffect(() => {
@@ -1331,7 +1334,9 @@ export default function Home() {
       // Send the coordinates too. The server resolves the zone from these and ignores a
       // zoneId that disagrees, so out-of-zone restaurants cannot be reached by tampering
       // with the request or by stale client state.
-      if (Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
+      // Skip coordinates while ordering for someone else: the server treats them as
+      // authoritative, which would snap the list back to the customer's own area.
+      if (!orderForOthers.active && Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
         params.latitude = location.latitude
         params.longitude = location.longitude
       }

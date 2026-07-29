@@ -632,6 +632,16 @@ export const getOrders = asyncHandler(async (req, res) => {
         // Zone info from assignmentInfo
         zoneId: order.assignmentInfo?.zoneId || null,
         zoneName: order.assignmentInfo?.zoneName || null,
+        // Who the food is for. On a someone_else order the account holder and the person
+        // receiving it are different people, and support needs both to resolve a dispute.
+        orderType: order.orderType || 'self',
+        recipient: order.orderType === 'someone_else'
+          ? {
+              name: order.recipient?.name || '',
+              phone: order.recipient?.phone || '',
+              note: order.recipient?.note || ''
+            }
+          : null,
         // Refund status from settlement
         refundStatus: refundStatusMap.get(order._id.toString()) || null
       };

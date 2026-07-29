@@ -10,6 +10,7 @@ import Loader from "@/components/Loader"
 // Home & Discovery
 const Home = lazy(() => import("../pages/Home"))
 const Under250 = lazy(() => import("../pages/Under250"))
+const OrderForSomeoneElse = lazy(() => import("../pages/OrderForSomeoneElse"))
 const CategoryPage = lazy(() => import("../pages/CategoryPage"))
 const Restaurants = lazy(() => import("../pages/restaurants/Restaurants"))
 const RestaurantDetails = lazy(() => import("../pages/restaurants/RestaurantDetails"))
@@ -92,6 +93,7 @@ export default function UserRouter() {
           {/* Home & Discovery */}
           <Route path="/" element={<Home />} />
           <Route path="/under-250" element={<Under250 />} />
+          <Route path="/order-for-someone-else" element={<OrderForSomeoneElse />} />
           <Route path="/category/:category" element={<CategoryPage />} />
           <Route path="/restaurants" element={<Restaurants />} />
           <Route path="/restaurants/:slug" element={<RestaurantDetails />} />

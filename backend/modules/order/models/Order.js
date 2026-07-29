@@ -55,6 +55,33 @@ const orderSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Who the food is actually for. 'self' is the ordinary case; 'someone_else' means the
+  // account holder is ordering on behalf of another person, so the rider and the restaurant
+  // must contact the recipient rather than the person who paid.
+  orderType: {
+    type: String,
+    enum: ['self', 'someone_else'],
+    default: 'self',
+    index: true
+  },
+  recipient: {
+    name: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    phone: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    // Free-text note from the orderer, e.g. "call before you reach, it's for my mother".
+    note: {
+      type: String,
+      trim: true,
+      default: ''
+    }
+  },
   restaurantId: {
     type: String,
     required: true

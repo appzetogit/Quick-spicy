@@ -341,6 +341,27 @@ export default function OrdersTable({
                     <div className="flex flex-col">
                       <span className="text-sm font-medium text-slate-700">{order.customerName}</span>
                       <span className="text-xs text-slate-500 mt-0.5">{order.customerPhone}</span>
+                      {/* On a for-someone-else order the account holder above is not the
+                          person receiving the food, and support needs both to resolve a
+                          complaint about a delivery. */}
+                      {order.orderType === "someone_else" && (
+                        <div className="mt-1.5 rounded-md bg-amber-50 border border-amber-200 px-2 py-1">
+                          <span className="block text-[10px] font-semibold uppercase tracking-wide text-amber-700">
+                            For someone else
+                          </span>
+                          <span className="block text-xs font-medium text-amber-900">
+                            {order.recipient?.name || "--"}
+                          </span>
+                          <span className="block text-[11px] text-amber-700">
+                            {order.recipient?.phone || "--"}
+                          </span>
+                          {order.recipient?.note && (
+                            <span className="block text-[11px] italic text-amber-700 mt-0.5">
+                              {order.recipient.note}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </td>
                 )}

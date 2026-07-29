@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom"
-import { Tag, User, Truck } from "lucide-react"
+import { Tag, User, Truck, Users } from "lucide-react"
 
 export default function BottomNavigation() {
   const location = useLocation()
@@ -7,7 +7,8 @@ export default function BottomNavigation() {
   // Check active routes - support both /user/* and /* paths
   const isUnder250 = location.pathname === "/under-250" || location.pathname === "/user/under-250"
   const isProfile = location.pathname.startsWith("/profile") || location.pathname.startsWith("/user/profile")
-  const isDelivery = !isUnder250 && !isProfile && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
+  const isForOthers = location.pathname.startsWith("/user/order-for-someone-else")
+  const isDelivery = !isUnder250 && !isProfile && !isForOthers && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
 
   return (
     <div
@@ -48,6 +49,26 @@ export default function BottomNavigation() {
             Under 250
           </span>
           {isUnder250 && (
+            <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-700 dark:bg-green-500 rounded-b-full" />
+          )}
+        </Link>
+
+        {/* Divider */}
+        <div className="h-8 w-px bg-gray-300 dark:bg-gray-700" />
+
+        {/* Order for someone else */}
+        <Link
+          to="/user/order-for-someone-else"
+          className={`flex flex-col items-center gap-1.5 px-4 sm:px-5 py-2 transition-all duration-200 relative ${isForOthers
+              ? "text-green-700 dark:text-green-500"
+              : "text-gray-600 dark:text-gray-400"
+            }`}
+        >
+          <Users className={`h-5 w-5 ${isForOthers ? "text-green-700 dark:text-green-500" : "text-gray-600 dark:text-gray-400"}`} strokeWidth={2} />
+          <span className={`text-xs sm:text-sm font-medium ${isForOthers ? "text-green-700 dark:text-green-500 font-semibold" : "text-gray-600 dark:text-gray-400"}`}>
+            For Others
+          </span>
+          {isForOthers && (
             <div className="absolute top-0 left-0 right-0 h-0.5 bg-green-700 dark:bg-green-500 rounded-b-full" />
           )}
         </Link>

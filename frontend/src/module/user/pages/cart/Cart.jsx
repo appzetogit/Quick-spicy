@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
 import { useCart } from "../../context/CartContext"
+import { useOrderForSomeoneElse } from "../../hooks/useOrderForSomeoneElse"
 import { useProfile } from "../../context/ProfileContext"
 import { useOrders } from "../../context/OrdersContext"
 import { useLocation as useUserLocation } from "../../hooks/useLocation"
@@ -101,6 +102,7 @@ export default function Cart() {
   const couponCelebrationTimeoutRef = useRef(null)
 
   const cartContext = useCart();
+  const orderForOthers = useOrderForSomeoneElse();
 
   const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant, syncCartRestaurant } = cartContext;
   const { getDefaultAddress, getDefaultPaymentMethod, setDefaultAddress, addresses, paymentMethods, userProfile } = useProfile()
@@ -1682,6 +1684,16 @@ export default function Cart() {
         return;
       }
 
+      if (orderForOthers.active) {
+        const recipientName = String(orderForOthers.recipient?.name || "").trim()
+        const recipientPhone = String(orderForOthers.recipient?.phone || "").replace(/\D/g, "")
+        if (!recipientName || recipientPhone.length < 10) {
+          alert("Please add the name and phone number of the person you're ordering for.")
+          setIsPlacingOrder(false)
+          return
+        }
+      }
+
       const returnUrl = buildSafeReturnUrl("/user/orders", "order_id={order_id}")
 
       const orderPayload = {
@@ -1698,7 +1710,17 @@ export default function Cart() {
         sendCutlery: sendCutlery !== false,
         paymentMethod: effectivePaymentMethod,
         zoneId: finalZoneId,
-        returnUrl
+        returnUrl,
+        // Recorded so the rider and the restaurant contact the person receiving the food
+        // rather than the account holder who paid for it.
+        orderType: orderForOthers.active ? "someone_else" : "self",
+        ...(orderForOthers.active
+          ? { recipient: {
+              name: orderForOthers.recipient?.name || "",
+              phone: orderForOthers.recipient?.phone || "",
+              note: orderForOthers.recipient?.note || "",
+            } }
+          : {}),
       };
       // Log final order details (including paymentMethod for COD debugging)
       debugLog('📤 FINAL: Sending order to backend with:', {
@@ -1831,6 +1853,9 @@ export default function Cart() {
           setPlacedOrderId(order.orderId)
           setShowOrderSuccess(true)
           clearCart()
+          // Leave for-someone-else mode once the order is placed, so the next visit shows
+          // the customer's own area rather than silently staying in someone else's.
+          orderForOthers.clear()
           setIsPlacingOrder(false)
         } else {
           throw new Error(lastPendingMessage || verifyResponse?.data?.message || "Payment verification failed")
@@ -2107,6 +2132,55 @@ export default function Cart() {
                 </button>
               </div>
 
+
+              {/* Recipient details - only when ordering on someone else's behalf.
+                  The rider delivers to and calls this person, not the account holder. */}
+              {orderForOthers.active && (
+                <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-4 rounded-lg md:rounded-xl mb-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-100">
+                        Who is this order for?
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        Delivering to {orderForOthers.zoneName || "another area"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => orderForOthers.clear()}
+                      className="text-xs font-semibold text-[#EB590E] underline whitespace-nowrap"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    <input
+                      value={orderForOthers.recipient?.name || ""}
+                      onChange={(e) => orderForOthers.setRecipient({ name: e.target.value })}
+                      placeholder="Their full name"
+                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] dark:text-gray-100 outline-none focus:border-[#EB590E]"
+                    />
+                    <input
+                      value={orderForOthers.recipient?.phone || ""}
+                      onChange={(e) => orderForOthers.setRecipient({ phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
+                      inputMode="numeric"
+                      placeholder="Their 10-digit phone number"
+                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] dark:text-gray-100 outline-none focus:border-[#EB590E]"
+                    />
+                    <input
+                      value={orderForOthers.recipient?.note || ""}
+                      onChange={(e) => orderForOthers.setRecipient({ note: e.target.value })}
+                      placeholder="Anything the rider should know (optional)"
+                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] dark:text-gray-100 outline-none focus:border-[#EB590E]"
+                    />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Make sure the delivery address above is theirs, not yours.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Note & Cutlery */}
               <div className="bg-white dark:bg-[#1a1a1a] px-4 md:px-6 py-3 md:py-4 rounded-lg md:rounded-xl flex flex-col sm:flex-row gap-2 md:gap-3">

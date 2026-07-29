@@ -2897,8 +2897,18 @@ export default function DeliveryHome() {
                 // so assigning the object here displayed the rider ₹0 for every order.
                 estimatedEarnings: earningsValue || selectedRestaurant?.estimatedEarnings || 0,
                 amount: earningsValue, // Also set amount for compatibility
-                customerName: order.userId?.name || selectedRestaurant?.customerName,
-                customerPhone: order.userId?.phone || selectedRestaurant?.customerPhone || null,
+                // For a for-someone-else order the rider must call the recipient, not the
+                // account holder who paid. Ringing the wrong person is a failed delivery.
+                customerName: (order.orderType === 'someone_else' && order.recipient?.name)
+                  ? order.recipient.name
+                  : (order.userId?.name || selectedRestaurant?.customerName),
+                customerPhone: (order.orderType === 'someone_else' && order.recipient?.phone)
+                  ? order.recipient.phone
+                  : (order.userId?.phone || selectedRestaurant?.customerPhone || null),
+                orderType: order.orderType || 'self',
+                recipientNote: order.recipient?.note || '',
+                orderedByName: order.orderType === 'someone_else' ? (order.userId?.name || '') : '',
+                orderedByPhone: order.orderType === 'someone_else' ? (order.userId?.phone || '') : '',
                 customerAddress: order.address?.formattedAddress || 
                                 (order.address?.street ? `${order.address.street}, ${order.address.city || ''}, ${order.address.state || ''}`.trim() : '') ||
                                 selectedRestaurant?.customerAddress,
@@ -11767,6 +11777,30 @@ selectedRestaurant?.lng || null,
 
           {/* Customer Info */}
           <div className="mb-6">
+            {/* The name above is the recipient on a for-someone-else order, not whoever
+                paid. Say so explicitly, and show who placed it, so the rider is not
+                confused when the person at the door is not the name on the account. */}
+            {selectedRestaurant?.orderType === 'someone_else' && (
+              <div className="mb-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-800">
+                  Ordered for someone else
+                </p>
+                <p className="text-xs text-amber-800 mt-0.5">
+                  Deliver to and call the person named below.
+                </p>
+                {selectedRestaurant?.orderedByName && (
+                  <p className="text-xs text-amber-700 mt-1">
+                    Placed by {selectedRestaurant.orderedByName}
+                    {selectedRestaurant?.orderedByPhone ? ` (${selectedRestaurant.orderedByPhone})` : ''}
+                  </p>
+                )}
+                {selectedRestaurant?.recipientNote && (
+                  <p className="text-xs italic text-amber-800 mt-1">
+                    &ldquo;{selectedRestaurant.recipientNote}&rdquo;
+                  </p>
+                )}
+              </div>
+            )}
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {selectedRestaurant?.customerName || 'Customer Name'}
             </h2>

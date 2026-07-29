@@ -409,8 +409,25 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       total: order.pricing.total,
       totalAmount: order.pricing.total,
       deliveryFee: deliveryFeeFromOrder,
-      customerName: orderWithUser.userId?.name || 'Customer',
-      customerPhone: orderWithUser.userId?.phone || '',
+      // For an order placed on someone else's behalf the rider must contact the recipient,
+      // not the account holder who paid. The orderer is still carried separately below so
+      // support can reach whoever actually placed it.
+      customerName: (order.orderType === 'someone_else' && order.recipient?.name)
+        ? order.recipient.name
+        : (orderWithUser.userId?.name || 'Customer'),
+      customerPhone: (order.orderType === 'someone_else' && order.recipient?.phone)
+        ? order.recipient.phone
+        : (orderWithUser.userId?.phone || ''),
+      orderType: order.orderType || 'self',
+      recipient: order.orderType === 'someone_else' ? {
+        name: order.recipient?.name || '',
+        phone: order.recipient?.phone || '',
+        note: order.recipient?.note || '',
+      } : null,
+      orderedBy: order.orderType === 'someone_else' ? {
+        name: orderWithUser.userId?.name || 'Customer',
+        phone: orderWithUser.userId?.phone || '',
+      } : null,
       status: order.status,
       createdAt: order.createdAt,
       estimatedDeliveryTime: order.estimatedDeliveryTime || 30,
@@ -729,8 +746,25 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
         address: restaurantLocation.formattedAddress || restaurantLocation.address || restaurantAddress,
         formattedAddress: restaurantLocation.formattedAddress || restaurantLocation.address || restaurantAddress
       } : null,
-      customerName: orderWithUser.userId?.name || 'Customer',
-      customerPhone: orderWithUser.userId?.phone || '',
+      // For an order placed on someone else's behalf the rider must contact the recipient,
+      // not the account holder who paid. The orderer is still carried separately below so
+      // support can reach whoever actually placed it.
+      customerName: (order.orderType === 'someone_else' && order.recipient?.name)
+        ? order.recipient.name
+        : (orderWithUser.userId?.name || 'Customer'),
+      customerPhone: (order.orderType === 'someone_else' && order.recipient?.phone)
+        ? order.recipient.phone
+        : (orderWithUser.userId?.phone || ''),
+      orderType: order.orderType || 'self',
+      recipient: order.orderType === 'someone_else' ? {
+        name: order.recipient?.name || '',
+        phone: order.recipient?.phone || '',
+        note: order.recipient?.note || '',
+      } : null,
+      orderedBy: order.orderType === 'someone_else' ? {
+        name: orderWithUser.userId?.name || 'Customer',
+        phone: orderWithUser.userId?.phone || '',
+      } : null,
       deliveryAddress: orderWithUser.address?.address || orderWithUser.address?.location?.address || orderWithUser.address?.formattedAddress,
       customerLocation: orderWithUser.address?.location ? {
         latitude: orderWithUser.address.location.coordinates?.[1],

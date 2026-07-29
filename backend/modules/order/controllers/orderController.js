@@ -345,8 +345,34 @@ export const createOrder = async (req, res) => {
       sendCutlery,
       paymentMethod: bodyPaymentMethod,
       tipAmount: bodyTipAmount,
-      returnUrl
+      returnUrl,
+      orderType: bodyOrderType,
+      recipient: bodyRecipient
     } = req.body;
+
+    // Ordering on behalf of someone else. The delivery address still drives zone validation
+    // below, so this cannot be used to deliver outside a service area: it only records who
+    // the rider and restaurant should be dealing with on arrival.
+    const orderType = String(bodyOrderType || '').trim() === 'someone_else' ? 'someone_else' : 'self';
+    const recipientName = String(bodyRecipient?.name || '').trim();
+    const recipientPhone = String(bodyRecipient?.phone || '').replace(/\D/g, '');
+    const recipientNote = String(bodyRecipient?.note || '').trim();
+
+    if (orderType === 'someone_else') {
+      if (!recipientName) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter the name of the person you're ordering for."
+        });
+      }
+      // The rider has to be able to reach them; a wrong number here is a failed delivery.
+      if (recipientPhone.length < 10) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid phone number for the person you're ordering for."
+        });
+      }
+    }
     // Support both camelCase and snake_case from client
     const paymentMethod = bodyPaymentMethod ?? req.body.payment_method;
 
@@ -800,6 +826,10 @@ export const createOrder = async (req, res) => {
         method: normalizedPaymentMethod,
         status: 'pending'
       },
+      orderType,
+      recipient: orderType === 'someone_else'
+        ? { name: recipientName, phone: recipientPhone, note: recipientNote }
+        : { name: '', phone: '', note: '' },
       assignmentInfo: {
         restaurantId: assignedRestaurantId,
         zoneId: userDetectedZoneId,
