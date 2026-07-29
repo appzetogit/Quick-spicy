@@ -212,9 +212,9 @@ export default function Under250() {
 
     return matchedZone?._id ? String(matchedZone._id) : null
   }, [availableZones, defaultSavedAddress, selectedLocation])
-  const effectiveZoneId = zoneSelection.mode === "manual" && zoneSelection.zoneId
-    ? zoneSelection.zoneId
-    : (zoneId || addressZoneFallbackId)
+  // Detected zone only. A manual override here let customers browse another zone's
+  // restaurants and order food that could never be delivered to them.
+  const effectiveZoneId = zoneId || addressZoneFallbackId
   const navigate = useNavigate()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
   const [activeCategory, setActiveCategory] = useState(null)
@@ -519,7 +519,14 @@ export default function Under250() {
       try {
         setLoadingRestaurants(true)
         const restaurantsResponse = await restaurantAPI.getRestaurants(
-          { zoneId: effectiveZoneId, _ts: Date.now() },
+          {
+            zoneId: effectiveZoneId,
+            // Coordinates win server-side, so a stale or tampered zoneId cannot widen this.
+            ...(Number.isFinite(zoneLookupLocation?.latitude) && Number.isFinite(zoneLookupLocation?.longitude)
+              ? { latitude: zoneLookupLocation.latitude, longitude: zoneLookupLocation.longitude }
+              : {}),
+            _ts: Date.now(),
+          },
           { noCache: true },
         )
         const restaurantsArray = restaurantsResponse?.data?.data?.restaurants || restaurantsResponse?.data?.restaurants || []

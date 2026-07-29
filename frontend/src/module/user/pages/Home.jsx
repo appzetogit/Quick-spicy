@@ -943,9 +943,12 @@ export default function Home() {
   const [showToast, setShowToast] = useState(false)
   const [showManageCollections, setShowManageCollections] = useState(false)
   const [selectedRestaurantSlug, setSelectedRestaurantSlug] = useState(null)
-  const effectiveZoneId = zoneSelection.mode === "manual" && zoneSelection.zoneId
-    ? zoneSelection.zoneId
-    : zoneId
+  // Zone follows the customer's detected location only. A manual override previously won
+  // here, which let someone browse and order from a zone hundreds of kilometres away; the
+  // restaurant then cooked food it could not deliver and had to cancel. Ordering to another
+  // location belongs in an explicit "order for someone else" flow keyed on the recipient's
+  // delivery address, not in a zone picker that silently changes what the catalogue means.
+  const effectiveZoneId = zoneId
 
   // Fetch real categories from backend API
   useEffect(() => {
@@ -1322,13 +1325,18 @@ export default function Home() {
         params.trusted = 'true'
       }
 
-      // Apply either auto-detected zone or the user's manual zone override.
       if (effectiveZoneId) {
         params.zoneId = effectiveZoneId
       }
+      // Send the coordinates too. The server resolves the zone from these and ignores a
+      // zoneId that disagrees, so out-of-zone restaurants cannot be reached by tampering
+      // with the request or by stale client state.
+      if (Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
+        params.latitude = location.latitude
+        params.longitude = location.longitude
+      }
       // Avoid stale API cache in WebView after admin image updates.
       params._ts = Date.now()
-      // Note: We show all restaurants regardless of zone, but apply grayscale styling if user is out of service
 
       debugLog('Fetching restaurants with params:', params)
       const response = await restaurantAPI.getRestaurants(params)
@@ -1776,8 +1784,19 @@ export default function Home() {
         return hasIds && idsInOrder.includes(mongoId) && !existingIds.has(mongoId)
       })
 
+    // Recommendations are admin-curated across the whole platform, so without this they
+    // surface restaurants from other zones that the customer cannot order from.
+    // Recommending food nobody can buy is worse than recommending nothing.
+    const inCurrentZone = (restaurant) => {
+      if (!effectiveZoneId) return true // zone not detected yet; the list is filtered once it is
+      const restaurantZoneId = restaurant?.restaurantZoneId
+      if (!restaurantZoneId) return false // unknown zone is not assumed to be the customer's
+      return String(restaurantZoneId) === String(effectiveZoneId)
+    }
+
     return [...orderedFromSettings, ...fromFetchedMissing]
       .filter(matchesVegMode)
+      .filter(inCurrentZone)
       .slice(0, 12)
   }, [
     recommendedRestaurantIds,
@@ -1785,7 +1804,8 @@ export default function Home() {
     restaurantsData,
     extractImages,
     normalizeImageUrl,
-    matchesVegMode
+    matchesVegMode,
+    effectiveZoneId
   ])
 
   // Featured foods removed - will be handled by restaurants data from API

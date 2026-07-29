@@ -342,11 +342,44 @@ export const getRestaurants = async (req, res) => {
       zoneId // User's zone ID (optional - if provided, filters by zone)
     } = req.query;
     
-    // Optional: Zone-based filtering - if zoneId is provided, validate and filter by zone
+    // Resolve the customer's zone from their coordinates when the app sends them, and let
+    // that win over any zoneId in the query. A customer could otherwise browse another
+    // state's restaurants by picking that zone in the app, order food that could never be
+    // delivered, and leave the restaurant to cancel after cooking.
+    const customerLat = Number(req.query.latitude ?? req.query.lat);
+    const customerLng = Number(req.query.longitude ?? req.query.lng);
+    const hasCustomerCoordinates =
+      Number.isFinite(customerLat) &&
+      Number.isFinite(customerLng) &&
+      !(customerLat === 0 && customerLng === 0);
+
+    let resolvedZoneId = zoneId ? String(zoneId) : null;
+
+    if (hasCustomerCoordinates) {
+      const activeZonesForCustomer = await Zone.find({ isActive: true }).lean();
+      const detectedZoneId = getRestaurantZoneId(customerLat, customerLng, activeZonesForCustomer);
+
+      if (!detectedZoneId) {
+        // Outside every service area: show nothing rather than food that cannot be ordered.
+        return successResponse(res, 200, 'No restaurants available at your location', {
+          restaurants: [],
+          total: 0,
+          outsideServiceArea: true,
+        });
+      }
+
+      if (resolvedZoneId && resolvedZoneId !== detectedZoneId) {
+        console.warn('⚠️ Client zoneId disagrees with the customer coordinates; using coordinates', {
+          clientZoneId: resolvedZoneId,
+          detectedZoneId,
+        });
+      }
+      resolvedZoneId = detectedZoneId;
+    }
+
     let userZone = null;
-    if (zoneId) {
-      // Validate zone exists and is active
-      userZone = await Zone.findById(zoneId).lean();
+    if (resolvedZoneId) {
+      userZone = await Zone.findById(resolvedZoneId).lean();
       if (!userZone || !userZone.isActive) {
         return errorResponse(res, 400, 'Invalid or inactive zone. Please detect your zone again.');
       }
@@ -437,7 +470,9 @@ export const getRestaurants = async (req, res) => {
       .lean();
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
-    const userZoneId = zoneId ? String(zoneId) : null;
+    // resolvedZoneId rather than zoneId: when the app sends coordinates they are
+    // authoritative, so a zone picked in the UI cannot widen what the customer sees.
+    const userZoneId = resolvedZoneId;
     let activeZones = [];
     if (userZoneId) {
       activeZones = await Zone.find({ isActive: true })
@@ -1143,7 +1178,26 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
   // Optimized to avoid per-restaurant menu queries on every request.
   try {
     const { zoneId } = req.query;
-    const userZoneId = zoneId ? String(zoneId) : null;
+
+    // Same rule as the main listing: coordinates decide the zone when the app sends them,
+    // so this page cannot be used to browse another zone's restaurants.
+    const lat = Number(req.query.latitude ?? req.query.lat);
+    const lng = Number(req.query.longitude ?? req.query.lng);
+    let userZoneId = zoneId ? String(zoneId) : null;
+
+    if (Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)) {
+      const activeZonesForCustomer = await Zone.find({ isActive: true }).lean();
+      const detectedZoneId = getRestaurantZoneId(lat, lng, activeZonesForCustomer);
+      if (!detectedZoneId) {
+        return successResponse(res, 200, 'No restaurants available at your location', {
+          restaurants: [],
+          total: 0,
+          outsideServiceArea: true,
+        });
+      }
+      userZoneId = detectedZoneId;
+    }
+
     const MAX_PRICE = 250;
     const MAX_ITEMS_PER_RESTAURANT = 12;
 
