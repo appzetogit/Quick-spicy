@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { useLocationSelector } from "../components/UserLayout"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
+import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
 import { useCart } from "../context/CartContext"
 import { useProfile } from "../context/ProfileContext"
 import PageNavbar from "../components/PageNavbar"
@@ -212,9 +213,11 @@ export default function Under250() {
 
     return matchedZone?._id ? String(matchedZone._id) : null
   }, [availableZones, defaultSavedAddress, selectedLocation])
-  // Detected zone only. A manual override here let customers browse another zone's
-  // restaurants and order food that could never be delivered to them.
-  const effectiveZoneId = zoneId || addressZoneFallbackId
+  // Honour the branch the customer picked on the home page, so this page does not silently
+  // show a different area than the one they are browsing.
+  const orderForOthers = useOrderForSomeoneElse()
+  const chosenBranchZoneId = orderForOthers.zoneId || null
+  const effectiveZoneId = chosenBranchZoneId || zoneId || addressZoneFallbackId
   const navigate = useNavigate()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
   const [activeCategory, setActiveCategory] = useState(null)
@@ -521,8 +524,9 @@ export default function Under250() {
         const restaurantsResponse = await restaurantAPI.getRestaurants(
           {
             zoneId: effectiveZoneId,
-            // Coordinates win server-side, so a stale or tampered zoneId cannot widen this.
-            ...(Number.isFinite(zoneLookupLocation?.latitude) && Number.isFinite(zoneLookupLocation?.longitude)
+            // Coordinates are authoritative server-side, so only send them when the
+            // customer has not picked a branch; otherwise the list snaps back to their area.
+            ...(!chosenBranchZoneId && Number.isFinite(zoneLookupLocation?.latitude) && Number.isFinite(zoneLookupLocation?.longitude)
               ? { latitude: zoneLookupLocation.latitude, longitude: zoneLookupLocation.longitude }
               : {}),
             _ts: Date.now(),

@@ -3,14 +3,16 @@ import { useCallback, useEffect, useState } from "react"
 /**
  * "Order for someone else" mode.
  *
- * Restaurant visibility normally follows the customer's GPS zone, because letting people
- * browse any zone is what produced orders from hundreds of kilometres away that restaurants
- * had to cancel after cooking. This mode is the sanctioned exception: the customer states up
- * front that they are ordering for another person, picks that person's zone, and supplies
- * the recipient's details at checkout.
+ * Two separate things live here, and conflating them was a mistake worth spelling out.
  *
- * It only widens what is *shown*. The order itself is still validated against the delivery
- * address on the server, so nothing here can place an undeliverable order.
+ * `zoneId` is simply the branch being browsed. Customers may switch branch freely; browsing
+ * another area is harmless because order creation independently resolves the zone from the
+ * delivery address, so an undeliverable order is refused at checkout regardless.
+ *
+ * `active` means the customer said they are ordering for somebody else, which is what makes
+ * checkout ask for the recipient's name and number. Browsing a branch must not imply that:
+ * someone looking at another town out of curiosity should not be asked who they are buying
+ * for.
  */
 const STORAGE_KEY = "orderForSomeoneElse"
 const CHANGE_EVENT = "orderForSomeoneElseChanged"
@@ -61,8 +63,19 @@ export function useOrderForSomeoneElse() {
     }
   }, [])
 
+  // Explicit "ordering for someone else": browse that branch AND collect recipient details.
   const startForZone = useCallback((zoneId, zoneName = "") => {
     write({ ...read(), active: true, zoneId: zoneId ? String(zoneId) : null, zoneName })
+  }, [])
+
+  // Plain branch switching from the home page. Changes what is shown and nothing else.
+  const setBrowseZone = useCallback((zoneId, zoneName = "") => {
+    write({ ...read(), active: false, zoneId: zoneId ? String(zoneId) : null, zoneName })
+  }, [])
+
+  // Back to the customer's own detected area.
+  const clearBrowseZone = useCallback(() => {
+    write({ ...read(), active: false, zoneId: null, zoneName: "" })
   }, [])
 
   const setRecipient = useCallback((recipient) => {
@@ -73,7 +86,7 @@ export function useOrderForSomeoneElse() {
   // yourself rather than silently staying in another zone.
   const clear = useCallback(() => write(EMPTY), [])
 
-  return { ...state, startForZone, setRecipient, clear }
+  return { ...state, startForZone, setBrowseZone, clearBrowseZone, setRecipient, clear }
 }
 
 export default useOrderForSomeoneElse

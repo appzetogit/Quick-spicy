@@ -949,9 +949,12 @@ export default function Home() {
   // deliberate, visible mode rather than the old silent zone picker, and it only changes
   // what is shown: the order is still validated against the delivery address server-side.
   const orderForOthers = useOrderForSomeoneElse()
-  const effectiveZoneId = orderForOthers.active && orderForOthers.zoneId
-    ? orderForOthers.zoneId
-    : zoneId
+  // A branch the customer picked wins over the detected one, whether they picked it to
+  // browse or as part of ordering for someone else. Browsing elsewhere is safe on its own:
+  // order creation resolves the zone from the delivery address, so an undeliverable order
+  // is still refused at checkout.
+  const chosenBranchZoneId = orderForOthers.zoneId || null
+  const effectiveZoneId = chosenBranchZoneId || zoneId
 
   // Fetch real categories from backend API
   useEffect(() => {
@@ -1174,12 +1177,12 @@ export default function Home() {
     const nextValue = String(event.target.value || "")
     if (nextValue === "auto") {
       setZoneSelection({ mode: "auto", zoneId: "" })
-      orderForOthers.clear()
+      orderForOthers.clearBrowseZone()
       return
     }
     const chosen = availableZones.find((item) => String(item?._id || "") === nextValue)
     setZoneSelection({ mode: "manual", zoneId: nextValue })
-    orderForOthers.startForZone(
+    orderForOthers.setBrowseZone(
       nextValue,
       chosen?.name || chosen?.zoneName || chosen?.serviceLocation || "Selected area",
     )
@@ -1195,7 +1198,7 @@ export default function Home() {
       </div>
       <div className="relative flex items-center min-w-[120px]">
         <select
-          value={orderForOthers.active && orderForOthers.zoneId ? orderForOthers.zoneId : "auto"}
+          value={chosenBranchZoneId || "auto"}
           onChange={handleZoneSelectionChange}
           disabled={loadingAvailableZones}
           className="w-full pr-6 border-0 bg-transparent py-0 pl-0 text-xs font-bold text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0 cursor-pointer appearance-none"
@@ -1342,12 +1345,10 @@ export default function Home() {
       if (effectiveZoneId) {
         params.zoneId = effectiveZoneId
       }
-      // Send the coordinates too. The server resolves the zone from these and ignores a
-      // zoneId that disagrees, so out-of-zone restaurants cannot be reached by tampering
-      // with the request or by stale client state.
-      // Skip coordinates while ordering for someone else: the server treats them as
-      // authoritative, which would snap the list back to the customer's own area.
-      if (!orderForOthers.active && Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
+      // Coordinates are only sent when the customer has NOT picked a branch. The server
+      // treats them as authoritative, so sending them alongside a chosen branch snapped the
+      // list straight back to the customer's own area and the picker appeared to do nothing.
+      if (!chosenBranchZoneId && Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
         params.latitude = location.latitude
         params.longitude = location.longitude
       }
@@ -1543,7 +1544,7 @@ export default function Home() {
       setLoadingRestaurants(false)
       debugLog('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [normalizeImageUrl, effectiveZoneId, extractImages, buildRestaurantImageCandidates])
+  }, [normalizeImageUrl, effectiveZoneId, chosenBranchZoneId, location, extractImages, buildRestaurantImageCandidates])
 
   const applyFiltersAndRefetch = useCallback(async (
     nextActiveFilters = activeFilters,
@@ -2679,7 +2680,7 @@ export default function Home() {
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
               <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
-                {filteredRestaurants.length} Restaurants {orderForOthers.active ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
+                {filteredRestaurants.length} Restaurants {chosenBranchZoneId ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
               </h2>
               <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
             </div>
