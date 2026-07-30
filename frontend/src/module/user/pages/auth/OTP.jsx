@@ -179,7 +179,11 @@ export default function OTP() {
       const email = authData?.method === "email" ? authData.email : null
       const purpose = authData?.isSignUp ? "register" : "login"
       const providedName = authData?.isSignUp ? authData?.name || null : null
-      const referralCode = authData?.isSignUp ? authData?.referralCode : null
+      // Sent regardless of isSignUp, which this flow never sets: users register through the
+      // login path and are auto-created there. The server only resolves a referrer for a
+      // brand-new user and marks the reward granted once, so passing it on an ordinary login
+      // is harmless.
+      const referralCode = authData?.referralCode || null
 
       // First attempt: verify OTP for login/register with user role
       const response = await authAPI.verifyOTP(
@@ -226,6 +230,8 @@ export default function OTP() {
       // Dispatch custom event for same-tab updates
       window.dispatchEvent(new Event("userAuthChanged"))
 
+      try { sessionStorage.removeItem("pendingReferralCode") } catch { /* private mode */ }
+
       setSuccess(true)
 
       // Redirect to user home after short delay
@@ -269,7 +275,11 @@ export default function OTP() {
       const phone = authData?.method === "phone" ? authData.phone : null
       const email = authData?.method === "email" ? authData.email : null
       const purpose = authData?.isSignUp ? "register" : "login"
-      const referralCode = authData?.isSignUp ? authData?.referralCode : null
+      // Sent regardless of isSignUp, which this flow never sets: users register through the
+      // login path and are auto-created there. The server only resolves a referrer for a
+      // brand-new user and marks the reward granted once, so passing it on an ordinary login
+      // is harmless.
+      const referralCode = authData?.referralCode || null
 
       // Second call with name to auto-register and login
       const response = await authAPI.verifyOTP(

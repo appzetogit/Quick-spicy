@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate, Link, useSearchParams } from "react-router-dom"
 import { AlertCircle, Loader2 } from "lucide-react"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Button } from "@/components/ui/button"
@@ -13,6 +13,21 @@ const debugError = (...args) => {}
 
 export default function SignIn() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
+  // Referral links look like /user/auth/sign-in?mode=signup&ref=CODE. The code was never
+  // read here and authData hardcoded null, so no referral has ever reached the backend and
+  // not one reward has been paid. Stored so it survives the hop to the OTP screen, and
+  // remembered across a reload in case the customer opens the link and comes back later.
+  const referralCodeFromLink = (() => {
+    const fromUrl = String(searchParams.get("ref") || "").trim().toUpperCase()
+    if (fromUrl) {
+      try { sessionStorage.setItem("pendingReferralCode", fromUrl) } catch { /* private mode */ }
+      return fromUrl
+    }
+    try { return String(sessionStorage.getItem("pendingReferralCode") || "").trim().toUpperCase() } catch { return "" }
+  })()
+
 
   const [formData, setFormData] = useState({
     phone: "",
@@ -62,7 +77,7 @@ export default function SignIn() {
         phone: fullPhone,
         email: null,
         name: null,
-        referralCode: null,
+        referralCode: referralCodeFromLink || null,
         isSignUp: false,
         module: "user",
       }
