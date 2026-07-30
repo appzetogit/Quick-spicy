@@ -1165,14 +1165,25 @@ export default function Home() {
     }
   }, [availableZones, zoneSelection])
 
+  // Picking a branch here means "deliver to that area", which is only legitimate when the
+  // food is for someone who lives there. It therefore drives the same for-someone-else mode
+  // as the For Others tab, so checkout still collects the recipient's name and number.
+  // Filtering the catalogue without that step is what let a customer in one state order from
+  // another and left the restaurant to cancel after cooking.
   const handleZoneSelectionChange = useCallback((event) => {
     const nextValue = String(event.target.value || "")
     if (nextValue === "auto") {
       setZoneSelection({ mode: "auto", zoneId: "" })
+      orderForOthers.clear()
       return
     }
+    const chosen = availableZones.find((item) => String(item?._id || "") === nextValue)
     setZoneSelection({ mode: "manual", zoneId: nextValue })
-  }, [])
+    orderForOthers.startForZone(
+      nextValue,
+      chosen?.name || chosen?.zoneName || chosen?.serviceLocation || "Selected area",
+    )
+  }, [availableZones, orderForOthers])
 
   const renderZoneSelectorControl = () => (
     <div className="flex items-center gap-2 bg-white dark:bg-[#151515] hover:bg-gray-50 dark:hover:bg-[#1d1d1d] border border-gray-200 dark:border-gray-800 rounded-full px-4 py-2 shadow-sm transition-all duration-300">
@@ -1184,7 +1195,7 @@ export default function Home() {
       </div>
       <div className="relative flex items-center min-w-[120px]">
         <select
-          value={zoneSelection.mode === "manual" && zoneSelection.zoneId ? zoneSelection.zoneId : "auto"}
+          value={orderForOthers.active && orderForOthers.zoneId ? orderForOthers.zoneId : "auto"}
           onChange={handleZoneSelectionChange}
           disabled={loadingAvailableZones}
           className="w-full pr-6 border-0 bg-transparent py-0 pl-0 text-xs font-bold text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0 cursor-pointer appearance-none"
@@ -2668,7 +2679,7 @@ export default function Home() {
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
               <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
-                {filteredRestaurants.length} Restaurants {zoneSelection.mode === "manual" ? `in ${selectedZoneLabel}` : "delivering to you"}
+                {filteredRestaurants.length} Restaurants {orderForOthers.active ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
               </h2>
               <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
             </div>
