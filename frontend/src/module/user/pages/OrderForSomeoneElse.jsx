@@ -232,8 +232,14 @@ export default function OrderForSomeoneElse() {
                 <div className="space-y-3">
                   {restaurants.map((restaurant) => {
                     const slug = restaurant?.slug || restaurant?._id
+                    // profileImage comes back as { url }, not a string; passing the object
+                    // straight to <img src> rendered nothing at all.
+                    const pick = (v) => (typeof v === "string" ? v : v?.url || v?.secure_url || "")
                     const image =
-                      restaurant?.profileImage || restaurant?.image || restaurant?.coverImage || ""
+                      pick(restaurant?.profileImage) ||
+                      pick(restaurant?.image) ||
+                      pick(Array.isArray(restaurant?.coverImages) ? restaurant.coverImages[0] : restaurant?.coverImages) ||
+                      pick(Array.isArray(restaurant?.menuImages) ? restaurant.menuImages[0] : restaurant?.menuImages)
                     const cuisines = Array.isArray(restaurant?.cuisines) ? restaurant.cuisines.slice(0, 2).join(", ") : ""
                     return (
                       <Link
@@ -254,12 +260,16 @@ export default function OrderForSomeoneElse() {
                             <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-gray-400">{cuisines}</p>
                           )}
                           <div className="mt-1.5 flex items-center gap-3">
-                            {Number(restaurant?.rating) > 0 && (
-                              <span className="flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-gray-300">
-                                <Star className="h-3 w-3 fill-green-600 text-green-600" />
-                                {Number(restaurant.rating).toFixed(1)}
-                              </span>
-                            )}
+                            <span className="flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-gray-300">
+                              {Number(restaurant?.rating) > 0 ? (
+                                <>
+                                  <Star className="h-3 w-3 fill-green-600 text-green-600" />
+                                  {Number(restaurant.rating).toFixed(1)}
+                                </>
+                              ) : (
+                                <span className="text-slate-400">New</span>
+                              )}
+                            </span>
                             {restaurant?.deliveryTime && (
                               <span className="text-xs text-slate-500 dark:text-gray-400">{restaurant.deliveryTime}</span>
                             )}

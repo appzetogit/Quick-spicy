@@ -1469,7 +1469,9 @@ export default function Home() {
             ),
             cuisine: cuisine,
             cuisines: Array.isArray(restaurant.cuisines) ? restaurant.cuisines : [],
-            rating: restaurant.rating || 4.5,
+            // Real value only. This fell back to 4.5, and since no restaurant has been
+            // rated yet that meant every card advertised a 4.5 nobody had given it.
+            rating: Number(restaurant.rating) || 0,
             deliveryTime: deliveryTime,
             distance: distance,
             distanceInKm: distanceInKm, // Store numeric distance for sorting
@@ -1776,7 +1778,7 @@ export default function Home() {
         mongoId: restaurantId,
         name: restaurant?.name || 'Restaurant',
         cuisine,
-        rating: Number(restaurant?.rating) || 4.0,
+        rating: Number(restaurant?.rating) || 0,
         distance: '',
         deliveryTime: '',
         image: normalizeImageUrl(image) || foodImages[0],
@@ -1805,19 +1807,12 @@ export default function Home() {
         return hasIds && idsInOrder.includes(mongoId) && !existingIds.has(mongoId)
       })
 
-    // Recommendations are admin-curated across the whole platform, so without this they
-    // surface restaurants from other zones that the customer cannot order from.
-    // Recommending food nobody can buy is worse than recommending nothing.
-    const inCurrentZone = (restaurant) => {
-      if (!effectiveZoneId) return true // zone not detected yet; the list is filtered once it is
-      const restaurantZoneId = restaurant?.restaurantZoneId
-      if (!restaurantZoneId) return false // unknown zone is not assumed to be the customer's
-      return String(restaurantZoneId) === String(effectiveZoneId)
-    }
-
+    // No zone filter here. Recommendations are now curated per branch and fetched for the
+    // branch being shown, so the server already returns the right ones. Filtering again on
+    // the client emptied the section outright: the landing payload carries no zone field, so
+    // every entry looked like it belonged to another area.
     return [...orderedFromSettings, ...fromFetchedMissing]
       .filter(matchesVegMode)
-      .filter(inCurrentZone)
       .slice(0, 12)
   }, [
     recommendedRestaurantIds,
@@ -2578,7 +2573,7 @@ export default function Home() {
                       <div className="relative h-24 sm:h-28 md:h-32 bg-gray-100">
                         <img src={restaurant.image} alt={restaurant.name} className="w-full h-full object-cover" loading="lazy" />
                         <div className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-white/95 text-[10px] font-semibold text-green-700">
-                          {Number(restaurant.rating || 0).toFixed(1)}
+                          {Number(restaurant.rating) > 0 ? Number(restaurant.rating).toFixed(1) : "New"}
                         </div>
                       </div>
                       <div className="p-2">
