@@ -710,56 +710,6 @@ export default function Home() {
     fetchHeroBanners()
   }, [normalizeImageUrl])
 
-  // Fetch landing page config (categories, explore more, settings)
-  useEffect(() => {
-    const fetchLandingConfig = async () => {
-      try {
-        setLoadingLandingConfig(true)
-        const response = await api.get('/hero-banners/landing/public')
-        if (response.data.success && response.data.data) {
-          const apiCategories = response.data.data.categories || []
-          const apiExploreMore = response.data.data.exploreMore || []
-
-          // Extra safety: only keep active items and ensure order ascending
-          setLandingCategories(
-            apiCategories
-              .filter((c) => c.isActive !== false)
-                .sort((a, b) => (a.order || 0) - (b.order || 0))
-          )
-          setLandingExploreMore(
-            apiExploreMore
-              .filter((e) => e.isActive !== false)
-                .sort((a, b) => (a.order || 0) - (b.order || 0))
-          )
-          setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
-          setHomePopupConfig({
-            enabled: Boolean(response.data.data.settings?.homePopup?.enabled),
-            message: response.data.data.settings?.homePopup?.message || "",
-            imageUrl: normalizeImageUrl(response.data.data.settings?.homePopup?.imageUrl || ""),
-          })
-          setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
-            ? response.data.data.settings.recommendedRestaurantIds
-            : [])
-          setRecommendedRestaurantsFromSettings(Array.isArray(response.data.data.settings?.recommendedRestaurants)
-            ? response.data.data.settings.recommendedRestaurants
-            : [])
-        }
-      } catch (error) {
-        debugError('Error fetching landing config:', error)
-        // Fallback to empty arrays and default heading
-        setLandingCategories([])
-        setLandingExploreMore([])
-        setExploreMoreHeading("Explore More")
-        setHomePopupConfig({ enabled: false, message: "", imageUrl: "" })
-        setRecommendedRestaurantIds([])
-        setRecommendedRestaurantsFromSettings([])
-      } finally {
-        setLoadingLandingConfig(false)
-      }
-    }
-
-    fetchLandingConfig()
-  }, [])
 
   // Keep index within current banner bounds after admin updates/reloads.
   useEffect(() => {
@@ -955,6 +905,60 @@ export default function Home() {
   // is still refused at checkout.
   const chosenBranchZoneId = orderForOthers.zoneId || null
   const effectiveZoneId = chosenBranchZoneId || zoneId
+
+  // Fetch landing page config (categories, explore more, settings)
+  useEffect(() => {
+    const fetchLandingConfig = async () => {
+      try {
+        setLoadingLandingConfig(true)
+        // Recommendations are curated per zone, so ask for the branch being shown.
+        const response = await api.get('/hero-banners/landing/public', {
+          params: effectiveZoneId ? { zoneId: effectiveZoneId } : {},
+        })
+        if (response.data.success && response.data.data) {
+          const apiCategories = response.data.data.categories || []
+          const apiExploreMore = response.data.data.exploreMore || []
+
+          // Extra safety: only keep active items and ensure order ascending
+          setLandingCategories(
+            apiCategories
+              .filter((c) => c.isActive !== false)
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+          )
+          setLandingExploreMore(
+            apiExploreMore
+              .filter((e) => e.isActive !== false)
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+          )
+          setExploreMoreHeading(response.data.data.settings?.exploreMoreHeading || "Explore More")
+          setHomePopupConfig({
+            enabled: Boolean(response.data.data.settings?.homePopup?.enabled),
+            message: response.data.data.settings?.homePopup?.message || "",
+            imageUrl: normalizeImageUrl(response.data.data.settings?.homePopup?.imageUrl || ""),
+          })
+          setRecommendedRestaurantIds(Array.isArray(response.data.data.settings?.recommendedRestaurantIds)
+            ? response.data.data.settings.recommendedRestaurantIds
+            : [])
+          setRecommendedRestaurantsFromSettings(Array.isArray(response.data.data.settings?.recommendedRestaurants)
+            ? response.data.data.settings.recommendedRestaurants
+            : [])
+        }
+      } catch (error) {
+        debugError('Error fetching landing config:', error)
+        // Fallback to empty arrays and default heading
+        setLandingCategories([])
+        setLandingExploreMore([])
+        setExploreMoreHeading("Explore More")
+        setHomePopupConfig({ enabled: false, message: "", imageUrl: "" })
+        setRecommendedRestaurantIds([])
+        setRecommendedRestaurantsFromSettings([])
+      } finally {
+        setLoadingLandingConfig(false)
+      }
+    }
+
+    fetchLandingConfig()
+  }, [effectiveZoneId])
 
   // Fetch real categories from backend API
   useEffect(() => {

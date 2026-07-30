@@ -63,6 +63,10 @@ export default function LandingPageManagement() {
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [recommendedSearchQuery, setRecommendedSearchQuery] = useState("")
+  // "" edits the global fallback; a zone id edits that branch's own list.
+  const [recommendedZoneId, setRecommendedZoneId] = useState("")
+  const [recommendedByZone, setRecommendedByZone] = useState({})
+  const [zonesForRecommended, setZonesForRecommended] = useState([])
 
   // Top 10 Restaurants
   const [top10Restaurants, setTop10Restaurants] = useState([])
@@ -359,12 +363,46 @@ export default function LandingPageManagement() {
       .slice(0, 80)
   }, [allRestaurants, recommendedSearchQuery])
 
+  useEffect(() => {
+    let cancelled = false
+    api
+      .get('/admin/zones', { ...getAuthConfig(), params: { page: 1, limit: 500, isActive: true } })
+      .then((res) => {
+        if (cancelled) return
+        const list = res?.data?.data?.zones || res?.data?.zones || []
+        setZonesForRecommended(Array.isArray(list) ? list : [])
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
+
+  // Ids currently being edited, for whichever scope is selected.
+  const activeRecommendedIds = recommendedZoneId
+    ? (recommendedByZone[recommendedZoneId] || [])
+    : (settings.recommendedRestaurantIds || [])
+
   const recommendedRestaurantsSelected = useMemo(() => {
-    const selectedIds = new Set(settings.recommendedRestaurantIds || [])
-    return allRestaurants.filter((restaurant) => selectedIds.has(restaurant._id))
-  }, [allRestaurants, settings.recommendedRestaurantIds])
+    const selectedIds = new Set(activeRecommendedIds)
+    // Preserve the admin's chosen order: the home page renders them in this sequence.
+    return activeRecommendedIds
+      .map((id) => allRestaurants.find((r) => r._id === id))
+      .filter(Boolean)
+      .concat(allRestaurants.filter((r) => selectedIds.has(r._id) && !activeRecommendedIds.includes(r._id)))
+  }, [allRestaurants, activeRecommendedIds])
 
   const toggleRecommendedRestaurant = (restaurantId) => {
+    if (recommendedZoneId) {
+      setRecommendedByZone((prev) => {
+        const current = prev[recommendedZoneId] || []
+        return {
+          ...prev,
+          [recommendedZoneId]: current.includes(restaurantId)
+            ? current.filter((id) => id !== restaurantId)
+            : [...current, restaurantId],
+        }
+      })
+      return
+    }
     setSettings((prev) => {
       const previousIds = Array.isArray(prev.recommendedRestaurantIds) ? prev.recommendedRestaurantIds : []
       const alreadySelected = previousIds.includes(restaurantId)
@@ -988,6 +1026,12 @@ export default function LandingPageManagement() {
       const response = await api.get('/hero-banners/landing/settings', getAuthConfig())
       if (response.data.success) {
         const nextSettings = response.data.data.settings || {}
+        // Rebuild the per-zone map the editor works against.
+        const byZone = {}
+        for (const row of nextSettings.recommendedRestaurantsByZone || []) {
+          if (row?.zoneId) byZone[String(row.zoneId)] = (row.restaurantIds || []).map(String)
+        }
+        setRecommendedByZone(byZone)
         setSettings({
           exploreMoreHeading: nextSettings.exploreMoreHeading || "Explore More",
           recommendedRestaurantIds: Array.isArray(nextSettings.recommendedRestaurantIds) ? nextSettings.recommendedRestaurantIds : []
@@ -1015,7 +1059,11 @@ export default function LandingPageManagement() {
       setSuccess(null)
       const response = await api.patch('/hero-banners/landing/settings', {
         exploreMoreHeading: settings.exploreMoreHeading,
-        recommendedRestaurantIds: Array.isArray(settings.recommendedRestaurantIds) ? settings.recommendedRestaurantIds : []
+        recommendedRestaurantIds: Array.isArray(settings.recommendedRestaurantIds) ? settings.recommendedRestaurantIds : [],
+        // Zones with an empty selection are omitted, which is how the server clears them.
+        recommendedRestaurantsByZone: Object.entries(recommendedByZone)
+          .filter(([, ids]) => Array.isArray(ids) && ids.length > 0)
+          .map(([zoneId, restaurantIds]) => ({ zoneId, restaurantIds })),
       }, getAuthConfig())
       if (response.data.success) {
         const savedSettings = response.data.data?.settings || {}
@@ -1629,8 +1677,35 @@ export default function LandingPageManagement() {
                   <div>
                     <Label htmlFor="recommended-search">Recommended For You Restaurants</Label>
                     <p className="text-xs text-slate-500 mt-1 mb-2">
-                      Choose multiple restaurants to display below filters on the user home page.
+                      Choose restaurants to show below the filters on the user home page.
+                      Pick a branch to curate that area on its own; customers only ever see
+                      the list for the branch they are browsing.
                     </p>
+
+                    <div className="mb-3">
+                      <Label htmlFor="recommended-zone" className="text-xs">Applies to</Label>
+                      <select
+                        id="recommended-zone"
+                        value={recommendedZoneId}
+                        onChange={(e) => setRecommendedZoneId(e.target.value)}
+                        className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">All zones (fallback)</option>
+                        {zonesForRecommended.map((zone) => {
+                          const count = (recommendedByZone[String(zone._id)] || []).length
+                          return (
+                            <option key={String(zone._id)} value={String(zone._id)}>
+                              {(zone.name || zone.zoneName || "Zone")}{count ? ` - ${count} selected` : " - not set"}
+                            </option>
+                          )
+                        })}
+                      </select>
+                      <p className="text-[11px] text-slate-500 mt-1">
+                        {recommendedZoneId
+                          ? "Branches left unset fall back to the All zones list."
+                          : "Used only for branches that have no list of their own."}
+                      </p>
+                    </div>
 
                     <div className="relative mb-3">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
