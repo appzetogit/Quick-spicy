@@ -2207,6 +2207,22 @@ export const submitOrderReview = async (req, res) => {
 
     await order.save();
 
+    // Roll the review up onto the restaurant. Without this the score was stored on the order
+    // and never surfaced anywhere, leaving every restaurant on 0 despite real ratings.
+    // Failure here must not lose the customer's review, which is already saved.
+    try {
+      const updated = await recalculateRestaurantRating(order.restaurantId);
+      if (updated) {
+        logger.info('Restaurant rating recalculated', {
+          restaurantId: updated.restaurantId,
+          rating: updated.rating,
+          totalRatings: updated.totalRatings,
+        });
+      }
+    } catch (aggregateError) {
+      logger.error(`Failed to recalculate restaurant rating: ${aggregateError.message}`);
+    }
+
     return res.json({
       success: true,
       message: 'Review submitted successfully',
