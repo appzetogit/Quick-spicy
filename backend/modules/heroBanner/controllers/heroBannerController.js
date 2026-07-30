@@ -337,10 +337,15 @@ export const getLandingConfig = async (req, res) => {
         .lean(),
       LandingPageSettings.getSettings(),
     ]);
-    const settings = await settingsDoc.populate(
-      'recommendedRestaurants',
-      'name slug restaurantId rating cuisines profileImage coverImages menuImages'
-    );
+    const settings = await settingsDoc.populate([
+      { path: 'recommendedRestaurants', select: RECOMMENDED_FIELDS },
+      { path: 'recommendedRestaurantsByZone.restaurants', select: RECOMMENDED_FIELDS },
+    ]);
+
+    // The client sends the branch it is showing, so recommendations match the catalogue.
+    const requestedZoneId = String(req.query?.zoneId || '').trim() || null;
+    const { restaurants: zoneRecommendations, source: recommendationSource } =
+      resolveZoneRecommendations(settings, requestedZoneId);
 
     return successResponse(res, 200, 'Landing config retrieved successfully', {
       categories: categories.map(c => withNormalizedImageUrl(c, req)),
@@ -352,24 +357,45 @@ export const getLandingConfig = async (req, res) => {
           message: settings.homePopup?.message || '',
           imageUrl: normalizeImageUrlForResponse(settings.homePopup?.imageUrl, req) || '',
         },
-        recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
-        recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
-          _id: restaurant._id,
-          name: restaurant.name,
-          slug: restaurant.slug,
-          restaurantId: restaurant.restaurantId,
-          rating: restaurant.rating,
-          cuisines: restaurant.cuisines,
-          profileImage: restaurant.profileImage,
-          coverImages: restaurant.coverImages,
-          menuImages: restaurant.menuImages,
-        })),
+        recommendedRestaurantIds: zoneRecommendations.map((restaurant) => String(restaurant._id)),
+        recommendedRestaurants: zoneRecommendations.map(toRecommendedRestaurant),
+        recommendationSource,
       },
     });
   } catch (error) {
     console.error('Error fetching landing config:', error);
     return errorResponse(res, 500, 'Failed to fetch landing config');
   }
+};
+
+
+// Shape a populated restaurant for the landing payloads.
+const toRecommendedRestaurant = (restaurant) => ({
+  _id: restaurant._id,
+  name: restaurant.name,
+  slug: restaurant.slug,
+  restaurantId: restaurant.restaurantId,
+  rating: restaurant.rating,
+  cuisines: restaurant.cuisines,
+  profileImage: restaurant.profileImage,
+  coverImages: restaurant.coverImages,
+  menuImages: restaurant.menuImages,
+});
+
+const RECOMMENDED_FIELDS = 'name slug restaurantId rating cuisines profileImage coverImages menuImages';
+
+// Recommendations for one zone, falling back to the global list when that zone has none.
+// A customer should never be recommended restaurants that cannot deliver to them, so the
+// zone list wins whenever it is configured, even if it is deliberately short.
+const resolveZoneRecommendations = (settings, zoneId) => {
+  if (!zoneId) return { restaurants: settings.recommendedRestaurants || [], source: 'global' };
+  const entry = (settings.recommendedRestaurantsByZone || []).find(
+    (row) => String(row?.zone?._id || row?.zone || '') === String(zoneId),
+  );
+  if (entry && Array.isArray(entry.restaurants) && entry.restaurants.length > 0) {
+    return { restaurants: entry.restaurants, source: 'zone' };
+  }
+  return { restaurants: settings.recommendedRestaurants || [], source: 'global' };
 };
 
 // ==================== LANDING PAGE CATEGORIES (ADMIN) ====================
@@ -757,6 +783,8 @@ export const toggleLandingExploreMoreStatus = async (req, res) => {
 export const getLandingSettings = async (req, res) => {
   try {
     const settingsDoc = await LandingPageSettings.getSettings();
+    await settingsDoc.populate({ path: 'recommendedRestaurantsByZone.restaurants', select: RECOMMENDED_FIELDS });
+    await settingsDoc.populate({ path: 'recommendedRestaurantsByZone.zone', select: 'name zoneName serviceLocation' });
     const settings = await settingsDoc.populate(
       'recommendedRestaurants',
       'name slug restaurantId rating cuisines profileImage coverImages menuImages'
@@ -770,6 +798,12 @@ export const getLandingSettings = async (req, res) => {
           message: settings.homePopup?.message || '',
           imageUrl: normalizeImageUrlForResponse(settings.homePopup?.imageUrl, req) || '',
         },
+        recommendedRestaurantsByZone: (settings.recommendedRestaurantsByZone || []).map((row) => ({
+          zoneId: String(row?.zone?._id || row?.zone || ''),
+          zoneName: row?.zone?.name || row?.zone?.zoneName || row?.zone?.serviceLocation || '',
+          restaurantIds: (row?.restaurants || []).map((restaurant) => String(restaurant._id || restaurant)),
+          restaurants: (row?.restaurants || []).filter((r) => r && r._id).map(toRecommendedRestaurant),
+        })),
         recommendedRestaurantIds: (settings.recommendedRestaurants || []).map((restaurant) => String(restaurant._id)),
         recommendedRestaurants: (settings.recommendedRestaurants || []).map((restaurant) => ({
           _id: restaurant._id,
@@ -906,6 +940,36 @@ export const updateLandingSettings = async (req, res) => {
         .lean();
 
       settings.recommendedRestaurants = existingRestaurants.map((restaurant) => restaurant._id);
+    }
+
+    // Per-zone recommendations. Sent as [{ zoneId, restaurantIds }]. Ids are checked against
+    // the collections rather than trusted, so a stale id from the admin UI cannot leave a
+    // dangling reference that renders as a blank card on the home page. A zone submitted
+    // with an empty list is dropped, which is how an admin clears one.
+    if (Array.isArray(requestBody.recommendedRestaurantsByZone)) {
+      const rows = [];
+      for (const row of requestBody.recommendedRestaurantsByZone) {
+        const zoneId = String(row?.zoneId || row?.zone || '').trim();
+        if (!mongoose.Types.ObjectId.isValid(zoneId)) continue;
+
+        const requestedIds = [
+          ...new Set(
+            (Array.isArray(row?.restaurantIds) ? row.restaurantIds : [])
+              .map((id) => String(id))
+              .filter((id) => mongoose.Types.ObjectId.isValid(id)),
+          ),
+        ];
+        if (requestedIds.length === 0) continue;
+
+        const found = await Restaurant.find({ _id: { $in: requestedIds } }).select('_id').lean();
+        const foundIds = new Set(found.map((r) => String(r._id)));
+        // Preserve the admin's ordering; the home page shows them in this order.
+        const ordered = requestedIds.filter((id) => foundIds.has(id));
+        if (ordered.length > 0) {
+          rows.push({ zone: zoneId, restaurants: ordered });
+        }
+      }
+      settings.recommendedRestaurantsByZone = rows;
     }
 
     await settings.save();

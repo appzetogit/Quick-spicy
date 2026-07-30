@@ -30,9 +30,25 @@ const landingPageSettingsSchema = new mongoose.Schema({
       maxlength: 1000,
     },
   },
+  // Platform-wide fallback, used for zones that have no list of their own.
   recommendedRestaurants: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Restaurant',
+  }],
+  // Per-zone recommendations. A customer browsing Markapur should be recommended Markapur
+  // restaurants; a single global list meant most customers saw places that do not deliver
+  // to them. Kept as its own list per zone rather than a flag on the global one so an admin
+  // can curate each area independently.
+  recommendedRestaurantsByZone: [{
+    zone: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Zone',
+      required: true,
+    },
+    restaurants: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Restaurant',
+    }],
   }],
   updatedAt: {
     type: Date,
