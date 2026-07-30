@@ -356,7 +356,8 @@ export default function SearchResults() {
               "Flat ₹40 OFF above ₹149"
             ]
             const defaultDeliveryTimes = ["25-30 mins", "20-25 mins", "30-35 mins"]
-            const defaultDistances = ["1.2 km", "1 km", "0.8 km"]
+            // Distances come from the API, which computes them from the customer's location.
+            const defaultDistances = ["", "", ""]
             const defaultFeaturedPrice = 249
 
             if (fieldName === 'offer' && defaultOffers.includes(value)) {

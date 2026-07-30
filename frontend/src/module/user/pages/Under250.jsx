@@ -376,7 +376,7 @@ export default function Under250() {
       distance:
         typeof restaurant.distance === "string" && restaurant.distance.trim()
           ? restaurant.distance
-          : "1.2 km",
+          : "",
       menuItems: menuItems.map((item, itemIndex) => ({
         ...item,
         id: item?.id || item?._id || `${restaurantId}-item-${itemIndex}`,

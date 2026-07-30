@@ -545,7 +545,7 @@ function RestaurantDetailsContent() {
             rating: actualRestaurant?.rating || apiRestaurant?.rating || actualRestaurant?.averageRating || apiRestaurant?.averageRating || 4.5,
             reviews: actualRestaurant?.totalRatings || apiRestaurant?.totalRatings || actualRestaurant?.reviewCount || apiRestaurant?.reviewCount || actualRestaurant?.reviews?.length || apiRestaurant?.reviews?.length || 0,
             deliveryTime: actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || "25-30 mins",
-            distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "1.2 km",
+            distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "",
             location: formattedAddress,
             locationObject: locationObj, // Store full location object for reference
             image: normalizedProfileImage?.url
@@ -1814,7 +1814,7 @@ function RestaurantDetailsContent() {
             onClick={() => setShowLocationSheet(true)}
           >
             <MapPin className="h-4 w-4" />
-            <span>{restaurant?.distance || "1.2 km"} · {restaurant?.location || "Location"}</span>
+            <span>{restaurant?.distance ? `${restaurant.distance} · ` : ""}{restaurant?.location || "Location"}</span>
             <ChevronDown className="h-4 w-4 text-gray-500" />
           </div>
 
@@ -2773,7 +2773,7 @@ function RestaurantDetailsContent() {
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <MapPin className="h-3.5 w-3.5" />
-                                  <span>{outlet?.distance || "1.2 km"}</span>
+                                  <span>{outlet?.distance || ""}</span>
                                 </div>
                               </div>
                               <div className="flex flex-col items-end gap-0.5">

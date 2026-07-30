@@ -10,6 +10,28 @@ import mongoose from 'mongoose';
 import { deleteRestaurantRelatedData } from '../services/deleteRestaurantData.js';
 import { escapeRegex } from '../../../shared/utils/regex.js';
 
+// Straight-line distance in km. Good enough for a listing; road distance would need a
+// routing call per restaurant per request.
+const haversineKm = (lat1, lng1, lat2, lng2) => {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
+
+// Restaurants carry coordinates as latitude/longitude, as a GeoJSON pair, or only under
+// onboarding, depending on when they were created.
+const extractRestaurantLatLng = (restaurantLike) => {
+  const loc = restaurantLike?.location || restaurantLike?.onboarding?.step1?.location || {};
+  const lat = Number(loc.latitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[1] : NaN));
+  const lng = Number(loc.longitude ?? (Array.isArray(loc.coordinates) ? loc.coordinates[0] : NaN));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) return { lat: null, lng: null };
+  return { lat, lng };
+};
+
 const toImageObject = (value) => {
   if (!value) return null;
 
@@ -109,6 +131,13 @@ const sanitizePublicRestaurant = (restaurantLike) => {
           pincode: normalizedRestaurant.location.pincode,
           postalCode: normalizedRestaurant.location.postalCode,
           street: normalizedRestaurant.location.street,
+          // Coordinates were stripped here, so the app could not compute a distance and fell
+          // back to a hardcoded one for every restaurant.
+          latitude: normalizedRestaurant.location.latitude ?? null,
+          longitude: normalizedRestaurant.location.longitude ?? null,
+          coordinates: Array.isArray(normalizedRestaurant.location.coordinates)
+            ? normalizedRestaurant.location.coordinates
+            : undefined,
         }
       : null,
     onboarding: normalizedRestaurant.onboarding
@@ -353,6 +382,17 @@ export const getRestaurants = async (req, res) => {
       Number.isFinite(customerLng) &&
       !(customerLat === 0 && customerLng === 0);
 
+    // Distance-only coordinates. When a customer is browsing another branch we must not send
+    // latitude/longitude, because those decide the zone and would snap the list back to their
+    // own area. Distance is still worth showing, so it travels under its own parameter that
+    // never influences which restaurants are returned.
+    const distanceLat = Number(req.query.distanceLat ?? customerLat);
+    const distanceLng = Number(req.query.distanceLng ?? customerLng);
+    const hasDistanceOrigin =
+      Number.isFinite(distanceLat) &&
+      Number.isFinite(distanceLng) &&
+      !(distanceLat === 0 && distanceLng === 0);
+
     let resolvedZoneId = zoneId ? String(zoneId) : null;
 
     if (hasCustomerCoordinates) {
@@ -536,11 +576,28 @@ export const getRestaurants = async (req, res) => {
         ? restaurantZoneId === userZoneId
         : null;
 
+      // Distance from the customer, computed per restaurant. Every restaurant carries a
+      // stored distance of "1.2 km" - a literal seeded on all of them and never calculated -
+      // so the app showed the same figure for every result regardless of where it was.
+      // Only overridden when the customer's coordinates are known; without them there is no
+      // honest distance to show, so the field is left null rather than invented.
+      // ponytail: straight-line distance, which is what a listing needs; road distance would
+      // mean a routing call per restaurant per request.
+      let computedDistance = null;
+      if (hasDistanceOrigin) {
+        const { lat: rLat, lng: rLng } = extractRestaurantLatLng(restaurant);
+        if (Number.isFinite(rLat) && Number.isFinite(rLng)) {
+          const km = haversineKm(distanceLat, distanceLng, rLat, rLng);
+          computedDistance = km >= 1 ? `${km.toFixed(1)} km` : `${Math.round(km * 1000)} m`;
+        }
+      }
+
       return sanitizePublicRestaurant({
         ...normalizedRestaurant,
         deliveryFee: noDeliveryFeeConfigured ? null : resolvedDeliveryFee,
         freeDelivery: isFreeDelivery,
         restaurantZoneId,
+        distance: computedDistance,
         ...(userZoneId ? { isInUserZone } : {}),
       });
     }).filter(Boolean);

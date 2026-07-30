@@ -190,7 +190,7 @@ export default function Gourmet() {
                             <Clock className="h-4 w-4" strokeWidth={1.5} />
                             <span className="font-medium">{restaurant.estimatedDeliveryTime || restaurant.deliveryTime || '25-30 mins'}</span>
                             <span className="mx-1">|</span>
-                            <span className="font-medium">{restaurant.distance || '1.2 km'}</span>
+                            <span className="font-medium">{restaurant.distance || ''}</span>
                           </div>
 
                           {/* Offer Badge */}

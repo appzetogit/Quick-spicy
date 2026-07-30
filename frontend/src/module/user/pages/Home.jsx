@@ -1356,6 +1356,13 @@ export default function Home() {
         params.latitude = location.latitude
         params.longitude = location.longitude
       }
+      // Always send the distance origin, even while browsing another branch. It only feeds
+      // the per-restaurant distance and never decides which restaurants come back, so it
+      // cannot pull the list away from the branch the customer picked.
+      if (Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
+        params.distanceLat = location.latitude
+        params.distanceLng = location.longitude
+      }
       // Avoid stale API cache in WebView after admin image updates.
       params._ts = Date.now()
 
@@ -1397,7 +1404,9 @@ export default function Home() {
           const deliveryTime = restaurant.estimatedDeliveryTime || "25-30 mins"
 
           // Calculate distance from user to restaurant
-          let distance = restaurant.distance || "1.2 km"
+          // No invented fallback: every restaurant stores a literal "1.2 km" that was
+          // never calculated, so defaulting to it showed the same figure for all of them.
+          let distance = restaurant.distance || ""
 
           // Get restaurant coordinates
           const restaurantLocation = restaurant.location

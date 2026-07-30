@@ -85,7 +85,7 @@ export default function Restaurants() {
             cuisine,
             rating: Number(restaurant?.rating || 0) || 4.5,
             deliveryTime: restaurant?.estimatedDeliveryTime || "25-30 mins",
-            distance: restaurant?.distance || "1.2 km",
+            distance: restaurant?.distance || "",
             priceRange: restaurant?.priceRange || "$$",
             image: pickRestaurantImage(restaurant),
             isActive: restaurant?.isActive !== false,
