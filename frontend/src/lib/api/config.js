@@ -434,6 +434,7 @@ export const API_ENDPOINTS = {
     FOOD_APPROVAL_REJECT: "/admin/food-approvals/:id/reject",
     OFFERS: "/admin/offers",
     OFFERS_SWITCH: "/admin/offers/switch",
+    OFFER_BANNERS: "/hero-banners/offer-banners",
     ZONES: "/admin/zones",
     ZONE_BY_ID: "/admin/zones/:id",
     ZONE_STATUS: "/admin/zones/:id/status",

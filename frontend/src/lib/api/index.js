@@ -1335,6 +1335,16 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.OFFERS, { params });
   },
 
+  // Offer banner carousel shown below the categories row.
+  getOfferBanners: () => apiClient.get(API_ENDPOINTS.ADMIN.OFFER_BANNERS),
+  createOfferBanner: (formData) =>
+    apiClient.post(API_ENDPOINTS.ADMIN.OFFER_BANNERS, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  updateOfferBanner: (id, payload) =>
+    apiClient.patch(`${API_ENDPOINTS.ADMIN.OFFER_BANNERS}/${id}`, payload),
+  deleteOfferBanner: (id) => apiClient.delete(`${API_ENDPOINTS.ADMIN.OFFER_BANNERS}/${id}`),
+
   // Platform-wide offers kill switch, toggled from the coupons page.
   getOffersSwitch: () => {
     return apiClient.get(API_ENDPOINTS.ADMIN.OFFERS_SWITCH);

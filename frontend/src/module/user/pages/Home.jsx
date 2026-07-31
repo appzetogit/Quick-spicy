@@ -39,6 +39,7 @@ import {
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
+import OfferBannerCarousel from "../components/OfferBannerCarousel"
 import quickSpicyLogo from "@/assets/quicky-spicy-logo.png"
 import offerImage from "@/assets/offerimage.png"
 import api, { restaurantAPI, zoneAPI } from "@/lib/api"
@@ -2472,6 +2473,11 @@ export default function Home() {
             )}
           </div>
         </motion.section>
+
+        {/* Offer banners - sits directly below the categories row. Scoped to the branch being
+            browsed so a promotion that only runs in one area is not shown elsewhere. Renders
+            nothing when there are no banners. */}
+        <OfferBannerCarousel zoneId={effectiveZoneId} />
 
         {/* Filters */}
         <motion.section

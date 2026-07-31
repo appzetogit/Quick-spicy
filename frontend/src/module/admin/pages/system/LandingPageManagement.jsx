@@ -62,6 +62,13 @@ export default function LandingPageManagement() {
   const [settings, setSettings] = useState({ exploreMoreHeading: "Explore More", recommendedRestaurantIds: [] })
   const [settingsLoading, setSettingsLoading] = useState(true)
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [offerBanners, setOfferBanners] = useState([])
+  const [offerBannersLoading, setOfferBannersLoading] = useState(false)
+  const [offerBannerFile, setOfferBannerFile] = useState(null)
+  const [offerBannerTitle, setOfferBannerTitle] = useState("")
+  const [offerBannerLink, setOfferBannerLink] = useState("")
+  const [offerBannerZoneId, setOfferBannerZoneId] = useState("")
+  const [offerBannerUploading, setOfferBannerUploading] = useState(false)
   const [recommendedSearchQuery, setRecommendedSearchQuery] = useState("")
   // "" edits the global fallback; a zone id edits that branch's own list.
   const [recommendedZoneId, setRecommendedZoneId] = useState("")
@@ -380,6 +387,69 @@ export default function LandingPageManagement() {
   const activeRecommendedIds = recommendedZoneId
     ? (recommendedByZone[recommendedZoneId] || [])
     : (settings.recommendedRestaurantIds || [])
+
+  const fetchOfferBanners = useCallback(async () => {
+    try {
+      setOfferBannersLoading(true)
+      const res = await adminAPI.getOfferBanners()
+      setOfferBanners(res?.data?.data?.banners || [])
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to load offer banners")
+    } finally {
+      setOfferBannersLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (activeTab === "offer-banners") fetchOfferBanners()
+  }, [activeTab, fetchOfferBanners])
+
+  const uploadOfferBanner = async () => {
+    if (!offerBannerFile) {
+      setError("Please choose a banner image")
+      return
+    }
+    try {
+      setOfferBannerUploading(true)
+      setError(null)
+      const form = new FormData()
+      form.append("image", offerBannerFile)
+      form.append("title", offerBannerTitle)
+      form.append("linkUrl", offerBannerLink)
+      if (offerBannerZoneId) form.append("zoneId", offerBannerZoneId)
+      await adminAPI.createOfferBanner(form)
+      setSuccess("Offer banner added")
+      setOfferBannerFile(null)
+      setOfferBannerTitle("")
+      setOfferBannerLink("")
+      setOfferBannerZoneId("")
+      await fetchOfferBanners()
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to upload offer banner")
+    } finally {
+      setOfferBannerUploading(false)
+    }
+  }
+
+  const patchOfferBanner = async (id, payload) => {
+    try {
+      await adminAPI.updateOfferBanner(id, payload)
+      await fetchOfferBanners()
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to update offer banner")
+    }
+  }
+
+  const removeOfferBanner = async (id) => {
+    if (!window.confirm("Delete this offer banner? It will disappear from the app immediately.")) return
+    try {
+      await adminAPI.deleteOfferBanner(id)
+      setSuccess("Offer banner deleted")
+      await fetchOfferBanners()
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to delete offer banner")
+    }
+  }
 
   const recommendedRestaurantsSelected = useMemo(() => {
     const selectedIds = new Set(activeRecommendedIds)
@@ -1317,6 +1387,7 @@ export default function LandingPageManagement() {
   const tabs = [
     { id: 'banners', label: 'Hero Banners', icon: ImageIcon },
     { id: 'under-250', label: '250 Banner', icon: Tag },
+    { id: 'offer-banners', label: 'Offer Banners', icon: Tag },
     { id: 'explore-more', label: 'Explore More', icon: Layout },
   ]
 
@@ -1642,6 +1713,139 @@ export default function LandingPageManagement() {
         )}
 
         {/* Explore More Tab */}
+        {activeTab === 'offer-banners' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-1">Add Offer Banner</h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Shown in a sliding carousel below the categories row on the customer home page.
+              </p>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label htmlFor="offer-banner-file">Banner image</Label>
+                  <Input
+                    id="offer-banner-file"
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setOfferBannerFile(e.target.files?.[0] || null)}
+                    className="mt-1"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Wide images work best; the strip is short.</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="offer-banner-title">Title (for screen readers)</Label>
+                  <Input
+                    id="offer-banner-title"
+                    value={offerBannerTitle}
+                    onChange={(e) => setOfferBannerTitle(e.target.value)}
+                    placeholder="e.g. Flat 20% off this weekend"
+                    className="mt-1"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="offer-banner-link">Opens (optional)</Label>
+                  <Input
+                    id="offer-banner-link"
+                    value={offerBannerLink}
+                    onChange={(e) => setOfferBannerLink(e.target.value)}
+                    placeholder="/user/offers  or  https://..."
+                    className="mt-1"
+                  />
+                  <p className="text-[11px] text-slate-500 mt-1">Leave empty for a banner that is not clickable.</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="offer-banner-zone">Show in</Label>
+                  <select
+                    id="offer-banner-zone"
+                    value={offerBannerZoneId}
+                    onChange={(e) => setOfferBannerZoneId(e.target.value)}
+                    className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All zones</option>
+                    {zonesForRecommended.map((zone) => (
+                      <option key={String(zone._id)} value={String(zone._id)}>
+                        {zone.name || zone.zoneName || "Zone"}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Limit a promotion to one branch so customers elsewhere are not shown an offer they cannot use.
+                  </p>
+                </div>
+              </div>
+
+              <Button onClick={uploadOfferBanner} disabled={offerBannerUploading || !offerBannerFile} className="mt-4">
+                {offerBannerUploading ? "Uploading..." : "Add Banner"}
+              </Button>
+            </div>
+
+            <div className="bg-white rounded-xl border border-slate-200 p-6">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">
+                Offer Banners ({offerBanners.length})
+              </h2>
+
+              {offerBannersLoading && <p className="text-sm text-slate-500 py-6 text-center">Loading...</p>}
+              {!offerBannersLoading && offerBanners.length === 0 && (
+                <p className="text-sm text-slate-500 py-6 text-center">
+                  No offer banners yet. The carousel stays hidden until you add one.
+                </p>
+              )}
+
+              <div className="space-y-3">
+                {offerBanners.map((banner, i) => (
+                  <div key={banner._id} className="flex items-center gap-4 border border-slate-200 rounded-lg p-3">
+                    <img src={banner.imageUrl} alt={banner.title || "Offer banner"} className="h-16 w-28 object-cover rounded-md bg-slate-100" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-800 truncate">{banner.title || "(no title)"}</p>
+                      <p className="text-xs text-slate-500 truncate">{banner.linkUrl || "Not clickable"}</p>
+                      <p className="text-xs text-slate-500">{banner.zoneName ? `Only in ${banner.zoneName}` : "All zones"}</p>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => patchOfferBanner(banner._id, { order: Math.max(0, (banner.order ?? i) - 1) })}
+                        disabled={i === 0}
+                        className="px-2 py-1 text-xs rounded border border-slate-300 disabled:opacity-40"
+                        title="Move earlier"
+                      >
+                        Up
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => patchOfferBanner(banner._id, { order: (banner.order ?? i) + 1 })}
+                        disabled={i === offerBanners.length - 1}
+                        className="px-2 py-1 text-xs rounded border border-slate-300 disabled:opacity-40"
+                        title="Move later"
+                      >
+                        Down
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => patchOfferBanner(banner._id, { isActive: !banner.isActive })}
+                        className={`px-2 py-1 text-xs rounded border ${banner.isActive ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}`}
+                      >
+                        {banner.isActive ? "Live" : "Hidden"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeOfferBanner(banner._id)}
+                        className="px-2 py-1 text-xs rounded border border-red-300 text-red-600"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'explore-more' && (
           <>
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
