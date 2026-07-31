@@ -3,6 +3,7 @@ import LandingPageCategory from '../models/LandingPageCategory.js';
 import LandingPageExploreMore from '../models/LandingPageExploreMore.js';
 import LandingPageSettings from '../models/LandingPageSettings.js';
 import Under250Banner from '../models/Under250Banner.js';
+import OfferBanner from '../models/OfferBanner.js';
 import Top10Restaurant from '../models/Top10Restaurant.js';
 import GourmetRestaurant from '../models/GourmetRestaurant.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
@@ -1667,5 +1668,149 @@ export const toggleGourmetRestaurantStatus = async (req, res) => {
   } catch (error) {
     console.error('Error toggling Gourmet restaurant status:', error);
     return errorResponse(res, 500, 'Failed to update Gourmet restaurant status');
+  }
+};
+
+// ==================== OFFER BANNERS ====================
+// A carousel of promotional banners shown below the categories row on the user home page.
+
+const serializeOfferBanner = (banner, req) => ({
+  _id: banner._id,
+  imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
+  title: banner.title || '',
+  linkUrl: banner.linkUrl || '',
+  zoneId: banner.zone ? String(banner.zone._id || banner.zone) : null,
+  zoneName: banner.zone?.name || banner.zone?.zoneName || '',
+  order: banner.order ?? 0,
+  isActive: banner.isActive !== false,
+});
+
+/**
+ * Public feed for the carousel.
+ * GET /api/hero-banners/offer-banners/public?zoneId=...
+ *
+ * Banners with no zone run everywhere; banners tied to a zone appear only in that branch, so
+ * customers are not shown a promotion they cannot use.
+ */
+export const getOfferBanners = async (req, res) => {
+  try {
+    const zoneId = String(req.query?.zoneId || '').trim();
+    const zoneFilter = mongoose.Types.ObjectId.isValid(zoneId)
+      ? { $or: [{ zone: null }, { zone: new mongoose.Types.ObjectId(zoneId) }] }
+      : { zone: null };
+
+    const banners = await OfferBanner.find({ isActive: true, ...zoneFilter })
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+
+    return successResponse(res, 200, 'Offer banners retrieved successfully', {
+      banners: banners.map((banner) => serializeOfferBanner(banner, req)),
+    });
+  } catch (error) {
+    console.error('Error fetching offer banners:', error);
+    return errorResponse(res, 500, 'Failed to fetch offer banners');
+  }
+};
+
+/** GET /api/hero-banners/offer-banners (admin) - includes inactive ones. */
+export const getAllOfferBanners = async (req, res) => {
+  try {
+    const banners = await OfferBanner.find()
+      .populate('zone', 'name zoneName')
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+
+    return successResponse(res, 200, 'Offer banners retrieved successfully', {
+      banners: banners.map((banner) => serializeOfferBanner(banner, req)),
+    });
+  } catch (error) {
+    console.error('Error fetching offer banners:', error);
+    return errorResponse(res, 500, 'Failed to fetch offer banners');
+  }
+};
+
+/** POST /api/hero-banners/offer-banners (admin, multipart with `image`). */
+export const createOfferBanner = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 400, 'Please choose a banner image');
+    }
+
+    const result = await uploadToCloudinary(req.file.buffer, {
+      folder: 'appzeto/offer-banners',
+      resource_type: 'image',
+    });
+
+    // New banners go to the end of the carousel rather than jumping to the front.
+    const last = await OfferBanner.findOne().sort({ order: -1 }).select('order').lean();
+
+    const zoneId = String(req.body?.zoneId || '').trim();
+
+    const banner = await OfferBanner.create({
+      imageUrl: normalizeImageUrlForResponse(result.secure_url, req),
+      cloudinaryPublicId: result.public_id,
+      title: String(req.body?.title || '').trim(),
+      linkUrl: String(req.body?.linkUrl || '').trim(),
+      zone: mongoose.Types.ObjectId.isValid(zoneId) ? zoneId : null,
+      order: last ? last.order + 1 : 0,
+      isActive: true,
+    });
+
+    return successResponse(res, 201, 'Offer banner created successfully', {
+      banner: serializeOfferBanner(banner, req),
+    });
+  } catch (error) {
+    console.error('Error creating offer banner:', error);
+    return errorResponse(res, 500, 'Failed to create offer banner');
+  }
+};
+
+/** PATCH /api/hero-banners/offer-banners/:id (admin) - title, link, zone, order, status. */
+export const updateOfferBanner = async (req, res) => {
+  try {
+    const banner = await OfferBanner.findById(req.params.id);
+    if (!banner) return errorResponse(res, 404, 'Offer banner not found');
+
+    if (typeof req.body?.title === 'string') banner.title = req.body.title.trim();
+    if (typeof req.body?.linkUrl === 'string') banner.linkUrl = req.body.linkUrl.trim();
+    if (typeof req.body?.isActive === 'boolean') banner.isActive = req.body.isActive;
+    if (Number.isFinite(Number(req.body?.order))) banner.order = Number(req.body.order);
+
+    // An empty string clears the restriction, which is how a banner goes platform-wide.
+    if (req.body?.zoneId !== undefined) {
+      const zoneId = String(req.body.zoneId || '').trim();
+      banner.zone = mongoose.Types.ObjectId.isValid(zoneId) ? zoneId : null;
+    }
+
+    await banner.save();
+    return successResponse(res, 200, 'Offer banner updated successfully', {
+      banner: serializeOfferBanner(banner, req),
+    });
+  } catch (error) {
+    console.error('Error updating offer banner:', error);
+    return errorResponse(res, 500, 'Failed to update offer banner');
+  }
+};
+
+/** DELETE /api/hero-banners/offer-banners/:id (admin). */
+export const deleteOfferBanner = async (req, res) => {
+  try {
+    const banner = await OfferBanner.findById(req.params.id);
+    if (!banner) return errorResponse(res, 404, 'Offer banner not found');
+
+    if (banner.cloudinaryPublicId) {
+      // A failed remote delete must not block removing the banner from the carousel.
+      try {
+        await deleteFromCloudinary(banner.cloudinaryPublicId);
+      } catch (cloudinaryError) {
+        console.warn('Could not delete offer banner image from storage:', cloudinaryError.message);
+      }
+    }
+
+    await OfferBanner.findByIdAndDelete(req.params.id);
+    return successResponse(res, 200, 'Offer banner deleted successfully');
+  } catch (error) {
+    console.error('Error deleting offer banner:', error);
+    return errorResponse(res, 500, 'Failed to delete offer banner');
   }
 };

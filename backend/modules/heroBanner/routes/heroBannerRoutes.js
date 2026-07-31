@@ -21,6 +21,11 @@ import {
   deleteLandingExploreMore,
   updateLandingExploreMoreOrder,
   toggleLandingExploreMoreStatus,
+  getOfferBanners,
+  getAllOfferBanners,
+  createOfferBanner,
+  updateOfferBanner,
+  deleteOfferBanner,
   getLandingSettings,
   updateLandingSettings,
   getUnder250Banners,
@@ -53,6 +58,7 @@ const router = express.Router();
 router.get('/public', getHeroBanners);
 router.get('/landing/public', getLandingConfig);
 
+router.get('/offer-banners/public', getOfferBanners);
 router.get('/under-250/public', getUnder250Banners);
 router.get('/top-10/public', getTop10Restaurants);
 router.get('/gourmet/public', getGourmetRestaurants);
@@ -77,6 +83,12 @@ router.patch('/:id/status', authenticateAdmin, toggleBannerStatus);
 router.patch('/:id/link-restaurants', authenticateAdmin, linkRestaurantsToBanner);
 
 // Admin routes - Landing Page Categories
+// Admin routes - Offer Banners (carousel below the categories row)
+router.get('/offer-banners', authenticateAdmin, getAllOfferBanners);
+router.post('/offer-banners', authenticateAdmin, uploadMiddleware.single('image'), createOfferBanner);
+router.patch('/offer-banners/:id', authenticateAdmin, updateOfferBanner);
+router.delete('/offer-banners/:id', authenticateAdmin, deleteOfferBanner);
+
 router.get('/landing/categories', authenticateAdmin, getLandingCategories);
 router.post(
   '/landing/categories',
