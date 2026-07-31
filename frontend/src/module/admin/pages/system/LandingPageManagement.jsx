@@ -1820,7 +1820,11 @@ export default function LandingPageManagement() {
                   </select>
                 </div>
 
-                <Button onClick={uploadOfferBanner} disabled={offerBannerUploading || !offerBannerFile} className="w-full">
+                <Button
+                  onClick={uploadOfferBanner}
+                  disabled={offerBannerUploading || !offerBannerFile}
+                  className="w-full h-11 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:bg-slate-300 disabled:text-slate-500 disabled:shadow-none"
+                >
                   {offerBannerUploading ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
                   ) : (
