@@ -65,6 +65,7 @@ export default function LandingPageManagement() {
   const [offerBanners, setOfferBanners] = useState([])
   const [offerBannersLoading, setOfferBannersLoading] = useState(false)
   const [offerBannerFile, setOfferBannerFile] = useState(null)
+  const [offerBannerPreview, setOfferBannerPreview] = useState("")
   const [offerBannerTitle, setOfferBannerTitle] = useState("")
   const [offerBannerLink, setOfferBannerLink] = useState("")
   const [offerBannerZoneId, setOfferBannerZoneId] = useState("")
@@ -387,6 +388,16 @@ export default function LandingPageManagement() {
   const activeRecommendedIds = recommendedZoneId
     ? (recommendedByZone[recommendedZoneId] || [])
     : (settings.recommendedRestaurantIds || [])
+
+  useEffect(() => {
+    if (!offerBannerFile) {
+      setOfferBannerPreview("")
+      return undefined
+    }
+    const url = URL.createObjectURL(offerBannerFile)
+    setOfferBannerPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [offerBannerFile])
 
   const fetchOfferBanners = useCallback(async () => {
     try {
@@ -1714,134 +1725,210 @@ export default function LandingPageManagement() {
 
         {/* Explore More Tab */}
         {activeTab === 'offer-banners' && (
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-1">Add Offer Banner</h2>
-              <p className="text-xs text-slate-500 mb-4">
-                Shown in a sliding carousel below the categories row on the customer home page.
-              </p>
+          <div className="grid gap-6 lg:grid-cols-[380px_minmax(0,1fr)] items-start">
 
-              <div className="grid gap-3 md:grid-cols-2">
+            {/* ---------- Create ---------- */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100">
+                <h2 className="text-base font-bold text-slate-900">Add a banner</h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Appears in the sliding row below Categories on the customer home page.
+                </p>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Preview-first picker, so it is obvious an image was chosen */}
                 <div>
-                  <Label htmlFor="offer-banner-file">Banner image</Label>
-                  <Input
+                  <label
+                    htmlFor="offer-banner-file"
+                    className="block cursor-pointer rounded-lg border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/40 transition-colors overflow-hidden"
+                  >
+                    {offerBannerPreview ? (
+                      <div className="relative">
+                        <img src={offerBannerPreview} alt="Selected banner preview" className="w-full h-32 object-cover" />
+                        <span className="absolute bottom-2 right-2 text-[11px] bg-black/70 text-white px-2 py-0.5 rounded">
+                          Click to change
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center">
+                        <Upload className="w-6 h-6 mx-auto text-slate-400" />
+                        <p className="mt-2 text-sm font-medium text-slate-700">Choose banner image</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Wide image, roughly 3:1</p>
+                      </div>
+                    )}
+                  </label>
+                  <input
                     id="offer-banner-file"
                     type="file"
                     accept="image/*"
+                    className="hidden"
                     onChange={(e) => setOfferBannerFile(e.target.files?.[0] || null)}
-                    className="mt-1"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Wide images work best; the strip is short.</p>
+                  {offerBannerFile && (
+                    <button
+                      type="button"
+                      onClick={() => setOfferBannerFile(null)}
+                      className="mt-2 text-xs text-slate-500 hover:text-red-600"
+                    >
+                      Remove image
+                    </button>
+                  )}
                 </div>
 
                 <div>
-                  <Label htmlFor="offer-banner-title">Title (for screen readers)</Label>
+                  <Label htmlFor="offer-banner-title" className="text-xs font-semibold text-slate-700">
+                    Name <span className="font-normal text-slate-400">(helps you find it later)</span>
+                  </Label>
                   <Input
                     id="offer-banner-title"
                     value={offerBannerTitle}
                     onChange={(e) => setOfferBannerTitle(e.target.value)}
-                    placeholder="e.g. Flat 20% off this weekend"
+                    placeholder="Weekend 20% off"
                     className="mt-1"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="offer-banner-link">Opens (optional)</Label>
+                  <Label htmlFor="offer-banner-link" className="text-xs font-semibold text-slate-700">
+                    On tap, open <span className="font-normal text-slate-400">(optional)</span>
+                  </Label>
                   <Input
                     id="offer-banner-link"
                     value={offerBannerLink}
                     onChange={(e) => setOfferBannerLink(e.target.value)}
-                    placeholder="/user/offers  or  https://..."
+                    placeholder="/user/offers"
                     className="mt-1"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Leave empty for a banner that is not clickable.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Leave blank and the banner is just an image.</p>
                 </div>
 
                 <div>
-                  <Label htmlFor="offer-banner-zone">Show in</Label>
+                  <Label htmlFor="offer-banner-zone" className="text-xs font-semibold text-slate-700">Show in</Label>
                   <select
                     id="offer-banner-zone"
                     value={offerBannerZoneId}
                     onChange={(e) => setOfferBannerZoneId(e.target.value)}
                     className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="">All zones</option>
+                    <option value="">Every branch</option>
                     {zonesForRecommended.map((zone) => (
                       <option key={String(zone._id)} value={String(zone._id)}>
-                        {zone.name || zone.zoneName || "Zone"}
+                        Only {zone.name || zone.zoneName || "Zone"}
                       </option>
                     ))}
                   </select>
-                  <p className="text-[11px] text-slate-500 mt-1">
-                    Limit a promotion to one branch so customers elsewhere are not shown an offer they cannot use.
-                  </p>
                 </div>
-              </div>
 
-              <Button onClick={uploadOfferBanner} disabled={offerBannerUploading || !offerBannerFile} className="mt-4">
-                {offerBannerUploading ? "Uploading..." : "Add Banner"}
-              </Button>
+                <Button onClick={uploadOfferBanner} disabled={offerBannerUploading || !offerBannerFile} className="w-full">
+                  {offerBannerUploading ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Uploading...</>
+                  ) : (
+                    <><Upload className="w-4 h-4 mr-2" /> Save banner</>
+                  )}
+                </Button>
+                {!offerBannerFile && (
+                  <p className="text-[11px] text-center text-slate-400">Choose an image to enable saving</p>
+                )}
+              </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">
-                Offer Banners ({offerBanners.length})
-              </h2>
-
-              {offerBannersLoading && <p className="text-sm text-slate-500 py-6 text-center">Loading...</p>}
-              {!offerBannersLoading && offerBanners.length === 0 && (
-                <p className="text-sm text-slate-500 py-6 text-center">
-                  No offer banners yet. The carousel stays hidden until you add one.
-                </p>
-              )}
-
-              <div className="space-y-3">
-                {offerBanners.map((banner, i) => (
-                  <div key={banner._id} className="flex items-center gap-4 border border-slate-200 rounded-lg p-3">
-                    <img src={banner.imageUrl} alt={banner.title || "Offer banner"} className="h-16 w-28 object-cover rounded-md bg-slate-100" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 truncate">{banner.title || "(no title)"}</p>
-                      <p className="text-xs text-slate-500 truncate">{banner.linkUrl || "Not clickable"}</p>
-                      <p className="text-xs text-slate-500">{banner.zoneName ? `Only in ${banner.zoneName}` : "All zones"}</p>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => patchOfferBanner(banner._id, { order: Math.max(0, (banner.order ?? i) - 1) })}
-                        disabled={i === 0}
-                        className="px-2 py-1 text-xs rounded border border-slate-300 disabled:opacity-40"
-                        title="Move earlier"
-                      >
-                        Up
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => patchOfferBanner(banner._id, { order: (banner.order ?? i) + 1 })}
-                        disabled={i === offerBanners.length - 1}
-                        className="px-2 py-1 text-xs rounded border border-slate-300 disabled:opacity-40"
-                        title="Move later"
-                      >
-                        Down
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => patchOfferBanner(banner._id, { isActive: !banner.isActive })}
-                        className={`px-2 py-1 text-xs rounded border ${banner.isActive ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}`}
-                      >
-                        {banner.isActive ? "Live" : "Hidden"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => removeOfferBanner(banner._id)}
-                        className="px-2 py-1 text-xs rounded border border-red-300 text-red-600"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                ))}
+            {/* ---------- List ---------- */}
+            <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">Live banners</h2>
+                  <p className="text-xs text-slate-500 mt-0.5">Customers see them in this order.</p>
+                </div>
+                <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                  {offerBanners.length}
+                </span>
               </div>
+
+              {offerBannersLoading ? (
+                <div className="p-10 text-center text-sm text-slate-500">
+                  <Loader2 className="w-5 h-5 mx-auto animate-spin mb-2" /> Loading...
+                </div>
+              ) : offerBanners.length === 0 ? (
+                <div className="p-12 text-center">
+                  <ImageIcon className="w-8 h-8 mx-auto text-slate-300" />
+                  <p className="mt-3 text-sm font-medium text-slate-700">No banners yet</p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    The carousel stays hidden on the app until you add one.
+                  </p>
+                </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {offerBanners.map((banner, i) => (
+                    <div key={banner._id} className="flex items-center gap-4 p-4">
+                      <span className="text-xs font-mono text-slate-400 w-5 shrink-0">{i + 1}</span>
+
+                      <img
+                        src={banner.imageUrl}
+                        alt={banner.title || "Offer banner"}
+                        className="h-14 w-24 shrink-0 object-cover rounded-md bg-slate-100 border border-slate-200"
+                      />
+
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">
+                          {banner.title || <span className="text-slate-400 font-normal">Untitled</span>}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                          <span className="text-xs text-slate-500 truncate max-w-[220px]">
+                            {banner.linkUrl ? `Opens ${banner.linkUrl}` : "Not clickable"}
+                          </span>
+                          <span className="text-xs text-slate-500">
+                            {banner.zoneName ? `Only ${banner.zoneName}` : "Every branch"}
+                          </span>
+                          <span
+                            className={`text-[11px] font-semibold px-1.5 py-0.5 rounded ${
+                              banner.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                            }`}
+                          >
+                            {banner.isActive ? "Visible" : "Hidden"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => patchOfferBanner(banner._id, { order: Math.max(0, (banner.order ?? i) - 1) })}
+                          disabled={i === 0}
+                          title="Move up"
+                          className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          <ArrowUp className="w-4 h-4 text-slate-600" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => patchOfferBanner(banner._id, { order: (banner.order ?? i) + 1 })}
+                          disabled={i === offerBanners.length - 1}
+                          title="Move down"
+                          className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                        >
+                          <ArrowDown className="w-4 h-4 text-slate-600" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => patchOfferBanner(banner._id, { isActive: !banner.isActive })}
+                          className="px-2.5 py-1 text-xs font-medium rounded border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        >
+                          {banner.isActive ? "Hide" : "Show"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeOfferBanner(banner._id)}
+                          title="Delete banner"
+                          className="p-1.5 rounded hover:bg-red-50"
+                        >
+                          <Trash2 className="w-4 h-4 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
