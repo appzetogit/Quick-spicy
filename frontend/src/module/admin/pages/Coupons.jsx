@@ -516,6 +516,142 @@ export default function Coupons() {
                     <option value="selected">Selected Restaurant</option>
                   </select>
                 </div>
+                {/* Offer Scope. Previously nested two levels deep inside the restaurant
+                    picker, so it was effectively invisible and the feature looked missing.
+                    It now sits beside Restaurant Scope and is always shown, disabled with a
+                    reason when it cannot apply, rather than hidden. */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Product Scope
+                  </label>
+                  {formData.restaurantScope === "selected" && formData.restaurantIds.length === 1 ? (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="mt-3 border-t border-slate-200 pt-3">
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Offer Scope</label>
+                    <select
+                      value={formData.productScope}
+                      onChange={(e) => {
+                        const nextProductScope = e.target.value
+                        setFormData((prev) => ({
+                          ...prev,
+                          productScope: nextProductScope,
+                          selectedProducts: [],
+                        }))
+                        setProductSearch("")
+                        setShowProductSuggestions(false)
+                        if (submitError) setSubmitError("")
+                        if (submitSuccess) setSubmitSuccess("")
+                      }}
+                      className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="all">All Products (Default)</option>
+                      <option value="selected">Selected Products</option>
+                    </select>
+
+                    {formData.productScope === "selected" && (
+                      <div className="mt-3">
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">Select Products</label>
+                        {formData.selectedProducts.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-2">
+                            {formData.selectedProducts.map((prodId) => {
+                              const product = availableProducts.find((p) => String(p.id) === String(prodId))
+                              if (!product) return null
+
+                              return (
+                                <span
+                                  key={prodId}
+                                  className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
+                                >
+                                  {product.name} (₹{product.price})
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        selectedProducts: prev.selectedProducts.filter((id) => String(id) !== String(prodId)),
+                                      }))
+                                    }}
+                                    className="text-blue-700 hover:text-blue-900"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              )
+                            })}
+                          </div>
+                        )}
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={productSearch}
+                            onChange={(e) => {
+                              setProductSearch(e.target.value)
+                              setShowProductSuggestions(true)
+                            }}
+                            onFocus={() => setShowProductSuggestions(true)}
+                            onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
+                            placeholder={loadingProducts ? "Loading products..." : "Search products by name"}
+                            disabled={loadingProducts}
+                            className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          />
+
+                          {showProductSuggestions && !loadingProducts && (
+                            <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                              {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length > 0 ? (
+                                availableProducts
+                                  .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                  .slice(0, 20)
+                                  .map((product) => (
+                                    <button
+                                      key={product.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const alreadySelected = formData.selectedProducts.includes(product.id)
+                                        if (alreadySelected) {
+                                          setShowProductSuggestions(false)
+                                          setProductSearch("")
+                                          return
+                                        }
+
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          selectedProducts: [...prev.selectedProducts, product.id],
+                                        }))
+                                        setProductSearch("")
+                                        setShowProductSuggestions(true)
+                                      }}
+                                      className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50 text-sm font-medium text-slate-900"
+                                    >
+                                      {product.name} (₹{product.price})
+                                    </button>
+                                  ))
+                              ) : (
+                                <div className="px-3 py-2 text-sm text-slate-500">
+                                  No products found
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-3">
+                      <p className="text-sm font-medium text-slate-600">Applies to all products</p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {formData.restaurantScope !== "selected"
+                          ? "Set Restaurant Scope to Selected Restaurant, then pick one restaurant, to limit this offer to specific products."
+                          : formData.restaurantIds.length === 0
+                            ? "Pick one restaurant above to choose specific products."
+                            : "Product lists belong to a single restaurant. Select exactly one to choose specific products."}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">Zone (Optional)</label>
@@ -688,118 +824,6 @@ export default function Coupons() {
                       </p>
                     )}
 
-                    {formData.restaurantIds.length === 1 && (
-                      <div className="mt-3 border-t border-slate-200 pt-3">
-                        <label className="block text-xs font-semibold text-slate-600 mb-1">Offer Scope</label>
-                        <select
-                          value={formData.productScope}
-                          onChange={(e) => {
-                            const nextProductScope = e.target.value
-                            setFormData((prev) => ({
-                              ...prev,
-                              productScope: nextProductScope,
-                              selectedProducts: [],
-                            }))
-                            setProductSearch("")
-                            setShowProductSuggestions(false)
-                            if (submitError) setSubmitError("")
-                            if (submitSuccess) setSubmitSuccess("")
-                          }}
-                          className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="all">All Products (Default)</option>
-                          <option value="selected">Selected Products</option>
-                        </select>
-
-                        {formData.productScope === "selected" && (
-                          <div className="mt-3">
-                            <label className="block text-xs font-semibold text-slate-600 mb-1">Select Products</label>
-                            {formData.selectedProducts.length > 0 && (
-                              <div className="mb-2 flex flex-wrap gap-2">
-                                {formData.selectedProducts.map((prodId) => {
-                                  const product = availableProducts.find((p) => String(p.id) === String(prodId))
-                                  if (!product) return null
-
-                                  return (
-                                    <span
-                                      key={prodId}
-                                      className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700"
-                                    >
-                                      {product.name} (₹{product.price})
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setFormData((prev) => ({
-                                            ...prev,
-                                            selectedProducts: prev.selectedProducts.filter((id) => String(id) !== String(prodId)),
-                                          }))
-                                        }}
-                                        className="text-blue-700 hover:text-blue-900"
-                                      >
-                                        ×
-                                      </button>
-                                    </span>
-                                  )
-                                })}
-                              </div>
-                            )}
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={productSearch}
-                                onChange={(e) => {
-                                  setProductSearch(e.target.value)
-                                  setShowProductSuggestions(true)
-                                }}
-                                onFocus={() => setShowProductSuggestions(true)}
-                                onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
-                                placeholder={loadingProducts ? "Loading products..." : "Search products by name"}
-                                disabled={loadingProducts}
-                                className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-
-                              {showProductSuggestions && !loadingProducts && (
-                                <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
-                                  {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length > 0 ? (
-                                    availableProducts
-                                      .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                                      .slice(0, 20)
-                                      .map((product) => (
-                                        <button
-                                          key={product.id}
-                                          type="button"
-                                          onClick={() => {
-                                            const alreadySelected = formData.selectedProducts.includes(product.id)
-                                            if (alreadySelected) {
-                                              setShowProductSuggestions(false)
-                                              setProductSearch("")
-                                              return
-                                            }
-
-                                            setFormData((prev) => ({
-                                              ...prev,
-                                              selectedProducts: [...prev.selectedProducts, product.id],
-                                            }))
-                                            setProductSearch("")
-                                            setShowProductSuggestions(true)
-                                          }}
-                                          className="block w-full border-b border-slate-100 px-3 py-2 text-left last:border-b-0 hover:bg-slate-50 text-sm font-medium text-slate-900"
-                                        >
-                                          {product.name} (₹{product.price})
-                                        </button>
-                                      ))
-                                  ) : (
-                                    <div className="px-3 py-2 text-sm text-slate-500">
-                                      No products found
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
 
                     {formData.restaurantIds.length > 1 && (
                       <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
