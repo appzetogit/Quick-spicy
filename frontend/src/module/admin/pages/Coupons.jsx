@@ -596,7 +596,7 @@ export default function Coupons() {
                           />
 
                           {showProductSuggestions && !loadingProducts && (
-                            <div className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                            <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
                               {availableProducts.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).length > 0 ? (
                                 availableProducts
                                   .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
@@ -605,7 +605,8 @@ export default function Coupons() {
                                     <button
                                       key={product.id}
                                       type="button"
-                                      onClick={() => {
+                                      onMouseDown={(e) => {
+                                        e.preventDefault()
                                         const alreadySelected = formData.selectedProducts.includes(product.id)
                                         if (alreadySelected) {
                                           setShowProductSuggestions(false)
@@ -761,13 +762,16 @@ export default function Coupons() {
                       />
 
                       {showRestaurantSuggestions && (
-                        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+                        <div className="absolute z-50 mt-1 max-h-56 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg">
                           {restaurantSuggestions.length > 0 ? (
                             restaurantSuggestions.map((restaurant) => (
                               <button
                                 key={restaurant._id}
                                 type="button"
-                                onClick={() => {
+                                // mousedown, not click: the input's onBlur closes this list,
+                                // and blur lands before click, so the click never arrived.
+                                onMouseDown={(e) => {
+                                  e.preventDefault()
                                   const alreadySelected = formData.restaurantIds.some(
                                     (selectedId) => String(selectedId) === String(restaurant._id),
                                   )
