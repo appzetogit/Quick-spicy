@@ -590,6 +590,8 @@ export default function Coupons() {
                             }}
                             onFocus={() => setShowProductSuggestions(true)}
                             onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
+                            autoComplete="off"
+                            name="coupon-product-search"
                             placeholder={loadingProducts ? "Loading products..." : "Search products by name"}
                             disabled={loadingProducts}
                             className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -757,6 +759,8 @@ export default function Coupons() {
                         }}
                         onFocus={() => setShowRestaurantSuggestions(true)}
                         onBlur={() => setTimeout(() => setShowRestaurantSuggestions(false), 200)}
+                        autoComplete="off"
+                        name="coupon-restaurant-search"
                         placeholder="Search restaurant by name, phone, or email"
                         className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
