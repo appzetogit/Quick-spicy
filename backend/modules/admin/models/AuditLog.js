@@ -53,7 +53,12 @@ const auditLogSchema = new mongoose.Schema({
   transactionDetails: {
     amount: Number,
     currency: { type: String, default: 'INR' },
-    type: String,
+    // Declared as { type: String } rather than a bare `type: String`. Mongoose reads a key
+    // named `type` holding a SchemaType as a declaration of the ENCLOSING path, so the bare
+    // form made the whole of transactionDetails a String field. Every write of the intended
+    // object then failed to cast, and because the audit write sits inside the escrow and
+    // wallet paths it took the payout down with it.
+    type: { type: String },
     status: String,
     orderId: {
       type: mongoose.Schema.Types.ObjectId,

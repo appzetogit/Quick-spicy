@@ -24,7 +24,7 @@ export const holdEscrow = async (orderId, userId, amount) => {
     await settlement.save();
 
     // Create audit log
-    await AuditLog.createLog({
+    await safeAuditLog({
       entityType: 'order',
       entityId: orderId,
       action: 'escrow_hold',
@@ -52,6 +52,21 @@ export const holdEscrow = async (orderId, userId, amount) => {
 /**
  * Release escrow and distribute funds after delivery
  */
+/**
+ * Write an audit entry without letting it break the thing being audited.
+ *
+ * These calls sit after the settlement has already been saved, so a throw here reported a
+ * failed escrow release for money that had in fact moved. 1056 orders hit that. Auditing is
+ * a record of the work, not part of it.
+ */
+const safeAuditLog = async (entry) => {
+  try {
+    await AuditLog.createLog(entry);
+  } catch (auditError) {
+    console.error('Audit log write failed (continuing):', auditError.message);
+  }
+};
+
 export const releaseEscrow = async (orderId) => {
   try {
     let settlement = await OrderSettlement.findOne({ orderId });
@@ -123,7 +138,7 @@ export const releaseEscrow = async (orderId) => {
     await settlement.save();
 
     // Create audit log
-    await AuditLog.createLog({
+    await safeAuditLog({
       entityType: 'order',
       entityId: orderId,
       action: 'escrow_release',
@@ -179,7 +194,7 @@ const creditRestaurantWallet = async (restaurantId, orderId, netAmount, orderNum
     await wallet.save();
 
     // Create audit log
-    await AuditLog.createLog({
+    await safeAuditLog({
       entityType: 'restaurant',
       entityId: restaurantId,
       action: 'wallet_credit',
@@ -238,7 +253,7 @@ const creditDeliveryWallet = async (deliveryId, orderId, amount, orderNumber, ti
     await wallet.save();
 
     // Create audit log
-    await AuditLog.createLog({
+    await safeAuditLog({
       entityType: 'delivery',
       entityId: deliveryId,
       action: 'wallet_credit',
@@ -325,7 +340,7 @@ const creditAdminWallet = async (orderId, adminEarning, orderNumber, restaurantI
     await wallet.save();
 
     // Create audit log
-    await AuditLog.createLog({
+    await safeAuditLog({
       entityType: 'order',
       entityId: orderId,
       action: 'admin_wallet_credit',
