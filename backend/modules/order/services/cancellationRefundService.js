@@ -41,6 +41,25 @@ export const calculateCancellationRefund = async (orderId, cancellationReason) =
 
     const settlement = await OrderSettlement.findOne({ orderId });
     if (!settlement) {
+      // A settlement only exists once money has actually been taken. Of 930 cancelled
+      // orders, 922 had none: 517 cash-on-delivery and 397 whose payment never completed.
+      // Nothing was collected, so there is nothing to refund, and treating that as an error
+      // made every such cancellation look like a failure.
+      const paymentStatus = String(order.payment?.status || '').toLowerCase();
+      const moneyWasCollected = ['completed', 'paid', 'success'].includes(paymentStatus);
+
+      if (!moneyWasCollected) {
+        return {
+          cancellationStage: getCancellationStage(order),
+          refundAmount: 0,
+          restaurantCompensation: 0,
+          settlement: null,
+          reason: 'No payment was collected for this order, so there is nothing to refund.'
+        };
+      }
+
+      // Paid but no settlement record is a real inconsistency. Surface it rather than
+      // silently refunding zero on money the customer actually handed over.
       throw new Error('Settlement not found');
     }
 
