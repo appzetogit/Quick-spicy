@@ -168,6 +168,22 @@ export const processCancellationRefund = async (orderId, cancellationReason) => 
 
     const settlement = await OrderSettlement.findOne({ orderId });
     if (!settlement) {
+      // Same reasoning as calculateCancellationRefund: a settlement only exists once money
+      // has been taken. Cash-on-delivery and abandoned payments have none, so there is
+      // nothing to refund and this is not a failure.
+      const paymentStatus = String(order.payment?.status || '').toLowerCase();
+      const moneyWasCollected = ['completed', 'paid', 'success'].includes(paymentStatus);
+
+      if (!moneyWasCollected) {
+        return {
+          cancellationStage: getCancellationStage(order),
+          refundAmount: 0,
+          restaurantCompensation: 0,
+          settlement: null,
+          reason: 'No payment was collected for this order, so there is nothing to refund.'
+        };
+      }
+
       throw new Error('Settlement not found');
     }
 
