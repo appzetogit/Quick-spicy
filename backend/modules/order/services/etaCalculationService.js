@@ -1,5 +1,6 @@
 import googleMapsService from './googleMapsService.js';
 import Order from '../models/Order.js';
+import mongoose from 'mongoose';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Delivery from '../../delivery/models/Delivery.js';
 import OrderEvent from '../models/OrderEvent.js';
@@ -43,8 +44,16 @@ class ETACalculationService {
     } = orderData;
 
     try {
-      // 1. Get restaurant data
-      const restaurant = await Restaurant.findOne({ restaurantId });
+      // 1. Get restaurant data.
+      // Order.restaurantId is a String that usually holds the Mongo _id, but this looked up
+      // the separate human-readable restaurantId field, so the query almost never matched
+      // and 1079 orders were created without an ETA. Match either form, as the order
+      // controller already does.
+      const restaurantKey = String(restaurantId || '').trim();
+      const restaurant = mongoose.Types.ObjectId.isValid(restaurantKey)
+        ? await Restaurant.findById(restaurantKey)
+        : await Restaurant.findOne({ $or: [{ restaurantId: restaurantKey }, { slug: restaurantKey }] });
+
       if (!restaurant) {
         throw new Error('Restaurant not found');
       }
