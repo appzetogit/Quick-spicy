@@ -905,6 +905,19 @@ export default function Home() {
   // order creation resolves the zone from the delivery address, so an undeliverable order
   // is still refused at checkout.
   const chosenBranchZoneId = orderForOthers.zoneId || null
+
+  // A branch picked just for browsing must not outlive the visit. It is kept in
+  // localStorage, and only "Auto detect" or a completed order ever cleared it, so once a
+  // customer switched branch the app pinned that zone forever and auto-detect could never
+  // win it back: they kept seeing another area's restaurants. Ordering for someone else is
+  // deliberate and does persist, so that case is left alone.
+  useEffect(() => {
+    if (!orderForOthers.active && orderForOthers.zoneId) {
+      orderForOthers.clearBrowseZone()
+    }
+    // Mount only: clearing on every change would fight the picker mid-session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const effectiveZoneId = chosenBranchZoneId || zoneId
 
   // Fetch landing page config (categories, explore more, settings)
