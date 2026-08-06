@@ -364,6 +364,8 @@ export default function Home() {
   const isHandlingSwitchOff = useRef(false)
   const heroShellRef = useRef(null)
   const stickyHeaderRef = useRef(null)
+  // Only the newest restaurant request may write its result. See fetchRestaurants.
+  const restaurantsRequestIdRef = useRef(0)
   const slugifyCategory = useCallback((value) => String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -899,10 +901,6 @@ export default function Home() {
   // deliberate, visible mode rather than the old silent zone picker, and it only changes
   // what is shown: the order is still validated against the delivery address server-side.
   const orderForOthers = useOrderForSomeoneElse()
-  // A branch the customer picked wins over the detected one, whether they picked it to
-  // browse or as part of ordering for someone else. Browsing elsewhere is safe on its own:
-  // order creation resolves the zone from the delivery address, so an undeliverable order
-  // is still refused at checkout.
   const chosenBranchZoneId = orderForOthers.zoneId || null
 
   // A branch picked just for browsing must not outlive the visit. It is kept in
@@ -917,10 +915,33 @@ export default function Home() {
     // Mount only: clearing on every change would fight the picker mid-session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
-  const effectiveZoneId = chosenBranchZoneId || zoneId
+
+  // A branch picked from the zone dropdown above still wins: it is cleared on the next
+  // mount by the effect above, so it cannot outlive the visit.
+  //
+  // A pin from "order for someone else" persists by design, and that is what pinned a
+  // customer standing in Indore to an Andhra branch 800km away across every visit, with
+  // nothing on screen saying why. Their own detected zone now wins over it. The choice
+  // still applies where it is expressed - the "order for someone else" screen lists that
+  // branch directly - and it is kept here only as a fallback for customers we cannot
+  // place at all.
+  const sessionBranchZoneId = orderForOthers.active ? null : chosenBranchZoneId
+  // The fallback only applies once detection has actually settled outside every zone.
+  // Using it while zoneStatus is still "loading" leaked the pinned branch's categories and
+  // recommendations into the first paint before the real zone arrived.
+  const fallbackBranchZoneId = zoneStatus === "OUT_OF_SERVICE" ? chosenBranchZoneId : null
+  const effectiveZoneId = sessionBranchZoneId || zoneId || fallbackBranchZoneId
+  // Coordinates are authoritative server-side, so they must be withheld whenever we are
+  // deliberately showing a branch other than the detected one - and only then.
+  const browsingChosenBranch = Boolean(effectiveZoneId) && effectiveZoneId !== zoneId
 
   // Fetch landing page config (categories, explore more, settings)
   useEffect(() => {
+    // The zone can change while a request is in flight - auto-detect resolving, or the
+    // customer switching branch. Without this guard the slower response won, so another
+    // branch's curated recommendations stayed on screen under the customer's own zone.
+    let stale = false
+
     const fetchLandingConfig = async () => {
       try {
         setLoadingLandingConfig(true)
@@ -928,6 +949,7 @@ export default function Home() {
         const response = await api.get('/hero-banners/landing/public', {
           params: effectiveZoneId ? { zoneId: effectiveZoneId } : {},
         })
+        if (stale) return
         if (response.data.success && response.data.data) {
           const apiCategories = response.data.data.categories || []
           const apiExploreMore = response.data.data.exploreMore || []
@@ -957,6 +979,7 @@ export default function Home() {
             : [])
         }
       } catch (error) {
+        if (stale) return
         debugError('Error fetching landing config:', error)
         // Fallback to empty arrays and default heading
         setLandingCategories([])
@@ -966,15 +989,22 @@ export default function Home() {
         setRecommendedRestaurantIds([])
         setRecommendedRestaurantsFromSettings([])
       } finally {
-        setLoadingLandingConfig(false)
+        if (!stale) setLoadingLandingConfig(false)
       }
     }
 
     fetchLandingConfig()
+    return () => {
+      stale = true
+    }
   }, [effectiveZoneId])
 
   // Fetch real categories from backend API
   useEffect(() => {
+    // Same staleness guard as the landing config: a slower response for the previous zone
+    // must not overwrite the current one's categories.
+    let stale = false
+
     const fetchRealCategories = async () => {
       try {
         setLoadingRealCategories(true)
@@ -986,6 +1016,7 @@ export default function Home() {
           params.vegMode = 'true'
         }
         const response = await api.get('/categories/public', { params })
+        if (stale) return
         if (response.data.success && response.data.data.categories) {
           const adminCategories = response.data.data.categories.map(cat => ({
             id: cat.id,
@@ -999,14 +1030,18 @@ export default function Home() {
           setRealCategories([])
         }
       } catch (error) {
+        if (stale) return
         debugError('Error fetching real categories:', error)
         setRealCategories([])
       } finally {
-        setLoadingRealCategories(false)
+        if (!stale) setLoadingRealCategories(false)
       }
     }
 
     fetchRealCategories()
+    return () => {
+      stale = true
+    }
   }, [normalizeImageUrl, effectiveZoneId, vegMode])
 
   // Memoize cartCount to prevent recalculation on every render - use cart directly
@@ -1215,7 +1250,7 @@ export default function Home() {
       </div>
       <div className="relative flex items-center min-w-[120px]">
         <select
-          value={chosenBranchZoneId || "auto"}
+          value={browsingChosenBranch ? effectiveZoneId : "auto"}
           onChange={handleZoneSelectionChange}
           disabled={loadingAvailableZones}
           className="w-full pr-6 border-0 bg-transparent py-0 pl-0 text-xs font-bold text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0 cursor-pointer appearance-none"
@@ -1285,6 +1320,12 @@ export default function Home() {
 
   // Fetch restaurants from API with filters
   const fetchRestaurants = useCallback(async (filters = {}) => {
+    // This runs from several effects and from the filter bar, so a cleanup closure is not
+    // enough: only the newest call may write. Without this, a slow response for the zone
+    // the customer just left could overwrite the list for the zone they are now in.
+    const requestId = ++restaurantsRequestIdRef.current
+    const isStale = () => requestId !== restaurantsRequestIdRef.current
+
     try {
       setLoadingRestaurants(true)
 
@@ -1299,6 +1340,7 @@ export default function Home() {
         debugLog('✅ Backend connection successful')
       } catch (healthError) {
         // Backend connection error - handled silently, toast notifications shown via axios interceptor
+        if (isStale()) return
         setRestaurantsData([])
         setLoadingRestaurants(false)
         return
@@ -1366,6 +1408,7 @@ export default function Home() {
       const haveCoordinates =
         Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)
       if (!effectiveZoneId && !haveCoordinates) {
+        if (isStale()) return
         setRestaurantsData([])
         setLoadingRestaurants(false)
         return
@@ -1374,10 +1417,11 @@ export default function Home() {
       if (effectiveZoneId) {
         params.zoneId = effectiveZoneId
       }
-      // Coordinates are only sent when the customer has NOT picked a branch. The server
-      // treats them as authoritative, so sending them alongside a chosen branch snapped the
-      // list straight back to the customer's own area and the picker appeared to do nothing.
-      if (!chosenBranchZoneId && Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
+      // Coordinates are withheld only while we are actually falling back to a chosen branch.
+      // The server treats them as authoritative, so sending them would snap that fallback
+      // back to the customer's own area and the choice would appear to do nothing. Once we
+      // can place the customer ourselves, their coordinates are exactly what should decide.
+      if (!browsingChosenBranch && Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)) {
         params.latitude = location.latitude
         params.longitude = location.longitude
       }
@@ -1401,6 +1445,7 @@ export default function Home() {
 
         if (restaurantsArray.length === 0) {
           debugWarn('No restaurants found in API response')
+          if (isStale()) return
           setRestaurantsData([])
           setLoadingRestaurants(false)
           return
@@ -1569,9 +1614,11 @@ export default function Home() {
         }
 
         debugLog('Transformed and sorted restaurants:', restaurantsWithOutletTimings)
+        if (isStale()) return
         setRestaurantsData(restaurantsWithOutletTimings)
       } else {
         debugWarn('Invalid API response structure:', response.data)
+        if (isStale()) return
         setRestaurantsData([])
       }
     } catch (error) {
@@ -1579,12 +1626,13 @@ export default function Home() {
       debugError('Error details:', error.response?.data || error.message)
       // Don't set hardcoded data here - let the useMemo fallback handle it
       // This way, if API succeeds later, it will show the real data
+      if (isStale()) return
       setRestaurantsData([])
     } finally {
-      setLoadingRestaurants(false)
+      if (!isStale()) setLoadingRestaurants(false)
       debugLog('Restaurant loading completed. restaurantsData length:', restaurantsData.length)
     }
-  }, [normalizeImageUrl, effectiveZoneId, chosenBranchZoneId, location, extractImages, buildRestaurantImageCandidates])
+  }, [normalizeImageUrl, effectiveZoneId, browsingChosenBranch, location, extractImages, buildRestaurantImageCandidates])
 
   const applyFiltersAndRefetch = useCallback(async (
     nextActiveFilters = activeFilters,
@@ -2718,7 +2766,7 @@ export default function Home() {
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
               <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
-                {filteredRestaurants.length} Restaurants {chosenBranchZoneId ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
+                {filteredRestaurants.length} Restaurants {browsingChosenBranch ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
               </h2>
               <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
             </div>

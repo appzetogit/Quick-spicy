@@ -217,7 +217,13 @@ export default function Under250() {
   // show a different area than the one they are browsing.
   const orderForOthers = useOrderForSomeoneElse()
   const chosenBranchZoneId = orderForOthers.zoneId || null
-  const effectiveZoneId = chosenBranchZoneId || zoneId || addressZoneFallbackId
+  // Same precedence as the home page: a branch picked in this session wins, but a pin left
+  // behind by "order for someone else" must not outrank the customer's own detected zone.
+  const sessionBranchZoneId = orderForOthers.active ? null : chosenBranchZoneId
+  // Only once detection has settled outside every zone, never while it is still loading.
+  const fallbackBranchZoneId = zoneStatus === "OUT_OF_SERVICE" ? chosenBranchZoneId : null
+  const effectiveZoneId = sessionBranchZoneId || zoneId || addressZoneFallbackId || fallbackBranchZoneId
+  const browsingChosenBranch = Boolean(effectiveZoneId) && effectiveZoneId !== zoneId
   const navigate = useNavigate()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
   const [activeCategory, setActiveCategory] = useState(null)
@@ -524,9 +530,10 @@ export default function Under250() {
         const restaurantsResponse = await restaurantAPI.getRestaurants(
           {
             zoneId: effectiveZoneId,
-            // Coordinates are authoritative server-side, so only send them when the
-            // customer has not picked a branch; otherwise the list snaps back to their area.
-            ...(!chosenBranchZoneId && Number.isFinite(zoneLookupLocation?.latitude) && Number.isFinite(zoneLookupLocation?.longitude)
+            // Coordinates are authoritative server-side, so withhold them only while we are
+            // deliberately showing a branch other than the detected one; otherwise the list
+            // snaps back to the customer's own area.
+            ...(!browsingChosenBranch && Number.isFinite(zoneLookupLocation?.latitude) && Number.isFinite(zoneLookupLocation?.longitude)
               ? { latitude: zoneLookupLocation.latitude, longitude: zoneLookupLocation.longitude }
               : {}),
             _ts: Date.now(),
@@ -614,7 +621,7 @@ export default function Under250() {
     }
 
     fetchRestaurantsUnder250()
-  }, [addressZoneFallbackId, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
+  }, [addressZoneFallbackId, browsingChosenBranch, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
 
   // Fetch categories from admin API
   useEffect(() => {
