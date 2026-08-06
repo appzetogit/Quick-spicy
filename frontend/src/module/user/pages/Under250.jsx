@@ -524,6 +524,10 @@ export default function Under250() {
       return
     }
 
+    // The zone can change mid-flight while auto-detect resolves. Without this the slower
+    // response wins and the previous branch's list stays on screen.
+    let stale = false
+
     const fetchRestaurantsUnder250 = async () => {
       try {
         setLoadingRestaurants(true)
@@ -542,6 +546,7 @@ export default function Under250() {
         )
         const restaurantsArray = restaurantsResponse?.data?.data?.restaurants || restaurantsResponse?.data?.restaurants || []
 
+        if (stale) return
         if (!Array.isArray(restaurantsArray) || restaurantsArray.length === 0) {
           setUnder250Restaurants([])
           return
@@ -561,6 +566,7 @@ export default function Under250() {
           debugError('Error in getRestaurantsUnder250:', err);
         }
 
+        if (stale) return
         if (normalizedRestaurants.length > 0) {
           setUnder250Restaurants(normalizedRestaurants);
           return;
@@ -611,16 +617,21 @@ export default function Under250() {
         )
 
         const normalizedFallbackRestaurants = fallbackRestaurantMenus.filter(Boolean)
+        if (stale) return
         setUnder250Restaurants(normalizedFallbackRestaurants)
       } catch (error) {
+        if (stale) return
         debugError('Error fetching restaurants under 250:', error)
         setUnder250Restaurants([])
       } finally {
-        setLoadingRestaurants(false)
+        if (!stale) setLoadingRestaurants(false)
       }
     }
 
     fetchRestaurantsUnder250()
+    return () => {
+      stale = true
+    }
   }, [addressZoneFallbackId, browsingChosenBranch, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
 
   // Fetch categories from admin API
