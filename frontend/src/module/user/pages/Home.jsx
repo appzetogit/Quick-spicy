@@ -1360,6 +1360,18 @@ export default function Home() {
         params.trusted = 'true'
       }
 
+      // Never request an unscoped catalogue. With no zone resolved and no coordinates the
+      // server has nothing to filter on and returns every restaurant in every branch, which
+      // is what customers saw when location was denied, still resolving, or outside all
+      // zones. Showing nothing until we know where they are is the honest answer.
+      const haveCoordinates =
+        Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)
+      if (!effectiveZoneId && !haveCoordinates) {
+        setRestaurantsData([])
+        setLoadingRestaurants(false)
+        return
+      }
+
       if (effectiveZoneId) {
         params.zoneId = effectiveZoneId
       }
