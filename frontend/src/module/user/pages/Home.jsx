@@ -20,7 +20,6 @@ import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { useSearchOverlay, useLocationSelector } from "../components/UserLayout"
 import PageNavbar from "../components/PageNavbar"
-import LocationPrompt from "../components/LocationPrompt"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -1924,7 +1923,7 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen bg-white dark:bg-[#0a0a0a] pb-16 md:pb-6">
-      <LocationPrompt />
+      {/* LocationPrompt removed: LocationGate now asks before Home ever renders. */}
       <div className="transition-all duration-300">
       {/* Unified Background for Entire Page - Vibrant Food Theme */}
       <div className="absolute top-0 left-0 right-0 bottom-0 pointer-events-none overflow-hidden z-0">

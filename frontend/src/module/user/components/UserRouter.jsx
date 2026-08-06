@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom"
 import ProtectedRoute from "@/components/ProtectedRoute"
 import AuthRedirect from "@/components/AuthRedirect"
 import UserLayout from "./UserLayout"
+import LocationGate from "./LocationGate"
 import { Suspense, lazy } from "react"
 import Loader from "@/components/Loader"
 
@@ -90,15 +91,19 @@ export default function UserRouter() {
     <Suspense fallback={<Loader />}>
       <Routes>
         <Route element={<UserLayout />}>
-          {/* Home & Discovery */}
-          <Route path="/" element={<Home />} />
-          <Route path="/under-250" element={<Under250 />} />
+          {/* Home & Discovery - behind the location gate, because everything here is
+              zone-scoped and meaningless without knowing where the customer is.
+              "Order for someone else" stays outside it: it is the way out of the gate. */}
+          <Route element={<LocationGate />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/under-250" element={<Under250 />} />
+            <Route path="/category/:category" element={<CategoryPage />} />
+            <Route path="/restaurants" element={<Restaurants />} />
+            <Route path="/restaurants/:slug" element={<RestaurantDetails />} />
+            <Route path="/search" element={<SearchResults />} />
+            <Route path="/product/:id" element={<ProductDetail />} />
+          </Route>
           <Route path="/order-for-someone-else" element={<OrderForSomeoneElse />} />
-          <Route path="/category/:category" element={<CategoryPage />} />
-          <Route path="/restaurants" element={<Restaurants />} />
-          <Route path="/restaurants/:slug" element={<RestaurantDetails />} />
-          <Route path="/search" element={<SearchResults />} />
-          <Route path="/product/:id" element={<ProductDetail />} />
           <Route path="/support" element={<Support />} />
 
           {/* Cart - Protected */}
