@@ -158,6 +158,10 @@ export default function Cart() {
   // It was previously only rendered inside order tracking, which many never open, so the
   // rider arrived and the customer had no OTP to hand over.
   const [placedOrderOtp, setPlacedOrderOtp] = useState(null)
+  // Focused when checkout is blocked on a missing recipient detail, so the customer is
+  // taken to the empty field instead of hunting for it.
+  const recipientNameRef = useRef(null)
+  const recipientPhoneRef = useRef(null)
   const [selectedAddressId, setSelectedAddressId] = useState(null)
   const [checkoutAddressSnapshot, setCheckoutAddressSnapshot] = useState(null)
 
@@ -1737,8 +1741,18 @@ export default function Cart() {
         const recipientName = String(orderForOthers.recipient?.name || "").trim()
         const recipientPhone = String(orderForOthers.recipient?.phone || "").replace(/\D/g, "")
         if (!recipientName || recipientPhone.length < 10) {
-          alert("Please add the name and phone number of the person you're ordering for.")
+          // A native alert blocks the thread, so the button sat on "Processing..." behind it
+          // and read as a frozen app rather than a missing field. Toast matches the rest of
+          // the app and clears the button immediately.
           setIsPlacingOrder(false)
+          toast.error(
+            !recipientName
+              ? "Add the name of the person you're ordering for."
+              : "Add their 10-digit phone number."
+          )
+          recipientNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+          if (!recipientName) recipientNameRef.current?.focus()
+          else recipientPhoneRef.current?.focus()
           return
         }
       }
@@ -2208,6 +2222,7 @@ export default function Cart() {
 
                   <div className="mt-3 space-y-2">
                     <input
+                      ref={recipientNameRef}
                       value={orderForOthers.recipient?.name || ""}
                       onChange={(e) => orderForOthers.setRecipient({ name: e.target.value })}
                       placeholder="Their full name"
@@ -2215,6 +2230,7 @@ export default function Cart() {
                     />
                     <input
                       value={orderForOthers.recipient?.phone || ""}
+                      ref={recipientPhoneRef}
                       onChange={(e) => orderForOthers.setRecipient({ phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
                       inputMode="numeric"
                       placeholder="Their 10-digit phone number"
