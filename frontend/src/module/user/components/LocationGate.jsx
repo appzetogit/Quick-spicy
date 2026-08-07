@@ -24,13 +24,117 @@ const FIX_TIMEOUT_MS = 20000
 
 const hasPermissionsApi = typeof navigator !== "undefined" && Boolean(navigator.permissions?.query)
 
-function Shell({ title, body, children }) {
+/**
+ * "We haven't landed here yet" - a scout ship scanning an area we do not deliver to.
+ *
+ * Inline SVG and CSS keyframes rather than the animation libraries this app already
+ * carries: this screen is the first thing a customer outside the service area sees, so it
+ * must not wait on a lazy chunk to become something other than a blank panel.
+ */
+function OutOfZoneScene() {
+  const stars = [
+    { x: 26, y: 26, r: 1.6, d: "0s" },
+    { x: 196, y: 34, r: 2, d: ".9s" },
+    { x: 54, y: 14, r: 1.2, d: "1.7s" },
+    { x: 168, y: 16, r: 1.4, d: "2.4s" },
+    { x: 14, y: 62, r: 1.2, d: "1.2s" },
+    { x: 208, y: 70, r: 1.6, d: "2s" },
+  ]
+
+  return (
+    <div className="mx-auto w-full max-w-[240px]" aria-hidden="true">
+      <style>{`
+        @keyframes qsBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+        @keyframes qsBeam { 0%,100% { opacity: .22 } 50% { opacity: .55 } }
+        @keyframes qsBlink { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+        @keyframes qsTwinkle { 0%,100% { opacity: .15 } 50% { opacity: .85 } }
+        @keyframes qsScan { 0%,100% { transform: scaleX(.82) } 50% { transform: scaleX(1) } }
+        .qs-bob { animation: qsBob 3.6s ease-in-out infinite; }
+        .qs-beam { animation: qsBeam 2.4s ease-in-out infinite; transform-origin: 112px 74px; }
+        .qs-scan { animation: qsScan 2.4s ease-in-out infinite; transform-origin: 112px 74px; }
+        .qs-blink { animation: qsBlink 1.6s ease-in-out infinite; }
+        .qs-star { animation: qsTwinkle 2.8s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+          .qs-bob, .qs-beam, .qs-blink, .qs-star, .qs-scan { animation: none; }
+        }
+      `}</style>
+
+      <svg viewBox="0 0 224 168" className="h-auto w-full" role="img">
+        {stars.map((s) => (
+          <circle
+            key={`${s.x}-${s.y}`}
+            className="qs-star fill-slate-300 dark:fill-slate-600"
+            cx={s.x}
+            cy={s.y}
+            r={s.r}
+            style={{ animationDelay: s.d }}
+          />
+        ))}
+
+        {/* Ground line and the spot we cannot reach */}
+        <ellipse className="fill-slate-100 dark:fill-slate-800/60" cx="112" cy="146" rx="66" ry="9" />
+        <path
+          className="stroke-slate-300 dark:stroke-slate-700"
+          d="M112 128c-6.6 0-12-5.4-12-12 0-9 12-21 12-21s12 12 12 21c0 6.6-5.4 12-12 12z"
+          fill="none"
+          strokeWidth="2.5"
+          strokeLinejoin="round"
+        />
+
+        <g className="qs-scan">
+          <g className="qs-beam">
+            <path d="M96 74 L128 74 L154 142 L70 142 Z" fill="url(#qsBeamFill)" />
+          </g>
+        </g>
+
+        <g className="qs-bob">
+          {/* Saucer */}
+          <ellipse className="fill-slate-200 dark:fill-slate-700" cx="112" cy="70" rx="52" ry="14" />
+          <ellipse className="fill-slate-300 dark:fill-slate-600" cx="112" cy="66" rx="52" ry="12" />
+          {/* Dome */}
+          <path
+            className="fill-orange-200 dark:fill-orange-900"
+            d="M88 60a24 20 0 0 1 48 0z"
+          />
+          <path
+            className="fill-orange-100 dark:fill-orange-800"
+            d="M96 60a16 13 0 0 1 32 0z"
+            opacity="0.85"
+          />
+          {/* Running lights */}
+          {[78, 112, 146].map((cx, i) => (
+            <circle
+              key={cx}
+              className="qs-blink"
+              cx={cx}
+              cy={72}
+              r="3.4"
+              fill="#EB590E"
+              style={{ animationDelay: `${i * 0.35}s` }}
+            />
+          ))}
+        </g>
+
+        <defs>
+          <linearGradient id="qsBeamFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#EB590E" stopOpacity="0.55" />
+            <stop offset="100%" stopColor="#EB590E" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+  )
+}
+
+function Shell({ title, body, children, scene = null }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-white px-6 dark:bg-[#0a0a0a]">
       <div className="w-full max-w-sm text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-950/50">
-          <MapPin className="h-7 w-7 text-primary-orange" />
-        </div>
+        {scene || (
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-950/50">
+            <MapPin className="h-7 w-7 text-primary-orange" />
+          </div>
+        )}
         <h1 className="mt-5 text-lg font-semibold text-slate-900 dark:text-gray-100">{title}</h1>
         <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">{body}</p>
         <div className="mt-6 space-y-3">{children}</div>
@@ -151,6 +255,7 @@ export default function LocationGate() {
 
   const unavailable = (
     <Shell
+      scene={<OutOfZoneScene />}
       title="Service is currently unavailable in your area."
       body="We don't deliver here yet. You can still order to an area we cover."
     >

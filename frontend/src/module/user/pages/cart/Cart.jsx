@@ -314,7 +314,7 @@ export default function Cart() {
       longitude: selectedAddressCoordinates[0]
     }
     : currentLocation
-  const { zoneId, zone } = useZone(zoneLocation) // Prefer selected/saved address zone
+  const { zoneId, zone, zoneStatus } = useZone(zoneLocation) // Prefer selected/saved address zone
 
   // How far the customer currently is from the address they are ordering to. The zone above
   // deliberately follows the delivery address - that is what the server validates and what
@@ -350,6 +350,18 @@ export default function Cart() {
     restaurantAssignedZoneId &&
     String(zoneId) !== String(restaurantAssignedZoneId)
   )
+
+  // An address that sits in no zone at all left zoneId null, which made the mismatch check
+  // above quietly false: the button still said "Place Order" and the customer only learned
+  // it was undeliverable after submitting, when the server refused with a 403. That is what
+  // made it feel like an order could be sent almost anywhere - nothing stopped it until the
+  // very end. Ordering for someone else runs through this same cart, so the recipient's
+  // address is held to the branch's zone by the same rule.
+  //
+  // Gated on OUT_OF_SERVICE rather than "no zoneId" so the button is not disabled during the
+  // brief window while the zone lookup is still running.
+  const addressOutsideAllZones = Boolean(hasSavedAddress && zoneStatus === "OUT_OF_SERVICE")
+  const cannotDeliverToAddress = restaurantZoneMismatch || addressOutsideAllZones
 
   const cancellationPolicyNotice = (
     <div className="mt-3 md:mt-4 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-gray-700 dark:bg-[#1a1a1a]">
@@ -1333,6 +1345,11 @@ export default function Cart() {
 
     if (cart.length === 0) {
       alert("Your cart is empty")
+      return
+    }
+
+    if (addressOutsideAllZones) {
+      toast.error("We don't deliver to this address yet. Choose an address inside a service area.")
       return
     }
 
@@ -2850,16 +2867,18 @@ export default function Cart() {
                 </div>
               </div>
 
-              {restaurantZoneMismatch && (
+              {cannotDeliverToAddress && (
                 <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs md:text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
-                  This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order.
+                  {addressOutsideAllZones
+                    ? "We don't deliver to this address yet. Pick a delivery address inside one of our service areas."
+                    : "This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order."}
                 </div>
               )}
 
               <Button
                 size="lg"
                 onClick={handlePlaceOrder}
-                disabled={isPlacingOrder || restaurantZoneMismatch || (selectedPaymentMethod === "wallet" && walletBalance < total)}
+                disabled={isPlacingOrder || cannotDeliverToAddress || (selectedPaymentMethod === "wallet" && walletBalance < total)}
                 className="w-full bg-[#EB590E] hover:bg-[#D94F0C] dark:bg-[#EB590E] dark:hover:bg-[#D94F0C] text-white px-6 md:px-10 h-14 md:h-16 rounded-lg md:rounded-xl text-base md:text-lg font-bold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {(selectedPaymentMethod === "cashfree" || selectedPaymentMethod === "wallet") && (
@@ -2871,6 +2890,8 @@ export default function Cart() {
                 <span className="font-bold text-base md:text-lg">
                   {isPlacingOrder
                     ? "Processing..."
+                    : addressOutsideAllZones
+                      ? "We Don't Deliver Here Yet"
                     : restaurantZoneMismatch
                       ? "Restaurant Not In Address Zone"
                     : !hasSavedAddress
