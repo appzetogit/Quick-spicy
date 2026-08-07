@@ -2167,8 +2167,29 @@ export default function Home() {
                 <Link
                   key={category.id || `sticky-cat-${index}`}
                   to={`/user/category/${category.slug || category.name.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="flex-shrink-0 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-[11px] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap"
+                  className="flex-shrink-0 flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#1a1a1a] py-1 pl-1 pr-3 text-[11px] font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap"
                 >
+                  {/* 22px so the chip stays roughly the height of a text-only one - the full
+                      64px circles from the strip below would cost a third of a phone screen.
+                      A broken or missing image hides itself rather than leaving a grey hole.
+
+                      Loaded eagerly: this row only mounts once the customer has scrolled to
+                      it, so it is already on screen, and these are the same URLs the strip
+                      below has already fetched, so they come from cache. Lazy left the chips
+                      showing empty circles for seconds. */}
+                  {category.image ? (
+                    <img
+                      src={category.image}
+                      alt=""
+                      aria-hidden="true"
+                      loading="eager"
+                      decoding="async"
+                      className="h-[22px] w-[22px] shrink-0 rounded-full object-cover bg-gray-200 dark:bg-gray-800"
+                      onError={(e) => { e.currentTarget.style.display = 'none' }}
+                    />
+                  ) : (
+                    <span className="h-[22px] w-[22px] shrink-0 rounded-full bg-gray-200 dark:bg-gray-800" />
+                  )}
                   {category.name}
                 </Link>
               ))}

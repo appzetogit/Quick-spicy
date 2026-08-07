@@ -2405,18 +2405,26 @@ export function useLocation() {
 
         debugLog("🚀 Permission granted! Fetching/Watching location...", shouldForceRefresh ? "(FORCE REFRESH)" : "");
 
-        // Always fetch fresh location if we don't have a valid one
-        // Check current location state to see if it's a placeholder
-        const currentLocation = location
-        const hasPlaceholder = currentLocation &&
-          (currentLocation.formattedAddress === "Select location" ||
-            currentLocation.city === "Current Location")
-
-        const shouldFetch = shouldForceRefresh || !hasInitialLocation || hasPlaceholder
-
-        if (shouldFetch) {
-          debugLog("🔄 Fetching location - shouldForceRefresh:", shouldForceRefresh, "hasInitialLocation:", hasInitialLocation, "hasPlaceholder:", hasPlaceholder)
-          getLocation(true, shouldForceRefresh) // forceFresh = true if cached location is incomplete
+        // Always take a fresh fix on startup. The cached address is already on screen from
+        // above, so this is revalidation behind it, not a wait.
+        //
+        // This used to be conditional: a cached address that merely looked complete - four
+        // or more comma-separated parts, which any properly geocoded address has - skipped
+        // the fetch entirely and left the app relying on watchPosition to notice. A customer
+        // who travelled from Giddalur to Khammam and reopened the app was still shown
+        // Giddalur, because watchPosition only fires on movement and they had arrived and
+        // stopped. Killing the app did not help: the same complete cached address was
+        // reloaded and the same fetch skipped.
+        //
+        // forceFresh matters as much as fetching at all. Without it getLocation returns the
+        // location stored server-side and never reaches the GPS, which is the same stale
+        // Giddalur by another route.
+        //
+        // Customers who deliberately picked a location are not affected: manual mode returns
+        // above, before this point.
+        debugLog("🔄 Revalidating location on startup (cached shown meanwhile)")
+        {
+          getLocation(true, true)
             .then((location) => {
               if (location &&
                 location.formattedAddress !== "Select location" &&
@@ -2459,9 +2467,6 @@ export function useLocation() {
               // Still start watching in case permission is granted later
               startWatchingLocation()
             })
-        } else {
-          // We have a valid location, just start watching
-          startWatchingLocation()
         }
       } catch (err) {
         debugError("Error in checkPermissionAndStart:", err);
