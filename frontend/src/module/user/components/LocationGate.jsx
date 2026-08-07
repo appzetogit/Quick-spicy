@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Link, Outlet } from "react-router-dom"
 import { Loader2, MapPin } from "lucide-react"
 import { useLocation } from "../hooks/useLocation"
@@ -159,12 +159,16 @@ const secondaryButton =
 
 export default function LocationGate() {
   const { location, requestLocation } = useLocation()
-  const { zoneStatus, error: zoneError } = useZone(location)
+  const { zoneStatus, error: zoneError, refreshZone } = useZone(location)
   const { zoneId: browseZoneId } = useOrderForSomeoneElse()
 
   const [permission, setPermission] = useState(null) // null while we are still asking the browser
   const [requesting, setRequesting] = useState(false)
   const [fixTimedOut, setFixTimedOut] = useState(false)
+  // Retrying used to look broken: the button spun and the same screen came back with nothing
+  // said. This carries the reason it did not work.
+  const [retryNote, setRetryNote] = useState("")
+  const awaitingRetryResultRef = useRef(false)
 
   const hasCoords = Number.isFinite(location?.latitude) && Number.isFinite(location?.longitude)
 
@@ -211,27 +215,69 @@ export default function LocationGate() {
     return () => clearTimeout(timer)
   }, [permission, hasCoords])
 
+  // Report the outcome of a retry once the zone lookup that follows it has settled. Without
+  // this a customer who is genuinely still outside the area taps Try again, watches the
+  // spinner, and gets the identical screen with no acknowledgement that anything happened.
+  useEffect(() => {
+    if (!awaitingRetryResultRef.current) return
+    if (zoneStatus === "OUT_OF_SERVICE") {
+      awaitingRetryResultRef.current = false
+      setRetryNote("Checked again - we still don't deliver to where you are right now.")
+    } else if (zoneStatus === "IN_SERVICE") {
+      awaitingRetryResultRef.current = false
+      setRetryNote("")
+    }
+  }, [zoneStatus])
+
   const allow = useCallback(async () => {
     setRequesting(true)
+    setRetryNote("")
     try {
+      // Re-read the permission before asking. Someone who just switched location on in
+      // browser or OS settings is the main reason this button gets pressed, and without
+      // this the stale "denied" would send them down the dead path again.
+      let state = permission
+      if (hasPermissionsApi) {
+        try {
+          const result = await navigator.permissions.query({ name: "geolocation" })
+          state = result.state
+          setPermission(state)
+        } catch {
+          // Older Safari: fall through and just try.
+        }
+      }
+
+      if (state === "denied") {
+        setRetryNote(
+          "Location is still blocked for this site. Allow it in your browser settings, then try again.",
+        )
+        return
+      }
+
       const result = await requestLocation()
       if (Number.isFinite(result?.latitude) && Number.isFinite(result?.longitude)) {
         setPermission("granted")
+        // Coordinates are often identical - same spot, or a zone added since they last
+        // looked - and useZone skips re-detection when they barely move, so ask it directly.
+        awaitingRetryResultRef.current = true
+        refreshZone()
         return
       }
+
       // useLocation resolves with a placeholder rather than throwing when the browser
       // refuses, so the absence of coordinates is the only signal here. Browsers with the
       // Permissions API report the real state through the change listener above; without
       // it, assume a denial so the customer is not left tapping a button the browser has
-      // already decided to ignore. The unavailable screen carries a "Try again" for the
-      // case where it was only a slow fix.
+      // already decided to ignore.
       if (!hasPermissionsApi) setPermission("denied")
+      setRetryNote("We still couldn't read your location. Check that location is on for this device.")
     } catch {
       if (!hasPermissionsApi) setPermission("denied")
+      setRetryNote("We still couldn't read your location. Check that location is on for this device.")
     } finally {
       setRequesting(false)
     }
-  }, [requestLocation])
+  }, [permission, requestLocation, refreshZone])
 
   const verdict = decideGate({ browseZoneId, permission, hasCoords, fixTimedOut, zoneStatus, zoneError })
 
@@ -247,8 +293,34 @@ export default function LocationGate() {
       <button type="button" onClick={allow} disabled={requesting} className={primaryButton}>
         {requesting ? "Getting location..." : failed ? "Try again" : "Allow location"}
       </button>
+      {retryNote ? (
+        <p className="text-xs text-slate-500 dark:text-gray-400">{retryNote}</p>
+      ) : null}
       <Link to="/order-for-someone-else" className={secondaryButton}>
-        Order for someone else
+        Order for Someone Else
+      </Link>
+    </Shell>
+  )
+
+  const note = retryNote ? (
+    <p className="text-xs text-slate-500 dark:text-gray-400">{retryNote}</p>
+  ) : null
+
+  // Permission denied is not the same thing as "we don't deliver here" - we have no idea
+  // where they are - so it says so, and leads with the action that fixes it. The way out to
+  // ordering for someone else stays on both.
+  const locationBlocked = (
+    <Shell
+      scene={<OutOfZoneScene />}
+      title="Turn on location to see restaurants near you"
+      body="We need your location to know which kitchens can deliver to you. Nothing is shared beyond finding your area."
+    >
+      <button type="button" onClick={allow} disabled={requesting} className={primaryButton}>
+        {requesting ? "Checking..." : "Try again"}
+      </button>
+      {note}
+      <Link to="/order-for-someone-else" className={secondaryButton}>
+        Order for Someone Else
       </Link>
     </Shell>
   )
@@ -268,10 +340,13 @@ export default function LocationGate() {
       <button type="button" onClick={allow} disabled={requesting} className={secondaryButton}>
         {requesting ? "Checking..." : "Try again"}
       </button>
+      {note}
     </Shell>
   )
 
-  if (verdict === "unavailable") return unavailable
+  // Same verdict, two different truths: a blocked permission means we cannot see where they
+  // are, which is not the same claim as "we do not deliver to your area".
+  if (verdict === "unavailable") return permission === "denied" ? locationBlocked : unavailable
   if (verdict === "ask") return explainer(false)
   if (verdict === "retry") return explainer(true)
   if (verdict === "wait") {

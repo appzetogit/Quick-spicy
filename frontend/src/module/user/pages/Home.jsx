@@ -348,15 +348,17 @@ export default function Home() {
       return "live"
     }
   })
-  const [zoneSelection, setZoneSelection] = useState(() => {
+  // The manual zone mode this used to hold is gone along with the dropdown that set it.
+  // The stored value is cleared rather than read: anyone who used the old picker still has
+  // mode:"manual" in localStorage, and honouring that would keep pinning them to a branch
+  // no UI can any longer change.
+  useEffect(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem(USER_ZONE_SELECTION_KEY) || "{}")
-      if (saved?.mode === "manual" && saved?.zoneId) {
-        return { mode: "manual", zoneId: String(saved.zoneId) }
-      }
-    } catch (_) {}
-    return { mode: "auto", zoneId: "" }
-  })
+      localStorage.removeItem(USER_ZONE_SELECTION_KEY)
+    } catch {
+      // Storage unavailable; nothing was persisted to begin with.
+    }
+  }, [])
   const [realCategories, setRealCategories] = useState([])
   const [loadingRealCategories, setLoadingRealCategories] = useState(true)
   const [showAllCategoriesModal, setShowAllCategoriesModal] = useState(false)
@@ -1144,14 +1146,14 @@ export default function Home() {
     useZone(defaultSavedAddressLocation)
 
   const hasSavedAddress = Boolean(defaultSavedAddress && savedAddressText)
+  // The "not manual" clause both of these used to carry is dropped with the zone dropdown:
+  // there is no manual mode left, so it was always true.
   const shouldUseLiveZoneStatus =
-    zoneSelection.mode !== "manual" &&
     hasLiveLocation &&
     !zoneLoading &&
     !zoneError
 
   const shouldUseSavedAddressZoneStatus =
-    zoneSelection.mode !== "manual" &&
     !shouldUseLiveZoneStatus &&
     hasSavedAddress &&
     Boolean(defaultSavedAddressLocation) &&
@@ -1164,25 +1166,11 @@ export default function Home() {
   const userPoints = 99
 
   const [placeholderIndex, setPlaceholderIndex] = useState(0)
-  const selectedZoneMeta = useMemo(() => {
-    if (zoneSelection.mode === "manual") {
-      return availableZones.find((item) => String(item?._id || "") === String(zoneSelection.zoneId || "")) || null
-    }
-    return null
-  }, [availableZones, zoneSelection])
   const selectedZoneLabel = useMemo(() => {
-    if (zoneSelection.mode === "manual") {
-      return selectedZoneMeta?.name || selectedZoneMeta?.zoneName || selectedZoneMeta?.serviceLocation || "Selected zone"
-    }
     if (zoneLoading) return "Detecting zone..."
     if (zone?.name || zone?.zoneName) return zone.name || zone.zoneName
-    if (zoneStatus === "OUT_OF_SERVICE") return "Auto: outside service zone"
-    return "Auto detect"
-  }, [selectedZoneMeta, zoneSelection.mode, zoneLoading, zone, zoneStatus])
-
-  useEffect(() => {
-    localStorage.setItem(USER_ZONE_SELECTION_KEY, JSON.stringify(zoneSelection))
-  }, [zoneSelection])
+    return "your area"
+  }, [zoneLoading, zone])
 
   useEffect(() => {
     let mounted = true
@@ -1211,64 +1199,6 @@ export default function Home() {
       mounted = false
     }
   }, [])
-
-  useEffect(() => {
-    if (zoneSelection.mode !== "manual" || !zoneSelection.zoneId || availableZones.length === 0) return
-    const hasSelectedZone = availableZones.some((item) => String(item?._id || "") === String(zoneSelection.zoneId))
-    if (!hasSelectedZone) {
-      setZoneSelection({ mode: "auto", zoneId: "" })
-    }
-  }, [availableZones, zoneSelection])
-
-  // Picking a branch here means "deliver to that area", which is only legitimate when the
-  // food is for someone who lives there. It therefore drives the same for-someone-else mode
-  // as the For Others tab, so checkout still collects the recipient's name and number.
-  // Filtering the catalogue without that step is what let a customer in one state order from
-  // another and left the restaurant to cancel after cooking.
-  const handleZoneSelectionChange = useCallback((event) => {
-    const nextValue = String(event.target.value || "")
-    if (nextValue === "auto") {
-      setZoneSelection({ mode: "auto", zoneId: "" })
-      orderForOthers.clearBrowseZone()
-      return
-    }
-    const chosen = availableZones.find((item) => String(item?._id || "") === nextValue)
-    setZoneSelection({ mode: "manual", zoneId: nextValue })
-    orderForOthers.setBrowseZone(
-      nextValue,
-      chosen?.name || chosen?.zoneName || chosen?.serviceLocation || "Selected area",
-    )
-  }, [availableZones, orderForOthers])
-
-  const renderZoneSelectorControl = () => (
-    <div className="flex items-center gap-2 bg-white dark:bg-[#151515] hover:bg-gray-50 dark:hover:bg-[#1d1d1d] border border-gray-200 dark:border-gray-800 rounded-full px-4 py-2 shadow-sm transition-all duration-300">
-      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
-        <MapPin className="h-3.5 w-3.5 text-[#EB590E]" strokeWidth={2.5} />
-        <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
-          Delivery Zone:
-        </span>
-      </div>
-      <div className="relative flex items-center min-w-[120px]">
-        <select
-          value={browsingChosenBranch ? effectiveZoneId : "auto"}
-          onChange={handleZoneSelectionChange}
-          disabled={loadingAvailableZones}
-          className="w-full pr-6 border-0 bg-transparent py-0 pl-0 text-xs font-bold text-gray-900 dark:text-gray-100 outline-none transition focus:ring-0 cursor-pointer appearance-none"
-          aria-label="Choose delivery zone"
-        >
-          <option value="auto" className="bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
-            {zoneLoading ? "Detecting..." : "Auto detect"}
-          </option>
-          {availableZones.map((item) => (
-            <option key={item._id} value={item._id} className="bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-gray-100">
-              {item.name || item.zoneName || item.serviceLocation || "Unnamed zone"}
-            </option>
-          ))}
-        </select>
-        <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
-      </div>
-    </div>
-  )
 
   // Simple filter toggle function
   const toggleFilter = (filterId) => {
@@ -2197,12 +2127,23 @@ export default function Home() {
               <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                 <span className="w-2 h-2 rounded-full bg-[#EB590E] animate-pulse flex-shrink-0"></span>
                 <span className="text-xs font-semibold">
-                  {zoneSelection.mode === "manual" ? "Currently showing restaurants in selected zone" : "Automatically detecting restaurants in your zone"}
+                  {browsingChosenBranch
+                    ? `Ordering for someone in ${orderForOthers.zoneName || selectedZoneLabel}`
+                    : `Showing restaurants in ${zone?.name || zone?.zoneName || "your area"}`}
                 </span>
               </div>
-              <div>
-                {renderZoneSelectorControl()}
-              </div>
+              {/* The zone dropdown that used to sit here is gone. Picking a branch from the
+                  listing let customers browse an area they were nowhere near and pinned it
+                  across visits. The zone now follows the detected location, and the only way
+                  to serve another area is to choose that delivery address deliberately. */}
+              {browsingChosenBranch && (
+                <Link
+                  to="/order-for-someone-else"
+                  className="text-xs font-semibold text-[#EB590E] underline underline-offset-2"
+                >
+                  Change delivery area
+                </Link>
+              )}
             </div>
           </div>
         </motion.div>
@@ -2365,12 +2306,23 @@ export default function Home() {
               <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400">
                 <span className="w-2 h-2 rounded-full bg-[#EB590E] animate-pulse flex-shrink-0"></span>
                 <span className="text-xs font-semibold">
-                  {zoneSelection.mode === "manual" ? "Currently showing restaurants in selected zone" : "Automatically detecting restaurants in your zone"}
+                  {browsingChosenBranch
+                    ? `Ordering for someone in ${orderForOthers.zoneName || selectedZoneLabel}`
+                    : `Showing restaurants in ${zone?.name || zone?.zoneName || "your area"}`}
                 </span>
               </div>
-              <div>
-                {renderZoneSelectorControl()}
-              </div>
+              {/* The zone dropdown that used to sit here is gone. Picking a branch from the
+                  listing let customers browse an area they were nowhere near and pinned it
+                  across visits. The zone now follows the detected location, and the only way
+                  to serve another area is to choose that delivery address deliberately. */}
+              {browsingChosenBranch && (
+                <Link
+                  to="/order-for-someone-else"
+                  className="text-xs font-semibold text-[#EB590E] underline underline-offset-2"
+                >
+                  Change delivery area
+                </Link>
+              )}
             </div>
           </div>
         </motion.div>
