@@ -20,6 +20,7 @@ import UserWallet from '../../user/models/UserWallet.js';
 import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 import OutletTimings from '../../restaurant/models/OutletTimings.js';
 import { randomInt } from 'crypto';
+import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -705,7 +706,18 @@ export const createOrder = async (req, res) => {
     // then compared the restaurant's zone against itself and always passed. In production
     // this admitted orders with delivery addresses up to 648km outside the zone they were
     // filed under, a third of which were later cancelled after the food had been cooked.
-    const effectiveUserZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
+    let effectiveUserZone = findActiveZoneForPoint(activeZones, addressLat, addressLng);
+
+    // Same boundary tolerance the listing and zone detection use. All three must agree, or a
+    // customer just outside a polygon browses a full menu and is refused at payment.
+    if (!effectiveUserZone) {
+      effectiveUserZone = findZoneWithinBuffer(
+        activeZones,
+        addressLat,
+        addressLng,
+        extractZonePolygon,
+      );
+    }
 
     if (!effectiveUserZone) {
       logger.warn('⚠️ Order blocked: delivery address is outside every active service zone', {

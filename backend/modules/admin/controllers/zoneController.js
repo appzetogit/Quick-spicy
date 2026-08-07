@@ -2,6 +2,7 @@ import Zone from '../models/Zone.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
+import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
 
 /**
  * Get all zones
@@ -415,18 +416,7 @@ export const detectUserZone = asyncHandler(async (req, res) => {
     // the check never once rescued the boundary case it was written for. It now measures the
     // distance to the nearest edge, which is what "just outside" means.
     if (!userZone) {
-      let nearestKm = Infinity;
-
-      for (const zone of activeZones) {
-        const polygonCoords = extractZonePolygon(zone);
-        if (!polygonCoords || polygonCoords.length < 3) continue;
-
-        const distance = distanceToPolygonEdgeKm(userLat, userLng, polygonCoords);
-        if (distance <= ZONE_EDGE_BUFFER_KM && distance < nearestKm) {
-          nearestKm = distance;
-          userZone = zone;
-        }
-      }
+      userZone = findZoneWithinBuffer(activeZones, userLat, userLng, extractZonePolygon);
     }
 
     if (!userZone) {
@@ -455,51 +445,6 @@ export const detectUserZone = asyncHandler(async (req, res) => {
     return errorResponse(res, 500, 'Failed to detect zone');
   }
 });
-
-// How far past a zone boundary still counts as inside. Zone polygons are drawn by hand in
-// the admin panel and phone GPS drifts by tens of metres, so a hard edge turns customers on
-// the far pavement into "we don't deliver here".
-// ponytail: flat tolerance. If a branch needs its own, move it onto the Zone document.
-const ZONE_EDGE_BUFFER_KM = Number(process.env.ZONE_EDGE_BUFFER_KM || 0.25);
-
-/**
- * Shortest distance in km from a point to a polygon's outline.
- *
- * Works on the segments rather than the vertices: a point can sit close to the middle of a
- * long edge while being kilometres from every corner, and only the edge distance answers
- * "how far outside is this?". Longitude is scaled by cos(latitude) so a degree east is not
- * treated as wide as a degree north.
- */
-function distanceToPolygonEdgeKm(lat, lng, polygonCoords) {
-  const KM_PER_DEG = 111.32;
-  const scale = Math.cos((lat * Math.PI) / 180);
-  const toXY = (a, b) => ({ x: b * KM_PER_DEG * scale, y: a * KM_PER_DEG });
-
-  const p = toXY(lat, lng);
-  let best = Infinity;
-
-  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
-    const a = normalizeCoordinate(polygonCoords[j]);
-    const b = normalizeCoordinate(polygonCoords[i]);
-    if (a.lat === null || b.lat === null) continue;
-
-    const s = toXY(a.lat, a.lng);
-    const e = toXY(b.lat, b.lng);
-    const dx = e.x - s.x;
-    const dy = e.y - s.y;
-    const lengthSq = dx * dx + dy * dy;
-
-    // Project the point onto the segment, clamped so it cannot run past either end.
-    const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - s.x) * dx + (p.y - s.y) * dy) / lengthSq));
-    const cx = s.x + t * dx;
-    const cy = s.y + t * dy;
-    const distance = Math.hypot(p.x - cx, p.y - cy);
-
-    if (distance < best) best = distance;
-  }
-
-  return best;
-}
 
 /**
  * Calculate zone centroid (average of all coordinates)

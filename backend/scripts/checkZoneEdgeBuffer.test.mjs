@@ -5,33 +5,7 @@
 // assertions pin the edge-distance maths that replaced it.
 import assert from "node:assert/strict"
 
-// Mirrors distanceToPolygonEdgeKm in zoneController.js. Copied rather than imported because
-// importing that controller drags in Mongoose models and the whole app config.
-const normalizeCoordinate = (c) => ({ lat: c.latitude ?? c.lat ?? null, lng: c.longitude ?? c.lng ?? null })
-
-function distanceToPolygonEdgeKm(lat, lng, polygonCoords) {
-  const KM_PER_DEG = 111.32
-  const scale = Math.cos((lat * Math.PI) / 180)
-  const toXY = (a, b) => ({ x: b * KM_PER_DEG * scale, y: a * KM_PER_DEG })
-  const p = toXY(lat, lng)
-  let best = Infinity
-
-  for (let i = 0, j = polygonCoords.length - 1; i < polygonCoords.length; j = i++) {
-    const a = normalizeCoordinate(polygonCoords[j])
-    const b = normalizeCoordinate(polygonCoords[i])
-    if (a.lat === null || b.lat === null) continue
-    const s = toXY(a.lat, a.lng)
-    const e = toXY(b.lat, b.lng)
-    const dx = e.x - s.x
-    const dy = e.y - s.y
-    const lengthSq = dx * dx + dy * dy
-    const t = lengthSq === 0 ? 0 : Math.max(0, Math.min(1, ((p.x - s.x) * dx + (p.y - s.y) * dy) / lengthSq))
-    const cx = s.x + t * dx
-    const cy = s.y + t * dy
-    best = Math.min(best, Math.hypot(p.x - cx, p.y - cy))
-  }
-  return best
-}
+import { distanceToPolygonEdgeKm, ZONE_EDGE_BUFFER_KM } from "../shared/utils/zoneGeometry.js"
 
 // A roughly 11km x 11km square near Giddalur's latitude.
 const square = [
@@ -49,11 +23,11 @@ const near = (actual, expected, toleranceKm, label) =>
 
 // ~110m north of the top edge: the case the buffer exists for.
 near(distanceToPolygonEdgeKm(15.401, 78.95, square), 0.111, 0.02, "just outside the north edge")
-assert.ok(distanceToPolygonEdgeKm(15.401, 78.95, square) <= 0.25, "must fall inside a 250m buffer")
+assert.ok(distanceToPolygonEdgeKm(15.401, 78.95, square) <= ZONE_EDGE_BUFFER_KM, "must fall inside the buffer")
 
 // ~2.2km past the edge is genuinely outside and must NOT be admitted.
 near(distanceToPolygonEdgeKm(15.42, 78.95, square), 2.226, 0.05, "2km outside")
-assert.ok(distanceToPolygonEdgeKm(15.42, 78.95, square) > 0.25, "genuinely outside stays outside")
+assert.ok(distanceToPolygonEdgeKm(15.42, 78.95, square) > ZONE_EDGE_BUFFER_KM, "genuinely outside stays outside")
 
 // The centre of the square is ~5.4km from the nearest edge - the east/west ones, since a
 // degree of longitude is narrower than a degree of latitude at this cos(15.35deg) scaling.

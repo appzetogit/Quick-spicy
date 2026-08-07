@@ -9,6 +9,7 @@ import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
 import { deleteRestaurantRelatedData } from '../services/deleteRestaurantData.js';
 import { escapeRegex } from '../../../shared/utils/regex.js';
+import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
 
 // Straight-line distance in km. Good enough for a listing; road distance would need a
 // routing call per restaurant per request.
@@ -397,7 +398,21 @@ export const getRestaurants = async (req, res) => {
 
     if (hasCustomerCoordinates) {
       const activeZonesForCustomer = await Zone.find({ isActive: true }).lean();
-      const detectedZoneId = getRestaurantZoneId(customerLat, customerLng, activeZonesForCustomer);
+      let detectedZoneId = getRestaurantZoneId(customerLat, customerLng, activeZonesForCustomer);
+
+      // Same boundary tolerance public zone detection uses. Without it the two disagreed:
+      // detection told a customer just outside a polygon that service was available, and
+      // this endpoint then returned an empty list, which reads as broken rather than as out
+      // of area.
+      if (!detectedZoneId) {
+        const bufferedZone = findZoneWithinBuffer(
+          activeZonesForCustomer,
+          customerLat,
+          customerLng,
+          (zone) => zone?.coordinates,
+        );
+        detectedZoneId = bufferedZone?._id ? bufferedZone._id.toString() : null;
+      }
 
       if (!detectedZoneId) {
         // Outside every service area: show nothing rather than food that cannot be ordered.
@@ -1244,7 +1259,17 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
 
     if (Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)) {
       const activeZonesForCustomer = await Zone.find({ isActive: true }).lean();
-      const detectedZoneId = getRestaurantZoneId(lat, lng, activeZonesForCustomer);
+      let detectedZoneId = getRestaurantZoneId(lat, lng, activeZonesForCustomer);
+      if (!detectedZoneId) {
+        // Same boundary tolerance as zone detection; see the listing endpoint above.
+        const bufferedZone = findZoneWithinBuffer(
+          activeZonesForCustomer,
+          lat,
+          lng,
+          (zone) => zone?.coordinates,
+        );
+        detectedZoneId = bufferedZone?._id ? bufferedZone._id.toString() : null;
+      }
       if (!detectedZoneId) {
         return successResponse(res, 200, 'No restaurants available at your location', {
           restaurants: [],
