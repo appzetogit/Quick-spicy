@@ -1691,8 +1691,11 @@ export const adminAPI = {
   },
 
   // Get public categories (for user frontend)
-  getPublicCategories: () => {
-    return apiClient.get(API_ENDPOINTS.ADMIN.CATEGORIES_PUBLIC);
+  // Pass a zoneId from customer-facing screens: unscoped this returns every category from
+  // every branch, so a customer in one town browses menus nobody can deliver to them. The
+  // restaurant-side callers deliberately omit it and still get the full list.
+  getPublicCategories: (params = {}) => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.CATEGORIES_PUBLIC, { params });
   },
 
   getCategoryById: (id) => {

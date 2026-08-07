@@ -155,10 +155,16 @@ export default function CategoryPage() {
 
   // Fetch categories from admin API
   useEffect(() => {
+    // Scoped to the customer's zone, and re-fetched when it resolves. Unscoped this listed
+    // all 339 categories across every branch, so the tabs offered food no local kitchen
+    // makes. The stale flag stops a slower earlier response overwriting a newer one.
+    let stale = false
+
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true)
-        const response = await adminAPI.getPublicCategories()
+        const response = await adminAPI.getPublicCategories(zoneId ? { zoneId } : {})
+        if (stale) return
 
         if (response.data && response.data.success && response.data.data && response.data.data.categories) {
           const categoriesArray = response.data.data.categories
@@ -194,16 +200,20 @@ export default function CategoryPage() {
           setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
         }
       } catch (error) {
+        if (stale) return
         debugError('Error fetching categories:', error)
         // Keep default "All" category on error
         setCategories([{ id: 'all', name: "All", image: null, slug: 'all' }])
       } finally {
-        setLoadingCategories(false)
+        if (!stale) setLoadingCategories(false)
       }
     }
 
     fetchCategories()
-  }, [])
+    return () => {
+      stale = true
+    }
+  }, [zoneId])
 
   // Helper function to check if menu has dishes matching category keywords
   const checkCategoryInMenu = (menu, categoryId) => {
