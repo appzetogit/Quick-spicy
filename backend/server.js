@@ -36,7 +36,8 @@ const __dirname = path.dirname(__filename);
 
 // Import configurations
 import { connectDB } from './config/database.js';
-import { connectRedis } from './config/redis.js';
+import { connectRedis, createSocketAdapterClients } from './config/redis.js';
+import { createAdapter } from '@socket.io/redis-adapter';
 import { initializeFirebaseRealtime, isFirebaseRealtimeReady } from './config/firebaseRealtime.js';
 
 // Import middleware
@@ -1078,17 +1079,51 @@ io.on('connection', (socket) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 
+/**
+ * Whether this process owns the cron schedule.
+ *
+ * Fork mode (no NODE_APP_INSTANCE) -> yes, it is the only process.
+ * Cluster mode -> only worker 0.
+ */
+export function isSchedulerInstance(instance = process.env.NODE_APP_INSTANCE) {
+  if (instance === undefined || instance === null || instance === '') return true;
+  return String(instance) === '0';
+}
+
 async function startServer() {
   await initializeServices();
   console.log(`Firebase Realtime ready before listening: ${isFirebaseRealtimeReady() ? 'yes' : 'no'}`);
 
+  // Without this, a restaurant connected to one worker never receives an order event emitted
+  // from another, so realtime alerts fail silently for a fraction of traffic. Attach before
+  // listening so no connection is accepted while events would still be worker-local.
+  const adapterClients = await createSocketAdapterClients();
+  if (adapterClients) {
+    io.adapter(createAdapter(adapterClients.pubClient, adapterClients.subClient));
+    console.log('✅ Socket.IO Redis adapter attached (safe to run multiple workers)');
+  } else if (process.env.NODE_APP_INSTANCE !== undefined) {
+    // Running under cluster mode with no adapter is the one combination that silently
+    // breaks realtime, so say so loudly rather than letting it look healthy.
+    console.error('❌ Running clustered WITHOUT the Socket.IO Redis adapter. Realtime events will not reach all clients. Set REDIS_ENABLED=true or return pm2 to fork mode.');
+  } else {
+    console.log('ℹ️  Socket.IO running single-process (no Redis adapter).');
+  }
+
   httpServer.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 
-    // Initialize scheduled tasks after startup
-    setTimeout(() => {
-      initializeScheduledTasks();
-    }, 5000);
+    // Scheduled tasks must run on exactly one process. Under pm2 cluster mode every worker
+    // loads this file, so without the gate each cron fires once per worker: duplicate
+    // delivery-partner notifications, duplicate auto-assignments, and N concurrent MongoDB
+    // backups. pm2 sets NODE_APP_INSTANCE per worker; it is absent in fork mode, which is
+    // why "absent" also counts as the leader.
+    if (isSchedulerInstance()) {
+      setTimeout(() => {
+        initializeScheduledTasks();
+      }, 5000);
+    } else {
+      console.log(`⏭️  Scheduled tasks skipped on worker ${process.env.NODE_APP_INSTANCE} (leader runs them)`);
+    }
   });
 }
 

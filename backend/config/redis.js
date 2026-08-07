@@ -78,5 +78,49 @@ export const getRedisClient = () => {
   return redisClient;
 };
 
+/**
+ * Create the pub/sub client pair for the Socket.IO Redis adapter.
+ *
+ * Deliberately not the shared client above: the adapter puts its subscriber into subscribe
+ * mode, where redis refuses ordinary commands, so sharing it would break every other Redis
+ * user in the process. These two also reconnect, unlike the shared client - a Redis blip
+ * that permanently severed the adapter would silently stop cross-worker order events while
+ * the app looked healthy.
+ *
+ * Returns null when Redis is disabled or unreachable. The caller must then stay on a single
+ * process: without this adapter, a socket connected to one worker never sees events emitted
+ * from another.
+ */
+export const createSocketAdapterClients = async () => {
+  if (process.env.REDIS_ENABLED !== 'true' && process.env.REDIS_ENABLED !== '1') {
+    return null;
+  }
+
+  const build = () =>
+    createClient({
+      socket: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        reconnectStrategy: (retries) => Math.min(1000 * 2 ** retries, 30000),
+      },
+      password: process.env.REDIS_PASSWORD || undefined,
+    });
+
+  const pubClient = build();
+  const subClient = pubClient.duplicate();
+
+  pubClient.on('error', (err) => logger.warn(`Socket.IO Redis pub error: ${err.message}`));
+  subClient.on('error', (err) => logger.warn(`Socket.IO Redis sub error: ${err.message}`));
+
+  try {
+    await Promise.all([pubClient.connect(), subClient.connect()]);
+    return { pubClient, subClient };
+  } catch (error) {
+    logger.warn(`Socket.IO Redis adapter unavailable: ${error.message}`);
+    await Promise.allSettled([pubClient.quit(), subClient.quit()]);
+    return null;
+  }
+};
+
 export default connectRedis;
 

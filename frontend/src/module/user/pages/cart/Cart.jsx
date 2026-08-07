@@ -154,6 +154,10 @@ export default function Cart() {
   const [orderProgress, setOrderProgress] = useState(0)
   const [showOrderSuccess, setShowOrderSuccess] = useState(false)
   const [placedOrderId, setPlacedOrderId] = useState(null)
+  // Shown on this screen because it is the one screen every customer sees after ordering.
+  // It was previously only rendered inside order tracking, which many never open, so the
+  // rider arrived and the customer had no OTP to hand over.
+  const [placedOrderOtp, setPlacedOrderOtp] = useState(null)
   const [selectedAddressId, setSelectedAddressId] = useState(null)
   const [checkoutAddressSnapshot, setCheckoutAddressSnapshot] = useState(null)
 
@@ -1752,6 +1756,7 @@ export default function Cart() {
       if (effectivePaymentMethod === "cash") {
         toast.success("Order placed with Cash on Delivery")
         setPlacedOrderId(order?.orderId || order?.id || null)
+        setPlacedOrderOtp(order?.deliveryDropOtp ? String(order.deliveryDropOtp) : null)
         setShowOrderSuccess(true)
         clearCart()
         setIsPlacingOrder(false)
@@ -1762,6 +1767,7 @@ export default function Cart() {
       if (effectivePaymentMethod === "wallet") {
         toast.success("Order placed with Wallet payment")
         setPlacedOrderId(order?.orderId || order?.id || null)
+        setPlacedOrderOtp(order?.deliveryDropOtp ? String(order.deliveryDropOtp) : null)
         setShowOrderSuccess(true)
         clearCart()
         setIsPlacingOrder(false)
@@ -3014,6 +3020,17 @@ export default function Cart() {
               <h3 className="text-3xl font-bold text-[#EB590E] mb-2">Order Placed!</h3>
               <p className="text-gray-600">Your delicious food is on its way</p>
             </div>
+
+            {placedOrderOtp && (
+              <div
+                className="mt-6 w-full max-w-xs rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-center"
+                style={{ animation: 'slideUp 0.5s ease-out 0.9s both' }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Delivery OTP</p>
+                <p className="mt-1 text-3xl font-extrabold tracking-widest text-blue-900">{placedOrderOtp}</p>
+                <p className="mt-1 text-xs text-blue-700">Give this to your delivery partner at the door.</p>
+              </div>
+            )}
 
             {/* Action Button */}
             <button

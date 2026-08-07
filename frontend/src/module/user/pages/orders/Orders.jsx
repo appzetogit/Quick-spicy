@@ -345,6 +345,12 @@ export default function Orders() {
               deliveredAt: order.deliveredAt || null,
               deliveryPartnerName: order.deliveryPartnerId?.name || order.deliveryPartnerName || null,
               deliveryPartnerPhone: order.deliveryPartnerId?.phone || order.deliveryPartnerPhone || null,
+              // The rider asks for this at the door. It was only ever rendered inside order
+              // tracking, so customers who never opened that screen reported never receiving
+              // an OTP at all and could not complete the handover.
+              deliveryOtp: order.deliveryVerification?.dropOtp?.code
+                ? String(order.deliveryVerification.dropOtp.code)
+                : null,
               note: order.note || null
             }
           })
@@ -650,8 +656,21 @@ Order again from this restaurant in the ${companyName} app.`
               || "https://images.unsplash.com/photo-1604908176997-125188eb3c52?auto=format&fit=crop&w=200&q=80"
             const location = order.restaurantLocation || `${order.address?.city || ''}, ${order.address?.state || ''}`.trim() || 'Location not available'
 
+            // Only worth showing while the handover is still ahead of them.
+            const showDeliveryOtp = Boolean(order.deliveryOtp) && !isDelivered && !isCancelled
+
             return (
               <div key={order.id} className="relative bg-white dark:bg-[#141414] rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 overflow-hidden">
+                {showDeliveryOtp && (
+                  <div className="flex items-center justify-between gap-3 bg-blue-50 dark:bg-blue-950/40 px-4 py-2 border-b border-blue-100 dark:border-blue-900">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+                      Delivery OTP
+                    </p>
+                    <p className="text-xl font-extrabold tracking-widest text-blue-900 dark:text-blue-200">
+                      {order.deliveryOtp}
+                    </p>
+                  </div>
+                )}
                 {/* Card Header: Restaurant Info */}
                 <div className="flex items-start justify-between p-4 pb-2">
                   <div className="flex gap-3">
