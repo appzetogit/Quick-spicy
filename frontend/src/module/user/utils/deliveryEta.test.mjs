@@ -8,6 +8,7 @@ import {
   formatArrivalMinutes,
   AVERAGE_SPEED_KMPH,
   HANDOVER_MINUTES,
+  ROAD_WINDING_FACTOR,
 } from "./deliveryEta.js"
 
 const NOW = 1_700_000_000_000
@@ -20,13 +21,24 @@ const live = estimateArrivalMinutes({
   orderPlacedAt: NOW,
   now: NOW,
 })
-assert.equal(live, Math.round((3 / AVERAGE_SPEED_KMPH) * 60 + HANDOVER_MINUTES))
+assert.equal(
+  live,
+  Math.round(((3 * ROAD_WINDING_FACTOR) / AVERAGE_SPEED_KMPH) * 60 + HANDOVER_MINUTES),
+)
 assert.ok(live > 0 && live < 45, "live distance must not echo the 45 minute promise")
 
 // Closer rider, sooner arrival. This is the bit that "was not reducing".
 const far = estimateArrivalMinutes({ distanceToCustomerM: 5000, now: NOW })
 const near = estimateArrivalMinutes({ distanceToCustomerM: 500, now: NOW })
 assert.ok(near < far, "arrival must fall as the rider closes in")
+
+// Straight-line distance is scaled up: nobody rides in a straight line, and an
+// unscaled estimate is optimistic by roughly a third and always slips.
+const unscaled = Math.round((5 / AVERAGE_SPEED_KMPH) * 60 + HANDOVER_MINUTES)
+assert.ok(
+  estimateArrivalMinutes({ distanceToCustomerM: 5000, now: NOW }) > unscaled,
+  "road winding must make a 5km estimate longer than the straight-line one",
+)
 
 // At the door we still say 1 min, never 0 while they are moving.
 assert.equal(estimateArrivalMinutes({ distanceToCustomerM: 0, now: NOW }), HANDOVER_MINUTES)

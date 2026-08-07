@@ -15,9 +15,15 @@
 
 // Urban two-wheeler average including lights and turns. Deliberately not the free-flow
 // speed, which produces confidently early arrivals.
-// ponytail: single constant. Real road duration needs the Directions API, which is disabled;
-// when it is enabled, feed its duration in as distanceMinutesOverride.
 export const AVERAGE_SPEED_KMPH = 18
+
+// The distance we get is straight-line between the rider's and the customer's coordinates.
+// Nobody rides in a straight line: roads bend, one-ways divert, rivers and railways force
+// detours. Real road distance in Indian towns runs roughly a third longer than the crow
+// flies, so without this the arrival time is optimistic by about the same margin and the
+// customer is always told a number that then slips.
+// ponytail: one flat factor. If a branch's road network is unusually bad, this is the knob.
+export const ROAD_WINDING_FACTOR = 1.3
 
 // Handing over at the door, finding the flat, lifts.
 export const HANDOVER_MINUTES = 3
@@ -45,7 +51,8 @@ export function estimateArrivalMinutes({
     distanceToCustomerM !== null && distanceToCustomerM !== undefined && distanceToCustomerM !== ""
   const distanceM = hasLiveDistance ? Number(distanceToCustomerM) : NaN
   if (Number.isFinite(distanceM) && distanceM >= 0) {
-    const travelMinutes = (distanceM / 1000 / AVERAGE_SPEED_KMPH) * 60
+    const roadKm = (distanceM / 1000) * ROAD_WINDING_FACTOR
+    const travelMinutes = (roadKm / AVERAGE_SPEED_KMPH) * 60
     return Math.max(MIN_REPORTED_MINUTES, Math.round(travelMinutes + HANDOVER_MINUTES))
   }
 
