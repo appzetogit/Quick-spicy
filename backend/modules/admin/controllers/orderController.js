@@ -2,7 +2,7 @@ import Order from '../../order/models/Order.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
-import { findNearestDeliveryBoys } from '../../order/services/deliveryAssignmentService.js';
+import { findNearestDeliveryBoys, findZoneDeliveryPartnersForBroadcast } from '../../order/services/deliveryAssignmentService.js';
 import { notifyMultipleDeliveryBoys } from '../../order/services/deliveryNotificationService.js';
 import { notifyRestaurantOrderUpdate } from '../../order/services/restaurantNotificationService.js';
 import { notifyUserOrderUpdate } from '../../order/services/userNotificationService.js';
@@ -860,7 +860,7 @@ export const acceptOrder = asyncHandler(async (req, res) => {
             },
           );
 
-          const zoneDeliveryPartnerIds = Array.from(
+          let zoneDeliveryPartnerIds = Array.from(
             new Set(
               (zoneDeliveryBoys || [])
                 .map((d) => d?.deliveryPartnerId)
@@ -868,6 +868,30 @@ export const acceptOrder = asyncHandler(async (req, res) => {
                 .map((id) => String(id))
             )
           );
+
+          // The strict lookup needs a recent position, so riders with the app closed drop
+          // out of it - which is precisely the moment a notification is worth sending. When
+          // it finds nobody the old code logged a warning and told no one at all, and the
+          // order sat until a rider happened to open the app and spot it. That is the whole
+          // 10-15 minute delay: riders accepted within seconds of finally seeing an order,
+          // so they were never notified, only stumbled upon.
+          if (zoneDeliveryPartnerIds.length === 0) {
+            const broadcastZoneId = order?.assignmentInfo?.zoneId || null;
+            const fallbackPartners = await findZoneDeliveryPartnersForBroadcast(broadcastZoneId);
+            zoneDeliveryPartnerIds = Array.from(
+              new Set(
+                (fallbackPartners || [])
+                  .map((d) => d?.deliveryPartnerId)
+                  .filter(Boolean)
+                  .map((id) => String(id))
+              )
+            );
+            if (zoneDeliveryPartnerIds.length > 0) {
+              console.log(
+                `Admin accept: no rider had a recent position for order ${order.orderId}; notifying ${zoneDeliveryPartnerIds.length} zone rider(s) anyway`
+              );
+            }
+          }
 
           if (zoneDeliveryPartnerIds.length > 0) {
             order.assignmentInfo = {
