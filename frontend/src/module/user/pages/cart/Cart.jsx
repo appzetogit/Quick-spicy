@@ -1745,10 +1745,23 @@ export default function Cart() {
           // and read as a frozen app rather than a missing field. Toast matches the rest of
           // the app and clears the button immediately.
           setIsPlacingOrder(false)
+          // The mode can be left over from an earlier visit, so a customer buying their own
+          // dinner could be asked who they are ordering for and have no idea why. The action
+          // is the way out without hunting for the Cancel link further up the page.
           toast.error(
             !recipientName
               ? "Add the name of the person you're ordering for."
-              : "Add their 10-digit phone number."
+              : "Add their 10-digit phone number.",
+            {
+              action: {
+                label: "I'm ordering for myself",
+                onClick: () => {
+                  orderForOthers.clear()
+                  toast.success("Switched to ordering for yourself.")
+                },
+              },
+              duration: 8000,
+            }
           )
           recipientNameRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
           if (!recipientName) recipientNameRef.current?.focus()

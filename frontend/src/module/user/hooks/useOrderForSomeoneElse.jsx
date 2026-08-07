@@ -19,14 +19,32 @@ const CHANGE_EVENT = "orderForSomeoneElseChanged"
 
 const EMPTY = { active: false, zoneId: null, zoneName: "", recipient: { name: "", phone: "", note: "" } }
 
+// "Ordering for someone else" is a decision about the order being placed now, not a setting.
+// It used to sit in localStorage until an order completed or the customer found the Cancel
+// link, so anyone who opened that screen once - or tapped it by accident - was still in the
+// mode days later. Checkout then demanded a recipient name and number from someone buying
+// their own dinner, and refused to place the order until they supplied one.
+//
+// Six hours comfortably covers choosing an area, browsing, and checking out, while making
+// sure it cannot follow a customer into an unrelated order tomorrow.
+const ACTIVE_TTL_MS = 6 * 60 * 60 * 1000
+
 const read = () => {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return EMPTY
     const parsed = JSON.parse(raw)
     if (!parsed || typeof parsed !== "object") return EMPTY
+
+    // Entries written before this rule carry no timestamp. Those are exactly the customers
+    // stuck in the mode right now, so they lapse rather than being kept forever.
+    const activeSetAt = Number(parsed.activeSetAt)
+    const activeIsFresh =
+      Number.isFinite(activeSetAt) && activeSetAt > 0 && Date.now() - activeSetAt < ACTIVE_TTL_MS
+
     return {
-      active: parsed.active === true,
+      active: parsed.active === true && activeIsFresh,
+      activeSetAt: activeIsFresh ? activeSetAt : null,
       zoneId: parsed.zoneId ? String(parsed.zoneId) : null,
       zoneName: parsed.zoneName || "",
       recipient: {
@@ -65,17 +83,24 @@ export function useOrderForSomeoneElse() {
 
   // Explicit "ordering for someone else": browse that branch AND collect recipient details.
   const startForZone = useCallback((zoneId, zoneName = "") => {
-    write({ ...read(), active: true, zoneId: zoneId ? String(zoneId) : null, zoneName })
+    // Stamped so the mode can lapse. See ACTIVE_TTL_MS.
+    write({
+      ...read(),
+      active: true,
+      activeSetAt: Date.now(),
+      zoneId: zoneId ? String(zoneId) : null,
+      zoneName,
+    })
   }, [])
 
   // Plain branch switching from the home page. Changes what is shown and nothing else.
   const setBrowseZone = useCallback((zoneId, zoneName = "") => {
-    write({ ...read(), active: false, zoneId: zoneId ? String(zoneId) : null, zoneName })
+    write({ ...read(), active: false, activeSetAt: null, zoneId: zoneId ? String(zoneId) : null, zoneName })
   }, [])
 
   // Back to the customer's own detected area.
   const clearBrowseZone = useCallback(() => {
-    write({ ...read(), active: false, zoneId: null, zoneName: "" })
+    write({ ...read(), active: false, activeSetAt: null, zoneId: null, zoneName: "" })
   }, [])
 
   const setRecipient = useCallback((recipient) => {
