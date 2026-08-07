@@ -1172,6 +1172,42 @@ export const markOrderDelivered = asyncHandler(async (req, res) => {
 
     await order.save();
 
+    // Money moves here, exactly as it does when a rider completes the delivery in the app.
+    //
+    // This path set the status and stopped. Only the rider's completeDelivery endpoint ever
+    // released escrow, so an order closed from the admin panel left the restaurant and the
+    // delivery partner unpaid and produced no settlement record at all. Of 2203 delivered
+    // orders only 338 had one, and the shortfall lines up with orders that never went
+    // through the rider flow - which riders were being pushed out of by the delivery flow
+    // wedging on OTP failure.
+    //
+    // releaseEscrow creates the settlement when one is missing, so this covers COD orders
+    // that never had one at placement time. Failure is logged rather than thrown: the order
+    // really has been delivered, and refusing the request would leave it stuck in
+    // out_for_delivery forever. A missing settlement is recoverable; a stuck order is not.
+    if (order.payment?.method === 'cash' || order.payment?.method === 'cod') {
+      try {
+        const Payment = (await import("../../payment/models/Payment.js")).default;
+        await Payment.updateOne(
+          { orderId: order._id },
+          { $set: { status: 'completed', completedAt: now } }
+        );
+      } catch (paymentUpdateError) {
+        console.error("Admin mark delivered: COD payment update failed:", paymentUpdateError);
+      }
+    }
+
+    try {
+      const { releaseEscrow } = await import("../../order/services/escrowWalletService.js");
+      await releaseEscrow(order._id);
+      console.log(`Admin mark delivered: escrow released for order ${orderTrackingId}`);
+    } catch (escrowError) {
+      console.error(
+        `Admin mark delivered: escrow release FAILED for order ${orderTrackingId} - restaurant and rider are unpaid until this is settled:`,
+        escrowError
+      );
+    }
+
     // Best-effort cleanup so rider becomes immediately available in realtime channels.
     try {
       await removeActiveOrderTracking(orderTrackingId);
