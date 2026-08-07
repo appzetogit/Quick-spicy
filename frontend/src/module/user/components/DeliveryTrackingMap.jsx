@@ -928,8 +928,14 @@ const DeliveryTrackingMap = ({
   useEffect(() => {
     if (!trackingIds.length) return;
 
+    // withCredentials is what makes live tracking work at all. The socket authenticates from
+    // the user_access_token cookie, and the app and API are different origins in production,
+    // so without this the browser sends no cookie, the server answers the CONNECT packet
+    // with "Authentication token required", and the connection is refused. The customer then
+    // sits on a map that never moves. Admin and restaurant sockets already set it.
     socketRef.current = io(backendUrl, {
       transports: ['websocket', 'polling'],
+      withCredentials: true,
       reconnection: true,
       reconnectionDelay: 500,
       reconnectionAttempts: Infinity,

@@ -32,15 +32,25 @@ export const useLocationSharing = (orderId, enabled = false) => {
     if (!orderId || isSharingRef.current) return;
 
     if (!socketRef.current) {
+      // Without withCredentials the browser sends no auth cookie on the handshake, the
+      // server refuses the connection with "Authentication token required", and every
+      // location this rider produces is dropped before it reaches a customer.
       socketRef.current = io(backendUrl, {
         transports: ['websocket', 'polling'],
+        withCredentials: true,
         reconnection: true,
         reconnectionDelay: 1000,
         reconnectionAttempts: 5
       });
 
       socketRef.current.on('connect', () => {
-        socketRef.current.emit('join-delivery', orderId);
+        // join-delivery takes the delivery partner's own id and the server checks it against
+        // the authenticated identity. This passed the orderId, so the check could never pass
+        // and the rider never joined their own room.
+        const deliveryId = deliveryIdRef.current;
+        if (deliveryId) {
+          socketRef.current.emit('join-delivery', deliveryId);
+        }
       });
     }
 
