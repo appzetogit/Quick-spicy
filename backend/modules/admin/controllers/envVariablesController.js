@@ -57,7 +57,14 @@ export const getPublicEnvVariables = asyncHandler(async (req, res) => {
       FIREBASE_APP_ID: envData.FIREBASE_APP_ID || '',
       FIREBASE_VAPID_KEY: envData.FIREBASE_VAPID_KEY || '',
       MEASUREMENT_ID: envData.MEASUREMENT_ID || '',
-      FIREBASE_PROJECT_ID: envData.FIREBASE_PROJECT_ID || ''
+      FIREBASE_PROJECT_ID: envData.FIREBASE_PROJECT_ID || '',
+      // Feature flag, not a secret. Read from process.env rather than the database because
+      // this is an operational switch set in the server's .env, and it is what the tracking
+      // map checks before asking Google for a road route. Exposed here because the frontend
+      // is built on Vercel and cannot see the backend's environment any other way - the
+      // build-time VITE_ flag it used to read was never set anywhere, so the route always
+      // fell back to a straight line between two points.
+      ENABLE_GOOGLE_DIRECTIONS: String(process.env.ENABLE_GOOGLE_DIRECTIONS || '').trim() === 'true'
     };
     
     return successResponse(res, 200, 'Public environment variables retrieved successfully', publicEnvData);
@@ -73,7 +80,8 @@ export const getPublicEnvVariables = asyncHandler(async (req, res) => {
       FIREBASE_APP_ID: '',
       FIREBASE_VAPID_KEY: '',
       MEASUREMENT_ID: '',
-      FIREBASE_PROJECT_ID: ''
+      FIREBASE_PROJECT_ID: '',
+      ENABLE_GOOGLE_DIRECTIONS: String(process.env.ENABLE_GOOGLE_DIRECTIONS || '').trim() === 'true'
     });
   }
 });

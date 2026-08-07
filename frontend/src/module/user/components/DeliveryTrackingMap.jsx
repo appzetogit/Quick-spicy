@@ -77,7 +77,33 @@ const DeliveryTrackingMap = ({
   const restaurantMarkerRef = useRef(null);
 
   const backendUrl = API_BASE_URL.replace('/api', '');
-  const ENABLE_GOOGLE_DIRECTIONS = import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true';
+  // Road routing is switched on in the server's .env and delivered through /api/env/public.
+  // It used to read a build-time VITE_ flag that was never set on Vercel, so the check was
+  // permanently false: drawRoute returned immediately, DirectionsService was never built,
+  // and the map drew a straight line across whatever lay between the two points.
+  // The build-time flag still wins if someone sets it, for local work.
+  const [directionsEnabled, setDirectionsEnabled] = useState(
+    import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true'
+  );
+
+  useEffect(() => {
+    if (import.meta.env.VITE_ENABLE_GOOGLE_DIRECTIONS === 'true') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { adminAPI } = await import('@/lib/api');
+        const response = await adminAPI.getPublicEnvVariables();
+        if (cancelled) return;
+        setDirectionsEnabled(response?.data?.data?.ENABLE_GOOGLE_DIRECTIONS === true);
+      } catch {
+        // Leave it off. A straight line is a worse map, but a wrong one is worse still than
+        // no route at all, and this must never block tracking from rendering.
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const ENABLE_GOOGLE_DIRECTIONS = directionsEnabled;
   const [GOOGLE_MAPS_API_KEY, setGOOGLE_MAPS_API_KEY] = useState("");
   const trackingIds = useMemo(() => {
     const ids = [orderId, ...(Array.isArray(orderTrackingIds) ? orderTrackingIds : [])]
@@ -230,7 +256,24 @@ const DeliveryTrackingMap = ({
   // OPTIMIZED: Added caching to reduce API calls
   const drawRoute = useCallback((start, end) => {
     if (!ENABLE_GOOGLE_DIRECTIONS) return;
-    if (!mapInstance.current || !directionsServiceRef.current || !directionsRendererRef.current) return;
+    if (!mapInstance.current) return;
+
+    // Built here rather than only at map init: the flag now arrives from the server, so it
+    // can turn true after the map has already been set up. Without this the first order
+    // watched after a page load would silently keep the straight line.
+    if (!directionsServiceRef.current && window.google?.maps) {
+      directionsServiceRef.current = new window.google.maps.DirectionsService();
+    }
+    if (!directionsRendererRef.current && window.google?.maps) {
+      directionsRendererRef.current = new window.google.maps.DirectionsRenderer({
+        map: mapInstance.current,
+        suppressMarkers: true,
+        preserveViewport: true,
+        polylineOptions: { strokeColor: routeColor, strokeWeight: 0, strokeOpacity: 0 }
+      });
+    }
+
+    if (!directionsServiceRef.current || !directionsRendererRef.current) return;
 
     // Validate coordinates before making API call
     if (!start || !end) {
