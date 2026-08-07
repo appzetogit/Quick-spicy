@@ -2,6 +2,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { API_BASE_URL } from "./config.js";
 import { clearModuleAuth, setAuthData } from "../utils/auth.js";
+import { createSingleFlight } from "./singleFlight.js";
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -187,6 +188,28 @@ apiClient.interceptors.request.use(
 );
 
 /**
+ * Collapse concurrent refreshes into one request per module.
+ *
+ * Refresh tokens rotate on every use. The user endpoint goes further: it bumps
+ * tokenVersion each time, and a refresh arriving with the previous version is treated as
+ * token reuse, which revokes every session and clears the cookies.
+ *
+ * A page that fires several requests at once - any admin dashboard, or order tracking -
+ * produces several simultaneous 401s when the access token stops being accepted. Each one
+ * used to call refresh independently: the first rotated the token, and the rest arrived
+ * holding the version that had just been superseded. The server read that as reuse and
+ * killed the session, so the customer or admin was thrown back to the login screen for no
+ * reason they could see. That is the "logs out on its own" report.
+ *
+ * Now the first 401 starts the refresh and the rest wait on the same promise, so exactly
+ * one rotation happens and everybody retries against the new token. Keyed by endpoint so
+ * two modules open in one tab cannot receive each other's refresh.
+ */
+const refreshOnce = createSingleFlight((refreshEndpoint) =>
+  axios.post(`${API_BASE_URL}${refreshEndpoint}`, {}, { withCredentials: true }),
+);
+
+/**
  * Response Interceptor
  * Handles token refresh and error responses
  */
@@ -288,14 +311,9 @@ apiClient.interceptors.response.use(
         }
 
         // Try to refresh the token
-        // The refresh token is sent via httpOnly cookie automatically
-        const response = await axios.post(
-          `${API_BASE_URL}${refreshEndpoint}`,
-          {},
-          {
-            withCredentials: true,
-          },
-        );
+        // The refresh token is sent via httpOnly cookie automatically.
+        // Single-flight: see refreshOnce.
+        const response = await refreshOnce(refreshEndpoint);
         const currentModule = getModuleForCurrentRoute(currentPath);
 
         if (currentPath.startsWith("/admin")) {
