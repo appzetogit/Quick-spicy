@@ -172,7 +172,7 @@ const resolveFcmChannel = (channel = null, platform = "web", headers = {}) => {
  * POST /api/auth/send-otp
  */
 export const sendOTP = asyncHandler(async (req, res) => {
-  const { phone, email, purpose = "login" } = req.body;
+  const { phone, email, purpose = "login", referralCode } = req.body;
 
   // Validate that either phone or email is provided
   if (!phone && !email) {
@@ -193,6 +193,22 @@ export const sendOTP = asyncHandler(async (req, res) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return errorResponse(res, 400, "Invalid email format");
+    }
+  }
+
+  // Reject a bad referral code before an SMS is spent on it. Registration resolves the code
+  // again after OTP verification and fails the whole signup if it does not match, so without
+  // this check a single mistyped character meant the customer waited for an SMS, entered it,
+  // and was then refused an account with no idea which field was wrong.
+  if (referralCode) {
+    try {
+      await resolveReferrerByCode(referralCode);
+    } catch {
+      return errorResponse(
+        res,
+        400,
+        "That referral code is not valid. Check it, or continue without one.",
+      );
     }
   }
 

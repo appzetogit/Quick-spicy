@@ -82,14 +82,17 @@ export default function SignIn() {
 
     try {
       const fullPhone = `${formData.countryCode} ${formData.phone}`.trim()
-      await authAPI.sendOTP(fullPhone, "login", null)
+      const referralCode = formData.referralCode.trim() || null
+      // A bad code fails here, on the screen that owns the field, rather than after the
+      // customer has waited for an SMS and typed it in.
+      await authAPI.sendOTP(fullPhone, "login", null, referralCode)
 
       const authData = {
         method: "phone",
         phone: fullPhone,
         email: null,
         name: null,
-        referralCode: formData.referralCode.trim() || null,
+        referralCode,
         isSignUp: false,
         module: "user",
       }

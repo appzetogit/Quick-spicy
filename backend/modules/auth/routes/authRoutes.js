@@ -32,7 +32,10 @@ const sendOTPSchema = Joi.object({
   email: Joi.string().email().optional(),
   purpose: Joi.string()
     .valid('login', 'register', 'reset-password', 'verify-phone', 'verify-email')
-    .default('login')
+    .default('login'),
+  // Checked here so a mistyped code is caught on the screen that collects it, rather than
+  // after the customer has already waited for an SMS and entered it.
+  referralCode: Joi.string().trim().uppercase().max(32).optional().allow('', null)
 }).or('phone', 'email'); // At least one of phone or email must be provided
 
 const verifyOTPSchema = Joi.object({

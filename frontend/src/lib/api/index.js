@@ -58,10 +58,13 @@ export const api = {
 // Export auth helper functions
 export const authAPI = {
   // Send OTP (supports both phone and email)
-  sendOTP: (phone = null, purpose = "login", email = null) => {
+  // referralCode is sent so the server can reject a mistyped code before spending an SMS,
+  // instead of failing the whole registration after the customer has entered the OTP.
+  sendOTP: (phone = null, purpose = "login", email = null, referralCode = null) => {
     const payload = { purpose };
     if (phone) payload.phone = phone;
     if (email) payload.email = email;
+    if (referralCode) payload.referralCode = referralCode;
     return apiClient.post(API_ENDPOINTS.AUTH.SEND_OTP, payload);
   },
 
