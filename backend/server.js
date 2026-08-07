@@ -38,6 +38,7 @@ const __dirname = path.dirname(__filename);
 import { connectDB } from './config/database.js';
 import { connectRedis, createSocketAdapterClients } from './config/redis.js';
 import { createAdapter } from '@socket.io/redis-adapter';
+import cluster from 'node:cluster';
 import { initializeFirebaseRealtime, isFirebaseRealtimeReady } from './config/firebaseRealtime.js';
 
 // Import middleware
@@ -1101,9 +1102,11 @@ async function startServer() {
   if (adapterClients) {
     io.adapter(createAdapter(adapterClients.pubClient, adapterClients.subClient));
     console.log('✅ Socket.IO Redis adapter attached (safe to run multiple workers)');
-  } else if (process.env.NODE_APP_INSTANCE !== undefined) {
-    // Running under cluster mode with no adapter is the one combination that silently
-    // breaks realtime, so say so loudly rather than letting it look healthy.
+  } else if (cluster.isWorker) {
+    // Running clustered with no adapter is the one combination that silently breaks
+    // realtime, so say so loudly rather than letting it look healthy. Detected via
+    // cluster.isWorker, not NODE_APP_INSTANCE: pm2 sets that in fork mode too, so using it
+    // here raised this alarm on a perfectly healthy single-process server.
     console.error('❌ Running clustered WITHOUT the Socket.IO Redis adapter. Realtime events will not reach all clients. Set REDIS_ENABLED=true or return pm2 to fork mode.');
   } else {
     console.log('ℹ️  Socket.IO running single-process (no Redis adapter).');
