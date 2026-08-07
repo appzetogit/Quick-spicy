@@ -4,6 +4,7 @@ import { UtensilsCrossed, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOrders } from '../context/OrdersContext';
 import { orderAPI } from '@/lib/api';
+import { estimateArrivalMinutes } from "../utils/deliveryEta"
 
 const getOrderKey = (order) => order?.id || order?._id || order?.orderId || null;
 
@@ -20,19 +21,23 @@ const isActiveOrder = (order) => {
   );
 };
 
+// Shared with the tracking screen. This used to compute its own answer against a hardcoded
+// 35 minute fallback, so one order could show two different arrival times depending on which
+// screen the customer was looking at.
 const getTimeRemaining = (order) => {
   if (!order) return null;
 
-  const orderTime = new Date(
-    order.createdAt || order.orderDate || order.created_at || order.date || Date.now(),
-  );
-  const estimatedMinutes =
-    order.estimatedDeliveryTime ||
-    order.estimatedTime ||
-    order.estimated_delivery_time ||
-    35;
-  const deliveryTime = new Date(orderTime.getTime() + estimatedMinutes * 60000);
-  return Math.max(0, Math.floor((deliveryTime - new Date()) / 60000));
+  return estimateArrivalMinutes({
+    distanceToCustomerM:
+      order.distanceToCustomerM ?? order.deliveryState?.distanceToCustomerM ?? null,
+    orderEstimatedMinutes:
+      order.estimatedDeliveryTime ||
+      order.estimatedTime ||
+      order.estimated_delivery_time ||
+      null,
+    orderPlacedAt:
+      order.createdAt || order.orderDate || order.created_at || order.date || null,
+  });
 };
 
 export default function OrderTrackingCard() {

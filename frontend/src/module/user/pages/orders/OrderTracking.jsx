@@ -1,5 +1,5 @@
 import { useParams, Link, useSearchParams } from "react-router-dom"
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { useNavigate } from "react-router-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { toast } from "sonner"
@@ -37,6 +37,7 @@ import DeliveryTrackingMap from "../../components/DeliveryTrackingMap"
 import { orderAPI, restaurantAPI } from "@/lib/api"
 import { initCashfreePayment } from "@/lib/utils/cashfree"
 import circleIcon from "@/assets/circleicon.png"
+import { estimateArrivalMinutes, formatArrivalMinutes } from "../../utils/deliveryEta"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -78,7 +79,7 @@ const AnimatedCheckmark = ({ delay = 0 }) => (
 )
 
 // Real Delivery Map Component with User Live Location
-const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null, userLiveCoords = null, userLocationAccuracy = null }) => {
+const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null, userLiveCoords = null, userLocationAccuracy = null, onTrackingData = null }) => {
   const toPointFromGeoJSON = (coords) => {
     if (!Array.isArray(coords) || coords.length < 2) return null;
     const lng = Number(coords[0]);
@@ -201,6 +202,7 @@ const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null,
         userLocationAccuracy={userLocationAccuracy}
         deliveryBoyData={deliveryBoyData}
         order={order}
+        onTrackingData={onTrackingData}
       />
     </motion.div>
   );
@@ -352,7 +354,10 @@ export default function OrderTracking() {
 
   const [showConfirmation, setShowConfirmation] = useState(confirmed)
   const [orderStatus, setOrderStatus] = useState('placed')
-  const [estimatedTime, setEstimatedTime] = useState(29)
+  // Live remaining distance, reported by the tracking map as the rider moves. This is what
+  // makes the arrival time fall as they approach, instead of the old hardcoded 29 that
+  // decremented once a minute whether or not the rider had moved at all.
+  const [liveDistanceToCustomerM, setLiveDistanceToCustomerM] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [showCancelDialog, setShowCancelDialog] = useState(false)
   const [showOrderDetails, setShowOrderDetails] = useState(false)
@@ -468,13 +473,18 @@ export default function OrderTracking() {
     return code ? String(code) : null
   }, [order?.deliveryVerification?.dropOtp?.code])
 
+  // Ticks every second while the cancellation countdown is on screen, then keeps ticking
+  // slowly because the arrival estimate also reads this clock. It previously stopped once
+  // the cancel window closed, which would have frozen the arrival time for the rest of the
+  // delivery.
   useEffect(() => {
-    if (!isEditWindowOpen) return
+    const isFinished = orderStatus === 'delivered' || orderStatus === 'cancelled'
+    if (isFinished) return
     const interval = setInterval(() => {
       setTimerNow(Date.now())
-    }, 1000)
+    }, isEditWindowOpen ? 1000 : 30000)
     return () => clearInterval(interval)
-  }, [isEditWindowOpen])
+  }, [isEditWindowOpen, orderStatus])
 
   // Poll for order updates (especially when delivery partner accepts)
   // Only poll if delivery partner is not yet assigned to avoid unnecessary updates
@@ -700,13 +710,26 @@ export default function OrderTracking() {
     }
   }, [confirmed])
 
-  // Countdown timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEstimatedTime((prev) => Math.max(0, prev - 1))
-    }, 60000)
-    return () => clearInterval(timer)
+  const handleTrackingData = useCallback((payload) => {
+    const meters = Number(payload?.distanceToCustomerM)
+    setLiveDistanceToCustomerM(Number.isFinite(meters) && meters >= 0 ? meters : null)
   }, [])
+
+  // One shared calculation, used here and on the orders list. Falls back to the order's own
+  // promised window while the rider has not started reporting, and to nothing at all when we
+  // genuinely do not know - saying nothing beats inventing a number.
+  const estimatedTime = useMemo(
+    () =>
+      estimateArrivalMinutes({
+        distanceToCustomerM: liveDistanceToCustomerM,
+        orderEstimatedMinutes: order?.estimatedDeliveryTime ?? order?.eta?.max ?? null,
+        orderPlacedAt: order?.createdAt ?? null,
+        now: timerNow,
+      }),
+    [liveDistanceToCustomerM, order?.estimatedDeliveryTime, order?.eta?.max, order?.createdAt, timerNow],
+  )
+
+  const arrivalText = useMemo(() => formatArrivalMinutes(estimatedTime), [estimatedTime])
 
   // Listen for order status updates from socket (e.g., "Delivery partner on the way")
   useEffect(() => {
@@ -1035,17 +1058,17 @@ export default function OrderTracking() {
     },
     preparing: {
       title: "Preparing your order",
-      subtitle: `Arriving in ${estimatedTime} mins`,
+      subtitle: arrivalText ? `Arriving in ${arrivalText}` : "On the way",
       color: "bg-[#EB590E]"
     },
     pickup: {
       title: "Order picked up",
-      subtitle: `Arriving in ${estimatedTime} mins`,
+      subtitle: arrivalText ? `Arriving in ${arrivalText}` : "On the way",
       color: "bg-[#EB590E]"
     },
     on_way: {
       title: "Order picked up",
-      subtitle: `Arriving in ${estimatedTime} mins`,
+      subtitle: arrivalText ? `Arriving in ${arrivalText}` : "On the way",
       color: "bg-[#EB590E]"
     },
     delivered: {
@@ -1194,6 +1217,7 @@ export default function OrderTracking() {
           fallbackCustomerCoords={fallbackCustomerCoords}
           userLiveCoords={userLiveCoords}
           userLocationAccuracy={userLiveLocation?.accuracy ?? null}
+          onTrackingData={handleTrackingData}
         />
       )}
 
