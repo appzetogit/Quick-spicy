@@ -10,6 +10,8 @@ const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
+const RUPEE = "₹"
+
 
 export default function SignIn() {
   const navigate = useNavigate()
@@ -32,10 +34,14 @@ export default function SignIn() {
   const [formData, setFormData] = useState({
     phone: "",
     countryCode: "+91",
+    referralCode: referralCodeFromLink || "",
   })
 
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  // Typed codes are only offered when the customer did not arrive through a referral link,
+  // so a link cannot be silently overwritten by a stray keystroke.
+  const [showReferralField, setShowReferralField] = useState(Boolean(referralCodeFromLink))
 
   const validatePhone = (phone) => {
     if (!phone.trim()) return "Phone number is required"
@@ -51,6 +57,12 @@ export default function SignIn() {
     if (name === "phone") {
       value = value.replace(/\D/g, "").slice(0, 10)
       setError(validatePhone(value))
+    }
+
+    // The backend uppercases and trims referral codes before lookup, so match it here and
+    // stop a lowercase paste from being rejected as an invalid code.
+    if (name === "referralCode") {
+      value = value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 32)
     }
 
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -77,7 +89,7 @@ export default function SignIn() {
         phone: fullPhone,
         email: null,
         name: null,
-        referralCode: referralCodeFromLink || null,
+        referralCode: formData.referralCode.trim() || null,
         isSignUp: false,
         module: "user",
       }
@@ -141,6 +153,43 @@ export default function SignIn() {
                   <AlertCircle className="h-3 w-3" />
                   <span>{error}</span>
                 </div>
+              )}
+            </div>
+
+            {/* Referral code. Only new accounts earn the referrer a reward - the backend
+                ignores the code when the number already belongs to a registered customer -
+                so it is offered here rather than being made to look mandatory. */}
+            <div className="space-y-2">
+              {showReferralField ? (
+                <>
+                  <label htmlFor="referralCode" className="block text-xs md:text-sm font-medium text-gray-600 dark:text-gray-400">
+                    Referral code {referralCodeFromLink ? "(from your invite)" : "(optional)"}
+                  </label>
+                  <Input
+                    id="referralCode"
+                    name="referralCode"
+                    type="text"
+                    autoCapitalize="characters"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    maxLength={32}
+                    placeholder="e.g. RAHU1234"
+                    value={formData.referralCode}
+                    onChange={handleChange}
+                    className="h-12 md:h-14 text-base md:text-lg tracking-widest uppercase bg-white dark:bg-[#1a1a1a] text-black dark:text-white border-gray-300 dark:border-gray-700 rounded-lg"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-500">
+                    Your friend gets {RUPEE}50 in their wallet when you sign up.
+                  </p>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowReferralField(true)}
+                  className="text-sm font-semibold text-[#EB590E] underline underline-offset-2"
+                >
+                  Have a referral code?
+                </button>
               )}
             </div>
           </form>

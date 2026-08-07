@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import './index.css'
 import App from './App.jsx'
+import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 import { loadBusinessSettings } from './lib/utils/businessSettings.js'
 
 // Load business settings on app start (favicon, title)
@@ -194,7 +195,9 @@ if (!rootElement) {
 createRoot(rootElement).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
       <Toaster position="top-center" richColors offset="80px" />
     </BrowserRouter>
   </StrictMode>,
