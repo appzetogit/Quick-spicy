@@ -636,10 +636,18 @@ export default function Under250() {
 
   // Fetch categories from admin API
   useEffect(() => {
+    // Scope to the branch being shown, the way the home page already does. Unscoped, this
+    // returned all 339 categories from every branch, so a customer in Indore was browsing
+    // "ANDHRA SPECIALS" and "BASMATHI FRIED RICE" chips for food no one could deliver.
+    let stale = false
+
     const fetchCategories = async () => {
       try {
         setLoadingCategories(true)
-        const response = await api.get('/categories/public')
+        const response = await api.get('/categories/public', {
+          params: effectiveZoneId ? { zoneId: effectiveZoneId } : {},
+        })
+        if (stale) return
         if (response.data.success && response.data.data.categories) {
           const adminCategories = response.data.data.categories.map(cat => ({
             id: cat.id,
@@ -659,6 +667,7 @@ export default function Under250() {
           setCategories(defaultCategories)
         }
       } catch (error) {
+        if (stale) return
         debugError('Error fetching categories:', error)
         // Fallback to default categories on error
         const defaultCategories = [
@@ -668,12 +677,15 @@ export default function Under250() {
         ]
         setCategories(defaultCategories)
       } finally {
-        setLoadingCategories(false)
+        if (!stale) setLoadingCategories(false)
       }
     }
 
     fetchCategories()
-  }, [])
+    return () => {
+      stale = true
+    }
+  }, [effectiveZoneId])
 
   // Sync quantities from cart on mount
   useEffect(() => {
