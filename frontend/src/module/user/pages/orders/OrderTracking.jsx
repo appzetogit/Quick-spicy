@@ -1199,8 +1199,10 @@ export default function OrderTracking() {
 
       {/* Scrollable Content */}
       <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-4 md:py-6 space-y-4 md:space-y-6 pb-24 md:pb-32">
-        {/* 1-minute cancellation window after admin acceptance */}
-        {isAdminAccepted && (
+        {/* 1-minute cancellation window after admin acceptance. The whole card goes once the
+            window closes: leaving an "Expired" countdown above a dead red button invited the
+            taps that produced "I can still press cancel". */}
+        {isAdminAccepted && isEditWindowOpen && (
           <motion.div
             className="bg-white rounded-xl p-4 shadow-sm border border-orange-100"
             initial={{ opacity: 0, y: 20 }}
@@ -1525,18 +1527,14 @@ export default function OrderTracking() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8 }}
         >
-          {!isAdminAccepted || isEditWindowOpen ? (
+          {/* Once the window closes the option is removed rather than shown disabled. It
+              used to stay tappable and only answer with an error toast, which reads as the
+              app being broken instead of the window being over. */}
+          {(!isAdminAccepted || isEditWindowOpen) && (
             <SectionItem
               icon={CircleSlash}
               title="Cancel order"
               subtitle=""
-              onClick={handleCancelOrder}
-            />
-          ) : (
-            <SectionItem
-              icon={CircleSlash}
-              title="Cancel order"
-              subtitle="Cancellation window ended"
               onClick={handleCancelOrder}
             />
           )}

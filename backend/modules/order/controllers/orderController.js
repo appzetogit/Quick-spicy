@@ -22,6 +22,10 @@ import OutletTimings from '../../restaurant/models/OutletTimings.js';
 import { randomInt } from 'crypto';
 import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
 
+// How long after confirmation a customer may still cancel. Kept here rather than only in the
+// app, because the app's countdown is advisory and this endpoint is the thing that decides.
+const CUSTOMER_CANCELLATION_WINDOW_MS = Number(process.env.CUSTOMER_CANCELLATION_WINDOW_MS || 60_000);
+
 const logger = winston.createLogger({
   level: 'info',
   format: winston.format.json(),
@@ -2310,6 +2314,35 @@ export const cancelOrder = async (req, res) => {
         success: false,
         message: 'Cannot cancel a delivered order'
       });
+    }
+
+    // Customer cancellation closes a minute after the order is confirmed. Until now this
+    // window existed only in the app: the countdown ran on screen while this endpoint
+    // accepted a cancellation at any point short of delivery, so an order already being
+    // cooked - or on a rider's bike - could still be cancelled and the kitchen ate the cost.
+    //
+    // Before confirmation there is nothing to waste, so cancelling stays open. The clock
+    // starts at the confirmation timestamp, or the first tracking stage that carries one, so
+    // it cannot be reset by an unrelated write to the order.
+    const cancellationAnchor =
+      order.tracking?.confirmed?.timestamp ||
+      order.tracking?.preparing?.timestamp ||
+      null;
+
+    if (cancellationAnchor) {
+      const elapsedMs = Date.now() - new Date(cancellationAnchor).getTime();
+      if (elapsedMs > CUSTOMER_CANCELLATION_WINDOW_MS) {
+        logger.warn('Order cancellation refused: window closed', {
+          orderId: order.orderId,
+          elapsedMs,
+          windowMs: CUSTOMER_CANCELLATION_WINDOW_MS
+        });
+        return res.status(403).json({
+          success: false,
+          message:
+            'The cancellation window for this order has ended. Please contact support if you need help.'
+        });
+      }
     }
 
     // Get payment method from order or payment record
