@@ -4619,32 +4619,48 @@ export default function DeliveryHome() {
     setOrderDeliveredIsAnimatingToComplete(true)
     setOrderDeliveredButtonProgress(1)
 
-    // After slider completes, ask for OTP in popup if required, then continue
+    // After slider completes, ask for OTP in popup if required, then continue.
+    //
+    // Everything below runs inside try/finally for one reason: this callback is async and
+    // detached, so anything that threw inside it rejected into nowhere and left
+    // orderDeliveredFlowInProgressRef stuck true. The guard at the top of this function then
+    // returned immediately on every later attempt, so the rider swiped Delivered, entered
+    // the OTP, watched the modal close, and nothing happened - no error, no progress, and no
+    // way back short of restarting the app. That is the reported symptom exactly, and the
+    // records agree: 2202 orders were delivered carrying an OTP while only 348 were ever
+    // verified, against just 11 recorded wrong-code attempts.
     setTimeout(async () => {
-      const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
-      if (!otpVerified) {
+      try {
+        const otpVerified = await verifyDropOtpForCurrentOrder(orderIdForApi)
+        if (!otpVerified) {
+          setShowOrderDeliveredAnimation(true)
+          return
+        }
+
+        setShowOrderDeliveredAnimation(false)
+
+        // CRITICAL: Clear all pickup/delivery related popups
+        setShowReachedDropPopup(false)
+        setShowreachedPickupPopup(false)
+        setShowOrderIdConfirmationPopup(false)
+
+        // Show customer review popup after successful slide + OTP verification
+        setShowCustomerReviewPopup(true)
+      } catch (flowError) {
+        // Never fail silently here. A rider standing at a door needs to know the app did not
+        // accept the handover, not be left guessing.
+        toast.error(
+          flowError?.response?.data?.message ||
+          flowError?.message ||
+          'Could not complete the delivery. Please try again.'
+        )
         setShowOrderDeliveredAnimation(true)
+      } finally {
+        // Always released, so a failure costs one retry rather than the whole session.
         setOrderDeliveredButtonProgress(0)
         setOrderDeliveredIsAnimatingToComplete(false)
         orderDeliveredFlowInProgressRef.current = false
-        return
       }
-
-      setShowOrderDeliveredAnimation(false)
-
-      // CRITICAL: Clear all pickup/delivery related popups
-      setShowReachedDropPopup(false)
-      setShowreachedPickupPopup(false)
-      setShowOrderIdConfirmationPopup(false)
-
-      // Show customer review popup after successful slide + OTP verification
-      setShowCustomerReviewPopup(true)
-
-      setTimeout(() => {
-        setOrderDeliveredButtonProgress(0)
-        setOrderDeliveredIsAnimatingToComplete(false)
-        orderDeliveredFlowInProgressRef.current = false
-      }, 500)
     }, 200)
   }, [newOrder, selectedRestaurant, verifyDropOtpForCurrentOrder])
 
