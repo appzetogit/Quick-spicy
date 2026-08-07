@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react"
 import { locationAPI, userAPI } from "@/lib/api"
+import { evaluateManualMode } from "../utils/manualLocationMode"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -8,6 +9,7 @@ const debugError = (...args) => {}
 const USER_LOCATION_STORAGE_KEY = "userLocation"
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
 const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
+const USER_LOCATION_PREFERENCE_SET_AT_KEY = "userLocationPreferenceSetAt"
 
 export function useLocation() {
   const [location, setLocation] = useState(null)
@@ -68,6 +70,35 @@ export function useLocation() {
   }
 
   const isManualSelectionActive = () => getStoredLocationPreference() === "manual"
+
+  const getManualPreferenceSetAt = () => {
+    try {
+      return Number(localStorage.getItem(USER_LOCATION_PREFERENCE_SET_AT_KEY)) || null
+    } catch {
+      return null
+    }
+  }
+
+  // Drops a manual pin and returns to auto-detect. Announced on the same event the picker
+  // uses, so every screen listening for a preference change follows along instead of holding
+  // a pin nothing else believes in any more.
+  const releaseManualSelection = (reason) => {
+    try {
+      localStorage.setItem(USER_LOCATION_PREFERENCE_KEY, "live")
+      localStorage.removeItem(USER_LOCATION_PREFERENCE_SET_AT_KEY)
+    } catch {
+      // Storage unavailable: the ref below still frees this session.
+    }
+    manualSelectionActiveRef.current = false
+    debugLog(`📍 Manual location released (${reason})`)
+    try {
+      window.dispatchEvent(
+        new CustomEvent(USER_LOCATION_PREFERENCE_EVENT, { detail: { preference: "live" } })
+      )
+    } catch {
+      // CustomEvent unavailable in very old webviews; the ref change still applies here.
+    }
+  }
 
   const readStoredLocation = () => {
     try {
@@ -2362,6 +2393,33 @@ export function useLocation() {
     // The background fetch will set the location, or we'll use the cached/DB location
     // Only set fallback if we have no location after all attempts
 
+    // Asks the device where it is purely to decide whether a manual pin still makes sense.
+    // Read-only: it never overwrites the pinned location unless the pin is being dropped, so
+    // a customer browsing another part of their own city is left alone. Silent on failure -
+    // failing to get a fix is not evidence that anyone moved.
+    const checkManualDriftInBackground = () => {
+      if (!navigator.geolocation) return
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (!manualSelectionActiveRef.current) return
+
+          const verdict = evaluateManualMode({
+            setAtMs: getManualPreferenceSetAt(),
+            manualCoords: readStoredLocation(),
+            liveCoords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+          })
+
+          if (!verdict.expired) return
+
+          releaseManualSelection(verdict.reason)
+          getLocation(true, true).then(() => startWatchingLocation()).catch(() => {})
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 15000, maximumAge: 5 * 60 * 1000 }
+      )
+    }
+
     // Request fresh location in BACKGROUND (non-blocking)
     // CRITICAL FIX: Only auto-request if permission is ALREADY granted
     // This prevents "Requests geolocation permission on page load" warning
@@ -2369,6 +2427,22 @@ export function useLocation() {
       try {
         if (manualSelectionActiveRef.current) {
           setLoading(false)
+          // A manual pin used to end the story here, which is why it was permanent. Age is
+          // checked immediately; distance needs a fix, so that is asked for quietly in the
+          // background and only acted on if the customer has genuinely left the area.
+          const ageVerdict = evaluateManualMode({
+            setAtMs: getManualPreferenceSetAt(),
+            manualCoords: readStoredLocation(),
+            liveCoords: null,
+          })
+
+          if (ageVerdict.expired) {
+            releaseManualSelection(ageVerdict.reason)
+            getLocation(true, true).then(() => startWatchingLocation()).catch(() => {})
+            return
+          }
+
+          checkManualDriftInBackground()
           return
         }
 

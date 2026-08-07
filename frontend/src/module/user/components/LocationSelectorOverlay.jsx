@@ -15,6 +15,7 @@ const debugError = (...args) => {}
 
 const USER_LOCATION_STORAGE_KEY = "userLocation"
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
+const USER_LOCATION_PREFERENCE_SET_AT_KEY = "userLocationPreferenceSetAt"
 const USER_LOCATION_PREFERENCE_EVENT = "user-location-preference-changed"
 const USER_LOCATION_UPDATED_EVENT = "user-location-updated"
 
@@ -176,6 +177,15 @@ const ADDRESS_TYPE_OPTIONS = [
 const setUserLocationPreference = (preference) => {
   try {
     localStorage.setItem(USER_LOCATION_PREFERENCE_KEY, preference)
+    // Stamped so a manual pick can expire. Without this the pin was permanent, and a
+    // customer who used the picker once to correct a stale location was opted out of
+    // auto-detect for good. Cleared on the way back to live so a later pick starts its own
+    // clock rather than inheriting an old one.
+    if (preference === "manual") {
+      localStorage.setItem(USER_LOCATION_PREFERENCE_SET_AT_KEY, String(Date.now()))
+    } else {
+      localStorage.removeItem(USER_LOCATION_PREFERENCE_SET_AT_KEY)
+    }
   } catch {}
 
   if (typeof window !== "undefined") {
