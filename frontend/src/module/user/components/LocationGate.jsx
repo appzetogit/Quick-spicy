@@ -306,6 +306,17 @@ export default function LocationGate() {
     <p className="text-xs text-slate-500 dark:text-gray-400">{retryNote}</p>
   ) : null
 
+  // What the app believes about where they are. Coordinates are included because the address
+  // is often vague and the coordinates are what support can actually check against a zone.
+  const detectedPlace = hasCoords
+    ? [
+        location?.address || location?.area || location?.city,
+        `${location.latitude.toFixed(5)}, ${location.longitude.toFixed(5)}`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null
+
   // Permission denied is not the same thing as "we don't deliver here" - we have no idea
   // where they are - so it says so, and leads with the action that fixes it. The way out to
   // ordering for someone else stays on both.
@@ -341,6 +352,14 @@ export default function LocationGate() {
         {requesting ? "Checking..." : "Try again"}
       </button>
       {note}
+      {detectedPlace && (
+        // Customers reported this screen while standing inside a branch's town, with no way
+        // to tell whether the app had even found them. Showing what it actually detected
+        // turns "it's broken" into something they can check and report.
+        <p className="text-xs text-slate-400 dark:text-gray-500">
+          We detected you at: {detectedPlace}
+        </p>
+      )}
     </Shell>
   )
 
