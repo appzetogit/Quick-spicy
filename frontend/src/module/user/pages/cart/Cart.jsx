@@ -315,6 +315,34 @@ export default function Cart() {
     }
     : currentLocation
   const { zoneId, zone } = useZone(zoneLocation) // Prefer selected/saved address zone
+
+  // How far the customer currently is from the address they are ordering to. The zone above
+  // deliberately follows the delivery address - that is what the server validates and what
+  // the rider drives to - so a customer who has moved out of the area can still legitimately
+  // order to an address inside it. That is worth saying out loud rather than hiding: people
+  // moved 12km away, kept the old address selected, and only noticed at the door.
+  // ponytail: straight-line distance, no road routing. Fine for "are you still here?".
+  const distanceFromSelectedAddressKm = useMemo(() => {
+    const lat1 = Number(currentLocation?.latitude)
+    const lng1 = Number(currentLocation?.longitude)
+    const lat2 = Number(selectedAddressCoordinates?.[1])
+    const lng2 = Number(selectedAddressCoordinates?.[0])
+    if (![lat1, lng1, lat2, lng2].every(Number.isFinite)) return null
+    if ((lat2 === 0 && lng2 === 0) || (lat1 === 0 && lng1 === 0)) return null
+
+    const toRad = (deg) => (deg * Math.PI) / 180
+    const dLat = toRad(lat2 - lat1)
+    const dLng = toRad(lng2 - lng1)
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+  }, [currentLocation?.latitude, currentLocation?.longitude, selectedAddressCoordinates])
+
+  // 2km: past any plausible GPS or geocoding error, so the warning means they really have
+  // moved rather than that the pin landed on the next street.
+  const isAwayFromSelectedAddress =
+    distanceFromSelectedAddressKm !== null && distanceFromSelectedAddressKm > 2
   const defaultPayment = getDefaultPaymentMethod()
   const restaurantAssignedZoneId = restaurantData?.restaurantZoneId || null
   const restaurantZoneMismatch = Boolean(
@@ -2488,6 +2516,28 @@ export default function Cart() {
                         <p className="text-xs md:text-sm text-[#EB590E] mt-1">
                           Use current location and save address to place order
                         </p>
+                      )}
+                      {hasSavedAddress && isAwayFromSelectedAddress && (
+                        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
+                          <p className="text-xs md:text-sm font-semibold text-amber-900 dark:text-amber-300">
+                            You are no longer at the selected location.
+                          </p>
+                          <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-400">
+                            You are about {Math.round(distanceFromSelectedAddressKm)} km away. The
+                            order will still be delivered to the address above.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              openLocationSelector()
+                            }}
+                            className="mt-1.5 text-xs font-semibold text-amber-900 underline dark:text-amber-300"
+                          >
+                            Change delivery address
+                          </button>
+                        </div>
                       )}
                       {/* Address Selection Buttons */}
                       <div className="flex gap-2 mt-2">

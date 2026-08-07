@@ -3,7 +3,7 @@ import { createPortal } from "react-dom"
 import { useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"
-import { restaurantAPI, orderAPI, zoneAPI } from "@/lib/api"
+import { restaurantAPI, orderAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import { toast } from "sonner"
 import { useLocation } from "../../hooks/useLocation"
@@ -62,21 +62,13 @@ const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
 const USER_LOCATION_STORAGE_KEY = "userLocation"
 const PREVIOUS_ORDER_LOOKUP_LIMIT = 20
 
-const normalizeZoneMatchValue = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-
 function RestaurantDetailsContent() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const showOnlyUnder250 = searchParams.get('under250') === 'true'
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
-  const { vegMode, getDefaultAddress, addDishFavorite, removeDishFavorite, isDishFavorite, getDishFavorites, getFavorites, addFavorite, removeFavorite, isFavorite } = useProfile()
+  const { vegMode, addDishFavorite, removeDishFavorite, isDishFavorite, getDishFavorites, getFavorites, addFavorite, removeFavorite, isFavorite } = useProfile()
   const { location: userLocation } = useLocation() // Get user's current location
   const [storedManualLocation, setStoredManualLocation] = useState(() => {
     try {
@@ -93,12 +85,10 @@ function RestaurantDetailsContent() {
       return "live"
     }
   })
-  const [availableZones, setAvailableZones] = useState([])
   const selectedLocation = useMemo(() => {
     if (locationPreference !== "manual") return userLocation
     return storedManualLocation || userLocation
   }, [locationPreference, storedManualLocation, userLocation])
-  const defaultAddress = getDefaultAddress()
   const zoneLookupLocation = useMemo(() => {
     const coords = selectedLocation?.location?.coordinates
     if (Array.isArray(coords) && coords.length >= 2) {
@@ -123,55 +113,14 @@ function RestaurantDetailsContent() {
       return { latitude, longitude }
     }
 
-    const savedCoordinates = defaultAddress?.location?.coordinates
-    if (Array.isArray(savedCoordinates) && savedCoordinates.length >= 2) {
-      return {
-        latitude: Number(savedCoordinates[1]),
-        longitude: Number(savedCoordinates[0]),
-      }
-    }
-
+    // No saved-address fallback: see Under250. The zone follows where the customer is, not
+    // an address they saved earlier and may be far from.
     return userLocation
-  }, [defaultAddress, selectedLocation, userLocation])
-  const { zoneId, zone, loading: loadingZone, isOutOfService } = useZone(zoneLookupLocation) // Prefer saved/default address zone before live location
-  const addressZoneFallbackId = useMemo(() => {
-    const textCandidates = [
-      selectedLocation?.city,
-      selectedLocation?.area,
-      selectedLocation?.state,
-      selectedLocation?.formattedAddress,
-      selectedLocation?.address,
-      defaultAddress?.city,
-      defaultAddress?.area,
-      defaultAddress?.state,
-      defaultAddress?.formattedAddress,
-      defaultAddress?.address,
-      defaultAddress?.additionalDetails,
-    ]
-      .map(normalizeZoneMatchValue)
-      .filter(Boolean)
-
-    if (textCandidates.length === 0 || availableZones.length === 0) return null
-
-    const matchedZone = availableZones.find((item) => {
-      const zoneValues = [
-        item?.name,
-        item?.zoneName,
-        item?.serviceLocation,
-      ]
-        .map(normalizeZoneMatchValue)
-        .filter(Boolean)
-
-      return textCandidates.some((candidate) =>
-        zoneValues.some((zoneValue) =>
-          zoneValue.includes(candidate) || candidate.includes(zoneValue)
-        )
-      )
-    })
-
-    return matchedZone?._id ? String(matchedZone._id) : null
-  }, [availableZones, defaultAddress, selectedLocation])
-  const effectiveZoneId = zoneId || addressZoneFallbackId
+  }, [selectedLocation, userLocation])
+  const { zoneId, zone, loading: loadingZone, isOutOfService } = useZone(zoneLookupLocation)
+  // Removed: the address-text zone guess. See Under250 for why - it resurrected a zone
+  // whenever coordinates said the customer was outside every one of them.
+  const effectiveZoneId = zoneId
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [highlightIndex, setHighlightIndex] = useState(0)
   const [quantities, setQuantities] = useState({})
@@ -233,29 +182,6 @@ function RestaurantDetailsContent() {
       window.removeEventListener("storage", syncManualLocation)
       window.removeEventListener("user-location-preference-changed", syncManualLocation)
       window.removeEventListener("user-location-updated", syncManualLocation)
-    }
-  }, [])
-
-  useEffect(() => {
-    let active = true
-
-    const fetchZones = async () => {
-      try {
-        const response = await zoneAPI.getZones()
-        const zones = response?.data?.data?.zones || []
-        if (active) {
-          setAvailableZones(Array.isArray(zones) ? zones : [])
-        }
-      } catch (error) {
-        if (active) {
-          setAvailableZones([])
-        }
-      }
-    }
-
-    fetchZones()
-    return () => {
-      active = false
     }
   }, [])
 

@@ -19,7 +19,7 @@ import offerImage from "@/assets/offerimage.png"
 import AddToCartAnimation from "../components/AddToCartAnimation"
 import OptimizedImage from "@/components/OptimizedImage"
 import api from "@/lib/api"
-import { restaurantAPI, zoneAPI } from "@/lib/api"
+import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 const debugLog = (...args) => {}
@@ -34,14 +34,6 @@ const USER_LOCATION_UPDATED_EVENT = "user-location-updated"
 const USER_ZONE_SELECTION_UPDATED_EVENT = "user-zone-selection-updated"
 const UNDER_250_MAX_PRICE = 250
 const MAX_UNDER_250_ITEMS_PER_RESTAURANT = 12
-
-const normalizeZoneMatchValue = (value) =>
-  String(value || "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
 
 const getFinalUnder250ItemPrice = (item) => {
   const baseOriginalPrice = Number(item?.originalPrice || item?.price || 0)
@@ -101,7 +93,6 @@ const extractUnder250ItemsFromMenu = (menu) => {
 
 export default function Under250() {
   const { location } = useLocation()
-  const { getDefaultAddress } = useProfile()
   const [storedManualLocation, setStoredManualLocation] = useState(() => {
     try {
       const stored = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
@@ -121,7 +112,6 @@ export default function Under250() {
     if (locationPreference !== "manual") return location
     return storedManualLocation || location
   }, [location, locationPreference, storedManualLocation])
-  const defaultSavedAddress = useMemo(() => getDefaultAddress?.() || null, [getDefaultAddress])
   const zoneLookupLocation = useMemo(() => {
     const coords = selectedLocation?.location?.coordinates
     if (Array.isArray(coords) && coords.length >= 2) {
@@ -147,23 +137,12 @@ export default function Under250() {
       return { latitude, longitude }
     }
 
-    const savedCoords = defaultSavedAddress?.location?.coordinates
-    if (Array.isArray(savedCoords) && savedCoords.length >= 2) {
-      const savedLng = Number(savedCoords[0])
-      const savedLat = Number(savedCoords[1])
-      if (Number.isFinite(savedLat) && Number.isFinite(savedLng)) {
-        return { latitude: savedLat, longitude: savedLng }
-      }
-    }
-
-    const savedLatitude = Number(defaultSavedAddress?.latitude ?? defaultSavedAddress?.lat ?? defaultSavedAddress?.location?.latitude)
-    const savedLongitude = Number(defaultSavedAddress?.longitude ?? defaultSavedAddress?.lng ?? defaultSavedAddress?.location?.longitude)
-    if (Number.isFinite(savedLatitude) && Number.isFinite(savedLongitude)) {
-      return { latitude: savedLatitude, longitude: savedLongitude }
-    }
-
+    // Deliberately no fall back to the saved address. The zone answers "where is this
+    // customer standing", and resolving it from an address they saved weeks ago meant
+    // someone who had driven 36km out of the branch still saw that branch's restaurants and
+    // could order from them. Where they are is the only thing that decides it.
     return location
-  }, [selectedLocation, defaultSavedAddress, location])
+  }, [selectedLocation, location])
   const { zoneId, zoneStatus, isInService, isOutOfService } = useZone(zoneLookupLocation)
   const [zoneSelection, setZoneSelection] = useState(() => {
     try {
@@ -175,44 +154,11 @@ export default function Under250() {
 
     return { mode: "auto", zoneId: "" }
   })
-  const [availableZones, setAvailableZones] = useState([])
-  const addressZoneFallbackId = useMemo(() => {
-    const textCandidates = [
-      selectedLocation?.city,
-      selectedLocation?.area,
-      selectedLocation?.state,
-      selectedLocation?.formattedAddress,
-      selectedLocation?.address,
-      defaultSavedAddress?.city,
-      defaultSavedAddress?.area,
-      defaultSavedAddress?.state,
-      defaultSavedAddress?.formattedAddress,
-      defaultSavedAddress?.address,
-      defaultSavedAddress?.additionalDetails,
-    ]
-      .map(normalizeZoneMatchValue)
-      .filter(Boolean)
-
-    if (textCandidates.length === 0 || availableZones.length === 0) return null
-
-    const matchedZone = availableZones.find((zone) => {
-      const zoneValues = [
-        zone?.name,
-        zone?.zoneName,
-        zone?.serviceLocation,
-      ]
-        .map(normalizeZoneMatchValue)
-        .filter(Boolean)
-
-      return textCandidates.some((candidate) =>
-        zoneValues.some((zoneValue) =>
-          zoneValue.includes(candidate) || candidate.includes(zoneValue)
-        )
-      )
-    })
-
-    return matchedZone?._id ? String(matchedZone._id) : null
-  }, [availableZones, defaultSavedAddress, selectedLocation])
+  // Removed: a zone guessed by substring-matching the customer's address text against zone
+  // names. Delivery zones are polygons and only coordinates can decide membership. Matching
+  // "Indore" or a state name against a branch name handed back a zone the customer was
+  // nowhere near, and because it was consulted whenever GPS reported out-of-service it
+  // silently undid the out-of-zone check: restaurants reappeared and orders went through.
   // Honour the branch the customer picked on the home page, so this page does not silently
   // show a different area than the one they are browsing.
   const orderForOthers = useOrderForSomeoneElse()
@@ -222,7 +168,7 @@ export default function Under250() {
   const sessionBranchZoneId = orderForOthers.active ? null : chosenBranchZoneId
   // Only once detection has settled outside every zone, never while it is still loading.
   const fallbackBranchZoneId = zoneStatus === "OUT_OF_SERVICE" ? chosenBranchZoneId : null
-  const effectiveZoneId = sessionBranchZoneId || zoneId || addressZoneFallbackId || fallbackBranchZoneId
+  const effectiveZoneId = sessionBranchZoneId || zoneId || fallbackBranchZoneId
   const browsingChosenBranch = Boolean(effectiveZoneId) && effectiveZoneId !== zoneId
   const navigate = useNavigate()
   const { addToCart, updateQuantity, removeFromCart, getCartItem, cart } = useCart()
@@ -298,29 +244,6 @@ export default function Under250() {
     }
   }, [])
 
-  useEffect(() => {
-    let mounted = true
-
-    const fetchAvailableZones = async () => {
-      try {
-        const response = await zoneAPI.getZones()
-        const zones = response?.data?.data?.zones || []
-        if (mounted) {
-          setAvailableZones(Array.isArray(zones) ? zones : [])
-        }
-      } catch (_) {
-        if (mounted) {
-          setAvailableZones([])
-        }
-      }
-    }
-
-    fetchAvailableZones()
-
-    return () => {
-      mounted = false
-    }
-  }, [])
 
   const getItemKey = (itemId, restaurantId) => `${String(restaurantId || "unknown")}::${String(itemId || "unknown")}`
 
@@ -632,7 +555,7 @@ export default function Under250() {
     return () => {
       stale = true
     }
-  }, [addressZoneFallbackId, browsingChosenBranch, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
+  }, [browsingChosenBranch, effectiveZoneId, zoneId, zoneSelection.mode, zoneSelection.zoneId, zoneStatus])
 
   // Fetch categories from admin API
   useEffect(() => {
