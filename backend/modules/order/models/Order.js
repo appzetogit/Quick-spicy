@@ -55,6 +55,25 @@ const orderSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  // Who placed the order, captured at the time it was placed, exactly as restaurantName
+  // already is. Everything displaying a customer read through the userId reference, so
+  // deleting a customer orphaned every order they had ever placed and the admin list and
+  // their invoices all fell back to "Unknown" - permanently, since the source was gone.
+  // 18 customers have been deleted so far and their orders now have no recoverable name.
+  //
+  // An invoice should show the details as they were when the sale happened anyway, not
+  // whatever the profile says today, so snapshotting is the correct behaviour regardless of
+  // deletion.
+  customerName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  customerPhone: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   // Who the food is actually for. 'self' is the ordinary case; 'someone_else' means the
   // account holder is ordering on behalf of another person, so the rider and the restaurant
   // must contact the recipient rather than the person who paid.

@@ -823,9 +823,16 @@ export const createOrder = async (req, res) => {
       : items;
 
     // Create order in database with pending status
+    // Read once, purely to snapshot onto the order below. Indexed lookup on three fields.
+    const orderingUser = await User.findById(userId).select('name fullName phone').lean();
+
     const order = new Order({
       orderId: generatedOrderId,
       userId,
+      // Snapshotted so the order and its invoice keep the customer's details even if the
+      // profile is edited or the account is later deleted. See the Order model.
+      customerName: orderingUser?.name || orderingUser?.fullName || '',
+      customerPhone: orderingUser?.phone || '',
       restaurantId: assignedRestaurantId,
       restaurantName: assignedRestaurantName,
       items: authoritativeItems,
