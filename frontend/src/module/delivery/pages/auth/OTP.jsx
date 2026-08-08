@@ -46,7 +46,30 @@ export default function DeliveryOTP() {
       if (authenticated) {
         const pendingSignupPath = getPendingSignupPath()
         if (pendingSignupPath) {
-          navigate(pendingSignupPath, { replace: true })
+          // delivery_signup_required is a localStorage flag that is only cleared by a
+          // successful document upload or a fresh OTP login. Admin approval happens on the
+          // server and touches neither, so an approved rider kept being sent back to fill in
+          // details they had already submitted, every single time they opened the app.
+          //
+          // The server is the authority: it reports needsSignup only while the account is
+          // still pending or blocked. Ask it before acting on the flag.
+          deliveryAPI.getProfile()
+            .then((response) => {
+              const status = String(
+                response?.data?.data?.status ?? response?.data?.data?.delivery?.status ?? ""
+              ).toLowerCase()
+              const stillNeedsSignup = ["pending", "blocked"].includes(status)
+
+              if (!stillNeedsSignup && status) {
+                localStorage.removeItem("delivery_signup_required")
+                navigate("/delivery", { replace: true })
+                return
+              }
+              navigate(pendingSignupPath, { replace: true })
+            })
+            // Offline or the call failed: fall back to the flag rather than stranding a rider
+            // who genuinely has not finished signing up.
+            .catch(() => navigate(pendingSignupPath, { replace: true }))
           return
         }
         navigate("/delivery", { replace: true })
