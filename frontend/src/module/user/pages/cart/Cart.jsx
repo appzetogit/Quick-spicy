@@ -319,6 +319,9 @@ export default function Cart() {
     }
     : currentLocation
   const { zoneId, zone, zoneStatus } = useZone(zoneLocation) // Prefer selected/saved address zone
+  // Where the customer physically is, resolved to a zone. Only used to decide whether being
+  // away from the delivery address actually matters - see isAwayFromSelectedAddress.
+  const { zoneId: liveZoneId } = useZone(currentLocation)
 
   // How far the customer currently is from the address they are ordering to. The zone above
   // deliberately follows the delivery address - that is what the server validates and what
@@ -343,10 +346,25 @@ export default function Cart() {
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
   }, [currentLocation?.latitude, currentLocation?.longitude, selectedAddressCoordinates])
 
-  // 2km: past any plausible GPS or geocoding error, so the warning means they really have
-  // moved rather than that the pin landed on the next street.
-  const isAwayFromSelectedAddress =
-    distanceFromSelectedAddressKm !== null && distanceFromSelectedAddressKm > 2
+  // Warn only when being away from the address actually changes anything - that is, when the
+  // customer is standing in a different service zone from the one they are ordering to.
+  //
+  // This was a flat 2km, which was wrong for the thing it measures. Zones are whole towns:
+  // Cumbum's is roughly 6km across, so a customer at one end ordering to their home at the
+  // other was told "You are no longer at the selected location. You are about 4 km away."
+  // while standing well inside the branch's area, ordering to their own address, with the
+  // delivery entirely unaffected. It cost orders, which is the opposite of the point - the
+  // warning exists to stop people ordering to an address they have left, not to second-guess
+  // anyone who crossed their own town.
+  //
+  // Within one zone the distance is irrelevant: the same branch cooks it and the same rider
+  // carries it. Across zones it matters, and that is exactly what this now catches.
+  const isAwayFromSelectedAddress = Boolean(
+    hasSavedAddress &&
+    zoneId &&
+    liveZoneId &&
+    String(liveZoneId) !== String(zoneId)
+  )
   const defaultPayment = getDefaultPaymentMethod()
   const restaurantAssignedZoneId = restaurantData?.restaurantZoneId || null
   const restaurantZoneMismatch = Boolean(
@@ -2566,11 +2584,13 @@ export default function Cart() {
                       {hasSavedAddress && isAwayFromSelectedAddress && (
                         <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
                           <p className="text-xs md:text-sm font-semibold text-amber-900 dark:text-amber-300">
-                            You are no longer at the selected location.
+                            You&apos;re in a different area right now.
                           </p>
                           <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-400">
-                            You are about {Math.round(distanceFromSelectedAddressKm)} km away. The
-                            order will still be delivered to the address above.
+                            This order will still be delivered to the address above
+                            {Number.isFinite(distanceFromSelectedAddressKm)
+                              ? `, about ${Math.round(distanceFromSelectedAddressKm)} km away.`
+                              : "."}
                           </p>
                           <button
                             type="button"
