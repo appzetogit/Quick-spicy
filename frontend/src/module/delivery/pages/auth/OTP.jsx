@@ -55,8 +55,13 @@ export default function DeliveryOTP() {
           // still pending or blocked. Ask it before acting on the flag.
           deliveryAPI.getProfile()
             .then((response) => {
+              // getProfile responds { data: { profile } }, so the status is one level deeper
+              // than the other delivery endpoints. The alternatives are kept because a
+              // mis-read here silently reinstates the original bug: an unknown status is
+              // treated as "still pending" and the rider is sent back to the form.
+              const payload = response?.data?.data
               const status = String(
-                response?.data?.data?.status ?? response?.data?.data?.delivery?.status ?? ""
+                payload?.profile?.status ?? payload?.status ?? payload?.delivery?.status ?? ""
               ).toLowerCase()
               const stillNeedsSignup = ["pending", "blocked"].includes(status)
 
