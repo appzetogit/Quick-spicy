@@ -58,9 +58,34 @@ export const calculateCancellationRefund = async (orderId, cancellationReason) =
         };
       }
 
-      // Paid but no settlement record is a real inconsistency. Surface it rather than
-      // silently refunding zero on money the customer actually handed over.
-      throw new Error('Settlement not found');
+      // Paid, but no settlement record. This was a throw, on the reasoning that refunding
+      // zero on money the customer actually handed over is worse than failing loudly. The
+      // failing was loud in the log and silent to the customer: every caller wraps this in
+      // a try/catch that logs and moves on, so the cancellation completed and the refund
+      // simply never happened.
+      //
+      // It is also not the rare inconsistency it was taken for. Settlements were only ever
+      // created on the delivery path, so an order cancelled before delivery never had one -
+      // which is every cancelled wallet order. Of 17, the 7 with a settlement were all
+      // refunded and the 10 without were all not, worth Rs 1620 left in the platform's
+      // pocket.
+      //
+      // The money paid is known without a settlement: it is what the customer was charged.
+      // Refund that in full. Cancellation happened before delivery by definition here, so
+      // there is nothing to compensate a restaurant for and no delivery leg to deduct.
+      // processWalletRefund creates the settlement record it needs a few lines later.
+      const paidTotal = Number(order.pricing?.total) || 0;
+      console.warn(
+        `[calculateCancellationRefund] No settlement for paid order ${order.orderId}; refunding the full ${paidTotal} that was charged.`
+      );
+
+      return {
+        cancellationStage: getCancellationStage(order),
+        refundAmount: paidTotal,
+        restaurantCompensation: 0,
+        settlement: null,
+        reason: 'Order was paid but never settled, so the full amount charged is refundable.'
+      };
     }
 
     const cancellationStage = getCancellationStage(order);
