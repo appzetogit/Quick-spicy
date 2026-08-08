@@ -234,7 +234,20 @@ export const approveFoodItem = asyncHandler(async (req, res) => {
     const { id } = req.params;
     const adminId = req.user._id;
 
-    const menus = await Menu.find({ isActive: true }).lean();
+    // Narrowed to the menu that actually holds this id. This was Menu.find({ isActive: true })
+    // - every menu in full, all sections, items, subsections and add-ons - measured at 49.6
+    // seconds on production against 107 menus. Longer than the client's 30s timeout, so the
+    // browser cancelled the request and the admin saw the approval fail while the server was
+    // still working. Same cause as the empty approvals list, which was fixed a commit
+    // earlier; these two handlers were left on the old query.
+    const menus = await Menu.find({
+      isActive: true,
+      $or: [
+        { 'sections.items.id': id },
+        { 'sections.subsections.items.id': id },
+        { 'addons.id': id },
+      ],
+    }).lean();
     let foundItem = null;
     let foundMenu = null;
     let foundSection = null;
@@ -515,7 +528,20 @@ export const rejectFoodItem = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, 'Rejection reason is required');
     }
 
-    const menus = await Menu.find({ isActive: true }).lean();
+    // Narrowed to the menu that actually holds this id. This was Menu.find({ isActive: true })
+    // - every menu in full, all sections, items, subsections and add-ons - measured at 49.6
+    // seconds on production against 107 menus. Longer than the client's 30s timeout, so the
+    // browser cancelled the request and the admin saw the approval fail while the server was
+    // still working. Same cause as the empty approvals list, which was fixed a commit
+    // earlier; these two handlers were left on the old query.
+    const menus = await Menu.find({
+      isActive: true,
+      $or: [
+        { 'sections.items.id': id },
+        { 'sections.subsections.items.id': id },
+        { 'addons.id': id },
+      ],
+    }).lean();
     let foundItem = null;
     let foundMenu = null;
     let foundSection = null;
