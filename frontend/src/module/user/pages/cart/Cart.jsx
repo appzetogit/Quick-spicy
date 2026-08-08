@@ -321,7 +321,7 @@ export default function Cart() {
   const { zoneId, zone, zoneStatus } = useZone(zoneLocation) // Prefer selected/saved address zone
   // Where the customer physically is, resolved to a zone. Only used to decide whether being
   // away from the delivery address actually matters - see isAwayFromSelectedAddress.
-  const { zoneId: liveZoneId } = useZone(currentLocation)
+  const { zoneId: liveZoneId, zoneStatus: liveZoneStatus } = useZone(currentLocation)
 
   // How far the customer currently is from the address they are ordering to. The zone above
   // deliberately follows the delivery address - that is what the server validates and what
@@ -383,7 +383,24 @@ export default function Cart() {
   // Gated on OUT_OF_SERVICE rather than "no zoneId" so the button is not disabled during the
   // brief window while the zone lookup is still running.
   const addressOutsideAllZones = Boolean(hasSavedAddress && zoneStatus === "OUT_OF_SERVICE")
-  const cannotDeliverToAddress = restaurantZoneMismatch || addressOutsideAllZones
+
+  // HARD BLOCK, chosen by the operating team: a self order requires the customer to be
+  // physically inside the restaurant's zone, not merely delivering into it. This retires
+  // order-ahead-to-home from outside the zone - deliberately, after a customer who had
+  // moved between adjacent branches ordered from the old one. "Order for someone else" is
+  // exempt: ordering into a zone you are not in is that flow's whole purpose, and it is
+  // validated by the recipient's address zone instead. The server enforces the same rule,
+  // so this is the courteous early copy, not the security boundary. Only blocks once the
+  // live zone lookup has actually answered, so a slow GPS cannot disable checkout.
+  const liveOutsideRestaurantZone = Boolean(
+    !orderForOthers.active &&
+    restaurantAssignedZoneId &&
+    ((liveZoneId && String(liveZoneId) !== String(restaurantAssignedZoneId)) ||
+      liveZoneStatus === "OUT_OF_SERVICE")
+  )
+
+  const cannotDeliverToAddress =
+    restaurantZoneMismatch || addressOutsideAllZones || liveOutsideRestaurantZone
 
   const cancellationPolicyNotice = (
     <div className="mt-3 md:mt-4 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-gray-700 dark:bg-[#1a1a1a]">
@@ -1805,6 +1822,11 @@ export default function Cart() {
         paymentMethod: effectivePaymentMethod,
         zoneId: finalZoneId,
         returnUrl,
+        // Where the customer physically is at the moment of ordering. The server refuses a
+        // self order when this resolves outside the restaurant zone.
+        ...(Number.isFinite(Number(currentLocation?.latitude)) && Number.isFinite(Number(currentLocation?.longitude))
+          ? { liveLocation: { latitude: Number(currentLocation.latitude), longitude: Number(currentLocation.longitude) } }
+          : {}),
         // Recorded so the rider and the restaurant contact the person receiving the food
         // rather than the account holder who paid for it.
         orderType: orderForOthers.active ? "someone_else" : "self",
@@ -2581,7 +2603,7 @@ export default function Cart() {
                           Use current location and save address to place order
                         </p>
                       )}
-                      {hasSavedAddress && isAwayFromSelectedAddress && (
+                      {hasSavedAddress && isAwayFromSelectedAddress && !liveOutsideRestaurantZone && (
                         <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
                           <p className="text-xs md:text-sm font-semibold text-amber-900 dark:text-amber-300">
                             You&apos;re in a different area right now.
@@ -2918,9 +2940,11 @@ export default function Cart() {
 
               {cannotDeliverToAddress && (
                 <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs md:text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
-                  {addressOutsideAllZones
-                    ? "We don't deliver to this address yet. Pick a delivery address inside one of our service areas."
-                    : "This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order."}
+                  {liveOutsideRestaurantZone
+                    ? "You're currently outside this restaurant's delivery area, so this order can't be placed from here. Ordering for someone in that area? Use Order for Someone Else."
+                    : addressOutsideAllZones
+                      ? "We don't deliver to this address yet. Pick a delivery address inside one of our service areas."
+                      : "This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order."}
                 </div>
               )}
 
@@ -2939,6 +2963,8 @@ export default function Cart() {
                 <span className="font-bold text-base md:text-lg">
                   {isPlacingOrder
                     ? "Processing..."
+                    : liveOutsideRestaurantZone
+                      ? "You're Outside This Delivery Area"
                     : addressOutsideAllZones
                       ? "We Don't Deliver Here Yet"
                     : restaurantZoneMismatch

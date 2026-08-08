@@ -763,6 +763,61 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // HARD BLOCK: for an order the customer is placing for themselves, they must be
+    // physically standing in the restaurant's zone, not merely delivering into it.
+    //
+    // The address check above already guarantees the food goes somewhere the branch serves,
+    // which kept the rider and restaurant safe - but it still allowed ordering into a zone
+    // from outside it (order-ahead-to-home). The operating team chose to close that after a
+    // customer who had travelled between adjacent branches placed an order from the old one.
+    // The trade-off is deliberate and decided by them: order-ahead from outside the zone
+    // dies with this.
+    //
+    // "Order for someone else" is exempt because ordering into a zone you are not in is that
+    // flow's entire purpose; it stays validated by the recipient's address zone above, and it
+    // requires recipient details, so it cannot be used as a silent bypass.
+    //
+    // Orders arriving without live coordinates are allowed and logged loudly: app versions
+    // in the field predate this field, and rejecting every one of them would take the whole
+    // platform down for the length of a cache cycle. Tighten to mandatory once the logs go
+    // quiet.
+    if (orderType !== 'someone_else') {
+      const liveLat = Number(req.body?.liveLocation?.latitude);
+      const liveLng = Number(req.body?.liveLocation?.longitude);
+      const hasLiveCoordinates =
+        Number.isFinite(liveLat) && Number.isFinite(liveLng) && !(liveLat === 0 && liveLng === 0);
+
+      if (hasLiveCoordinates) {
+        // Same resolution and edge tolerance as the address, so GPS drift at a boundary
+        // cannot fail a customer the address logic would pass.
+        let liveZone = findActiveZoneForPoint(activeZones, liveLat, liveLng);
+        if (!liveZone) {
+          liveZone = findZoneWithinBuffer(activeZones, liveLat, liveLng, extractZonePolygon);
+        }
+        const liveZoneId = liveZone?._id?.toString() || null;
+
+        if (liveZoneId !== restaurantZoneId) {
+          logger.warn('⚠️ Order blocked: customer is not physically in the restaurant zone', {
+            userId,
+            liveLat,
+            liveLng,
+            liveZoneId,
+            restaurantZoneId,
+            orderType
+          });
+          return res.status(403).json({
+            success: false,
+            message: `You're currently outside ${restaurantZone?.name || restaurantZone?.zoneName || 'this restaurant'}'s delivery area. To order for someone there, use Order for Someone Else.`
+          });
+        }
+      } else {
+        logger.warn('⚠️ Order accepted WITHOUT live location (legacy client) - live-zone hard block skipped', {
+          userId,
+          restaurantZoneId
+        });
+      }
+    }
+
     logger.info('✅ Customer zone validated and matched with restaurant zone:', {
       zoneId: userDetectedZoneId,
       zoneName: effectiveUserZone?.name || effectiveUserZone?.zoneName,
