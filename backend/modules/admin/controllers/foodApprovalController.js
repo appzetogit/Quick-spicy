@@ -21,12 +21,33 @@ const logger = winston.createLogger({
  */
 export const getPendingFoodApprovals = asyncHandler(async (req, res) => {
   try {
-    const menus = await Menu.find({ isActive: true })
+    // This endpoint was loading every active menu in full - all sections, items,
+    // subsections and add-ons for 96 restaurants - plus every restaurant category, then
+    // discarding almost all of it. It took over 30 seconds, which is longer than the
+    // client's timeout, so the browser cancelled the request and the admin panel showed
+    // "Failed to load food approval requests" above an empty table while the server
+    // happily logged "Fetched 14 pending food approval records" to nobody.
+    //
+    // Only items and add-ons are ever actionable, and only when pending or carrying no
+    // status at all, so the database can select those menus directly. `$in: ['pending',
+    // null]` matches a missing field as well as an explicit null, which is what "no status
+    // yet" looks like on older records.
+    const actionableStatus = { $in: ['pending', null] };
+    const menus = await Menu.find({
+      isActive: true,
+      $or: [
+        { 'sections.items.approvalStatus': actionableStatus },
+        { 'sections.subsections.items.approvalStatus': actionableStatus },
+        { 'addons.approvalStatus': actionableStatus },
+      ],
+    })
       .populate('restaurant', 'name restaurantId')
       .lean();
-    const restaurantCategories = await RestaurantCategory.find({})
-      .populate('restaurant', 'name restaurantId')
-      .lean();
+
+    // Category requests are built below with isActionable: false, and the response keeps
+    // only actionable entries - so every one of them was thrown away after being fetched
+    // and mapped. Reading the collection at all was pure cost.
+    const restaurantCategories = [];
 
     const pendingRequests = [];
     const seenCategoryKeys = new Set();

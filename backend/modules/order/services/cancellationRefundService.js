@@ -981,10 +981,23 @@ export const processWalletRefund = async (orderId, adminId = null, refundAmount 
       const commission = 0; // For wallet refunds, we don't need actual commission
       const netEarning = foodPrice; // Simplified
       
+      // The order was loaded with .populate('userId'), which returns null when the customer's
+      // account has since been deleted. userId then came out null and the settlement failed
+      // validation with "Path `userId` is required", so the refund could not be issued at all
+      // - by hand from the admin panel or automatically. Exactly the orders most in need of a
+      // refund, since a deleted account cannot chase it.
+      //
+      // The raw ObjectId is still on the order document regardless of whether the user it
+      // points at still exists, so read that when populate has come back empty.
+      const rawUserId = order.userId?._id || order.get?.('userId') || order.userId;
+      if (!rawUserId) {
+        throw new Error(`Cannot create settlement for order ${order.orderId}: no userId on the order`);
+      }
+
       settlement = new OrderSettlement({
         orderId: order._id,
         orderNumber: order.orderId,
-        userId: order.userId?._id || order.userId,
+        userId: rawUserId,
         restaurantId: order.restaurantId,
         restaurantName: order.restaurantName || 'Unknown Restaurant',
         userPayment: {
