@@ -2401,13 +2401,46 @@ export function useLocation() {
       if (!navigator.geolocation) return
 
       navigator.geolocation.getCurrentPosition(
-        (pos) => {
+        async (pos) => {
+          if (!manualSelectionActiveRef.current) return
+
+          const liveCoords = { latitude: pos.coords.latitude, longitude: pos.coords.longitude }
+          const pinned = readStoredLocation()
+
+          // Ask which zone each point falls in, so the pin can expire on a zone change
+          // rather than only on raw distance. Distance alone let a customer carry a CUMBUM
+          // pin into B.PETA - the zones are 9km apart, inside the 20km drift allowance - and
+          // keep ordering from the wrong branch. resolved stays false unless both answers
+          // arrive, so a network failure degrades to the distance rule instead of guessing.
+          let zoneComparison = { resolved: false, pinnedZoneId: null, liveZoneId: null }
+          const pinnedLat = Number(pinned?.latitude)
+          const pinnedLng = Number(pinned?.longitude)
+          if (Number.isFinite(pinnedLat) && Number.isFinite(pinnedLng)) {
+            try {
+              const { zoneAPI } = await import("@/lib/api")
+              const [pinnedRes, liveRes] = await Promise.all([
+                zoneAPI.detectZone(pinnedLat, pinnedLng),
+                zoneAPI.detectZone(liveCoords.latitude, liveCoords.longitude),
+              ])
+              if (pinnedRes?.data?.success && liveRes?.data?.success) {
+                zoneComparison = {
+                  resolved: true,
+                  pinnedZoneId: pinnedRes.data.data?.zoneId || null,
+                  liveZoneId: liveRes.data.data?.zoneId || null,
+                }
+              }
+            } catch {
+              // Unreachable backend: fall through with resolved false.
+            }
+          }
+
           if (!manualSelectionActiveRef.current) return
 
           const verdict = evaluateManualMode({
             setAtMs: getManualPreferenceSetAt(),
-            manualCoords: readStoredLocation(),
-            liveCoords: { latitude: pos.coords.latitude, longitude: pos.coords.longitude },
+            manualCoords: pinned,
+            liveCoords,
+            zoneComparison,
           })
 
           if (!verdict.expired) return
@@ -2565,6 +2598,15 @@ export function useLocation() {
     debugLog("📍📍📍 User requested location update - clearing cache and fetching fresh")
     setLoading(true)
     setError(null)
+
+    // This is the "Add Current Location" action: an explicit statement that wherever was
+    // pinned no longer applies. Without this, tapping it while a manual pin was active
+    // fetched a fresh fix but left the preference on manual, so the very next mount
+    // reloaded the pin and the button appeared to do nothing - which is how a customer
+    // stayed on the old town's zone while standing in the new one.
+    if (manualSelectionActiveRef.current || isManualSelectionActive()) {
+      releaseManualSelection("user-requested-current-location")
+    }
 
     try {
       // Clear cached location to force fresh fetch

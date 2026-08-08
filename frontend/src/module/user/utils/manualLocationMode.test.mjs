@@ -81,4 +81,62 @@ assert.equal(
   false,
 )
 
+// The reported failure: CUMBUM and B.PETA are 9km apart - inside the 20km drift allowance -
+// so distance alone kept the pin. Zones differ, so the pin must expire.
+const CUMBUM_LIKE = { latitude: 15.58646, longitude: 79.11406 }
+const BPETA_LIKE = { latitude: 15.50774, longitude: 79.09312 }
+assert.ok(distanceKm(CUMBUM_LIKE, BPETA_LIKE) < MANUAL_MODE_MAX_DRIFT_KM, "premise: adjacent zones sit inside the drift allowance")
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW + 60_000,
+    manualCoords: CUMBUM_LIKE, liveCoords: BPETA_LIKE,
+    zoneComparison: { resolved: true, pinnedZoneId: "zone-cumbum", liveZoneId: "zone-bpeta" },
+  }).reason,
+  "zone-changed",
+)
+
+// Same zone: keep the pin no matter the in-town distance. Deliberate picks across your own
+// town must survive - that mistake was already made once in the cart warning.
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW,
+    manualCoords: CUMBUM_LIKE, liveCoords: BPETA_LIKE,
+    zoneComparison: { resolved: true, pinnedZoneId: "zone-x", liveZoneId: "zone-x" },
+  }).expired,
+  false,
+)
+
+// Pinned inside a zone, now standing outside every zone (or the reverse): both are stale.
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW, manualCoords: CUMBUM_LIKE, liveCoords: BPETA_LIKE,
+    zoneComparison: { resolved: true, pinnedZoneId: "zone-x", liveZoneId: null },
+  }).reason,
+  "zone-changed",
+)
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW, manualCoords: CUMBUM_LIKE, liveCoords: BPETA_LIKE,
+    zoneComparison: { resolved: true, pinnedZoneId: null, liveZoneId: "zone-x" },
+  }).reason,
+  "zone-changed",
+)
+
+// Zone lookup failed entirely: fall back to the distance rule, in both directions.
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW, manualCoords: CUMBUM_LIKE, liveCoords: BPETA_LIKE,
+    zoneComparison: { resolved: false, pinnedZoneId: null, liveZoneId: null },
+  }).expired,
+  false,
+  "9km with no zone answer keeps the pin - distance fallback",
+)
+assert.equal(
+  evaluateManualMode({
+    setAtMs: NOW, now: NOW, manualCoords: GIDDALUR, liveCoords: KHAMMAM,
+    zoneComparison: { resolved: false, pinnedZoneId: null, liveZoneId: null },
+  }).reason,
+  "moved-away",
+)
+
 console.log("manualLocationMode: all assertions passed")
