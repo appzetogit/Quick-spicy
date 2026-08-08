@@ -291,7 +291,7 @@ export default function LocationGate() {
       }
     >
       <button type="button" onClick={allow} disabled={requesting} className={primaryButton}>
-        {requesting ? "Getting location..." : failed ? "Try again" : "Allow location"}
+        {requesting ? "Getting your location..." : failed ? "Add Current Location" : "Allow location"}
       </button>
       {retryNote ? (
         <p className="text-xs text-slate-500 dark:text-gray-400">{retryNote}</p>
@@ -327,7 +327,7 @@ export default function LocationGate() {
       body="We need your location to know which kitchens can deliver to you. Nothing is shared beyond finding your area."
     >
       <button type="button" onClick={allow} disabled={requesting} className={primaryButton}>
-        {requesting ? "Checking..." : "Try again"}
+        {requesting ? "Getting your location..." : "Add Current Location"}
       </button>
       {note}
       <Link to="/order-for-someone-else" className={secondaryButton}>
@@ -348,8 +348,11 @@ export default function LocationGate() {
       >
         Order for Someone Else
       </Link>
+      {/* "Try again" gave no clue what it would do, and repeating a check that just failed
+          looks like the app arguing with the customer. This says what actually happens: take
+          a fresh GPS reading and re-check the area. Same action, honest label. */}
       <button type="button" onClick={allow} disabled={requesting} className={secondaryButton}>
-        {requesting ? "Checking..." : "Try again"}
+        {requesting ? "Getting your location..." : "Add Current Location"}
       </button>
       {note}
       {detectedPlace && (
@@ -358,6 +361,13 @@ export default function LocationGate() {
         // turns "it's broken" into something they can check and report.
         <p className="text-xs text-slate-400 dark:text-gray-500">
           We detected you at: {detectedPlace}
+        </p>
+      )}
+      {/* The coordinates are what a zone check actually consumes, so when someone reports
+          being wrongly excluded this is the one line that settles it. */}
+      {hasCoords && (
+        <p className="text-[11px] text-slate-400 dark:text-gray-600">
+          {Number(location.latitude).toFixed(5)}, {Number(location.longitude).toFixed(5)}
         </p>
       )}
     </Shell>
