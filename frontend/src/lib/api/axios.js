@@ -205,6 +205,18 @@ apiClient.interceptors.request.use(
  * one rotation happens and everybody retries against the new token. Keyed by endpoint so
  * two modules open in one tab cannot receive each other's refresh.
  */
+// Records that an admin session exists, in storage that outlives the tab so it matches the
+// cookie's actual lifetime. Written in three places: login, refresh, and the retry path.
+const setAdminSessionFlag = () => {
+  try {
+    localStorage.setItem("admin_authenticated", "true");
+    sessionStorage.setItem("admin_authenticated", "true");
+  } catch {
+    // Private mode with storage blocked: the cookie still authenticates every request, the
+    // UI just cannot remember between loads.
+  }
+};
+
 const refreshOnce = createSingleFlight((refreshEndpoint) =>
   axios.post(`${API_BASE_URL}${refreshEndpoint}`, {}, { withCredentials: true }),
 );
@@ -244,8 +256,14 @@ apiClient.interceptors.response.use(
         responseUrl.includes("/admin/auth/refresh-token"));
 
     if (isAdminCookieAuthEndpoint) {
-      sessionStorage.setItem("admin_authenticated", "true");
-      localStorage.removeItem("admin_authenticated");
+      // localStorage, not sessionStorage. The admin's real session is the httpOnly cookie,
+      // good for 24h of access and 7 days of refresh. This flag is only the client's hint
+      // that a session exists - and keeping it in sessionStorage meant the browser wiped it
+      // the moment the tab closed, so admins were bounced to the login screen while a
+      // perfectly valid cookie sat there for days. It protected nothing: anyone holding the
+      // browser profile still held the cookie. If admin sessions should be shorter, the
+      // lever is JWT_ACCESS_EXPIRY, not a flag that only misleads the UI.
+      setAdminSessionFlag();
     }
 
     // If auth endpoint response contains new access token, store it for the current module
@@ -258,8 +276,7 @@ apiClient.interceptors.response.use(
           null;
 
         if (currentModule === "admin" && isAdminCookieAuthEndpoint) {
-          sessionStorage.setItem("admin_authenticated", "true");
-          localStorage.removeItem("admin_authenticated");
+          setAdminSessionFlag();
         } else if (userSnapshot || responseData.accessToken) {
           setAuthData(
             currentModule,
@@ -317,8 +334,7 @@ apiClient.interceptors.response.use(
         const currentModule = getModuleForCurrentRoute(currentPath);
 
         if (currentPath.startsWith("/admin")) {
-          sessionStorage.setItem("admin_authenticated", "true");
-          localStorage.removeItem("admin_authenticated");
+          setAdminSessionFlag();
           if (originalRequest.headers?.Authorization) {
             delete originalRequest.headers.Authorization;
           }
