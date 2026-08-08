@@ -1586,6 +1586,54 @@ function RestaurantDetailsContent() {
     )
   }
 
+  // A restaurant in a different branch's zone cannot deliver here, so showing its menu only
+  // sets the customer up to fill a cart and be refused at checkout - order creation resolves
+  // the zone from the delivery address and returns 403 on a mismatch. Say so at the door
+  // instead, with the same wording and the same way out as the out-of-zone home screen.
+  //
+  // Both ids must be known before deciding: while the customer's zone is still resolving,
+  // zoneId is null and every restaurant would briefly look undeliverable.
+  const restaurantZoneId = restaurant?.restaurantZoneId ? String(restaurant.restaurantZoneId) : null
+  const restaurantOutsideCustomerZone = Boolean(
+    restaurant && zoneId && restaurantZoneId && String(zoneId) !== restaurantZoneId
+  )
+
+  if (restaurantOutsideCustomerZone) {
+    return (
+      <AnimatedPage>
+        <div className="flex min-h-screen items-center justify-center bg-white px-6 dark:bg-[#0a0a0a]">
+          <div className="w-full max-w-sm text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-orange-50 dark:bg-orange-950/50">
+              <MapPin className="h-7 w-7 text-[#EB590E]" />
+            </div>
+            <h1 className="mt-5 text-lg font-semibold text-slate-900 dark:text-gray-100">
+              Service is currently unavailable in your area.
+            </h1>
+            <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">
+              {restaurant?.name ? `${restaurant.name} doesn't deliver to your location.` : "This restaurant doesn't deliver to your location."}
+            </p>
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="w-full rounded-xl bg-[#EB590E] py-3 text-sm font-semibold text-white"
+              >
+                See restaurants near you
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/order-for-someone-else')}
+                className="block w-full rounded-xl border border-slate-300 py-3 text-sm font-medium text-slate-600 dark:border-gray-700 dark:text-gray-300"
+              >
+                Order for Someone Else
+              </button>
+            </div>
+          </div>
+        </div>
+      </AnimatedPage>
+    )
+  }
+
   // Show error state if restaurant not found or network error
   if (restaurantError && !restaurant) {
     const isNetworkError = restaurantError.includes('Backend server is not connected')
