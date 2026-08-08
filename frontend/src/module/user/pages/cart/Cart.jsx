@@ -392,6 +392,20 @@ export default function Cart() {
   // validated by the recipient's address zone instead. The server enforces the same rule,
   // so this is the courteous early copy, not the security boundary. Only blocks once the
   // live zone lookup has actually answered, so a slow GPS cannot disable checkout.
+  // Same rule the home page applies, repeated here because the cart is where the stale mode
+  // actually bites: "order for someone else" is the instrument for a zone you are NOT in,
+  // so the moment your own live zone IS the pinned zone, the mode is stale. Without this a
+  // customer who had used the out-of-zone escape hatch, then physically arrived in that
+  // area, was asked at checkout to name the person they were ordering for - themselves.
+  useEffect(() => {
+    if (!orderForOthers.active || !orderForOthers.zoneId || !liveZoneId) return
+    if (String(orderForOthers.zoneId) === String(liveZoneId)) {
+      orderForOthers.clear()
+      toast.success("You're in this delivery area now - ordering as yourself.")
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderForOthers.active, orderForOthers.zoneId, liveZoneId])
+
   const liveOutsideRestaurantZone = Boolean(
     !orderForOthers.active &&
     restaurantAssignedZoneId &&

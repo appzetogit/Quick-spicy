@@ -2585,9 +2585,43 @@ export function useLocation() {
     // This does NOT trigger browser prompt by itself; it only auto-fetches when permission is already granted.
     checkPermissionAndStart();
 
+    // Re-detect when the app comes back to the foreground, not only when it is relaunched.
+    //
+    // A phone that goes into the background has its JavaScript suspended: watchPosition
+    // stops firing and nothing resumes it with a fresh reading. Returning to the app is a
+    // resume, not a reload, so none of the startup work re-ran - which is why customers
+    // found that travelling updated their location only if they killed the app first.
+    // Killing the app was doing the job this listener now does.
+    //
+    // Gated on having been hidden for a meaningful stretch so quick tab-flips do not
+    // hammer GPS and geocoding. checkPermissionAndStart already handles both worlds:
+    // fresh fix in live mode, age and zone-drift checks on a manual pin.
+    const MEANINGFUL_BACKGROUND_MS = 60 * 1000
+    let hiddenAtMs = null
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        hiddenAtMs = Date.now()
+        return
+      }
+      const awayMs = hiddenAtMs ? Date.now() - hiddenAtMs : 0
+      hiddenAtMs = null
+      if (awayMs >= MEANINGFUL_BACKGROUND_MS) {
+        debugLog(`📍 App resumed after ${Math.round(awayMs / 1000)}s in background - re-detecting location`)
+        checkPermissionAndStart()
+      }
+    }
+    // bfcache restores skip every load event except this one.
+    const handlePageShow = (event) => {
+      if (event.persisted) checkPermissionAndStart()
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    window.addEventListener("pageshow", handlePageShow)
+
     // Cleanup timeout and watcher
     return () => {
       window.removeEventListener(USER_LOCATION_PREFERENCE_EVENT, handleLocationPreferenceChange)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+      window.removeEventListener("pageshow", handlePageShow)
       clearTimeout(loadingTimeout)
       debugLog("🧹 Cleaning up location watcher")
       stopWatchingLocation()

@@ -918,6 +918,19 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Ordering for someone else exists for reaching a zone you are NOT in - the out-of-zone
+  // screen even funnels customers into it. So when the customer's own detected zone becomes
+  // the very zone they pinned, the mode has outlived its reason: they walked into the area.
+  // Left active it followed them to checkout, which then demanded the name and number of
+  // "the person you're ordering for" from someone buying their own meal. Reported twice.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!orderForOthers.active || !orderForOthers.zoneId || !zoneId) return
+    if (String(orderForOthers.zoneId) === String(zoneId)) {
+      orderForOthers.clear()
+    }
+  }, [orderForOthers.active, orderForOthers.zoneId, zoneId])
+
   // A branch picked from the zone dropdown above still wins: it is cleared on the next
   // mount by the effect above, so it cannot outlive the visit.
   //
