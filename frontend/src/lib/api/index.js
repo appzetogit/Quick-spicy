@@ -1739,6 +1739,15 @@ export const adminAPI = {
       return apiClient.patch(API_ENDPOINTS.ADMIN.CATEGORY_HOME_VISIBILITY, data);
     },
 
+  // Reward Settings (signup bonus + referral payout) and customer wallets.
+  // Paths are literal here rather than routed through API_ENDPOINTS: these four are only
+  // used by the two admin screens that own them.
+  getRewardSettings: () => apiClient.get("/admin/reward-settings"),
+  updateRewardSettings: (data) => apiClient.put("/admin/reward-settings", data),
+  getCustomerWallets: (params = {}) => apiClient.get("/admin/customer-wallets", { params }),
+  updateCustomerWalletBalance: (userId, data) =>
+    apiClient.put(`/admin/customer-wallets/${userId}`, data),
+
   // Fee Settings Management (Delivery & Platform Fee)
   getFeeSettings: () => {
     return apiClient.get(API_ENDPOINTS.ADMIN.FEE_SETTINGS);

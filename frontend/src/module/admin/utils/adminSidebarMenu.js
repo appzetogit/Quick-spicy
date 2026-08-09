@@ -129,6 +129,8 @@ export const adminSidebarMenu = [
     items: [
       { type: "link", label: "Delivery Cash Limit", path: "/admin/delivery-cash-limit", icon: "IndianRupee" },
       { type: "link", label: "Delivery & Platform Fee", path: "/admin/fee-settings", icon: "DollarSign" },
+      { type: "link", label: "Reward Settings", path: "/admin/reward-settings", icon: "Gift" },
+      { type: "link", label: "Customer Wallets", path: "/admin/customer-wallets", icon: "Wallet" },
       { type: "link", label: "Cash limit settlement", path: "/admin/cash-limit-settlement", icon: "Receipt" },
       { type: "link", label: "Delivery Withdrawal", path: "/admin/delivery-withdrawal", icon: "Wallet" },
       { type: "link", label: "Delivery boy Wallet", path: "/admin/delivery-boy-wallet", icon: "PiggyBank" },

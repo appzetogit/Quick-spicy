@@ -15,6 +15,8 @@ const OrdersPage = lazy(() => import("../pages/orders/OrdersPage"));
 const OrderDetectDelivery = lazy(() => import("../pages/OrderDetectDelivery"));
 const Category = lazy(() => import("../pages/categories/Category"));
 const FeeSettings = lazy(() => import("../pages/fee-settings/FeeSettings"));
+const RewardSettings = lazy(() => import("../pages/reward-settings/RewardSettings"));
+const CustomerWallets = lazy(() => import("../pages/customer-wallets/CustomerWallets"));
 // Restaurant Management
 const ZoneSetup = lazy(() => import("../pages/restaurant/ZoneSetup"));
 const AddZone = lazy(() => import("../pages/restaurant/AddZone"));
@@ -188,6 +190,8 @@ export default function AdminRouter() {
           <Route path="categories" element={<Category />} />
           {/* Fee Settings */}
           <Route path="fee-settings" element={<FeeSettings />} />
+          <Route path="reward-settings" element={<RewardSettings />} />
+          <Route path="customer-wallets" element={<CustomerWallets />} />
           {/* Foods */}
           <Route path="foods" element={<FoodsList />} />
           <Route path="food/list" element={<FoodsList />} />
