@@ -125,7 +125,7 @@ async function resolveRestaurantForOrder(restaurantId) {
       };
 
   const restaurant = await Restaurant.findOne(query)
-    .select('name slug profileImage address location phone ownerPhone restaurantId zoneId zoneName onboarding.step1.location')
+    .select('name slug profileImage address location phone ownerPhone restaurantId zoneId zoneName onboarding.step1.location isActive isAcceptingOrders')
     .lean();
 
   if (!restaurant) return null;
