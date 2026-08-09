@@ -182,7 +182,7 @@ export default function SignIn() {
                     className="h-12 md:h-14 text-base md:text-lg tracking-widest uppercase bg-white dark:bg-[#1a1a1a] text-black dark:text-white border-gray-300 dark:border-gray-700 rounded-lg"
                   />
                   <p className="text-xs text-gray-500 dark:text-gray-500">
-                    Your friend gets {RUPEE}50 in their wallet when you sign up.
+                    Your friend gets {RUPEE}50 when your first order of {RUPEE}299+ is delivered.
                   </p>
                 </>
               ) : (

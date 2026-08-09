@@ -162,6 +162,17 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  // The delivered 299+ order that earned the referrer their reward. Doubles as the audit
+  // trail for why a wallet was credited.
+  referralQualifyingOrderId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Order',
+    default: null,
+  },
+  referralRewardGrantedAt: {
+    type: Date,
+    default: null,
+  },
   goldMembership: {
     isActive: {
       type: Boolean,

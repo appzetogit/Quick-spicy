@@ -2400,6 +2400,16 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       // Continue with legacy wallet update as fallback
     }
 
+    // Referral reward is earned here, not at signup: the referred customer has now
+    // completed a delivered order. The service checks the 299 threshold and the
+    // once-per-customer claim itself, and never throws into the delivery flow.
+    try {
+      const { grantReferralRewardOnQualifiedOrder } = await import('../../order/services/referralRewardService.js');
+      await grantReferralRewardOnQualifiedOrder(orderMongoId);
+    } catch (referralError) {
+      console.error(`Referral reward check failed for order ${orderIdForLog}:`, referralError?.message);
+    }
+
     // Calculate delivery earnings based on admin's commission rules
     // Get delivery distance (in km) from order
     let deliveryDistance = 0;

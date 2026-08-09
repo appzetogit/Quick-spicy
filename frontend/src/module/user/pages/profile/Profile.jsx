@@ -223,7 +223,7 @@ export default function Profile() {
 
   const handleShareReferral = async () => {
     if (!referralCode) return
-    const shareText = `Use my referral code ${referralCode} on signup and I get ₹50 in wallet.`
+    const shareText = `Order tasty food on Quick Spicy! Sign up with my referral code ${referralCode} - when your first order of ₹299+ is delivered, I earn ₹50.`
     try {
       if (navigator.share) {
         await navigator.share({

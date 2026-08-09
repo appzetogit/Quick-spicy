@@ -33,7 +33,6 @@ const logger = winston.createLogger({
   ],
 });
 
-const REFERRAL_REWARD_AMOUNT = 50;
 const NEW_USER_WALLET_CREDIT_AMOUNT = 20;
 const normalizePhoneToTenDigits = (value = "") =>
   String(value || "")
@@ -81,36 +80,24 @@ const resolveReferrerByCode = async (referralCode) => {
   return referrer;
 };
 
+// Records WHO referred this customer, and deliberately nothing else. This used to credit
+// the referrer 50 rupees on the spot, which made a signup itself worth money: one customer
+// manufactured roughly 80 signups and drew close to 4,000 rupees without a single order
+// being placed. The reward now waits until the referred customer completes a delivered
+// order of 299+ - see grantReferralRewardOnQualifiedOrder - so a referral only pays when it
+// produced the thing referrals exist to produce.
 const applyReferralReward = async ({ newUser, referrer }) => {
   if (!newUser || !referrer || newUser.role !== "user") return;
-  if (newUser.referralRewardGranted) return;
-
-  const rewardDescription = `Referral reward: ${newUser.name || "New user"} joined`;
-
-  const wallet = await UserWallet.findOrCreateByUserId(referrer._id);
-  wallet.addTransaction({
-    amount: REFERRAL_REWARD_AMOUNT,
-    type: "addition",
-    status: "Completed",
-    description: rewardDescription,
-    paymentMethod: "wallet",
-    metadata: new Map([
-      ["source", "referral_signup"],
-      ["referredUserId", newUser._id.toString()],
-      ["referredUserName", newUser.name || ""],
-    ]),
-  });
-  await wallet.save();
-
-  await User.findByIdAndUpdate(referrer._id, {
-    "wallet.balance": wallet.balance,
-    "wallet.currency": wallet.currency || "INR",
-  });
+  if (newUser.referredBy) return; // attribution is first-touch and permanent
 
   newUser.referredBy = referrer._id;
   newUser.referredAt = new Date();
-  newUser.referralRewardGranted = true;
   await newUser.save();
+
+  logger.info(`Referral attributed, reward deferred until a qualifying order`, {
+    referredUserId: newUser._id.toString(),
+    referrerId: referrer._id.toString(),
+  });
 };
 
 const applyNewUserWalletCredit = async (user) => {
@@ -483,16 +470,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           await user.save();
 
           // This is the first proof the number belongs to them, so it is where the
-          // signup bonus and any pending referral reward are earned. Both helpers are
-          // idempotent, so a later verification cannot pay twice.
+          // signup bonus is earned. The referral reward is NOT earned here any more: it
+          // waits for the referred customer's first delivered order of 299+, granted by
+          // grantReferralRewardOnQualifiedOrder on the order-delivered paths.
           await applyNewUserWalletCredit(user);
-
-          if (user.referredBy && !user.referralRewardGranted) {
-            const pendingReferrer = await User.findById(user.referredBy);
-            if (pendingReferrer) {
-              await applyReferralReward({ newUser: user, referrer: pendingReferrer });
-            }
-          }
         }
         // Could add email verification status update here if needed
       }

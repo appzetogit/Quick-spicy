@@ -1208,6 +1208,16 @@ export const markOrderDelivered = asyncHandler(async (req, res) => {
       );
     }
 
+    // Same referral hook as the rider's completeDelivery: delivered is delivered no matter
+    // which panel closed it, and skipping this here is exactly how settlements were silently
+    // lost on this path before.
+    try {
+      const { grantReferralRewardOnQualifiedOrder } = await import("../../order/services/referralRewardService.js");
+      await grantReferralRewardOnQualifiedOrder(order._id);
+    } catch (referralError) {
+      console.error(`Admin mark delivered: referral reward check failed for ${orderTrackingId}:`, referralError?.message);
+    }
+
     // Best-effort cleanup so rider becomes immediately available in realtime channels.
     try {
       await removeActiveOrderTracking(orderTrackingId);
