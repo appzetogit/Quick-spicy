@@ -62,7 +62,10 @@ const userSchema = new mongoose.Schema({
   addresses: [{
     label: {
       type: String,
-      enum: ['Home', 'Office', 'Other']
+      // 'Current location' is the auto-saved address the cart creates for a customer
+      // ordering from a zone their saved addresses are not in. Leaving it out of this
+      // enum made every such save a 500 in the field.
+      enum: ['Home', 'Office', 'Other', 'Current location']
     },
     recipientName: String,
     phone: String,
