@@ -873,6 +873,36 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // The customer agreed to the number the cart showed them. When the authoritative
+    // recomputation lands on a different total - a menu price edited, an offer expiring
+    // between cart and checkout - refuse and make the cart re-render, rather than charging
+    // an amount the customer never saw. Wallet payments debit immediately with no further
+    // confirmation screen, so without this the first sign of a price change was money
+    // leaving the wallet. One rupee of tolerance for rounding; clients that never sent a
+    // displayed total (older builds) skip the check rather than being locked out.
+    const clientShownTotal = Number(pricing?.total);
+    if (
+      Number.isFinite(clientShownTotal) &&
+      clientShownTotal > 0 &&
+      Math.abs(clientShownTotal - Number(authoritativePricing.total)) > 1
+    ) {
+      logger.warn('⚠️ Order refused: displayed total no longer matches authoritative pricing', {
+        userId,
+        clientShownTotal,
+        authoritativeTotal: authoritativePricing.total,
+        restaurantId: assignedRestaurantId
+      });
+      return res.status(409).json({
+        success: false,
+        code: 'PRICE_CHANGED',
+        message: `The order total has changed from ₹${clientShownTotal} to ₹${authoritativePricing.total} because a price or offer was updated. Please review your cart and try again.`,
+        data: {
+          previousTotal: clientShownTotal,
+          currentTotal: Number(authoritativePricing.total)
+        }
+      });
+    }
+
     const authoritativeItems = Array.isArray(authoritativePricing.items) && authoritativePricing.items.length > 0
       ? authoritativePricing.items
       : items;
