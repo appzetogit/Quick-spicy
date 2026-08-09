@@ -1,6 +1,6 @@
 ﻿import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import io from 'socket.io-client';
-import { API_BASE_URL } from '@/lib/api/config';
+import { API_ORIGIN } from '@/lib/api/config';
 import bikeLogo from '@/assets/bikelogo.png';
 import { RouteBasedAnimationController } from '@/module/user/utils/routeBasedAnimation';
 import {
@@ -76,7 +76,10 @@ const DeliveryTrackingMap = ({
   const customerMarkerRef = useRef(null);
   const restaurantMarkerRef = useRef(null);
 
-  const backendUrl = API_BASE_URL.replace('/api', '');
+  // API_ORIGIN, not string surgery on API_BASE_URL: the old replace('/api','') mangled the
+  // host into https://.quickspicy.in whenever the API lives on api.*, so this socket dialed
+  // a hostname DNS cannot resolve and live tracking depended entirely on the Firebase path.
+  const backendUrl = API_ORIGIN;
   // Road routing is switched on in the server's .env and delivered through /api/env/public.
   // It used to read a build-time VITE_ flag that was never set on Vercel, so the check was
   // permanently false: drawRoute returned immediately, DirectionsService was never built,

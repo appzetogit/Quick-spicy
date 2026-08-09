@@ -67,6 +67,22 @@ const placeholders = [
 
 const WEBVIEW_SESSION_CACHE_BUSTER = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
+// The transformed restaurant list, kept across navigation. Home unmounts whenever the
+// customer opens a restaurant or the cart, so every return re-fetched and re-transformed
+// the same list behind a shimmer - the server answering fast made it brief, not absent.
+// Module scope survives route changes in a SPA; 30s matches the server-side cache, so
+// within that window coming back paints instantly with zero network. Coordinates are
+// rounded to ~100m in the key: successive GPS fixes jitter by metres, and a key that
+// changed with every fix would never hit.
+const restaurantListClientCache = new Map()
+const RESTAURANT_LIST_CLIENT_TTL_MS = 30 * 1000
+const restaurantListCacheKey = ({ zoneId, latitude, longitude, filters }) => JSON.stringify({
+  z: zoneId || null,
+  la: Number.isFinite(Number(latitude)) ? Number(latitude).toFixed(3) : null,
+  lo: Number.isFinite(Number(longitude)) ? Number(longitude).toFixed(3) : null,
+  f: filters || null,
+})
+
 const USER_ZONE_SELECTION_KEY = "userZoneSelection"
 const USER_LOCATION_PREFERENCE_KEY = "userLocationPreference"
 const USER_LOCATION_STORAGE_KEY = "userLocation"
@@ -1269,25 +1285,36 @@ export default function Home() {
     const requestId = ++restaurantsRequestIdRef.current
     const isStale = () => requestId !== restaurantsRequestIdRef.current
 
+    const clientCacheKey = restaurantListCacheKey({
+      zoneId: effectiveZoneId,
+      latitude: location?.latitude,
+      longitude: location?.longitude,
+      filters: {
+        sortBy: filters.sortBy || null,
+        cuisine: filters.selectedCuisine || null,
+        active: filters.activeFilters ? [...filters.activeFilters].sort() : null,
+      },
+    })
+    const cachedList = restaurantListClientCache.get(clientCacheKey)
+    if (cachedList && Date.now() - cachedList.at < RESTAURANT_LIST_CLIENT_TTL_MS) {
+      setRestaurantsData(cachedList.data)
+      setLoadingRestaurants(false)
+      return
+    }
+
     try {
       setLoadingRestaurants(true)
 
-      // First, test backend connection
-      try {
-        // Use API_BASE_URL from config (supports both dev and production)
-        const backendUrl = API_BASE_URL.replace('/api', '')
-        const healthCheck = await fetch(`${backendUrl}/health`)
-        if (!healthCheck.ok) {
-          throw new Error(`Backend health check failed: ${healthCheck.status}`)
-        }
-        debugLog('✅ Backend connection successful')
-      } catch (healthError) {
-        // Backend connection error - handled silently, toast notifications shown via axios interceptor
-        if (isStale()) return
-        setRestaurantsData([])
-        setLoadingRestaurants(false)
-        return
-      }
+      // The health pre-check that used to sit here is gone, having managed to be wrong in
+      // both environments at once. It probed API_BASE_URL.replace('/api',''), which strips
+      // the first "/api" - inside the HOSTNAME when the API lives on api.quickspicy.in -
+      // producing https://.quickspicy.in, a hostname DNS refuses. The catch then quietly
+      // emptied the list, which is why Indore's one restaurant never rendered. In
+      // production the mangling happened to hit the frontend's own origin instead, where
+      // Vercel answers /health with index.html and a 200, so the "check" always passed
+      // while probing the wrong server. The listing request that follows reports its own
+      // failures; a pre-flight that adds a round trip and lies in both directions protects
+      // nothing.
 
       // Build query parameters from filters
       const params = {}
@@ -1558,6 +1585,10 @@ export default function Home() {
 
         debugLog('Transformed and sorted restaurants:', restaurantsWithOutletTimings)
         if (isStale()) return
+        restaurantListClientCache.set(clientCacheKey, { at: Date.now(), data: restaurantsWithOutletTimings })
+        if (restaurantListClientCache.size > 10) {
+          restaurantListClientCache.delete(restaurantListClientCache.keys().next().value)
+        }
         setRestaurantsData(restaurantsWithOutletTimings)
       } else {
         debugWarn('Invalid API response structure:', response.data)

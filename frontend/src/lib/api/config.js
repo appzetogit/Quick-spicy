@@ -86,6 +86,21 @@ if (rawApiBaseUrl && typeof rawApiBaseUrl === "string") {
 
 export const API_BASE_URL = rawApiBaseUrl;
 
+// The backend's origin, derived by parsing - never by string surgery. The old idiom
+// API_BASE_URL.replace('/api', '') strips the FIRST "/api", and when the host itself is
+// api.quickspicy.in that first match sits inside "//api." - the result is the origin
+// "https://.quickspicy.in", a hostname with an empty label that DNS refuses to resolve.
+// Every consumer of that idiom (the homepage health probe, the live-tracking socket) was
+// therefore talking to a nonexistent host whenever the API lives on an api.* subdomain,
+// which is exactly where production points it.
+export const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE_URL, typeof window !== "undefined" ? window.location.origin : undefined).origin;
+  } catch {
+    return API_BASE_URL.replace(/\/api\/?$/, "");
+  }
+})();
+
 // Validate URL format - catch malformed URLs like "https:/" or "https://https://"
 try {
   const urlObj = new URL(API_BASE_URL);
@@ -484,6 +499,7 @@ export const API_ENDPOINTS = {
 
 export default {
   API_BASE_URL,
+  API_ORIGIN,
   API_ENDPOINTS,
 };
 
