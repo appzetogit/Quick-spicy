@@ -33,7 +33,9 @@ const logger = winston.createLogger({
   ],
 });
 
-const NEW_USER_WALLET_CREDIT_AMOUNT = 20;
+// Amount comes from the admin panel (Reward Settings); this is only the fallback used when
+// the settings document has not been created yet.
+const DEFAULT_NEW_USER_WALLET_CREDIT = 20;
 const normalizePhoneToTenDigits = (value = "") =>
   String(value || "")
     .replace(/\D/g, "")
@@ -103,6 +105,14 @@ const applyReferralReward = async ({ newUser, referrer }) => {
 const applyNewUserWalletCredit = async (user) => {
   if (!user || user.role !== "user") return;
 
+  const { default: RewardSettings } = await import("../../admin/models/RewardSettings.js");
+  const rewardConfig = await RewardSettings.getConfig().catch(() => null);
+  if (rewardConfig && rewardConfig.signupBonusEnabled === false) return;
+  const creditAmount = Number(
+    rewardConfig?.signupBonusAmount ?? DEFAULT_NEW_USER_WALLET_CREDIT,
+  );
+  if (!Number.isFinite(creditAmount) || creditAmount <= 0) return;
+
   const wallet = await UserWallet.findOrCreateByUserId(user._id);
   const alreadyCredited = (wallet.transactions || []).some(
     (transaction) =>
@@ -120,7 +130,7 @@ const applyNewUserWalletCredit = async (user) => {
   }
 
   wallet.addTransaction({
-    amount: NEW_USER_WALLET_CREDIT_AMOUNT,
+    amount: creditAmount,
     type: "addition",
     status: "Completed",
     description: "Welcome bonus for new account signup",

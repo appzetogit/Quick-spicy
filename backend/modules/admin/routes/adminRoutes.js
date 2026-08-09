@@ -235,6 +235,12 @@ import {
   getFeeSettingsHistory,
   getPublicFeeSettings,
 } from "../controllers/feeSettingsController.js";
+import {
+  getRewardSettings,
+  updateRewardSettings,
+  getCustomerWallets,
+  updateCustomerWalletBalance,
+} from "../controllers/rewardSettingsController.js";
 import zoneRoutes from "./zoneRoutes.js";
 import { authenticateAdmin, authorizeAdmin } from "../middleware/adminAuth.js";
 import { uploadMiddleware } from "../../../shared/utils/cloudinaryService.js";
@@ -355,6 +361,14 @@ router.patch("/categories/:id/priority", updateCategoryPriority);
 router.patch("/categories/home-visibility", updateCategoryHomeVisibility);
 
 // Fee Settings Management (Delivery & Platform Fee)
+// Reward payouts and customer wallets. Reading is open to any admin; WRITING is
+// super-admin only - both endpoints move money, and the wallet one moves it into a
+// customer account directly. Same bar the delivery-boy wallet already sits behind.
+router.get("/reward-settings", getRewardSettings);
+router.put("/reward-settings", requireSuperAdmin, updateRewardSettings);
+router.get("/customer-wallets", getCustomerWallets);
+router.put("/customer-wallets/:userId", requireSuperAdmin, updateCustomerWalletBalance);
+
 router.get("/fee-settings", getFeeSettings);
 router.post("/fee-settings", createOrUpdateFeeSettings);
 router.put("/fee-settings/:id", updateFeeSettings);

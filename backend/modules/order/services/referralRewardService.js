@@ -19,6 +19,8 @@ import UserWallet from '../../user/models/UserWallet.js';
  * admin panel's mark-delivered - the same pair of paths escrow release taught us about.
  */
 
+// Fallbacks only. The live values come from the admin panel (Reward Settings) and are read
+// per grant, so changing the payout does not need a deploy.
 export const REFERRAL_REWARD_AMOUNT = Number(process.env.REFERRAL_REWARD_AMOUNT || 50);
 export const REFERRAL_QUALIFYING_ORDER_MIN = Number(
   process.env.REFERRAL_QUALIFYING_ORDER_MIN || 299
@@ -53,7 +55,15 @@ export async function grantReferralRewardOnQualifiedOrder(orderOrId) {
         : await Order.findById(orderOrId).select('orderId userId pricing status').lean();
 
     if (!order || String(order.status) !== 'delivered') return;
-    if (!isQualifyingOrderAmount(order.pricing)) return;
+
+    const { default: RewardSettings } = await import('../../admin/models/RewardSettings.js');
+    const config = await RewardSettings.getConfig().catch(() => null);
+    if (config && config.referralRewardEnabled === false) return;
+    const rewardAmount = Number(config?.referralRewardAmount ?? REFERRAL_REWARD_AMOUNT);
+    const minOrderAmount = Number(config?.referralMinOrderAmount ?? REFERRAL_QUALIFYING_ORDER_MIN);
+    if (!Number.isFinite(rewardAmount) || rewardAmount <= 0) return;
+
+    if (!isQualifyingOrderAmount(order.pricing, minOrderAmount)) return;
 
     const referredUserId = order.userId?._id || order.userId;
     if (!referredUserId) return;
@@ -113,7 +123,7 @@ export async function grantReferralRewardOnQualifiedOrder(orderOrId) {
 
     try {
       wallet.addTransaction({
-        amount: REFERRAL_REWARD_AMOUNT,
+        amount: rewardAmount,
         type: 'addition',
         status: 'Completed',
         description: `Referral reward: ${claimed.name || 'your friend'} completed their first qualifying order`,
@@ -134,7 +144,7 @@ export async function grantReferralRewardOnQualifiedOrder(orderOrId) {
       });
 
       console.log(
-        `[referralReward] Paid ${REFERRAL_REWARD_AMOUNT} to ${referrer._id} for referred customer ${claimed._id} (order ${order.orderId})`
+        `[referralReward] Paid ${rewardAmount} to ${referrer._id} for referred customer ${claimed._id} (order ${order.orderId})`
       );
     } catch (creditError) {
       // The claim is already taken but the money did not move: release the claim so the
