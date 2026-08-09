@@ -120,9 +120,12 @@ const orderSchema = new mongoose.Schema({
     }
   },
   address: {
+    // Deliberately not an enum. This is a snapshot of whatever the customer called their
+    // address; nothing in the system branches on it. Constraining it meant a new label
+    // ('Current location') rejected the whole ORDER at save time, after payment had been
+    // taken for wallet orders.
     label: {
-      type: String,
-      enum: ['Home', 'Office', 'Other']
+      type: String
     },
     street: String,
     additionalDetails: String,

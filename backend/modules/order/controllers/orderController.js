@@ -301,6 +301,27 @@ const findActiveZoneForPoint = (activeZones, lat, lng) => {
   return bestZone;
 };
 
+// The cart's fleet buttons send 'veg', the Order schema accepts 'pure_veg', and nothing
+// translated between them: every customer who picked the veg fleet had their order
+// rejected at save time with "Failed to create order". Normalising here rather than in
+// the cart fixes the app builds already installed on phones, which cannot be updated as
+// fast as a customer can tap. Anything unrecognised falls back to standard rather than
+// failing the order - a wrong-but-valid fleet is recoverable, a refused order is not.
+const FLEET_ALIASES = {
+  veg: 'pure_veg',
+  pureveg: 'pure_veg',
+  pure_veg: 'pure_veg',
+  'pure-veg': 'pure_veg',
+  fast: 'fast',
+  express: 'fast',
+  standard: 'standard',
+  normal: 'standard',
+};
+const normalizeDeliveryFleet = (value) => {
+  const key = String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+  return FLEET_ALIASES[key] || 'standard';
+};
+
 const findMappedZoneForRestaurant = (activeZones, restaurant = {}) => {
   if (!Array.isArray(activeZones) || !restaurant) return null;
 
@@ -857,12 +878,13 @@ export const createOrder = async (req, res) => {
       0,
       Number(bodyTipAmount ?? pricing?.tipAmount ?? pricing?.tip ?? 0) || 0
     );
+    const normalizedDeliveryFleet = normalizeDeliveryFleet(deliveryFleet);
     const authoritativePricing = await calculateOrderPricing({
       items,
       restaurantId: assignedRestaurantId,
       deliveryAddress: resolvedAddress,
       couponCode,
-      deliveryFleet: deliveryFleet || 'standard',
+      deliveryFleet: normalizedDeliveryFleet,
       tipAmount
     });
 
@@ -926,7 +948,7 @@ export const createOrder = async (req, res) => {
         ...authoritativePricing,
         couponCode
       },
-      deliveryFleet: deliveryFleet || 'standard',
+      deliveryFleet: normalizedDeliveryFleet,
       note: note || '',
       sendCutlery: sendCutlery !== false,
       status: 'pending',
@@ -1362,9 +1384,16 @@ export const createOrder = async (req, res) => {
       error: error.message,
       stack: error.stack
     });
-    res.status(500).json({
+    // A schema validation failure is a bug in what we sent, not a server fault, and the
+    // generic message hid three of them in a row - each one found by a customer failing to
+    // order instead of by us. Name the field in production too: it is the difference
+    // between a screenshot that diagnoses itself and another round of guessing.
+    const isValidationError = error?.name === 'ValidationError';
+    res.status(isValidationError ? 400 : 500).json({
       success: false,
-      message: 'Failed to create order',
+      message: isValidationError
+        ? `Order could not be placed: ${error.message.replace('Order validation failed: ', '')}`
+        : 'Failed to create order',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
