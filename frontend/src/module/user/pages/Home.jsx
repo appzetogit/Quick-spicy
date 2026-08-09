@@ -1172,7 +1172,7 @@ export default function Home() {
   }, [defaultSavedAddress])
 
   const { isOutOfService: isSavedAddressOutOfService, loading: savedAddressZoneLoading, error: savedAddressZoneError } =
-    useZone(defaultSavedAddressLocation)
+    useZone(defaultSavedAddressLocation, { probe: true })
 
   const hasSavedAddress = Boolean(defaultSavedAddress && savedAddressText)
   // The "not manual" clause both of these used to carry is dropped with the zone dropdown:

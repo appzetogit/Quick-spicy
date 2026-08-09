@@ -9,7 +9,14 @@ const debugError = (...args) => {}
  * Hook to detect and manage user's zone based on location
  * Automatically detects zone when location is available
  */
-export function useZone(location) {
+// probe: this instance is asking about a specific point (a delivery address, a live-vs-
+// address comparison) rather than tracking THE customer's zone. Probes must not touch the
+// shared localStorage zone: writing poisoned the app-wide zone with whatever point was
+// probed, and reading meant a single failed lookup answered with the LIVE location's zone.
+// That substitution is what showed B.PETA customers "restaurant is assigned to a different
+// zone" on valid orders whenever one detect call hiccuped - an unknown zone must stay
+// unknown, not borrow an answer from a different question.
+export function useZone(location, { probe = false } = {}) {
   const [zoneId, setZoneId] = useState(null)
   const [zoneStatus, setZoneStatus] = useState('loading') // 'loading' | 'IN_SERVICE' | 'OUT_OF_SERVICE'
   const [zone, setZone] = useState(null)
@@ -41,15 +48,19 @@ export function useZone(location) {
           setZoneStatus('IN_SERVICE')
           
           // Store in localStorage for persistence
-          localStorage.setItem('userZoneId', data.zoneId)
-          localStorage.setItem('userZone', JSON.stringify(data.zone))
+          if (!probe) {
+            localStorage.setItem('userZoneId', data.zoneId)
+            localStorage.setItem('userZone', JSON.stringify(data.zone))
+          }
         } else {
           // OUT_OF_SERVICE
           setZoneId(null)
           setZone(null)
           setZoneStatus('OUT_OF_SERVICE')
-          localStorage.removeItem('userZoneId')
-          localStorage.removeItem('userZone')
+          if (!probe) {
+            localStorage.removeItem('userZoneId')
+            localStorage.removeItem('userZone')
+          }
         }
       } else {
         throw new Error(response.data?.message || 'Failed to detect zone')
@@ -58,8 +69,9 @@ export function useZone(location) {
       debugError('Error detecting zone:', err)
       setError(err.response?.data?.message || err.message || 'Failed to detect zone')
       
-      // Try to use cached zone if available
-      const cachedZoneId = localStorage.getItem('userZoneId')
+      // Try to use cached zone if available - but never for a probe: the cache holds the
+      // customer's own zone, which is the answer to a different question.
+      const cachedZoneId = probe ? null : localStorage.getItem('userZoneId')
       if (cachedZoneId) {
         const cachedZone = localStorage.getItem('userZone')
         setZoneId(cachedZoneId)
@@ -74,7 +86,7 @@ export function useZone(location) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [probe])
 
   // Auto-detect zone when location changes
   useEffect(() => {
@@ -97,7 +109,7 @@ export function useZone(location) {
       }
     } else {
       // Try to use cached zone if location not available
-      const cachedZoneId = localStorage.getItem('userZoneId')
+      const cachedZoneId = probe ? null : localStorage.getItem('userZoneId')
       if (cachedZoneId) {
         const cachedZone = localStorage.getItem('userZone')
         setZoneId(cachedZoneId)

@@ -318,10 +318,10 @@ export default function Cart() {
       longitude: selectedAddressCoordinates[0]
     }
     : currentLocation
-  const { zoneId, zone, zoneStatus } = useZone(zoneLocation) // Prefer selected/saved address zone
+  const { zoneId, zone, zoneStatus } = useZone(zoneLocation, { probe: true }) // Prefer selected/saved address zone
   // Where the customer physically is, resolved to a zone. Only used to decide whether being
   // away from the delivery address actually matters - see isAwayFromSelectedAddress.
-  const { zoneId: liveZoneId, zoneStatus: liveZoneStatus } = useZone(currentLocation)
+  const { zoneId: liveZoneId, zoneStatus: liveZoneStatus } = useZone(currentLocation, { probe: true })
 
   // How far the customer currently is from the address they are ordering to. The zone above
   // deliberately follows the delivery address - that is what the server validates and what
