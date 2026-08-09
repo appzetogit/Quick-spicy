@@ -175,9 +175,14 @@ const RestaurantImageCarousel = React.memo(({ restaurant, priority = false, back
     if (!imgEl) return
 
     setShowShimmer(true)
+    // The shimmer used to give up after 2.5 seconds no matter what, which on a slow mobile
+    // connection meant it vanished BEFORE the image arrived - the reported "blank white
+    // cards". A placeholder's whole job is to hold the space until the picture exists, so
+    // it now stays for as long as a load could plausibly still succeed; onLoad and onError
+    // both clear it the moment there is something better to show.
     const shimmerTimeout = setTimeout(() => {
       setShowShimmer(false)
-    }, 2500)
+    }, 15000)
 
     if (imgEl.complete) {
       if (imgEl.naturalWidth > 0) {

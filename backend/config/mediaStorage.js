@@ -68,9 +68,12 @@ export function resolveMediaBaseUrl(req) {
 
 export const IMAGE_CATEGORIES = {
   menu: { directory: "menu", width: 800, height: 800, fit: "cover", quality: 75 },
-  restaurants: { directory: "restaurants", width: 1600, height: 900, fit: "cover", quality: 78 },
+  // 960px, not 1600: the largest surface these render on is a ~400px card (phones) or a
+  // ~700px detail hero. 1600x900 files were 3-5x the bytes of what any screen showed, and
+  // on rural 4G that was the difference between cards appearing and blank white boxes.
+  restaurants: { directory: "restaurants", width: 960, height: 540, fit: "cover", quality: 75 },
   users: { directory: "users", width: 500, height: 500, fit: "cover", quality: 78 },
-  banners: { directory: "banners", width: 1600, height: 900, fit: "cover", quality: 76 },
+  banners: { directory: "banners", width: 1280, height: 720, fit: "cover", quality: 74 },
   logos: { directory: "logos", width: 500, height: 500, fit: "inside", quality: 82 },
 };
 
