@@ -105,7 +105,7 @@ export default function Cart() {
   const orderForOthers = useOrderForSomeoneElse();
 
   const { cart, updateQuantity, addToCart, getCartCount, clearCart, cleanCartForRestaurant, syncCartRestaurant } = cartContext;
-  const { getDefaultAddress, getDefaultPaymentMethod, setDefaultAddress, addresses, paymentMethods, userProfile } = useProfile()
+  const { getDefaultAddress, getDefaultPaymentMethod, setDefaultAddress, addresses, paymentMethods, userProfile, addAddress, updateAddress } = useProfile()
   const { createOrder } = useOrders()
   const { openLocationSelector } = useLocationSelector()
   const { location: currentLocation } = useUserLocation() // Get live location address
@@ -415,6 +415,59 @@ export default function Cart() {
 
   const cannotDeliverToAddress =
     restaurantZoneMismatch || addressOutsideAllZones || liveOutsideRestaurantZone
+
+  // The traveller's case: physically standing in the restaurant's own zone, but the saved
+  // delivery address is back in the previous town. Cross-zone delivery is forbidden by
+  // design, so without this the customer was simply refused - the fix is to offer their
+  // current location as the delivery address in one tap, which is what they meant anyway.
+  const canDeliverToCurrentLocation = Boolean(
+    restaurantZoneMismatch &&
+    !addressOutsideAllZones &&
+    liveZoneId &&
+    restaurantAssignedZoneId &&
+    String(liveZoneId) === String(restaurantAssignedZoneId) &&
+    Number.isFinite(Number(currentLocation?.latitude)) &&
+    Number.isFinite(Number(currentLocation?.longitude))
+  )
+  const [savingCurrentLocationAddress, setSavingCurrentLocationAddress] = useState(false)
+  const deliverToCurrentLocation = async () => {
+    const lat = Number(currentLocation?.latitude)
+    const lng = Number(currentLocation?.longitude)
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      toast.error("We couldn't read your current location yet. Try again in a moment.")
+      return
+    }
+    try {
+      setSavingCurrentLocationAddress(true)
+      const payload = {
+        label: "Current location",
+        recipientName: userProfile?.name || "",
+        phone: userProfile?.phone || "",
+        street: currentLocation?.address || currentLocation?.formattedAddress || "Near my current location",
+        additionalDetails: "",
+        city: currentLocation?.city || "Current area",
+        state: currentLocation?.state || "",
+        zipCode: "",
+        latitude: lat,
+        longitude: lng,
+      }
+      // Same rule the address overlay follows: one address per label, updated in place,
+      // so travelling repeatedly does not pile up "Current location" entries.
+      const existing = addresses.find((addr) => normalizeAddressLabel(addr?.label) === "current location")
+      const existingId = existing ? getAddressId(existing) : null
+      const saved = existingId ? await updateAddress(existingId, payload) : await addAddress(payload)
+      const savedId = getAddressId(saved) || existingId
+      if (savedId) {
+        setSelectedAddressId(String(savedId))
+        setCheckoutAddressSnapshot(saved || existing)
+      }
+      toast.success("Delivering to your current location.")
+    } catch {
+      toast.error("Couldn't set your current location as the delivery address. Add it manually instead.")
+    } finally {
+      setSavingCurrentLocationAddress(false)
+    }
+  }
 
   const cancellationPolicyNotice = (
     <div className="mt-3 md:mt-4 rounded-2xl border border-gray-200 bg-white px-4 md:px-5 py-3 md:py-4 shadow-[0_2px_10px_rgba(15,23,42,0.06)] dark:border-gray-700 dark:bg-[#1a1a1a]">
@@ -2956,6 +3009,20 @@ export default function Cart() {
                 <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs md:text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-300">
                   {liveOutsideRestaurantZone
                     ? "You're currently outside this restaurant's delivery area, so this order can't be placed from here. Ordering for someone in that area? Use Order for Someone Else."
+                    : canDeliverToCurrentLocation
+                      ? (
+                        <span>
+                          Your saved delivery address is in a different area from where you are right now.
+                          <button
+                            type="button"
+                            onClick={deliverToCurrentLocation}
+                            disabled={savingCurrentLocationAddress}
+                            className="block mt-1.5 font-bold underline underline-offset-2 disabled:opacity-60"
+                          >
+                            {savingCurrentLocationAddress ? "Setting your location..." : "Deliver to my current location instead"}
+                          </button>
+                        </span>
+                      )
                     : addressOutsideAllZones
                       ? "We don't deliver to this address yet. Pick a delivery address inside one of our service areas."
                       : "This restaurant is assigned to a different zone than your current delivery address. Switch to the correct address or zone before placing the order."}
