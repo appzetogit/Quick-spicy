@@ -718,15 +718,21 @@ export default function OrderTracking() {
   // One shared calculation, used here and on the orders list. Falls back to the order's own
   // promised window while the rider has not started reporting, and to nothing at all when we
   // genuinely do not know - saying nothing beats inventing a number.
+  // The rider's live distance only means "time until my food arrives" once the rider is
+  // actually carrying it. Before pickup the assigned rider broadcasts positions too - from
+  // home, from the restaurant queue - and feeding that into the estimate showed
+  // "Arriving in 14 mins - On time" while the food was still cooking, three screens each
+  // with a different number. Until out_for_delivery, the promise countdown is the truth.
+  const riderIsEnRoute = order?.status === 'out_for_delivery'
   const estimatedTime = useMemo(
     () =>
       estimateArrivalMinutes({
-        distanceToCustomerM: liveDistanceToCustomerM,
+        distanceToCustomerM: riderIsEnRoute ? liveDistanceToCustomerM : null,
         orderEstimatedMinutes: order?.estimatedDeliveryTime ?? order?.eta?.max ?? null,
         orderPlacedAt: order?.createdAt ?? null,
         now: timerNow,
       }),
-    [liveDistanceToCustomerM, order?.estimatedDeliveryTime, order?.eta?.max, order?.createdAt, timerNow],
+    [riderIsEnRoute, liveDistanceToCustomerM, order?.estimatedDeliveryTime, order?.eta?.max, order?.createdAt, timerNow],
   )
 
   const arrivalText = useMemo(() => formatArrivalMinutes(estimatedTime), [estimatedTime])

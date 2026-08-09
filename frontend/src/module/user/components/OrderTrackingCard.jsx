@@ -27,9 +27,13 @@ const isActiveOrder = (order) => {
 const getTimeRemaining = (order) => {
   if (!order) return null;
 
+  // Same gate as the tracking screen: a rider's distance only predicts arrival while they
+  // are carrying the order. Any earlier and it is the distance to someone else's lunch run.
+  const riderIsEnRoute = order.status === 'out_for_delivery';
   return estimateArrivalMinutes({
-    distanceToCustomerM:
-      order.distanceToCustomerM ?? order.deliveryState?.distanceToCustomerM ?? null,
+    distanceToCustomerM: riderIsEnRoute
+      ? (order.distanceToCustomerM ?? order.deliveryState?.distanceToCustomerM ?? null)
+      : null,
     orderEstimatedMinutes:
       order.estimatedDeliveryTime ||
       order.estimatedTime ||

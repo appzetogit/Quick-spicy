@@ -365,6 +365,21 @@ export default function Cart() {
     liveZoneId &&
     String(liveZoneId) !== String(zoneId)
   )
+
+  // Same zone, but the delivery pin sits well away from where the customer is standing.
+  // This is how a rider ends up at the town-centre geocode of "Bestavaripeta" while the
+  // customer watches the map from their actual house 700m east - text-geocoded addresses
+  // carry imprecise pins. Not a block, just a one-tap correction using the same handler as
+  // the traveller flow; after switching, the distance collapses and the nudge disappears.
+  const pinFarFromCustomer = Boolean(
+    hasSavedAddress &&
+    !orderForOthers.active &&
+    zoneId &&
+    liveZoneId &&
+    String(liveZoneId) === String(zoneId) &&
+    Number.isFinite(distanceFromSelectedAddressKm) &&
+    distanceFromSelectedAddressKm > 0.25
+  )
   const defaultPayment = getDefaultPaymentMethod()
   const restaurantAssignedZoneId = restaurantData?.restaurantZoneId || null
   const restaurantZoneMismatch = Boolean(
@@ -2689,6 +2704,30 @@ export default function Cart() {
                         <p className="text-xs md:text-sm text-[#EB590E] mt-1">
                           Use current location and save address to place order
                         </p>
+                      )}
+                      {hasSavedAddress && pinFarFromCustomer && !cannotDeliverToAddress && (
+                        <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
+                          <p className="text-xs md:text-sm font-semibold text-amber-900 dark:text-amber-300">
+                            Your delivery pin is {distanceFromSelectedAddressKm >= 1
+                              ? `${distanceFromSelectedAddressKm.toFixed(1)} km`
+                              : `${Math.round(distanceFromSelectedAddressKm * 1000)} m`} from where you are right now.
+                          </p>
+                          <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-400">
+                            The rider is guided to the pin, not to you. If you&apos;re ordering to where you are, fix it in one tap.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              e.stopPropagation()
+                              deliverToCurrentLocation()
+                            }}
+                            disabled={savingCurrentLocationAddress}
+                            className="mt-1.5 text-xs md:text-sm font-bold underline underline-offset-2 text-amber-900 dark:text-amber-300 disabled:opacity-60"
+                          >
+                            {savingCurrentLocationAddress ? "Setting your location..." : "Deliver to my current location"}
+                          </button>
+                        </div>
                       )}
                       {hasSavedAddress && isAwayFromSelectedAddress && !liveOutsideRestaurantZone && (
                         <div className="mt-2 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-950/40">
