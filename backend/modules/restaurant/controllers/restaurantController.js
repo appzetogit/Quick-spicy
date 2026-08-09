@@ -7,6 +7,7 @@ import { uploadToCloudinary, deleteFromCloudinary } from '../../../shared/utils/
 import { initializeCloudinary } from '../../../config/cloudinary.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import mongoose from 'mongoose';
+import { getCachedOrFetch } from '../../../shared/utils/microCache.js';
 import { deleteRestaurantRelatedData } from '../services/deleteRestaurantData.js';
 import { escapeRegex } from '../../../shared/utils/regex.js';
 import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
@@ -397,7 +398,11 @@ export const getRestaurants = async (req, res) => {
     let resolvedZoneId = zoneId ? String(zoneId) : null;
 
     if (hasCustomerCoordinates) {
-      const activeZonesForCustomer = await Zone.find({ isActive: true }).lean();
+      const activeZonesForCustomer = await getCachedOrFetch(
+        'zones:active:full',
+        30_000,
+        () => Zone.find({ isActive: true }).lean(),
+      );
       let detectedZoneId = getRestaurantZoneId(customerLat, customerLng, activeZonesForCustomer);
 
       // Same boundary tolerance public zone detection uses. Without it the two disagreed:
@@ -530,27 +535,53 @@ export const getRestaurants = async (req, res) => {
     const userZoneId = resolvedZoneId;
     let activeZones = [];
     if (userZoneId) {
-      activeZones = await Zone.find({ isActive: true })
-        .select('_id coordinates restaurantId')
-        .lean();
+      activeZones = await getCachedOrFetch(
+        'zones:active:slim',
+        30_000,
+        () => Zone.find({ isActive: true }).select('_id coordinates restaurantId').lean(),
+      );
     }
 
     // Fetch restaurants. Same-zone filtering is applied below when zoneId is provided.
     const parsedLimit = Math.max(parseInt(limit, 10) || 50, 0);
     const parsedOffset = Math.max(parseInt(offset, 10) || 0, 0);
 
-    let restaurantQuery = Restaurant.find(query)
-      .select('-owner -createdAt -updatedAt -password')
-      .sort(sortObj);
+    // Everything the listing response emits (sanitizePublicRestaurant's allow-list) plus the
+    // nested onboarding paths the image and coordinate fallbacks read. Fetching whole
+    // documents pulled 434KB per request down a VPS-to-Atlas link measured at ~96KB/s -
+    // 4.4 seconds of pure transfer before a single restaurant could render, which is what
+    // "the homepage takes forever on first load" actually was. This list is 144KB.
+    const LISTING_FIELDS =
+      'restaurantId slug name profileImage menuImages cuisines foodPreference deliveryTimings ' +
+      'openDays rating totalRatings isActive isAcceptingOrders estimatedDeliveryTime distance ' +
+      'priceRange featuredDish specialDishes featuredPrice offer freeDelivery deliveryFee ' +
+      'location zoneId onboarding.step1.location onboarding.step2.profileImageUrl onboarding.step2.menuImageUrls';
 
-    // Zone filtering happens in application logic, so paginate only after that filter is applied.
-    if (!userZoneId) {
-      restaurantQuery = restaurantQuery
-        .limit(parsedLimit)
-        .skip(parsedOffset);
-    }
+    // 30 seconds of staleness on the listing is invisible next to the transfer it saves:
+    // the active-restaurant set changes a few times a day, and everything per-customer -
+    // distance, zone membership, pagination - is computed after this fetch, per request.
+    // The in-flight dedupe in the cache matters as much as the TTL: on a throttled link,
+    // ten customers arriving during one fetch must share it, not start ten more.
+    const applyPagination = !userZoneId;
+    const cacheKey = 'restaurants:list:' + JSON.stringify({
+      q: query,
+      s: sortObj,
+      l: applyPagination ? parsedLimit : null,
+      o: applyPagination ? parsedOffset : null,
+    });
 
-    let restaurants = await restaurantQuery.lean();
+    let restaurants = await getCachedOrFetch(cacheKey, 30_000, () => {
+      let restaurantQuery = Restaurant.find(query)
+        .select(LISTING_FIELDS)
+        .sort(sortObj);
+
+      // Zone filtering happens in application logic, so paginate only after that filter is applied.
+      if (applyPagination) {
+        restaurantQuery = restaurantQuery.limit(parsedLimit).skip(parsedOffset);
+      }
+
+      return restaurantQuery.lean();
+    });
     
     // Apply string-based filters that can't be done in MongoDB query
     if (maxDeliveryTime) {
