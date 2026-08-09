@@ -45,7 +45,12 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
-  const normalized = { ...location };
+  // Spreading a hydrated mongoose subdocument copies its internals ($__, _doc, ...) and
+  // NONE of its fields, so latitude/longitude silently vanished and the restaurant read as
+  // having no pin. Only lean() objects survived the spread, which is why this depended
+  // entirely on which lookup happened to run.
+  const plain = typeof location.toObject === 'function' ? location.toObject() : location;
+  const normalized = { ...plain };
 
   if (
     Array.isArray(normalized.coordinates) &&
@@ -461,11 +466,14 @@ export const createOrder = async (req, res) => {
       restaurantIdLength: restaurantId?.length
     });
 
-    // Find and validate the restaurant
+    // Find and validate the restaurant. resolveRestaurantForOrder already handles _id,
+    // public restaurantId and slug, and normalises the location. The block below used to
+    // overwrite that with a raw findById whose hydrated location could not survive the
+    // spread above - so ordering by Mongo _id failed with "Restaurant location is not set"
+    // while ordering the same restaurant by its public id worked.
     let restaurant = await resolveRestaurantForOrder(restaurantId);
-    // Try to find restaurant by restaurantId, _id, or slug
-    if (mongoose.Types.ObjectId.isValid(restaurantId) && restaurantId.length === 24) {
-      restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant && mongoose.Types.ObjectId.isValid(restaurantId) && restaurantId.length === 24) {
+      restaurant = await Restaurant.findById(restaurantId).lean();
       logger.info('🔍 Restaurant lookup by _id:', {
         restaurantId: restaurantId,
         found: !!restaurant,
@@ -473,12 +481,13 @@ export const createOrder = async (req, res) => {
       });
     }
     if (!restaurant) {
+      // .lean() for the same reason as above: a hydrated location cannot be spread.
       restaurant = await Restaurant.findOne({
         $or: [
           { restaurantId: restaurantId },
           { slug: restaurantId }
         ]
-      });
+      }).lean();
       logger.info('🔍 Restaurant lookup by restaurantId/slug:', {
         restaurantId: restaurantId,
         found: !!restaurant,
