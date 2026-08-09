@@ -430,6 +430,20 @@ export default function Cart() {
     Number.isFinite(Number(currentLocation?.longitude))
   )
   const [savingCurrentLocationAddress, setSavingCurrentLocationAddress] = useState(false)
+  // No tap, no extra step: the moment the cart can see the customer standing in the
+  // restaurant's own zone while the selected address is in another one, switch the
+  // delivery to their current location automatically. The operating team asked for
+  // exactly this after watching customers abandon at the extra step; cross-zone delivery
+  // is impossible anyway, so keeping the old-town address selected never wins.
+  // Runs once per cart visit - if it fails, the banner button below remains as the retry.
+  const autoCurrentLocationTriedRef = useRef(false)
+  useEffect(() => {
+    if (!canDeliverToCurrentLocation || savingCurrentLocationAddress) return
+    if (autoCurrentLocationTriedRef.current) return
+    autoCurrentLocationTriedRef.current = true
+    deliverToCurrentLocation()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canDeliverToCurrentLocation])
   const deliverToCurrentLocation = async () => {
     const lat = Number(currentLocation?.latitude)
     const lng = Number(currentLocation?.longitude)
@@ -446,7 +460,10 @@ export default function Cart() {
         street: currentLocation?.address || currentLocation?.formattedAddress || "Near my current location",
         additionalDetails: "",
         city: currentLocation?.city || "Current area",
-        state: currentLocation?.state || "",
+        // The save endpoint refuses an empty state, and a reverse geocode occasionally
+        // omits it - a placeholder keeps the one-tap flow working; coordinates are what
+        // the zone check and the rider actually use.
+        state: currentLocation?.state || currentLocation?.city || "India",
         zipCode: "",
         latitude: lat,
         longitude: lng,
@@ -462,8 +479,11 @@ export default function Cart() {
         setCheckoutAddressSnapshot(saved || existing)
       }
       toast.success("Delivering to your current location.")
-    } catch {
-      toast.error("Couldn't set your current location as the delivery address. Add it manually instead.")
+    } catch (saveError) {
+      toast.error(
+        saveError?.response?.data?.message ||
+        "Couldn't set your current location as the delivery address. Add it manually instead."
+      )
     } finally {
       setSavingCurrentLocationAddress(false)
     }
