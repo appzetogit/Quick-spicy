@@ -122,8 +122,9 @@ export default function UserLayout() {
   // Note: Authentication checks and redirects are handled by ProtectedRoute components
   // UserLayout should not interfere with authentication redirects
 
-  // Show bottom navigation only on home page, under-250 page, and profile page
-  const showBottomNav = location.pathname === "/" ||
+  // The desktop navbar belongs to the landing-style pages only; it is a full header and
+  // the inner pages draw their own.
+  const showDesktopChrome = location.pathname === "/" ||
     location.pathname === "/user" ||
     location.pathname === "/under-250" ||
     location.pathname === "/user/under-250" ||
@@ -131,6 +132,18 @@ export default function UserLayout() {
     location.pathname.startsWith("/profile") ||
     location.pathname === "/user/profile" ||
     location.pathname.startsWith("/user/profile")
+
+  // The mobile tab bar used to share the list above, which made it an allow-list: every
+  // page added since - order for someone else, restaurant details, search, offers - silently
+  // shipped with no way back to the tabs, and they were found one at a time by customers.
+  // Inverted, so a new page HAS the tabs unless it is a flow that must not be interrupted:
+  // signing in, the cart, and an individual order's tracking or invoice.
+  const NO_TAB_BAR = [
+    /^\/(user\/)?auth(\/|$)/,
+    /^\/(user\/)?cart(\/|$)/,
+    /^\/(user\/)?orders\/.+/,
+  ]
+  const showBottomNav = !NO_TAB_BAR.some((pattern) => pattern.test(location.pathname))
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] dark:bg-[#0a0a0a] transition-colors duration-200">
@@ -142,9 +155,9 @@ export default function UserLayout() {
                 {/* <Navbar /> */}
                 {/* Desktop Navbar - Hidden on mobile, visible on medium+ screens */}
                 <div className="hidden md:block">
-                  {showBottomNav && <DesktopNavbar />}
+                  {showDesktopChrome && <DesktopNavbar />}
                 </div>
-                <main className={showBottomNav ? "md:pt-40" : ""}>
+                <main className={showDesktopChrome ? "md:pt-40" : ""}>
                   <Outlet />
                 </main>
                 {showBottomNav && <BottomNavigation />}
