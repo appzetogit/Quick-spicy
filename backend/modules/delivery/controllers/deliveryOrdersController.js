@@ -2108,18 +2108,49 @@ export const verifyDropOtp = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'Order not found or not assigned to you');
   }
 
-  const isValidState = order.status === 'out_for_delivery' ||
-    order.status === 'delivered' ||
-    order.deliveryState?.currentPhase === 'at_delivery' ||
-    order.deliveryState?.currentPhase === 'en_route_to_delivery' ||
-    order.deliveryState?.currentPhase === 'completed' ||
-    order.deliveryState?.status === 'order_confirmed' ||
-    order.deliveryState?.status === 'delivered';
-  if (!isValidState) {
+  // The drop OTP exists only on the customer's screen. A rider who can type it correctly is
+  // standing in front of the customer with the food, whatever the database believes about
+  // which button was pressed on the way there.
+  //
+  // This used to demand out_for_delivery or an equivalent phase. When the pickup
+  // confirmation failed to record - a dropped request at the restaurant, a skipped tap -
+  // the order stayed at 'ready'/'at_pickup' and the rider was stranded at the door with no
+  // way to complete the delivery, holding food the customer had already paid for. Orders
+  // sitting in exactly that state are in production now.
+  //
+  // So the only states refused are the ones where a drop OTP is genuinely meaningless: the
+  // order was cancelled, or the rider has not accepted it yet. Everything else proceeds and
+  // the missed pickup transition is repaired below rather than blocking the handover.
+  const orderIsCancelled = order.status === 'cancelled' || order.status === 'rejected';
+  const riderHasAccepted = Boolean(order.deliveryPartnerId);
+  if (orderIsCancelled || !riderHasAccepted) {
     return errorResponse(
       res,
       400,
-      `OTP can be verified only after pickup while heading to customer. Current status: ${order.status}, phase: ${order.deliveryState?.currentPhase || 'unknown'}`
+      orderIsCancelled
+        ? 'This order was cancelled, so the delivery OTP cannot be verified.'
+        : 'Accept this order before verifying the delivery OTP.'
+    );
+  }
+
+  // Repair a pickup transition that never recorded, so the order does not reach 'delivered'
+  // claiming it was never collected. Logged loudly: a rider reaching the customer while the
+  // order still reads 'ready' means a pickup confirmation was lost, and that is worth
+  // finding rather than silently patching every time.
+  if (order.status !== 'out_for_delivery' && order.status !== 'delivered') {
+    console.warn(
+      `⚠️ Drop OTP presented while order ${order.orderId} was still '${order.status}' (phase: ${order.deliveryState?.currentPhase || 'unknown'}). Recording the missed pickup before completing.`
+    );
+    await Order.updateOne(
+      { _id: order._id },
+      {
+        $set: {
+          status: 'out_for_delivery',
+          'deliveryState.currentPhase': 'at_delivery',
+          'deliveryState.status': 'order_confirmed',
+          'deliveryState.pickupRecoveredAt': new Date()
+        }
+      }
     );
   }
 
@@ -2284,21 +2315,28 @@ export const completeDelivery = asyncHandler(async (req, res) => {
       });
     }
 
-    // Check if order is in valid state for completion
-    // Allow completion if order is out_for_delivery OR at_delivery phase
-    const isValidState = order.status === 'out_for_delivery' || 
+    const dropOtp = order?.deliveryVerification?.dropOtp || {};
+
+    // A drop OTP verified by THIS rider is the strongest proof of handover that exists: the
+    // code lives only on the customer's screen. When it is present, it outranks whatever
+    // phase the order recorded on the way here - otherwise a lost pickup transition strands
+    // the rider at the door, unable to finish a delivery the customer has already received.
+    const dropOtpProvesHandover = Boolean(dropOtp?.verifiedAt) &&
+      String(dropOtp?.verifiedBy || '') === String(delivery._id);
+
+    // Without that proof the original rule stands, so nobody can mark an order delivered
+    // from the restaurant queue.
+    const isValidState = dropOtpProvesHandover ||
+                         order.status === 'out_for_delivery' ||
                          order.deliveryState?.currentPhase === 'at_delivery' ||
                          order.deliveryState?.currentPhase === 'en_route_to_delivery';
-    
+
     if (!isValidState) {
       return errorResponse(res, 400, `Order cannot be completed. Current status: ${order.status}, Phase: ${order.deliveryState?.currentPhase || 'unknown'}`);
     }
 
-    const dropOtp = order?.deliveryVerification?.dropOtp || {};
     const requiresDropOtp = Boolean(dropOtp?.code);
-    const isDropOtpVerifiedForDelivery = Boolean(dropOtp?.verifiedAt) &&
-      String(dropOtp?.verifiedBy || '') === String(delivery._id);
-    if (requiresDropOtp && !isDropOtpVerifiedForDelivery) {
+    if (requiresDropOtp && !dropOtpProvesHandover) {
       return errorResponse(res, 403, 'Please verify customer drop OTP before completing delivery.');
     }
 
