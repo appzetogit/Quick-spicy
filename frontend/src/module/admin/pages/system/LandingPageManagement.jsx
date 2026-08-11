@@ -69,6 +69,8 @@ export default function LandingPageManagement() {
   const [offerBannerTitle, setOfferBannerTitle] = useState("")
   const [offerBannerLink, setOfferBannerLink] = useState("")
   const [offerBannerZoneId, setOfferBannerZoneId] = useState("")
+  // Which branch a newly uploaded main banner runs in. Empty = every branch.
+  const [heroBannerZoneId, setHeroBannerZoneId] = useState("")
   const [offerBannerUploading, setOfferBannerUploading] = useState(false)
   const [recommendedSearchQuery, setRecommendedSearchQuery] = useState("")
   // "" edits the global fallback; a zone id edits that branch's own list.
@@ -189,6 +191,21 @@ export default function LandingPageManagement() {
     uploadBanners(files)
   }
 
+  // Move an existing banner between branches without re-uploading the image.
+  const handleBannerZoneChange = async (bannerId, zoneId) => {
+    try {
+      await api.patch(`/hero-banners/${bannerId}/zone`, { zoneId: zoneId || "" }, getAuthConfig())
+      setBanners((prev) =>
+        prev.map((b) => (b._id === bannerId ? { ...b, zone: zoneId ? { _id: zoneId } : null } : b))
+      )
+      setSuccess(zoneId ? "Banner limited to that branch" : "Banner now shows in every branch")
+      setTimeout(() => setSuccess(null), 3000)
+    } catch (err) {
+      setError(err?.response?.data?.message || "Could not change the banner's branch")
+      setTimeout(() => setError(null), 4000)
+    }
+  }
+
   const uploadBanners = async (files) => {
     try {
       setBannersUploading(true)
@@ -214,6 +231,8 @@ export default function LandingPageManagement() {
           hasFormData: formData instanceof FormData
         })
       }
+
+      if (heroBannerZoneId) formData.append('zoneId', heroBannerZoneId)
 
       const response = await api.post('/hero-banners/multiple', formData, config)
 
@@ -1467,6 +1486,26 @@ export default function LandingPageManagement() {
             {/* Upload Section */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
               <h2 className="text-lg font-bold text-slate-900 mb-4">Upload New Banner(s)</h2>
+              <div className="mb-3">
+                <Label htmlFor="hero-banner-zone" className="text-xs font-semibold text-slate-700">Show in</Label>
+                <select
+                  id="hero-banner-zone"
+                  value={heroBannerZoneId}
+                  onChange={(e) => setHeroBannerZoneId(e.target.value)}
+                  className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Every branch</option>
+                  {zonesForRecommended.map((zone) => (
+                    <option key={String(zone._id)} value={String(zone._id)}>
+                      Only {zone.name || zone.zoneName || "Zone"}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Applies to the images uploaded next. Existing banners keep their own setting.
+                </p>
+              </div>
+
               <div
                 className="border-2 border-dashed border-blue-300 rounded-lg p-8 text-center bg-blue-50/30 cursor-pointer transition-colors hover:border-blue-400 hover:bg-blue-50/50"
                 onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
@@ -1552,6 +1591,21 @@ export default function LandingPageManagement() {
                         </div>
                       </div>
                       <div className="p-4 bg-white">
+                        <div className="mb-3">
+                          <label className="text-[11px] font-semibold text-slate-600">Shows in</label>
+                          <select
+                            value={banner.zone?._id ? String(banner.zone._id) : (banner.zone ? String(banner.zone) : "")}
+                            onChange={(e) => handleBannerZoneChange(banner._id, e.target.value)}
+                            className="mt-1 w-full px-2 py-1.5 text-xs rounded border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Every branch</option>
+                            {zonesForRecommended.map((zone) => (
+                              <option key={String(zone._id)} value={String(zone._id)}>
+                                Only {zone.name || zone.zoneName || "Zone"}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                         <div className="flex items-center justify-between gap-2 flex-wrap">
                           <div className="flex items-center gap-1">
                             <button onClick={() => handleBannerOrderChange(banner._id, 'up')} disabled={index === 0} className="p-1.5 rounded hover:bg-slate-100 disabled:opacity-50">

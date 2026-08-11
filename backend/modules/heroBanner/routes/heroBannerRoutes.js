@@ -7,6 +7,7 @@ import {
   createHeroBanner,
   createMultipleHeroBanners,
   deleteHeroBanner,
+  updateHeroBannerZone,
   updateBannerOrder,
   toggleBannerStatus,
   linkRestaurantsToBanner,
@@ -77,6 +78,7 @@ router.post(
   uploadMiddleware.array('images', 5),
   createMultipleHeroBanners
 );
+router.patch('/:id/zone', authenticateAdmin, updateHeroBannerZone);
 router.delete('/:id', authenticateAdmin, deleteHeroBanner);
 router.patch('/:id/order', authenticateAdmin, updateBannerOrder);
 router.patch('/:id/status', authenticateAdmin, toggleBannerStatus);

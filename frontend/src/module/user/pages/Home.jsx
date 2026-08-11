@@ -690,50 +690,6 @@ export default function Home() {
     }
   }, [showVegModePopup])
 
-  // Fetch hero banners from API
-  useEffect(() => {
-    const fetchHeroBanners = async () => {
-      try {
-        setLoadingBanners(true)
-        const response = await api.get('/hero-banners/public')
-        if (response.data.success && response.data.data.banners) {
-          const banners = response.data.data.banners
-
-          // Normalize and filter invalid banner records to prevent blank slides.
-          const normalizedBanners = banners
-            .map((banner) => {
-              if (typeof banner === 'string') {
-                return { imageUrl: normalizeImageUrl(banner), linkedRestaurants: [] }
-              }
-              return {
-                ...banner,
-                imageUrl: normalizeImageUrl(banner?.imageUrl),
-                linkedRestaurants: Array.isArray(banner?.linkedRestaurants) ? banner.linkedRestaurants : []
-              }
-            })
-            .filter((banner) => typeof banner?.imageUrl === 'string' && banner.imageUrl.trim().length > 0)
-
-          setHeroBannersData(normalizedBanners)
-          setHeroBannerImages(normalizedBanners.map((banner) => banner.imageUrl))
-          setCurrentBannerIndex(0)
-        } else {
-          setHeroBannersData([])
-          setHeroBannerImages([])
-          setCurrentBannerIndex(0)
-        }
-      } catch (error) {
-        debugError('Error fetching hero banners:', error)
-        // Fallback to empty array if API fails
-        setHeroBannerImages([])
-        setHeroBannersData([])
-        setCurrentBannerIndex(0)
-      } finally {
-        setLoadingBanners(false)
-      }
-    }
-
-    fetchHeroBanners()
-  }, [normalizeImageUrl])
 
 
   // Keep index within current banner bounds after admin updates/reloads.
@@ -967,6 +923,56 @@ export default function Home() {
   // recommendations into the first paint before the real zone arrived.
   const fallbackBranchZoneId = zoneStatus === "OUT_OF_SERVICE" ? chosenBranchZoneId : null
   const effectiveZoneId = sessionBranchZoneId || zoneId || fallbackBranchZoneId
+
+  // Fetch hero banners from API
+  useEffect(() => {
+    const fetchHeroBanners = async () => {
+      try {
+        setLoadingBanners(true)
+        // Zone-scoped, like the offer banners: a banner with no zone runs everywhere, a
+        // banner tied to a branch appears only there. Waits for the zone to resolve so a
+        // customer never sees the global-only set flash before their branch's banners.
+        const response = await api.get('/hero-banners/public', {
+          params: effectiveZoneId ? { zoneId: effectiveZoneId } : {},
+        })
+        if (response.data.success && response.data.data.banners) {
+          const banners = response.data.data.banners
+
+          // Normalize and filter invalid banner records to prevent blank slides.
+          const normalizedBanners = banners
+            .map((banner) => {
+              if (typeof banner === 'string') {
+                return { imageUrl: normalizeImageUrl(banner), linkedRestaurants: [] }
+              }
+              return {
+                ...banner,
+                imageUrl: normalizeImageUrl(banner?.imageUrl),
+                linkedRestaurants: Array.isArray(banner?.linkedRestaurants) ? banner.linkedRestaurants : []
+              }
+            })
+            .filter((banner) => typeof banner?.imageUrl === 'string' && banner.imageUrl.trim().length > 0)
+
+          setHeroBannersData(normalizedBanners)
+          setHeroBannerImages(normalizedBanners.map((banner) => banner.imageUrl))
+          setCurrentBannerIndex(0)
+        } else {
+          setHeroBannersData([])
+          setHeroBannerImages([])
+          setCurrentBannerIndex(0)
+        }
+      } catch (error) {
+        debugError('Error fetching hero banners:', error)
+        // Fallback to empty array if API fails
+        setHeroBannerImages([])
+        setHeroBannersData([])
+        setCurrentBannerIndex(0)
+      } finally {
+        setLoadingBanners(false)
+      }
+    }
+
+    fetchHeroBanners()
+  }, [normalizeImageUrl, effectiveZoneId])
   // Coordinates are authoritative server-side, so they must be withheld whenever we are
   // deliberately showing a branch other than the detected one - and only then.
   const browsingChosenBranch = Boolean(effectiveZoneId) && effectiveZoneId !== zoneId

@@ -21,10 +21,19 @@ const withNormalizedImageUrl = (item, req) =>
  */
 export const getHeroBanners = async (req, res) => {
   try {
-    const banners = await HeroBanner.find({ isActive: true })
+    // Same rule the offer banners already follow: a banner with no zone runs everywhere,
+    // a banner tied to a zone appears only in that branch. Without a resolvable zone the
+    // customer sees the global banners only - showing another branch's promotion to
+    // someone who cannot order from it is worse than showing nothing.
+    const zoneId = String(req.query?.zoneId || '').trim();
+    const zoneFilter = mongoose.Types.ObjectId.isValid(zoneId)
+      ? { $or: [{ zone: null }, { zone: new mongoose.Types.ObjectId(zoneId) }] }
+      : { zone: null };
+
+    const banners = await HeroBanner.find({ isActive: true, ...zoneFilter })
       .populate('linkedRestaurants', 'name slug restaurantId profileImage')
       .sort({ order: 1, createdAt: -1 })
-      .select('imageUrl order linkedRestaurants')
+      .select('imageUrl order linkedRestaurants zone')
       .lean();
 
     return successResponse(res, 200, 'Hero banners retrieved successfully', {
@@ -46,6 +55,7 @@ export const getAllHeroBanners = async (req, res) => {
   try {
     const banners = await HeroBanner.find()
       .populate('linkedRestaurants', 'name slug restaurantId profileImage')
+      .populate('zone', 'name zoneName')
       .sort({ order: 1, createdAt: -1 })
       .lean();
 
@@ -83,11 +93,19 @@ export const createHeroBanner = async (req, res) => {
 
     const newOrder = lastBanner ? lastBanner.order + 1 : 0;
 
+    // Optional zone from the admin form. Anything that is not a valid id - including the
+    // empty string the form sends for "All zones" - means no restriction.
+    const requestedZoneId = String(req.body?.zoneId || req.body?.zone || '').trim();
+    const zone = mongoose.Types.ObjectId.isValid(requestedZoneId)
+      ? new mongoose.Types.ObjectId(requestedZoneId)
+      : null;
+
     // Create banner record
     const banner = new HeroBanner({
       imageUrl: normalizedImageUrl,
       cloudinaryPublicId: result.public_id,
       order: newOrder,
+      zone,
       isActive: true
     });
 
@@ -98,6 +116,7 @@ export const createHeroBanner = async (req, res) => {
         _id: banner._id,
         imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
         order: banner.order,
+        zone: banner.zone ? String(banner.zone) : null,
         isActive: banner.isActive,
         createdAt: banner.createdAt
       }
@@ -130,6 +149,13 @@ export const createMultipleHeroBanners = async (req, res) => {
 
     let currentOrder = lastBanner ? lastBanner.order + 1 : 0;
 
+    // One zone applies to every image in this upload. Empty (the admin's "All zones")
+    // leaves them global, matching the offer-banner rule.
+    const requestedUploadZoneId = String(req.body?.zoneId || req.body?.zone || '').trim();
+    const uploadZone = mongoose.Types.ObjectId.isValid(requestedUploadZoneId)
+      ? new mongoose.Types.ObjectId(requestedUploadZoneId)
+      : null;
+
     const folder = 'appzeto/hero-banners';
     const uploadedBanners = [];
     const errors = [];
@@ -150,6 +176,7 @@ export const createMultipleHeroBanners = async (req, res) => {
           imageUrl: normalizedImageUrl,
           cloudinaryPublicId: result.public_id,
           order: currentOrder++,
+          zone: uploadZone,
           isActive: true
         });
 
@@ -158,6 +185,7 @@ export const createMultipleHeroBanners = async (req, res) => {
           _id: banner._id,
           imageUrl: normalizeImageUrlForResponse(banner.imageUrl, req),
           order: banner.order,
+          zone: banner.zone ? String(banner.zone) : null,
           isActive: banner.isActive,
           createdAt: banner.createdAt
         });
@@ -248,6 +276,46 @@ export const updateBannerOrder = async (req, res) => {
   } catch (error) {
     console.error('Error updating banner order:', error);
     return errorResponse(res, 500, 'Failed to update banner order');
+  }
+};
+
+/**
+ * Change which zone a hero banner runs in.
+ * PATCH /api/hero-banners/:id/zone   { zoneId }
+ *
+ * Separate from the create flow so an existing banner can be moved to a branch, or made
+ * global again, without re-uploading the image.
+ */
+export const updateHeroBannerZone = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const requestedZoneId = String(req.body?.zoneId ?? '').trim();
+
+    // Empty means "all zones". Anything non-empty must be a real id, so a typo cannot
+    // silently turn a branch banner into a global one.
+    if (requestedZoneId && !mongoose.Types.ObjectId.isValid(requestedZoneId)) {
+      return errorResponse(res, 400, 'Invalid zone selected for this banner');
+    }
+
+    const banner = await HeroBanner.findByIdAndUpdate(
+      id,
+      {
+        zone: requestedZoneId ? new mongoose.Types.ObjectId(requestedZoneId) : null,
+        updatedAt: new Date()
+      },
+      { new: true }
+    ).populate('zone', 'name zoneName');
+
+    if (!banner) {
+      return errorResponse(res, 404, 'Hero banner not found');
+    }
+
+    return successResponse(res, 200, 'Banner zone updated successfully', {
+      banner: withNormalizedImageUrl(banner.toObject(), req)
+    });
+  } catch (error) {
+    console.error('Error updating banner zone:', error);
+    return errorResponse(res, 500, 'Failed to update banner zone');
   }
 };
 
