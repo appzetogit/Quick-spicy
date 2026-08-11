@@ -163,6 +163,17 @@ const restaurantSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // The version retired by the most recent rotation, and when. Together they let a refresh
+    // that replays the immediately-previous token within the grace window be answered instead
+    // of revoked - see shared/utils/refreshRotation.js.
+    previousTokenVersion: {
+      type: Number,
+      default: null,
+    },
+    tokenVersionRotatedAt: {
+      type: Date,
+      default: null,
+    },
     isAcceptingOrders: {
       type: Boolean,
       default: true,

@@ -257,6 +257,16 @@ const userSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // See shared/utils/refreshRotation.js - lets a replayed refresh within the grace window be
+  // answered instead of logging the customer out.
+  previousTokenVersion: {
+    type: Number,
+    default: null
+  },
+  tokenVersionRotatedAt: {
+    type: Date,
+    default: null
+  },
   emailVerified: {
     type: Boolean,
     default: false

@@ -261,6 +261,16 @@ const deliverySchema = new mongoose.Schema(
       type: Number,
       default: 0
     },
+    // See shared/utils/refreshRotation.js - keeps a rider signed in when the app replays the
+    // previous refresh token, which a phone on patchy rural data does constantly.
+    previousTokenVersion: {
+      type: Number,
+      default: null
+    },
+    tokenVersionRotatedAt: {
+      type: Date,
+      default: null
+    },
     // Last login
     lastLogin: Date,
     // Verification

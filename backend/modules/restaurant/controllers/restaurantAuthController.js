@@ -1,6 +1,7 @@
 import Restaurant from '../models/Restaurant.js';
 import otpService from '../../auth/services/otpService.js';
 import jwtService from '../../auth/services/jwtService.js';
+import { decideRotation, markRotated, ROTATION_DECISION } from '../../../shared/utils/refreshRotation.js';
 import firebaseAuthService from '../../auth/services/firebaseAuthService.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
@@ -786,16 +787,31 @@ export const refreshToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 401, 'Restaurant not found');
     }
 
-    // RTR check
-    if (decoded.tokenVersion !== restaurant.tokenVersion) {
+    const decision = decideRotation(restaurant, decoded.tokenVersion);
+
+    if (decision === ROTATION_DECISION.REVOKE) {
       restaurant.tokenVersion += 1;
+      restaurant.previousTokenVersion = null;
       await restaurant.save();
       clearAuthCookies(res, 'restaurant');
       return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
     }
 
-    // Rotate version
-    restaurant.tokenVersion += 1;
+    // A replay of the token retired moments ago - a second tab, a retry, a WebView that did
+    // not persist the new cookie. Re-issue the CURRENT tokens without rotating again, so the
+    // owner stays signed in instead of being thrown back to the login screen.
+    if (decision === ROTATION_DECISION.REPLAY) {
+      const replayTokens = jwtService.generateTokens({
+        userId: restaurant._id.toString(),
+        role: 'restaurant',
+        email: restaurant.email || restaurant.phone || restaurant.restaurantId,
+        tokenVersion: restaurant.tokenVersion
+      });
+      setAuthCookies(res, 'restaurant', replayTokens);
+      return successResponse(res, 200, 'Token refreshed successfully');
+    }
+
+    markRotated(restaurant);
     await restaurant.save();
 
     // Generate new rotated access and refresh tokens

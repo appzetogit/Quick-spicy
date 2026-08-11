@@ -22,6 +22,7 @@ import {
 import winston from "winston";
 import { mintPushScopedToken } from "../../../shared/utils/pushScopedToken.js";
 import { randomInt } from "crypto";
+import { decideRotation, markRotated, ROTATION_DECISION } from "../../../shared/utils/refreshRotation.js";
 
 const logger = winston.createLogger({
   level: "info",
@@ -545,16 +546,29 @@ export const refreshToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 401, "User not found or inactive");
     }
 
-    // RTR check: if tokenVersion mismatch, token reuse detected. Revoke all.
-    if (decoded.tokenVersion !== user.tokenVersion) {
+    const decision = decideRotation(user, decoded.tokenVersion);
+
+    if (decision === ROTATION_DECISION.REVOKE) {
       user.tokenVersion += 1;
+      user.previousTokenVersion = null;
       await user.save();
       clearAuthCookies(res, "user");
       return errorResponse(res, 401, "Session expired or revoked. Please log in again.");
     }
 
-    // Rotate version
-    user.tokenVersion += 1;
+    // Replay of the just-retired token: two tabs, a retry, a lost response. Hand back the
+    // current tokens rather than logging the customer out mid-order.
+    if (decision === ROTATION_DECISION.REPLAY) {
+      const replayTokens = jwtService.generateTokens({
+        userId: user._id.toString(),
+        role: user.role,
+        tokenVersion: user.tokenVersion,
+      });
+      setAuthCookies(res, "user", replayTokens);
+      return successResponse(res, 200, "Token refreshed successfully");
+    }
+
+    markRotated(user);
     await user.save();
 
     // Generate new access and refresh tokens

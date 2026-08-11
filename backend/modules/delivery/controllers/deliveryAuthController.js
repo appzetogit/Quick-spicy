@@ -1,6 +1,7 @@
 import Delivery from '../models/Delivery.js';
 import otpService from '../../auth/services/otpService.js';
 import jwtService from '../../auth/services/jwtService.js';
+import { decideRotation, markRotated, ROTATION_DECISION } from '../../../shared/utils/refreshRotation.js';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import { asyncHandler } from '../../../shared/middleware/asyncHandler.js';
 import {
@@ -298,18 +299,35 @@ export const refreshToken = asyncHandler(async (req, res) => {
       return errorResponse(res, 401, 'Delivery boy not found or inactive');
     }
 
-    // RTR check: check both decoded.tokenVersion and delivery.refreshToken
-    if (decoded.tokenVersion !== delivery.tokenVersion || delivery.refreshToken !== refreshToken) {
-      // Token reuse detected. Revoke all.
+    const decision = decideRotation(delivery, decoded.tokenVersion);
+
+    if (decision === ROTATION_DECISION.REVOKE) {
       delivery.tokenVersion += 1;
+      delivery.previousTokenVersion = null;
       delivery.refreshToken = null;
       await delivery.save();
       clearAuthCookies(res, 'delivery');
       return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
     }
 
-    // Rotate version
-    delivery.tokenVersion += 1;
+    // Replay of the token retired moments ago - routine on a phone moving through patchy
+    // rural coverage. Re-issue the current tokens instead of dropping the rider mid-delivery.
+    // The stored refreshToken is deliberately NOT compared here: it only ever holds the
+    // newest token, so a legitimate replay would always fail that check.
+    if (decision === ROTATION_DECISION.REPLAY) {
+      const replayTokens = jwtService.generateTokens({
+        userId: delivery._id.toString(),
+        role: 'delivery',
+        email: delivery.email || delivery.phone || delivery.deliveryId,
+        tokenVersion: delivery.tokenVersion
+      });
+      delivery.refreshToken = replayTokens.refreshToken;
+      await delivery.save();
+      setAuthCookies(res, 'delivery', replayTokens);
+      return successResponse(res, 200, 'Token refreshed successfully');
+    }
+
+    markRotated(delivery);
 
     // Generate new rotated access and refresh tokens
     const tokens = jwtService.generateTokens({
