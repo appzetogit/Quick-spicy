@@ -341,9 +341,21 @@ export default function RestaurantsList() {
 
   // Get unique cuisines from restaurants for filter dropdown
   // Show full phone number without masking
+  // Phones are stored canonically as 91 + the 10 local digits. Admins think and type in
+  // local digits, so the edit form showed "918247066937", the admin typed "8247066937",
+  // the server canonicalised it straight back to "918247066937", and the reloaded form
+  // looked identical - reported as "the number is not getting updated" when the save had
+  // in fact worked every time. Showing the local form makes an edit visibly take effect.
+  const toLocalPhoneDigits = (phone) => {
+    const digits = String(phone || "").replace(/\D/g, "")
+    if (digits.length === 12 && digits.startsWith("91")) return digits.slice(2)
+    if (digits.length === 11 && digits.startsWith("0")) return digits.slice(1)
+    return digits
+  }
+
   const formatPhone = (phone) => {
     if (!phone) return ""
-    return phone
+    return toLocalPhoneDigits(phone) || phone
   }
 
   const formatFoodPreference = (value) => {
@@ -789,8 +801,8 @@ export default function RestaurantsList() {
       name: restaurant.name || "",
       ownerName: restaurant.ownerName || "",
       ownerEmail: restaurant.ownerEmail || "",
-      ownerPhone: restaurant.ownerPhone || "",
-      primaryContactNumber: restaurant.primaryContactNumber || "",
+      ownerPhone: toLocalPhoneDigits(restaurant.ownerPhone),
+      primaryContactNumber: toLocalPhoneDigits(restaurant.primaryContactNumber),
       email: restaurant.email || "",
       cuisinesText: Array.isArray(restaurant.cuisines) ? restaurant.cuisines.join(", ") : "",
       foodPreference: (
