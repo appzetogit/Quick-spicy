@@ -140,7 +140,11 @@ const paymentSchema = new mongoose.Schema({
   logs: [{
     action: {
       type: String,
-      enum: ['initiated', 'processing', 'completed', 'failed', 'refunded', 'cancelled']
+      // Mirrors the status enum above. 'pending' was missing, and the COD path records the
+      // payment's opening state as its first log entry - so every cash order failed
+      // validation and saved NO payment record at all. It happened 1,561 times in the
+      // current log alone, silently, because the caller treats the failure as non-blocking.
+      enum: ['initiated', 'pending', 'processing', 'completed', 'failed', 'refunded', 'cancelled']
     },
     timestamp: {
       type: Date,
