@@ -122,15 +122,16 @@ export default function OrdersTable({
     )
   }
 
+  // Mirrors the server's list: an admin can close out any order the restaurant accepted.
+  // Previously only ready / on-the-way qualified, so an order whose rider never finished the
+  // handover - stuck at confirmed or preparing - could not be completed from here at all.
+  // Pending is excluded on both sides: nothing has been accepted, so nothing should be paid.
   const isOrderDeliveredMarkable = (order) => {
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
-    return (
-      displayStatus === "ready" ||
-      displayStatus === "food on the way" ||
-      backendStatus === "ready" ||
-      backendStatus === "out_for_delivery"
-    )
+    const completable = ["confirmed", "preparing", "ready", "out_for_delivery"]
+    const displayCompletable = ["accepted", "confirmed", "preparing", "ready", "food on the way"]
+    return completable.includes(backendStatus) || displayCompletable.includes(displayStatus)
   }
   
   // The server returns exactly the current page, so render it as-is.

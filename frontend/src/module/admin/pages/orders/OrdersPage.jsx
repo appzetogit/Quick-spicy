@@ -842,6 +842,19 @@ export default function OrdersPage({ statusKey = "all" }) {
       return
     }
 
+    // Completing an order releases escrow: the restaurant and the rider get paid, and for
+    // COD it records the cash as collected. That is not undoable from this screen, so it
+    // asks first rather than acting on a misclick.
+    if (
+      !confirm(
+        `Mark order ${orderLabel} as delivered?
+
+This completes the order and releases payment to the restaurant and the delivery partner. It cannot be undone here.`,
+      )
+    ) {
+      return
+    }
+
     try {
       setMarkingDeliveredOrderId(order.id || order.orderId)
       const response = await adminAPI.markOrderDelivered(orderIdToUse)
@@ -1233,7 +1246,11 @@ export default function OrdersPage({ statusKey = "all" }) {
         onAcceptOrder={statusKey === "all" || statusKey === "pending" ? handleAcceptOrder : undefined}
         onRejectOrder={["all", "pending", "accepted", "processing", "scheduled"].includes(statusKey) ? handleRejectOrder : undefined}
         onMarkReady={statusKey === "all" || statusKey === "processing" ? handleMarkReadyOrder : undefined}
-        onMarkDelivered={statusKey === "all" ? handleMarkDeliveredOrder : undefined}
+        onMarkDelivered={
+          ["all", "accepted", "processing", "ready", "on_the_way", "scheduled"].includes(statusKey)
+            ? handleMarkDeliveredOrder
+            : undefined
+        }
         actionLoadingOrderId={processingActionOrderId}
         readyLoadingOrderId={markingReadyOrderId}
         deliveredLoadingOrderId={markingDeliveredOrderId}

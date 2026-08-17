@@ -274,6 +274,13 @@ export default function AdminHome() {
 
   const hasActiveFilters = selectedZone !== "all" || selectedPeriod !== "overall"
 
+  // Some tiles below are genuinely platform-wide: total customers, total foods and total
+  // delivery partners are not narrowed by the zone or period selector, while restaurants,
+  // addons and the order counts are. With a filter active that mix reads as contradictory
+  // numbers on one screen - the same figure appearing to change between views - so the
+  // tiles that ignore the filter now say so instead of looking like they answered it.
+  const platformWideHelper = (base) => (hasActiveFilters ? `${base} - all zones` : base)
+
   // Get order stats from real data
   const getOrderStats = () => {
     if (hasActiveFilters) {
@@ -489,7 +496,7 @@ export default function AdminHome() {
             <MetricCard
               title="Total delivery boy"
               value={totalDeliveryBoys.toLocaleString("en-IN")}
-              helper="All delivery partners"
+              helper={platformWideHelper("All delivery partners")}
               icon={<Truck className="h-5 w-5 text-indigo-600" />}
               accent="bg-indigo-200/40"
               path="/admin/delivery-partners"
@@ -505,7 +512,7 @@ export default function AdminHome() {
             <MetricCard
               title="Total foods"
               value={totalFoods.toLocaleString("en-IN")}
-              helper="Active menu items"
+              helper={platformWideHelper("Active menu items")}
               icon={<Package className="h-5 w-5 text-purple-600" />}
               accent="bg-purple-200/40"
               path="/admin/foods"
@@ -521,7 +528,7 @@ export default function AdminHome() {
             <MetricCard
               title="Total customers"
               value={totalCustomers.toLocaleString("en-IN")}
-              helper="Registered users"
+              helper={platformWideHelper("Registered users")}
               icon={<UserCircle className="h-5 w-5 text-cyan-600" />}
               accent="bg-cyan-200/40"
               path="/admin/customers"

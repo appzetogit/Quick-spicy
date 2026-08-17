@@ -164,6 +164,25 @@ export function isModuleAuthenticated(module) {
 }
 
 /**
+ * Record that this module has a live session.
+ *
+ * The real session is the httpOnly cookie; this flag is only a hint so the app can render
+ * without waiting on a round trip. localStorage is evicted far more eagerly than the cookie
+ * jar - low storage, "clear cache", a WebView data purge - and when the hint vanished the
+ * app sent customers to the OTP screen while their 7-day session was still perfectly valid.
+ * Restoring the hint from a verified session is what stops that.
+ */
+export function markModuleAuthenticated(module) {
+  try {
+    const storage = module === "admin" ? sessionStorage : localStorage;
+    storage.setItem(`${module}_authenticated`, "true");
+    if (module === "admin") localStorage.setItem("admin_authenticated", "true");
+  } catch {
+    // Storage full or blocked - the cookie still carries the session, so this is not fatal.
+  }
+}
+
+/**
  * Clear authentication data for a specific module
  * @param {string} module - Module name (admin, restaurant, delivery, user)
  */

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import apiClient from "@/lib/api";
 import Loader from "@/components/Loader";
-import { clearModuleAuth, isModuleAuthenticated } from "@/lib/utils/auth";
+import { clearModuleAuth, isModuleAuthenticated, markModuleAuthenticated } from "@/lib/utils/auth";
 
 /**
  * Role-based Protected Route Component
@@ -13,12 +13,17 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
   const [isVerifying, setIsVerifying] = useState(true);
   const [hasVerifiedSession, setHasVerifiedSession] = useState(false);
 
-  const isAuthenticated = requiredRole ? isModuleAuthenticated(requiredRole) : false;
+  // The localStorage hint, and whether the server has since confirmed a session despite it
+  // being absent. The hint alone used to decide access, so losing it - which a WebView does
+  // routinely - threw customers straight to the OTP screen with a valid session in place.
+  const hasLocalHint = requiredRole ? isModuleAuthenticated(requiredRole) : false;
+  const [serverConfirmedSession, setServerConfirmedSession] = useState(false);
+  const isAuthenticated = hasLocalHint || serverConfirmedSession;
 
   useEffect(() => {
     let isMounted = true;
 
-    if (!requiredRole || !isAuthenticated) {
+    if (!requiredRole) {
       setIsVerifying(false);
       setHasVerifiedSession(false);
       return () => {
@@ -47,6 +52,10 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
       .get(endpoint)
       .then(() => {
         if (!isMounted) return;
+        // The cookie is the session. Rebuild the local hint so the next launch renders
+        // immediately instead of bouncing to login.
+        markModuleAuthenticated(requiredRole);
+        setServerConfirmedSession(true);
         setHasVerifiedSession(true);
       })
       .catch((error) => {
@@ -58,10 +67,13 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
         // the next request decide.
         const status = error?.response?.status;
         if (status !== 401 && status !== 403) {
-          setHasVerifiedSession(true);
+          // Unreachable server says nothing about the session. Trust the local hint if we
+          // have one; without one there is nothing to render, so fall through to login.
+          setHasVerifiedSession(hasLocalHint);
           return;
         }
         clearModuleAuth(requiredRole);
+        setServerConfirmedSession(false);
         setHasVerifiedSession(false);
       })
       .finally(() => {
@@ -72,7 +84,7 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, requiredRole]);
+  }, [requiredRole, hasLocalHint]);
 
   // If no role required, allow access
   if (!requiredRole) {

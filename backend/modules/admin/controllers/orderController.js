@@ -1135,7 +1135,16 @@ export const markOrderDelivered = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, "Order not found");
     }
 
-    if (!["ready", "out_for_delivery"].includes(String(order.status || "").toLowerCase())) {
+    // Any order the restaurant has already accepted can be closed out by an admin. It used
+    // to be ready/out_for_delivery only, which left every order whose rider never completed
+    // the flow - stuck at confirmed or preparing - with no way to finish, while the customer
+    // had the food and the restaurant and rider went unpaid.
+    //
+    // 'pending' is deliberately excluded: nobody has accepted it, so releasing escrow would
+    // pay out for an order that was never cooked. Delivered and cancelled orders are
+    // excluded by the same list.
+    const ADMIN_COMPLETABLE_STATUSES = ["confirmed", "preparing", "ready", "out_for_delivery"];
+    if (!ADMIN_COMPLETABLE_STATUSES.includes(String(order.status || "").toLowerCase())) {
       return errorResponse(
         res,
         400,
