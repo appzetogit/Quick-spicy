@@ -372,6 +372,24 @@ apiClient.interceptors.response.use(
           });
         }
 
+        // Only a definitive answer from the server ends a session. A refresh that failed
+        // because the phone lost signal, the request timed out, or the API was mid-restart
+        // says nothing about whether the session is still valid - and treating those as
+        // "logged out" is what threw vendors and riders back to the login screen at random
+        // intervals all day. The cookies are untouched, so the next request simply retries.
+        const refreshStatus = refreshError?.response?.status;
+        const sessionDefinitelyOver = refreshStatus === 401 || refreshStatus === 403;
+
+        if (!sessionDefinitelyOver) {
+          if (import.meta.env.DEV) {
+            debugWarn(
+              "Token refresh failed without a definitive auth error - keeping the session:",
+              refreshStatus || refreshError?.code || refreshError?.message,
+            );
+          }
+          return Promise.reject(refreshError);
+        }
+
         // Refresh failed, clear module-specific token and redirect to login
         // BUT: Don't auto-redirect on certain pages - let them handle errors gracefully
         const currentPath = window.location.pathname;
@@ -407,8 +425,6 @@ apiClient.interceptors.response.use(
         }
 
         // For onboarding page, reject the promise so component can handle it
-        return Promise.reject(refreshError);
-
         return Promise.reject(refreshError);
       }
     }

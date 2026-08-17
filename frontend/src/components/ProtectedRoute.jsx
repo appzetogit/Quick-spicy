@@ -49,8 +49,18 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
         if (!isMounted) return;
         setHasVerifiedSession(true);
       })
-      .catch(() => {
+      .catch((error) => {
         if (!isMounted) return;
+        // Same rule as the axios interceptor: only the server saying 401/403 means the
+        // session is over. A timeout, a dropped mobile connection, or a 502 while the API
+        // restarts says nothing about the session, and clearing auth on those is what
+        // logged vendors and riders out at random on app launch. Keep the session and let
+        // the next request decide.
+        const status = error?.response?.status;
+        if (status !== 401 && status !== 403) {
+          setHasVerifiedSession(true);
+          return;
+        }
         clearModuleAuth(requiredRole);
         setHasVerifiedSession(false);
       })
