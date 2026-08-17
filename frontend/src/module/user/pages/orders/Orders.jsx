@@ -324,6 +324,10 @@ export default function Orders() {
               subtotal: order.pricing?.subtotal || 0,
               deliveryFee: order.pricing?.deliveryFee || 0,
               tax: order.pricing?.tax || 0,
+              // Charged on effectively every order, so leaving it out made the breakdown
+              // below fail to reach the total. Tip is rarer but has the same effect.
+              platformFee: order.pricing?.platformFee || 0,
+              tip: order.pricing?.tip || 0,
               pricing: order.pricing || {}, // Keep full pricing object for discounts, coupons
               payment: order.payment || {},
               paymentMethod: order.payment?.method || order.paymentMethod,
@@ -813,6 +817,18 @@ Order again from this restaurant in the ${companyName} app.`
                       <div className="flex justify-between text-xs">
                         <span className="text-gray-600 dark:text-gray-400">Tax</span>
                         <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.tax.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {order.platformFee > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Platform Fee</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.platformFee.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {order.tip > 0 && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600 dark:text-gray-400">Delivery Partner Tip</span>
+                        <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.tip.toFixed(2)}</span>
                       </div>
                     )}
                     {order.pricing?.discount > 0 && (

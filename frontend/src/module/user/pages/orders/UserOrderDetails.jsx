@@ -114,6 +114,22 @@ export default function UserOrderDetails() {
   }
 
   const orderIdDisplay = order.orderId || order._id || orderId
+  // The Reorder button called this without it ever being defined, so every click threw a
+  // ReferenceError and the button did nothing. Same behaviour as the orders list: take the
+  // customer back to the restaurant so they can build the order again.
+  const handleReorder = (targetOrder) => {
+    const id =
+      targetOrder?.restaurantId?._id ||
+      targetOrder?.restaurantId ||
+      targetOrder?.restaurant?._id ||
+      null
+    if (id) {
+      navigate(`/user/restaurants/${id}`)
+    } else {
+      toast.info("Restaurant information not available")
+    }
+  }
+
   // Use fetched restaurant data if available, otherwise use order.restaurantId or order.restaurant
   const restaurantObj = restaurant || order.restaurantId || order.restaurant || {}
   const restaurantName =
@@ -465,6 +481,20 @@ export default function UserOrderDetails() {
                 ₹{Number(pricing.subscriptionFee || 0).toFixed(2)}
               </span>
             </div>
+            {/* The tip is part of what was charged, so leaving it out meant these lines did
+                not add up to "Paid" on any tipped order. */}
+            {Number(pricing.tip || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Delivery partner tip</span>
+                <span className="text-gray-800">₹{Number(pricing.tip).toFixed(2)}</span>
+              </div>
+            )}
+            {Number(pricing.discount || 0) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-emerald-600">Discount</span>
+                <span className="text-emerald-600">-₹{Number(pricing.discount).toFixed(2)}</span>
+              </div>
+            )}
 
             <div className="border-t border-gray-100 my-2 pt-2 flex justify-between items-center">
               <span className="font-bold text-gray-800">Paid</span>

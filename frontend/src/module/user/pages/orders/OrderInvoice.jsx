@@ -38,6 +38,9 @@ export default function OrderInvoice() {
   const gstAmount = Number(pricing.tax ?? order.tax ?? 0)
   const couponDiscount = Number(pricing.discount ?? 0)
   const total = Number(pricing.total ?? order.total ?? 0)
+  // Without this the invoice lines did not add up to the amount charged on any tipped order,
+  // which for a document customers keep as a receipt is the one thing it must get right.
+  const tipAmount = Number(pricing.tip ?? order.tip ?? 0)
   const couponCode = pricing.couponCode || pricing.appliedCoupon?.code || null
 
   const formatDate = (dateString) => {
@@ -281,6 +284,12 @@ export default function OrderInvoice() {
                   <span>GST:</span>
                   <span>{formatMoney(gstAmount)}</span>
                 </div>
+                {tipAmount > 0 && (
+                  <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
+                    <span>Delivery Partner Tip:</span>
+                    <span>{formatMoney(tipAmount)}</span>
+                  </div>
+                )}
                 <div className="grand-total flex justify-between text-base sm:text-lg md:text-xl md:text-2xl pt-2 sm:pt-3 mt-2 sm:mt-3 border-t-2 border-[#EB590E]">
                   <span>Total:</span>
                   <span>{formatMoney(total)}</span>
