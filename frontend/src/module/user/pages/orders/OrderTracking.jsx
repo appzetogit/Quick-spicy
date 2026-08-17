@@ -331,7 +331,14 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
     createdAt: apiOrder?.createdAt || previousOrder?.createdAt || null,
     totalAmount: apiOrder?.pricing?.total || apiOrder?.totalAmount || previousOrder?.totalAmount || 0,
     deliveryFee: apiOrder?.pricing?.deliveryFee || apiOrder?.deliveryFee || previousOrder?.deliveryFee || 0,
-    gst: apiOrder?.pricing?.gst || apiOrder?.gst || previousOrder?.gst || 0,
+    // The stored field is pricing.tax; reading pricing.gst meant this row showed 0 on every
+    // order that actually carried tax. gst kept as a fallback for older records.
+    gst: apiOrder?.pricing?.tax ?? apiOrder?.pricing?.gst ?? apiOrder?.gst ?? previousOrder?.gst ?? 0,
+    // Carried through so the bill can show the real item total and the platform fee as its
+    // own line, rather than deriving one by subtraction and hiding the other inside it.
+    subtotal: apiOrder?.pricing?.subtotal ?? previousOrder?.subtotal ?? null,
+    platformFee: apiOrder?.pricing?.platformFee ?? previousOrder?.platformFee ?? 0,
+    discount: apiOrder?.pricing?.discount ?? previousOrder?.discount ?? 0,
     paymentMethod: apiOrder?.paymentMethod || apiOrder?.payment?.method || previousOrder?.paymentMethod || null,
     payment: apiOrder?.payment || previousOrder?.payment || null,
     deliveryVerification: apiOrder?.deliveryVerification || previousOrder?.deliveryVerification || null
@@ -1683,11 +1690,29 @@ export default function OrderTracking() {
               <p className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-1">Bill Summary</p>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Item Total</span>
-                <span className="text-gray-900 font-medium">₹{order?.totalAmount - (order?.deliveryFee || 0) - (order?.gst || 0)}</span>
+                <span className="text-gray-900 font-medium">
+                  {/* The order's own subtotal. This used to be derived as total minus
+                      delivery minus tax, which quietly folded the platform fee into the
+                      item total and overstated it by exactly that amount. */}
+                  ₹{Number(
+                    order?.subtotal ??
+                    (order?.totalAmount - (order?.deliveryFee || 0) - (order?.gst || 0) - (order?.platformFee || 0))
+                  ).toFixed(0)}
+                </span>
               </div>
+              {Number(order?.discount || 0) > 0 && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Discount</span>
+                  <span className="text-emerald-600 font-medium">-₹{Number(order.discount).toFixed(0)}</span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Delivery Fee</span>
                 <span className="text-gray-900 font-medium">₹{order?.deliveryFee || 0}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Platform Fee</span>
+                <span className="text-gray-900 font-medium">₹{Number(order?.platformFee || 0).toFixed(0)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-600">Taxes & Charges</span>
