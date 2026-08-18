@@ -791,7 +791,13 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           zoomControl: true,
           mapTypeControl: false,
           streetViewControl: false,
-          fullscreenControl: false
+          fullscreenControl: false,
+          // One finger pans the map. Without this Google defaults to 'cooperative' on touch
+          // devices, which demands two fingers and shows the "Use two fingers to move the
+          // map" overlay - on a screen whose whole job is dragging a pin to your door, that
+          // is a fight with the customer. 'greedy' is what the other maps in this app
+          // already use.
+          gestureHandling: 'greedy'
         })
 
         googleMapRef.current = map

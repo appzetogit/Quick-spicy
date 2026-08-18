@@ -1247,7 +1247,11 @@ This completes the order and releases payment to the restaurant and the delivery
         onRejectOrder={["all", "pending", "accepted", "processing", "scheduled"].includes(statusKey) ? handleRejectOrder : undefined}
         onMarkReady={statusKey === "all" || statusKey === "processing" ? handleMarkReadyOrder : undefined}
         onMarkDelivered={
-          ["all", "accepted", "processing", "ready", "on_the_way", "scheduled"].includes(statusKey)
+          // These are the statusKey values AdminRouter actually passes. An earlier guess used
+          // "on_the_way", which matches no route, so the Delivered action was missing from
+          // the Food On The Way tab - the one place an admin most needs it. Pending and the
+          // finished/cancelled tabs are deliberately excluded.
+          ["all", "scheduled", "accepted", "processing", "food-on-the-way"].includes(statusKey)
             ? handleMarkDeliveredOrder
             : undefined
         }

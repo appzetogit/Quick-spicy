@@ -167,6 +167,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       pendingDeliveryBoyRequests,
       menuTotals,
       totalCustomers,
+      orderingCustomerStats,
       recentOrders,
       recentRestaurants,
       activeDeliveryPartners,
@@ -394,6 +395,15 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       User.countDocuments({
         $or: [{ role: "user" }, { role: { $exists: false } }, { role: null }],
       }),
+      // Registered accounts and paying customers are wildly different numbers here - roughly
+      // 5,200 signups against 1,200 people who have ever ordered - and a single "Total
+      // customers" tile showing the larger one reads as wrong to anyone who knows the
+      // business. Both are reported so the dashboard can say which is which.
+      Order.aggregate([
+        { $match: { userId: { $ne: null } } },
+        { $group: { _id: "$userId" } },
+        { $count: "total" },
+      ]),
       Order.countDocuments({
         createdAt: { $gte: last24Hours },
       }),
@@ -608,6 +618,7 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
       },
       customers: {
         total: totalCustomers,
+        ordered: orderingCustomerStats?.[0]?.total || 0,
       },
       orderStats: {
         pending: pendingOrders,
