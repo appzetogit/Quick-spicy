@@ -501,7 +501,24 @@ export const updateMenu = asyncHandler(async (req, res) => {
   }
 
   console.log('[UPDATE MENU] About to save menu...');
-  await menu.save();
+  // Menus are one large document that several things write to - the restaurant's own edits,
+  // a second tab, the admin approval flow - and mongoose's optimistic concurrency rejects
+  // the loser outright with a VersionError. The restaurant sees a failure and their edit is
+  // gone; it happened 158 times. This endpoint's contract is "replace my sections with
+  // these", so re-reading the current document and re-applying the same payload is exactly
+  // what the caller asked for, and is safe to repeat.
+  try {
+    await menu.save();
+  } catch (saveError) {
+    if (saveError?.name !== 'VersionError') throw saveError;
+    console.warn('[UPDATE MENU] Concurrent save detected, re-applying on the current document');
+    const fresh = await Menu.findOne({ restaurant: restaurantId });
+    if (!fresh) throw saveError;
+    fresh.sections = menu.sections;
+    fresh.markModified('sections');
+    await fresh.save();
+    menu = fresh;
+  }
   console.log('[UPDATE MENU] Menu saved successfully');
   await syncRestaurantCategoriesFromMenu(restaurantId, menu.sections || []);
 
