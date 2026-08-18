@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, AlertCircle, FileText } from "lucide-react"
 import { orderAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { safeBack } from "../../utils/safeBack"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -155,7 +156,7 @@ export default function SubmitComplaint() {
       <div className="bg-white p-4 flex items-center sticky top-0 z-20 shadow-sm">
         <button
           type="button"
-          onClick={() => navigate(-1)}
+          onClick={() => safeBack(navigate)}
           className="p-1 rounded-full hover:bg-gray-100"
         >
           <ArrowLeft className="w-6 h-6 text-gray-700" />

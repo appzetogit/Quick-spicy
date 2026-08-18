@@ -6,6 +6,7 @@ import AnimatedPage from "../components/AnimatedPage"
 import { useLocationSelector } from "../components/UserLayout"
 import { useLocation as useLocationHook } from "../hooks/useLocation"
 import { FaLocationDot } from "react-icons/fa6"
+import { safeBack } from "../utils/safeBack"
 // Using placeholder for coffee banner
 const coffeeBanner = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=1200&h=400&fit=crop"
 // Using placeholder for starbucks logo
@@ -220,7 +221,7 @@ export default function Coffee() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate)}
               className="h-9 w-9 sm:h-10 sm:w-10 bg-white/90 backdrop-blur-sm rounded-full hover:bg-white transition-colors flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5 text-gray-800" strokeWidth={2.5} />

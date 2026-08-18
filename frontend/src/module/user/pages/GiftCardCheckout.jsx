@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { safeBack } from "../utils/safeBack"
 
 // Social icons for sharing
 const socialIcons = [
@@ -39,7 +40,7 @@ export default function GiftCardCheckout() {
       <div className="bg-white dark:bg-[#1a1a1a] sticky top-0 z-10 border-b border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-3 px-4 py-4">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => safeBack(navigate)}
             className="w-9 h-9 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-gray-700 dark:text-gray-300" />

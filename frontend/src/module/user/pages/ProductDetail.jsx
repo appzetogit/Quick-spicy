@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { safeBack } from "../utils/safeBack"
 
 // Sample product data - in a real app, this would come from an API
 const productsData = {
@@ -283,7 +284,7 @@ export default function ProductDetail() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate)}
               className="rounded-full bg-white/90 backdrop-blur-sm hover:bg-white shadow-md"
             >
               <ArrowLeft className="h-5 w-5" />

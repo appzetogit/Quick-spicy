@@ -9,6 +9,7 @@ import { userAPI } from "@/lib/api"
 import { clearPendingWalletTopup, getPendingWalletTopup } from "@/lib/utils/walletTopupSession"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { safeBack } from "../utils/safeBack"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -247,7 +248,7 @@ export default function Wallet() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center gap-3 px-4 sm:px-6 md:px-8 lg:px-10 py-4 md:py-5">
             <button
-              onClick={() => navigate(-1)}
+              onClick={() => safeBack(navigate)}
               className="w-9 h-9 md:w-10 md:h-10 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5 md:h-6 md:w-6 text-gray-700 dark:text-white" />

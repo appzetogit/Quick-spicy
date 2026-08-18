@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom"
 import { ArrowLeft, ChevronRight, MapPin, Search, Star, Users } from "lucide-react"
 import { restaurantAPI, zoneAPI } from "@/lib/api"
 import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
+import { safeBack } from "../utils/safeBack"
 
 /**
  * Pick the area the food is going to, then browse that area's restaurants without leaving
@@ -105,7 +106,7 @@ export default function OrderForSomeoneElse() {
         <div className="flex items-center gap-3 px-4 py-3">
           <button
             type="button"
-            onClick={() => (showRestaurants ? changeArea() : navigate(-1))}
+            onClick={() => (showRestaurants ? changeArea() : safeBack(navigate))}
             aria-label="Go back"
             className="p-1"
           >

@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { safeBack } from "../utils/safeBack"
 
 // Import banner
 // Using placeholder for gift card banner
@@ -114,7 +115,7 @@ export default function GiftCards() {
       <div className="relative">
         {/* Back Button */}
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => safeBack(navigate)}
           className="absolute top-4 left-4 z-10 w-10 h-10 bg-white/20 dark:bg-black/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 dark:hover:bg-black/30 transition-colors"
         >
           <ArrowLeft className="h-5 w-5 text-white" />

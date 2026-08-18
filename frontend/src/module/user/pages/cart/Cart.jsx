@@ -21,6 +21,7 @@ import { buildSafeReturnUrl } from "@/lib/utils/returnUrl"
 import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
+import { safeBack } from "../../utils/safeBack"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -2178,7 +2179,7 @@ export default function Cart() {
       <AnimatedPage className="min-h-screen bg-gray-50 dark:bg-[#0a0a0a]">
         <div className="bg-white dark:bg-[#1a1a1a] border-b dark:border-gray-800 sticky top-0 z-10">
           <div className="flex items-center gap-3 px-4 py-3">
-            <Link onClick={() => navigate(-1)}>
+            <Link onClick={() => safeBack(navigate)}>
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <ArrowLeft className="h-4 w-4" />
               </Button>
@@ -2258,7 +2259,7 @@ export default function Cart() {
         <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-between px-3 md:px-6 py-2 md:py-3">
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <Link onClick={() => navigate(-1)}>
+              <Link onClick={() => safeBack(navigate)}>
                 <Button variant="ghost" size="icon" className="h-7 w-7 md:h-8 md:w-8 flex-shrink-0">
                   <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
                 </Button>
@@ -2344,7 +2345,7 @@ export default function Cart() {
 
                 {/* Add more items */}
                 <button
-                  onClick={() => navigate(-1)}
+                  onClick={() => safeBack(navigate)}
                   className="flex items-center gap-2 mt-4 md:mt-6 text-[#EB590E] dark:text-[#EB590E]"
                 >
                   <Plus className="h-4 w-4 md:h-5 md:w-5" />

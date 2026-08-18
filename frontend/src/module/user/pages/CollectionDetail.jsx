@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useProfile } from "../context/ProfileContext"
+import { safeBack } from "../utils/safeBack"
 
 export default function CollectionDetail() {
   const { id } = useParams()
@@ -62,7 +63,7 @@ export default function CollectionDetail() {
                 variant="ghost" 
                 size="icon" 
                 className="rounded-full h-8 w-8 sm:h-10 sm:w-10"
-                onClick={() => navigate(-1)}
+                onClick={() => safeBack(navigate)}
               >
                 <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
@@ -95,7 +96,7 @@ export default function CollectionDetail() {
                 variant="ghost" 
                 size="icon" 
                 className="rounded-full h-8 w-8 sm:h-10 sm:w-10"
-                onClick={() => navigate(-1)}
+                onClick={() => safeBack(navigate)}
               >
                 <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>

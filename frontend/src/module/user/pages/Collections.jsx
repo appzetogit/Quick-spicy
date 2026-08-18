@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 
 // Import banner
 import collectionsBanner from "@/assets/collectionspagebanner.png"
+import { safeBack } from "../utils/safeBack"
 
 // Gradient colors for collection cards
 const gradientColors = [
@@ -55,7 +56,7 @@ export default function Collections() {
     <div className="min-h-screen bg-white dark:bg-[#0a0a0a]">
       {/* Back Button */}
       <button
-        onClick={() => navigate(-1)}
+        onClick={() => safeBack(navigate)}
         className="fixed top-4 left-4 z-20 w-10 h-10 bg-gray-800/60 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-gray-800/80 transition-colors"
       >
         <ArrowLeft className="h-5 w-5 text-white" />

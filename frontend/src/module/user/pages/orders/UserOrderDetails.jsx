@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import { getCompanyNameAsync } from "@/lib/utils/businessSettings"
+import { safeBack } from "../../utils/safeBack"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -331,7 +332,7 @@ export default function UserOrderDetails() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => safeBack(navigate)}
             className="p-1 rounded-full hover:bg-gray-100"
           >
             <ArrowLeft className="w-6 h-6 text-gray-700 cursor-pointer" />
