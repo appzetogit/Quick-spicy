@@ -216,26 +216,55 @@ export default function Customers() {
     }
   }
 
-  const handleExport = (format) => {
+  // The page renders a capped slice (see the fetch above), so exporting whatever happened to
+  // be loaded silently produced a short file - a download of 1,000 rows, or fewer once a
+  // search narrowed it, while the header truthfully said there were thousands. Anyone
+  // opening that file would believe it was the whole customer list. The export now pulls the
+  // complete set from the server, with the same filters applied, before writing the file.
+  const handleExport = async (format) => {
     if (filteredCustomers.length === 0) {
       toast.error("No customers to export")
       return
     }
 
     const filename = "customers"
+    let rows = filteredCustomers
+    try {
+      setIsFetching(true)
+      const response = await adminAPI.getUsers({
+        limit: 100000,
+        offset: 0,
+        ...(searchQuery && { search: searchQuery }),
+        ...(appliedFilters.orderDate && { orderDate: appliedFilters.orderDate }),
+        ...(appliedFilters.status && { status: appliedFilters.status }),
+        ...(appliedFilters.joiningDate && { joiningDate: appliedFilters.joiningDate }),
+      })
+      const data = response?.data?.data || response?.data
+      if (Array.isArray(data?.users) && data.users.length >= rows.length) {
+        rows = data.users
+      }
+    } catch (fetchError) {
+      // Fall back to what is on screen rather than refusing to export, but say so, so the
+      // file is never quietly mistaken for the full list.
+      debugError("Export: could not load the full customer list:", fetchError)
+      toast.warning(`Exporting the ${rows.length} customers currently loaded - the full list could not be fetched`)
+    } finally {
+      setIsFetching(false)
+    }
+
     try {
       switch (format) {
         case "csv":
-          exportCustomersToCSV(filteredCustomers, filename)
-          toast.success("CSV export started")
+          exportCustomersToCSV(rows, filename)
+          toast.success(`CSV export started - ${rows.length} customers`)
           break
         case "excel":
-          exportCustomersToExcel(filteredCustomers, filename)
-          toast.success("Excel export started")
+          exportCustomersToExcel(rows, filename)
+          toast.success(`Excel export started - ${rows.length} customers`)
           break
         case "pdf":
-          exportCustomersToPDF(filteredCustomers, filename)
-          toast.success("PDF download started")
+          exportCustomersToPDF(rows, filename)
+          toast.success(`PDF download started - ${rows.length} customers`)
           break
         default:
           toast.error("Invalid export format")
