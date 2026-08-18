@@ -369,6 +369,10 @@ export default function AdminHome() {
       ? (addonsLoaded ? filteredAddonsCount : (dashboardData?.addons?.total || 0))
       : filteredAddonsCount
   const totalCustomers = dashboardData?.customers?.total || 0
+  // Registered accounts and paying customers differ by roughly 4x here, and a lone "Total
+  // customers" figure kept being read as wrong because of it. Both are shown: the headline
+  // stays the registered count, the sub-line says how many of them have actually ordered.
+  const orderingCustomers = dashboardData?.customers?.ordered || 0
   const byStatus = dashboardData?.orders?.byStatus || {}
   const pendingOrders = hasActiveFilters
     ? filteredPendingOrders
@@ -528,7 +532,11 @@ export default function AdminHome() {
             <MetricCard
               title="Total customers"
               value={totalCustomers.toLocaleString("en-IN")}
-              helper={platformWideHelper("Registered users")}
+              helper={platformWideHelper(
+                orderingCustomers > 0
+                  ? `Registered - ${orderingCustomers.toLocaleString("en-IN")} have ordered`
+                  : "Registered users",
+              )}
               icon={<UserCircle className="h-5 w-5 text-cyan-600" />}
               accent="bg-cyan-200/40"
               path="/admin/customers"
