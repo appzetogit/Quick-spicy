@@ -1,4 +1,4 @@
-﻿import { Outlet, useLocation } from "react-router-dom"
+﻿import { Outlet, useLocation, useNavigate } from "react-router-dom"
 import { useEffect, useState, createContext, useContext, lazy, Suspense } from "react"
 import { ProfileProvider } from "../context/ProfileContext"
 import { CartProvider } from "../context/CartContext"
@@ -113,11 +113,38 @@ function LocationSelectorProvider({ children }) {
 
 export default function UserLayout() {
   const location = useLocation()
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Reset scroll to top whenever location changes (pathname, search, or hash)
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
   }, [location.pathname, location.search, location.hash])
+
+  // Keep the phone's back button inside the app.
+  //
+  // In the Flutter WebView the hardware back key pops browser history, and when the current
+  // screen is the FIRST entry there is nothing to pop, so the WebView itself closes - the
+  // reported "app closes when I press back on Under 250". That happens whenever the app
+  // launched straight onto a tab route, or history got replaced on the way in.
+  //
+  // The guard: on entering any non-home screen with no history behind it, insert Home
+  // underneath. Now the first back press lands on Home instead of exiting. Nothing changes
+  // when there IS history - back still returns to wherever the customer really came from.
+  // Only the user module does this; a back press from Home itself is a genuine exit and is
+  // left alone.
+  useEffect(() => {
+    const isHome = location.pathname === "/" || location.pathname === "/user"
+    const idx = window.history.state?.idx
+    if (isHome || typeof idx !== "number" || idx > 0) return
+
+    const current = location.pathname + location.search + location.hash
+    // Insert Home as the entry beneath this one: replace this entry with Home, then push
+    // the real screen back on top. Net effect: history is [Home, current], user still sees
+    // current, and back now goes Home.
+    navigate("/", { replace: true })
+    navigate(current)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
 
   // Note: Authentication checks and redirects are handled by ProtectedRoute components
   // UserLayout should not interfere with authentication redirects
