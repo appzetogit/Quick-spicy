@@ -1504,27 +1504,6 @@ export const getRestaurantMenuByIdAdmin = asyncHandler(async (req, res) => {
 });
 
 /**
- * Get All Restaurant Menus (Admin, populated with restaurant names)
- * GET /api/admin/menu/all-menus
- */
-export const getAllMenusAdmin = asyncHandler(async (req, res) => {
-  try {
-    const menus = await Menu.find({ isActive: true })
-      .populate("restaurant", "name")
-      .lean();
-
-    return successResponse(res, 200, "All restaurant menus retrieved successfully", {
-      menus: menus || [],
-    });
-  } catch (error) {
-    logger.error(`Error fetching all menus: ${error.message}`, {
-      error: error.stack,
-    });
-    return errorResponse(res, 500, "Failed to fetch all restaurant menus");
-  }
-});
-
-/**
  * Update Restaurant Status (Active/Inactive/Ban)
  * PUT /api/admin/restaurants/:id/status
  */
