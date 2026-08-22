@@ -19,6 +19,20 @@ const adminSessionSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+    // Hashes this session has just rotated away from, newest first. Several tabs that hit a
+    // 401 at the same moment all send the same cookie: the first rotates it, and the rest used
+    // to arrive holding a hash that no longer matched and were thrown out to the login screen.
+    // Keeping the last few generations, for a few seconds each, lets those stragglers through.
+    recentRefreshTokenHashes: {
+      type: [
+        {
+          _id: false,
+          hash: { type: String, required: true },
+          rotatedAt: { type: Date, required: true },
+        },
+      ],
+      default: [],
+    },
     ipAddress: {
       type: String,
       default: null,

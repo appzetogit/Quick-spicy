@@ -14,6 +14,52 @@ const hashRefreshToken = (refreshToken) => {
   return crypto.createHash("sha256").update(String(refreshToken)).digest("hex");
 };
 
+// How long the refresh token from the previous rotation keeps working. Long enough to cover
+// several tabs reacting to the same expiry, short enough that a genuinely stolen token is
+// worth almost nothing.
+export const REFRESH_GRACE_MS = 30 * 1000;
+
+// How many rotations back to remember. One entry per tab racing the same expiry; a handful is
+// plenty, and the grace window is what actually retires them.
+const RECENT_REFRESH_HASH_LIMIT = 5;
+
+/**
+ * Does this incoming refresh-token hash still belong to the session?
+ *
+ * The current hash always passes. A recently rotated-away hash passes too, but only within
+ * REFRESH_GRACE_MS of the rotation that replaced it - that is the window where another tab is
+ * still in flight with the cookie it read before the first tab rotated it.
+ */
+export const isAcceptableRefreshHash = (
+  session,
+  incomingHash,
+  now = Date.now(),
+  graceMs = REFRESH_GRACE_MS,
+) => {
+  if (!incomingHash) return false;
+  if (incomingHash === session.refreshTokenHash) return true;
+
+  return (session.recentRefreshTokenHashes || []).some(
+    (entry) =>
+      entry?.hash === incomingHash &&
+      entry?.rotatedAt &&
+      now - new Date(entry.rotatedAt).getTime() <= graceMs,
+  );
+};
+
+// Move the current hash into the recent list and take the new one as current.
+export const applyRefreshRotation = (session, nextHash, now = new Date()) => {
+  if (session.refreshTokenHash && session.refreshTokenHash !== nextHash) {
+    session.recentRefreshTokenHashes = [
+      { hash: session.refreshTokenHash, rotatedAt: now },
+      ...(session.recentRefreshTokenHashes || []),
+    ].slice(0, RECENT_REFRESH_HASH_LIMIT);
+  }
+
+  session.refreshTokenHash = nextHash;
+  return session;
+};
+
 const truncate = (value, maxLength = 255) => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
@@ -176,8 +222,7 @@ export const validateAdminSession = async ({
   }
 
   if (refreshToken && session.refreshTokenHash) {
-    const incomingHash = hashRefreshToken(refreshToken);
-    if (incomingHash !== session.refreshTokenHash) {
+    if (!isAcceptableRefreshHash(session, hashRefreshToken(refreshToken))) {
       return null;
     }
   }
@@ -201,7 +246,7 @@ export const rotateAdminSession = async ({
     return null;
   }
 
-  session.refreshTokenHash = hashRefreshToken(nextRefreshToken);
+  applyRefreshRotation(session, hashRefreshToken(nextRefreshToken));
   session.lastSeenAt = new Date();
   await session.save();
 
