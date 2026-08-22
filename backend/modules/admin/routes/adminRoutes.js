@@ -142,6 +142,10 @@ import {
   rejectFoodItem,
 } from "../controllers/foodApprovalController.js";
 import {
+  getAdminFoods,
+  getAdminMenuCategories,
+} from "../controllers/adminFoodsController.js";
+import {
   getAllComplaints,
   getComplaintDetails,
   updateComplaintStatus,
@@ -336,6 +340,8 @@ router.get("/customer-wallet-report", getCustomerWalletReport);
 router.get("/restaurants", getRestaurants);
 router.get("/restaurants/requests", getRestaurantJoinRequests);
 router.get("/restaurants/:id", getRestaurantByIdAdmin);
+router.get("/menu/foods", getAdminFoods);
+router.get("/menu/categories-overview", getAdminMenuCategories);
 router.get("/restaurants/:id/menu", getRestaurantMenuByIdAdmin);
 router.put("/restaurants/:id/menu", updateRestaurantMenuByIdAdmin);
 router.post("/restaurants", createRestaurant);
