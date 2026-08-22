@@ -559,14 +559,16 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     const tokens = jwtService.generateTokens({
       userId: restaurant._id.toString(),
       role: 'restaurant',
-      email: restaurant.email || restaurant.phone || restaurant.restaurantId
+      email: restaurant.email || restaurant.phone || restaurant.restaurantId,
+      tokenVersion: restaurant.tokenVersion || 0
     });
 
     setAuthCookies(res, 'restaurant', tokens);
 
     // Return access token and restaurant info
     return successResponse(res, 200, 'Authentication successful', {
-      accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
+      accessToken: tokens.accessToken,
+      fcmToken: mintPushScopedToken(restaurant._id, 'restaurant'),
       restaurant: {
         id: restaurant._id,
         restaurantId: restaurant.restaurantId,
@@ -695,7 +697,8 @@ export const login = asyncHandler(async (req, res) => {
   const tokens = jwtService.generateTokens({
     userId: restaurant._id.toString(),
     role: 'restaurant',
-    email: restaurant.email || restaurant.phone || restaurant.restaurantId
+    email: restaurant.email || restaurant.phone || restaurant.restaurantId,
+    tokenVersion: restaurant.tokenVersion || 0
   });
 
   setAuthCookies(res, 'restaurant', tokens);
@@ -703,7 +706,8 @@ export const login = asyncHandler(async (req, res) => {
   logger.info(`Restaurant logged in via email: ${restaurant._id}`, { email, restaurantId: restaurant._id });
 
   return successResponse(res, 200, 'Login successful', {
-    accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
+    accessToken: tokens.accessToken,
+    fcmToken: mintPushScopedToken(restaurant._id, 'restaurant'),
     restaurant: {
       id: restaurant._id,
       restaurantId: restaurant.restaurantId,
@@ -808,7 +812,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
         tokenVersion: restaurant.tokenVersion
       });
       setAuthCookies(res, 'restaurant', replayTokens);
-      return successResponse(res, 200, 'Token refreshed successfully');
+      return successResponse(res, 200, 'Token refreshed successfully', {
+        accessToken: replayTokens.accessToken
+      });
     }
 
     markRotated(restaurant);
@@ -824,7 +830,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     setAuthCookies(res, 'restaurant', tokens);
 
-    return successResponse(res, 200, 'Token refreshed successfully');
+    return successResponse(res, 200, 'Token refreshed successfully', {
+      accessToken: tokens.accessToken
+    });
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');
   }
@@ -1141,13 +1149,15 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
     const tokens = jwtService.generateTokens({
       userId: restaurant._id.toString(),
       role: 'restaurant',
-      email: restaurant.email || restaurant.phone || restaurant.restaurantId
+      email: restaurant.email || restaurant.phone || restaurant.restaurantId,
+      tokenVersion: restaurant.tokenVersion || 0
     });
 
     setAuthCookies(res, 'restaurant', tokens);
 
     return successResponse(res, 200, 'Firebase Google authentication successful', {
-      accessToken: mintPushScopedToken(restaurant._id, 'restaurant'),
+      accessToken: tokens.accessToken,
+      fcmToken: mintPushScopedToken(restaurant._id, 'restaurant'),
       restaurant: {
         id: restaurant._id,
         restaurantId: restaurant.restaurantId,

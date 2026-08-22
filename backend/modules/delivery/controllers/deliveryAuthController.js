@@ -184,7 +184,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         const tokens = jwtService.generateTokens({
           userId: delivery._id.toString(),
           role: 'delivery',
-          email: delivery.email || delivery.phone || delivery.deliveryId
+          email: delivery.email || delivery.phone || delivery.deliveryId,
+          tokenVersion: delivery.tokenVersion || 0
         });
 
         // Store refresh token
@@ -194,6 +195,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
         setAuthCookies(res, 'delivery', tokens);
 
         return successResponse(res, 200, 'OTP verified. Please complete your profile.', {
+          accessToken: tokens.accessToken,
+          fcmToken: mintPushScopedToken(delivery._id, 'delivery'),
           user: {
             id: delivery._id,
             name: delivery.name,
@@ -221,7 +224,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     const tokens = jwtService.generateTokens({
       userId: delivery._id.toString(),
       role: 'delivery',
-      email: delivery.email || delivery.phone || delivery.deliveryId
+      email: delivery.email || delivery.phone || delivery.deliveryId,
+      tokenVersion: delivery.tokenVersion || 0
     });
 
     // Store refresh token in database
@@ -234,17 +238,9 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     delivery.lastLogin = new Date();
     await delivery.save();
 
-    // The rider APK registers its native FCM token by calling the API directly and reads
-    // this value out of localStorage to authorise that call. Cookies cannot reach it: the
-    // native HTTP client does not share the WebView cookie jar. Dropping this token during
-    // the cookie migration is what silently stopped rider push notifications.
-    //
-    // This is deliberately NOT the session access token. It carries scope 'fcm', which the
-    // delivery auth middleware will only accept on the FCM registration route. Anything
-    // that scrapes it out of localStorage can register a push token and nothing else: no
-    // wallet, no orders, no profile. Session auth for web clients stays cookie-only.
     return successResponse(res, 200, 'Authentication successful', {
-      accessToken: mintPushScopedToken(delivery._id, 'delivery'),
+      accessToken: tokens.accessToken,
+      fcmToken: mintPushScopedToken(delivery._id, 'delivery'),
       user: {
         id: delivery._id,
         deliveryId: delivery.deliveryId,
@@ -324,7 +320,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
       delivery.refreshToken = replayTokens.refreshToken;
       await delivery.save();
       setAuthCookies(res, 'delivery', replayTokens);
-      return successResponse(res, 200, 'Token refreshed successfully');
+      return successResponse(res, 200, 'Token refreshed successfully', {
+        accessToken: replayTokens.accessToken
+      });
     }
 
     markRotated(delivery);
@@ -343,7 +341,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     setAuthCookies(res, 'delivery', tokens);
 
-    return successResponse(res, 200, 'Token refreshed successfully');
+    return successResponse(res, 200, 'Token refreshed successfully', {
+      accessToken: tokens.accessToken
+    });
   } catch (error) {
     return errorResponse(res, 401, error.message || 'Invalid refresh token');
   }

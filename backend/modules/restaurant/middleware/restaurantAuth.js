@@ -92,6 +92,14 @@ export const authenticate = async (req, res, next) => {
     // finish setup before approval.
     const isMenuRoute = allowsPrefix('/menu');
     const isInventoryRoute = allowsPrefix('/inventory');
+    const isFcmRoute =
+      allowsPrefix('/auth/fcm-token') ||
+      allowsPrefix('/fcm-token') ||
+      reqPath === '/fcm-token';
+    const isStatusRoute =
+      allowsPrefix('/status') ||
+      allowsPrefix('/auth/status') ||
+      reqPath === '/status';
     
     // Debug logging for inactive restaurants
     if (!restaurant.isActive) {
@@ -108,15 +116,17 @@ export const authenticate = async (req, res, next) => {
         isProfileRoute,
         isMenuRoute,
         isInventoryRoute,
-        willAllow: isOnboardingRoute || isProfileRoute || isMenuRoute || isInventoryRoute
+        isFcmRoute,
+        isStatusRoute,
+        willAllow: isOnboardingRoute || isProfileRoute || isMenuRoute || isInventoryRoute || isFcmRoute || isStatusRoute
       });
     }
     
-    // Allow access to onboarding, profile, menu, and inventory routes even if inactive
+    // Allow access to onboarding, profile, menu, inventory, status, and FCM routes even if inactive
     // These are essential for restaurant setup and management
     // Also allow access to getCurrentRestaurant endpoint (used to check status)
-    if (!restaurant.isActive && !isOnboardingRoute && !isProfileRoute && !isMenuRoute && !isInventoryRoute) {
-      console.error('❌ Restaurant account is inactive - access denied:', {
+    if (!restaurant.isActive && !isOnboardingRoute && !isProfileRoute && !isMenuRoute && !isInventoryRoute && !isFcmRoute && !isStatusRoute) {
+      console.warn('⚠️ Restaurant account is inactive - access restricted:', {
         restaurantId: restaurant._id,
         restaurantName: restaurant.name,
         isActive: restaurant.isActive,
@@ -129,10 +139,12 @@ export const authenticate = async (req, res, next) => {
           isOnboardingRoute,
           isProfileRoute,
           isMenuRoute,
-          isInventoryRoute
+          isInventoryRoute,
+          isFcmRoute,
+          isStatusRoute
         }
       });
-      return errorResponse(res, 401, 'Restaurant account is inactive. Please wait for admin approval.');
+      return errorResponse(res, 403, 'Restaurant account is inactive. Please wait for admin approval.');
     }
 
     // Attach restaurant to request

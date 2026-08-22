@@ -504,7 +504,8 @@ export const verifyOTP = asyncHandler(async (req, res) => {
 
     // Return access token and user info
     return successResponse(res, 200, "Authentication successful", {
-      accessToken: mintPushScopedToken(user._id, "user"),
+      accessToken: tokens.accessToken,
+      fcmToken: mintPushScopedToken(user._id, "user"),
       user: {
         id: user._id,
         name: user.name,
@@ -580,7 +581,9 @@ export const refreshToken = asyncHandler(async (req, res) => {
 
     setAuthCookies(res, "user", tokens);
 
-    return successResponse(res, 200, "Token refreshed successfully");
+    return successResponse(res, 200, "Token refreshed successfully", {
+      accessToken: tokens.accessToken,
+    });
   } catch (error) {
     return errorResponse(res, 401, error.message || "Invalid refresh token");
   }
@@ -786,7 +789,8 @@ export const login = asyncHandler(async (req, res) => {
   });
 
   return successResponse(res, 200, "Login successful", {
-    accessToken: mintPushScopedToken(user._id, "user"),
+    accessToken: tokens.accessToken,
+    fcmToken: mintPushScopedToken(user._id, "user"),
     user: {
       id: user._id,
       name: user.name,
@@ -1242,7 +1246,8 @@ export const firebaseGoogleLogin = asyncHandler(async (req, res) => {
       200,
       "Firebase Google authentication successful",
       {
-        accessToken: mintPushScopedToken(user._id, "user"),
+        accessToken: tokens.accessToken,
+        fcmToken: mintPushScopedToken(user._id, "user"),
         user: {
           id: user._id,
           name: user.name,

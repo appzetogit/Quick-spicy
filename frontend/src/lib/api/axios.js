@@ -1,7 +1,7 @@
 import axios from "axios";
 import { toast } from "sonner";
 import { API_BASE_URL } from "./config.js";
-import { clearModuleAuth, setAuthData } from "../utils/auth.js";
+import { clearModuleAuth, getModuleToken, setAuthData } from "../utils/auth.js";
 import { createSingleFlight } from "./singleFlight.js";
 
 const debugLog = (...args) => {}
@@ -132,15 +132,18 @@ apiClient.interceptors.request.use(
       !isPublicRestaurantRoute;
 
     // For authenticated routes, ALWAYS ensure Authorization header is set if we have a token
-    // This ensures FormData requests and other requests always have the token
+    // This ensures FormData requests, mobile WebViews, and cross-site requests always have the token
     if (isAuthenticatedRoute) {
-      // If no Authorization header or invalid format, set it
+      // If no Authorization header or invalid format, set it from storage if available
       if (
         !config.headers.Authorization ||
         (typeof config.headers.Authorization === "string" &&
           !config.headers.Authorization.startsWith("Bearer "))
       ) {
-        if (currentModule === "admin" && !config.headers.Authorization) {
+        const token = getModuleToken(currentModule);
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        } else if (currentModule === "admin" && !config.headers.Authorization) {
           debugWarn(
             `[API Interceptor] No admin Authorization header present for ${path}. Request may fail with 401.`,
           );
@@ -332,18 +335,36 @@ apiClient.interceptors.response.use(
         // Single-flight: see refreshOnce.
         const response = await refreshOnce(refreshEndpoint);
         const currentModule = getModuleForCurrentRoute(currentPath);
+        const refreshedData = response.data?.data || response.data;
+        const newAccessToken = refreshedData?.accessToken;
 
         if (currentPath.startsWith("/admin")) {
           setAdminSessionFlag();
-          if (originalRequest.headers?.Authorization) {
+          if (newAccessToken && newAccessToken !== "cookie-session") {
+            setAuthData("admin", newAccessToken, refreshedData?.user || null, null);
+            originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          } else if (originalRequest.headers?.Authorization) {
             delete originalRequest.headers.Authorization;
           }
           return apiClient(originalRequest);
         }
 
-        localStorage.setItem(`${currentModule}_authenticated`, "true");
-        if (originalRequest.headers?.Authorization) {
-          delete originalRequest.headers.Authorization;
+        if (newAccessToken && newAccessToken !== "cookie-session") {
+          setAuthData(
+            currentModule,
+            newAccessToken,
+            refreshedData?.user ||
+              refreshedData?.restaurant ||
+              refreshedData?.deliveryPartner ||
+              null,
+            null,
+          );
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        } else {
+          localStorage.setItem(`${currentModule}_authenticated`, "true");
+          if (originalRequest.headers?.Authorization) {
+            delete originalRequest.headers.Authorization;
+          }
         }
         return apiClient(originalRequest);
       } catch (refreshError) {
@@ -380,7 +401,18 @@ apiClient.interceptors.response.use(
         const refreshStatus = refreshError?.response?.status;
         const sessionDefinitelyOver = refreshStatus === 401 || refreshStatus === 403;
 
-        if (!sessionDefinitelyOver) {
+        const refreshErrorMsg = String(
+          refreshError?.response?.data?.message ||
+          refreshError?.response?.data?.error ||
+          "",
+        ).toLowerCase();
+        const isAccountStatusRestriction =
+          refreshErrorMsg.includes("inactive") ||
+          refreshErrorMsg.includes("approval") ||
+          refreshErrorMsg.includes("pending") ||
+          refreshErrorMsg.includes("blocked");
+
+        if (!sessionDefinitelyOver || isAccountStatusRestriction) {
           if (import.meta.env.DEV) {
             debugWarn(
               "Token refresh failed without a definitive auth error - keeping the session:",

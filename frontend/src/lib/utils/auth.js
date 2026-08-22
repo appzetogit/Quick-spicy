@@ -85,7 +85,16 @@ export function hasModuleAccess(role, module) {
  * @returns {string|null} - Access token or null
  */
 export function getModuleToken(module) {
-  if (module === "admin") {
+  if (!module) return null;
+  try {
+    const storage = module === "admin" ? sessionStorage : localStorage;
+    const token = storage.getItem(`${module}_accessToken`);
+    if (token && token !== "cookie-session") return token;
+    const fallbackToken =
+      localStorage.getItem(`${module}_accessToken`) ||
+      sessionStorage.getItem(`${module}_accessToken`);
+    if (fallbackToken && fallbackToken !== "cookie-session") return fallbackToken;
+  } catch {
     return null;
   }
   return null;

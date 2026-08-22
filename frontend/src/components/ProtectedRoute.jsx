@@ -60,15 +60,21 @@ export default function ProtectedRoute({ children, requiredRole, loginPath }) {
       })
       .catch((error) => {
         if (!isMounted) return;
-        // Same rule as the axios interceptor: only the server saying 401/403 means the
-        // session is over. A timeout, a dropped mobile connection, or a 502 while the API
-        // restarts says nothing about the session, and clearing auth on those is what
-        // logged vendors and riders out at random on app launch. Keep the session and let
-        // the next request decide.
         const status = error?.response?.status;
-        if (status !== 401 && status !== 403) {
-          // Unreachable server says nothing about the session. Trust the local hint if we
-          // have one; without one there is nothing to render, so fall through to login.
+        const errorMsg = String(
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "",
+        ).toLowerCase();
+        const isAccountStatusRestriction =
+          status === 403 ||
+          errorMsg.includes("inactive") ||
+          errorMsg.includes("approval") ||
+          errorMsg.includes("pending") ||
+          errorMsg.includes("blocked");
+
+        if (status !== 401 || isAccountStatusRestriction) {
+          // 403, inactive status, or network error says the account exists. Trust the local hint if we have one.
           setHasVerifiedSession(hasLocalHint);
           return;
         }
