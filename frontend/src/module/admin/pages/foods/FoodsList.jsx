@@ -46,21 +46,18 @@ export default function FoodsList() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
   const [imageVersion, setImageVersion] = useState(Date.now())
+  // Filtering, sorting and paging all happen on the server now, so the page only ever holds
+  // the rows it is showing plus the totals needed to draw the pager.
+  const [totalFoods, setTotalFoods] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [categoryFilterOptions, setCategoryFilterOptions] = useState([])
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
-  const getItemCreatedMs = (item = {}) => {
-    const direct = [item.createdAt, item.addedAt, item.requestedAt, item.updatedAt]
-      .map((v) => new Date(v).getTime())
-      .find((ms) => Number.isFinite(ms) && ms > 0)
-    if (direct) return direct
-
-    const rawId = String(item.id || "")
-    const match = rawId.match(/\d{10,}/)
-    if (match) {
-      const fromId = Number(match[0])
-      if (Number.isFinite(fromId) && fromId > 0) return fromId
-    }
-    return 0
-  }
+  // Typing must not fire a request per keystroke.
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350)
+    return () => clearTimeout(timer)
+  }, [searchQuery])
 
   const toArray = (value) => (Array.isArray(value) ? value : [])
   const withImageVersion = (url) => {
@@ -82,10 +79,10 @@ export default function FoodsList() {
     fetchZones()
   }, [])
 
-  const fetchAllFoods = useCallback(async () => {
+  // The restaurant dropdown is independent of the foods page being viewed, so it is loaded
+  // once rather than on every filter change.
+  const fetchRestaurantsForFilter = useCallback(async () => {
     try {
-      setLoading(true)
-
       const [activeRestaurantsResponse, inactiveRestaurantsResponse] = await Promise.all([
         adminAPI.getRestaurants({ limit: 1000 }),
         adminAPI.getRestaurants({ limit: 1000, status: "inactive" }),
@@ -119,99 +116,62 @@ export default function FoodsList() {
       setAllRestaurants(restaurants)
 
       if (restaurants.length === 0) {
-        setFoods([])
-        return
+        setRestaurantsForFilter([])
+        setAllRestaurants([])
       }
+    } catch (error) {
+      debugError("Error fetching restaurants for filter:", error)
+      setRestaurantsForFilter([])
+    }
+  }, [])
 
-      // Menus are fetched in parallel batches below. Loading them one restaurant at a
-      // time meant waiting on N sequential round-trips before anything rendered.
-      const loadRestaurantFoods = async (restaurant) => {
-        const allFoods = []
-        try {
-           const restaurantId = restaurant._id || restaurant.id
-           const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
-           const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu
-           const restZoneId = restaurant.zoneId?._id || restaurant.zoneId || restaurant.restaurantZoneId || ""
- 
-           if (menu && Array.isArray(menu.sections)) {
-             toArray(menu.sections).forEach((section) => {
-               toArray(section.items).forEach((item) => {
-                 allFoods.push({
-                   id: item.id || `${restaurantId}-${section.id}-${item.name}`,
-                   _id: item._id,
-                   name: item.name || "Unnamed Item",
-                   image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                   priority: "Normal",
-                   status: item.isAvailable !== false && item.approvalStatus !== "rejected",
-                   restaurantId,
-                   restaurantName: restaurant.name || "Unknown Restaurant",
-                   zoneId: restZoneId,
-                   sectionId: section.id,
-                   sectionName: section.name || "Unknown Section",
-                   price: item.price || 0,
-                   foodType: item.foodType || "Non-Veg",
-                   approvalStatus: item.approvalStatus || "pending",
-                   originalItem: item,
-                 })
-               })
- 
-               toArray(section.subsections).forEach((subsection) => {
-                 toArray(subsection.items).forEach((item) => {
-                   allFoods.push({
-                     id: item.id || `${restaurantId}-${section.id}-${subsection.id}-${item.name}`,
-                     _id: item._id,
-                     name: item.name || "Unnamed Item",
-                     image: item.image || item.images?.[0] || "https://via.placeholder.com/40",
-                     priority: "Normal",
-                     status: item.isAvailable !== false && item.approvalStatus !== "rejected",
-                     restaurantId,
-                     restaurantName: restaurant.name || "Unknown Restaurant",
-                     zoneId: restZoneId,
-                     sectionId: section.id,
-                     sectionName: section.name || "Unknown Section",
-                     subsectionId: subsection.id,
-                     subsectionName: subsection.name || "Unknown Subsection",
-                     price: item.price || 0,
-                     foodType: item.foodType || "Non-Veg",
-                     approvalStatus: item.approvalStatus || "pending",
-                     originalItem: item,
-                   })
-                 })
-               })
-             })
-           }
-        } catch (error) {
-          debugWarn(`Failed to fetch menu for restaurant ${restaurant._id || restaurant.id}:`, error.message)
-        }
-        return allFoods
+  // One request for the page being shown. The server applies the filters, the ordering and
+  // the paging, and reports the totals plus the categories the dropdown should offer.
+  const fetchAllFoods = useCallback(async () => {
+    try {
+      setLoading(true)
+      const response = await adminAPI.getAdminFoods({
+        page: currentPage,
+        limit: pageSize,
+        ...(debouncedSearch ? { search: debouncedSearch } : {}),
+        ...(selectedZone !== "all" ? { zoneId: selectedZone } : {}),
+        ...(selectedRestaurant !== "all" ? { restaurantId: selectedRestaurant } : {}),
+        ...(selectedCategory !== "all" ? { category: selectedCategory } : {}),
+        ...(selectedStockStatus !== "all" ? { stockStatus: selectedStockStatus } : {}),
+      })
+
+      const payload = response?.data?.data || response?.data || {}
+      setFoods(toArray(payload.foods))
+      setCategoryFilterOptions(toArray(payload.categories))
+      setTotalFoods(payload.pagination?.total || 0)
+      setTotalPages(payload.pagination?.totalPages || 1)
+      // The server clamps the page when filters shrink the result set below it.
+      if (payload.pagination?.page && payload.pagination.page !== currentPage) {
+        setCurrentPage(payload.pagination.page)
       }
-
-      // Batched rather than one big Promise.all so a few hundred restaurants don't
-      // fire a few hundred simultaneous requests at the API.
-      const MENU_FETCH_CONCURRENCY = 8
-      const allFoods = []
-      for (let i = 0; i < restaurants.length; i += MENU_FETCH_CONCURRENCY) {
-        const batch = restaurants.slice(i, i + MENU_FETCH_CONCURRENCY)
-        const batchResults = await Promise.all(batch.map(loadRestaurantFoods))
-        batchResults.forEach((foods) => allFoods.push(...foods))
-      }
-
-      allFoods.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
-      setFoods(
-        allFoods.filter(
-          (food) => String(food.approvalStatus || "").toLowerCase() === "approved"
-        )
-      )
       setImageVersion(Date.now())
     } catch (error) {
       debugError("Error fetching foods:", error)
       toast.error("Failed to load foods from restaurants")
       setFoods([])
-      setRestaurantsForFilter([])
+      setTotalFoods(0)
+      setTotalPages(1)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [
+    currentPage,
+    pageSize,
+    debouncedSearch,
+    selectedZone,
+    selectedRestaurant,
+    selectedCategory,
+    selectedStockStatus,
+  ])
+
+  useEffect(() => {
+    fetchRestaurantsForFilter()
+  }, [fetchRestaurantsForFilter])
 
   useEffect(() => {
     fetchAllFoods()
@@ -250,64 +210,14 @@ export default function FoodsList() {
     return `FOOD${lastDigits}`
   }
 
-  const filteredFoods = useMemo(() => {
-    let result = [...foods]
-    
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      result = result.filter(food =>
-        food.name.toLowerCase().includes(query) ||
-        food.id.toString().includes(query) ||
-        food.restaurantName?.toLowerCase().includes(query) ||
-        food.sectionName?.toLowerCase().includes(query) ||
-        food.subsectionName?.toLowerCase().includes(query)
-      )
-    }
+  // The server already returned exactly this page, filtered and sorted, so there is nothing
+  // left to narrow down here.
+  const paginatedFoods = foods
 
-    if (selectedZone !== "all") {
-      result = result.filter((food) => String(food.zoneId) === selectedZone)
-    }
-
-    if (selectedRestaurant !== "all") {
-      result = result.filter((food) => String(food.restaurantId) === selectedRestaurant)
-    }
-
-    if (selectedCategory !== "all") {
-      const normalizedCategory = selectedCategory.toLowerCase()
-      result = result.filter((food) => String(food.sectionName || "").trim().toLowerCase() === normalizedCategory)
-    }
-
-    if (selectedStockStatus === "in-stock") {
-      result = result.filter((food) => food.status === true)
-    }
-
-    if (selectedStockStatus === "out-of-stock") {
-      result = result.filter((food) => food.status !== true)
-    }
-
-    result.sort((a, b) => getItemCreatedMs(b.originalItem) - getItemCreatedMs(a.originalItem))
-    return result
-  }, [foods, searchQuery, selectedZone, selectedRestaurant, selectedCategory, selectedStockStatus])
-
-  const totalPages = useMemo(() => {
-    if (filteredFoods.length === 0) return 1
-    return Math.ceil(filteredFoods.length / pageSize)
-  }, [filteredFoods.length, pageSize])
-
-  const paginatedFoods = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredFoods.slice(start, start + pageSize)
-  }, [filteredFoods, currentPage, pageSize])
-
+  // Any change to the filters starts again from the first page.
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedZone, selectedRestaurant, selectedCategory, selectedStockStatus, pageSize])
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages)
-    }
-  }, [currentPage, totalPages])
+  }, [debouncedSearch, selectedZone, selectedRestaurant, selectedCategory, selectedStockStatus, pageSize])
 
   const restaurantOptions = useMemo(() => {
     const list = allRestaurants
@@ -332,24 +242,6 @@ export default function FoodsList() {
       }
     }
   }, [selectedZone, selectedRestaurant, restaurantOptions])
-
-  const categoryFilterOptions = useMemo(() => {
-    const uniqueCategories = new Map()
-
-    foods.forEach((food) => {
-      if (selectedRestaurant !== "all" && String(food.restaurantId) !== selectedRestaurant) return
-
-      const categoryName = String(food.sectionName || "").trim()
-      if (!categoryName) return
-
-      const normalizedName = categoryName.toLowerCase()
-      if (!uniqueCategories.has(normalizedName)) {
-        uniqueCategories.set(normalizedName, categoryName)
-      }
-    })
-
-    return Array.from(uniqueCategories.values()).sort((a, b) => a.localeCompare(b))
-  }, [foods, selectedRestaurant])
 
   useEffect(() => {
     if (selectedCategory === "all") return
@@ -699,7 +591,7 @@ export default function FoodsList() {
           <div className="flex items-center gap-2">
             <h2 className="text-lg font-semibold text-slate-900">Food List</h2>
             <span className="px-3 py-1 rounded-full text-sm font-semibold bg-slate-100 text-slate-700">
-              {filteredFoods.length}
+              {totalFoods}
             </span>
           </div>
 
@@ -807,7 +699,7 @@ export default function FoodsList() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredFoods.length === 0 ? (
+              ) : totalFoods === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center">
@@ -897,17 +789,17 @@ export default function FoodsList() {
           </table>
         </div>
 
-        {!loading && filteredFoods.length > 0 && (
+        {!loading && totalFoods > 0 && (
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 border-t border-slate-200 bg-slate-50">
             <div className="text-sm text-slate-600">
               Showing{" "}
               <span className="font-semibold text-slate-800">{(currentPage - 1) * pageSize + 1}</span>
               {" "}to{" "}
               <span className="font-semibold text-slate-800">
-                {Math.min(currentPage * pageSize, filteredFoods.length)}
+                {Math.min(currentPage * pageSize, totalFoods)}
               </span>
               {" "}of{" "}
-              <span className="font-semibold text-slate-800">{filteredFoods.length}</span>
+              <span className="font-semibold text-slate-800">{totalFoods}</span>
             </div>
 
             <div className="flex items-center gap-2">

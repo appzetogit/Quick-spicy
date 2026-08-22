@@ -1275,6 +1275,16 @@ export const adminAPI = {
     );
   },
 
+  // Admin foods list - filtered, sorted and paginated by the server.
+  getAdminFoods: (params = {}) => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.MENU_FOODS, { params });
+  },
+
+  // Menu categories aggregated across every restaurant (admin).
+  getAdminMenuCategories: () => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.MENU_CATEGORIES_OVERVIEW);
+  },
+
   // Update restaurant menu by ID (admin)
   updateRestaurantMenuById: (id, payload = {}) => {
     return apiClient.put(

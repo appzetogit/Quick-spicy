@@ -15,67 +15,6 @@ const debugError = () => {}
 const CATEGORY_IMAGE_FALLBACK = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='128' height='128' viewBox='0 0 128 128'><rect width='128' height='128' rx='24' fill='%23e2e8f0'/><text x='64' y='72' text-anchor='middle' font-family='Arial, sans-serif' font-size='18' fill='%2364758b'>No Image</text></svg>"
 
 const toArray = (value) => (Array.isArray(value) ? value : [])
-const normalizeCategoryName = (value) => String(value || "").trim()
-const buildRestaurantCategories = (menuEntries = []) => {
-  const categoryMap = new Map()
-
-  menuEntries.forEach(({ restaurant, menu }) => {
-    const restaurantId = String(restaurant?._id || restaurant?.id || "")
-    const restaurantName = String(restaurant?.name || "Unknown Restaurant").trim() || "Unknown Restaurant"
-    const sections = toArray(menu?.sections)
-
-    sections.forEach((section) => {
-      const rawName = normalizeCategoryName(section?.name)
-      if (!rawName) return
-
-      const key = rawName.toLowerCase()
-      const directImage = toArray(section?.items).find((item) => item?.image)?.image
-      const nestedImage = toArray(section?.subsections)
-        .flatMap((subsection) => toArray(subsection?.items))
-        .find((item) => item?.image)?.image
-      const image = directImage || nestedImage || CATEGORY_IMAGE_FALLBACK
-
-      if (!categoryMap.has(key)) {
-        categoryMap.set(key, {
-          id: key,
-          name: rawName,
-          image,
-          type: "Menu Section",
-          status: true,
-          restaurantIds: new Set(),
-          restaurantNames: [],
-        })
-      }
-
-      const existing = categoryMap.get(key)
-      existing.restaurantIds.add(restaurantId || restaurantName)
-      if (!existing.restaurantNames.includes(restaurantName)) {
-        existing.restaurantNames.push(restaurantName)
-      }
-      if (
-        (!existing.image || existing.image === CATEGORY_IMAGE_FALLBACK) &&
-        image &&
-        image !== CATEGORY_IMAGE_FALLBACK
-      ) {
-        existing.image = image
-      }
-    })
-  })
-
-  return Array.from(categoryMap.values())
-    .map((category, index) => ({
-      ...category,
-      sl: index + 1,
-      restaurantCount: category.restaurantIds.size,
-      restaurantsLabel: category.restaurantNames.join(", "),
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map((category, index) => ({
-      ...category,
-      sl: index + 1,
-    }))
-}
-
 export default function Category() {
   const [searchQuery, setSearchQuery] = useState("")
   const [categories, setCategories] = useState([])
@@ -100,38 +39,22 @@ export default function Category() {
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
-      const [restaurantsResponse, adminCategoriesResponse] = await Promise.all([
-        adminAPI.getRestaurants({ limit: 1000 }),
+      // The menu sections are aggregated by the API in one request. This page used to fetch
+      // every restaurant's full menu at once - one request each, all fired simultaneously -
+      // and reduce them in the browser.
+      const [menuCategoriesResponse, adminCategoriesResponse] = await Promise.all([
+        adminAPI.getAdminMenuCategories(),
         adminAPI.getCategories({ limit: 1000 }),
       ])
-      const restaurants =
-        restaurantsResponse?.data?.data?.restaurants ||
-        restaurantsResponse?.data?.restaurants ||
+
+      const menuCategories =
+        menuCategoriesResponse?.data?.data?.categories ||
+        menuCategoriesResponse?.data?.categories ||
         []
       const adminCategories =
         adminCategoriesResponse?.data?.data?.categories ||
         adminCategoriesResponse?.data?.categories ||
         []
-
-      if (!Array.isArray(restaurants) || restaurants.length === 0) {
-        setCategories([])
-        return
-      }
-
-      const menuEntries = await Promise.all(
-        restaurants.map(async (restaurant) => {
-          try {
-            const restaurantId = restaurant?._id || restaurant?.id
-            if (!restaurantId) return null
-            const menuResponse = await adminAPI.getRestaurantMenuById(restaurantId, { noCache: true })
-            const menu = menuResponse?.data?.data?.menu || menuResponse?.data?.menu || { sections: [] }
-            return { restaurant, menu }
-          } catch (menuError) {
-            debugWarn(`Failed to fetch menu for restaurant ${restaurant?._id || restaurant?.id}`, menuError)
-            return null
-          }
-        })
-      )
 
       const adminCategoryMap = new Map(
         (Array.isArray(adminCategories) ? adminCategories : []).map((category) => [
@@ -141,10 +64,13 @@ export default function Category() {
       )
 
       setCategories(
-        buildRestaurantCategories(menuEntries.filter(Boolean)).map((category) => {
+        menuCategories.map((category, index) => {
           const adminCategory = adminCategoryMap.get(String(category?.name || "").trim().toLowerCase())
           return {
             ...category,
+            sl: index + 1,
+            image: category?.image || CATEGORY_IMAGE_FALLBACK,
+            restaurantsLabel: toArray(category?.restaurantNames).join(", "),
             adminCategoryId: adminCategory?.id || adminCategory?._id || null,
             showOnHome: adminCategory?.showOnHome !== false,
           }
