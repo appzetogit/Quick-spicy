@@ -517,6 +517,16 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                   <span className="font-medium text-slate-900">₹{order.vatTax.toFixed(2)}</span>
                 </div>
               )}
+              {/* Part of what was charged, so omitting it made these lines fall short of the
+                  total by exactly the tip. */}
+              {Number(order.tip ?? order.pricing?.tip ?? 0) > 0 && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-600">Delivery Partner Tip</span>
+                  <span className="font-medium text-slate-900">
+                    ₹{Number(order.tip ?? order.pricing?.tip).toFixed(2)}
+                  </span>
+                </div>
+              )}
               <div className="pt-2 border-t border-slate-200">
                 <div className="flex justify-between items-center">
                   <span className="text-base font-semibold text-slate-700">Total Amount</span>
