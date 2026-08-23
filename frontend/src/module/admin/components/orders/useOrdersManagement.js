@@ -160,7 +160,20 @@ const resolveInvoicePricing = (order, items = []) => {
     settlementPayment?.gst,
   )
 
-  const computedTotal = subtotal + deliveryFee + platformFee + taxAmount - discountAmount
+  // The tip is part of what the customer was charged, so the invoice has to account for it
+  // or the printed lines do not add up to the grand total - a tipped order looked like it
+  // had been overcharged by exactly the tip.
+  //
+  // additionalTip is deliberately not included: that one is collected separately through
+  // tipPayments after the order, and is not part of pricing.total.
+  const tipAmount = firstFiniteNumber(
+    order?.tip,
+    pricing?.tip,
+    settlementPayment?.tip,
+  )
+
+  const computedTotal =
+    subtotal + deliveryFee + platformFee + taxAmount + tipAmount - discountAmount
   const totalAmount = firstFiniteNumber(
     order?.totalAmount,
     order?.orderAmount,
@@ -175,6 +188,7 @@ const resolveInvoicePricing = (order, items = []) => {
     deliveryFee,
     platformFee,
     taxAmount,
+    tipAmount,
     totalAmount,
     couponCode:
       order?.couponCode ||
@@ -420,6 +434,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
         deliveryFee,
         platformFee,
         taxAmount,
+        tipAmount,
         totalAmount,
         couponCode,
       } = resolveInvoicePricing(order, items)
@@ -622,6 +637,9 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
         summaryRows.push(["Platform Fee", formatMoney(platformFee)])
       }
       summaryRows.push(["GST", formatMoney(taxAmount)])
+      if (tipAmount > 0) {
+        summaryRows.push(["Delivery Partner Tip", formatMoney(tipAmount)])
+      }
       if (discountAmount > 0) {
         summaryRows.push([
           couponCode ? `Discount (${couponCode})` : "Discount",
