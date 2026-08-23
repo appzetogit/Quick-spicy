@@ -671,6 +671,22 @@ export const processCashfreeRefund = async (orderId, adminId = null) => {
       throw new Error('Refund can only be processed for Cashfree payments.');
     }
 
+    // A cashfree order is written before the customer reaches the payment page, so an order
+    // abandoned there is cancelled with the payment still pending and no cashfreeOrderId
+    // ever assigned. Nothing was collected, so there is nothing to refund - but throwing
+    // here logged it as a failed refund, and 495 of the 506 cancelled cashfree orders are
+    // exactly this. Real refund failures were being lost in that noise.
+    const paymentStatus = String(order.payment?.status || '').toLowerCase();
+    const moneyWasCollected = ['completed', 'paid', 'success'].includes(paymentStatus);
+
+    if (!moneyWasCollected) {
+      return {
+        refunded: false,
+        refundAmount: 0,
+        reason: 'No payment was collected for this order, so there is nothing to refund.'
+      };
+    }
+
     if (!order.payment.cashfreeOrderId) {
       throw new Error('Cashfree order ID not found for this order');
     }
