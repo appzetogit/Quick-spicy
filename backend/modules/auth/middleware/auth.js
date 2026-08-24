@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import { errorResponse } from "../../../shared/utils/response.js";
 import { getAccessTokenFromRequest } from "../../../shared/utils/authCookies.js";
 import { isPushScopeViolation } from "../../../shared/utils/pushScopedToken.js";
+import { decideRotation, ROTATION_DECISION } from "../../../shared/utils/refreshRotation.js";
 
 /**
  * Authentication Middleware
@@ -51,8 +52,16 @@ export const authenticate = async (req, res, next) => {
       return errorResponse(res, 401, "User account is inactive");
     }
 
-    // Check tokenVersion match to handle rotated/revoked sessions
-    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== user.tokenVersion) {
+    // A version mismatch alone doesn't mean this token is stale: refreshToken() bumps
+    // tokenVersion on every routine rotation, and any other request already in flight - a
+    // background poll, another tab, another device - is still holding the access token
+    // issued under the version just retired. decideRotation is the same check the refresh
+    // endpoint itself uses to tell that apart from real reuse of an old, stolen token; only
+    // REVOKE actually ends the session here.
+    if (
+      decoded.tokenVersion !== undefined &&
+      decideRotation(user, decoded.tokenVersion) === ROTATION_DECISION.REVOKE
+    ) {
       return errorResponse(res, 401, "Session expired or revoked. Please log in again.");
     }
 

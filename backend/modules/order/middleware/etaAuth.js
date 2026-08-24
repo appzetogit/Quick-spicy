@@ -5,6 +5,7 @@ import Delivery from '../../delivery/models/Delivery.js';
 import Admin from '../../admin/models/Admin.js';
 import { errorResponse } from '../../../shared/utils/response.js';
 import { getAccessTokenFromRequest } from '../../../shared/utils/authCookies.js';
+import { decideRotation, ROTATION_DECISION } from '../../../shared/utils/refreshRotation.js';
 
 const MODEL_BY_ROLE = {
   user: User,
@@ -56,7 +57,12 @@ export const authenticateOrderActor = async (req, res, next) => {
       return errorResponse(res, 401, 'Authenticated account not found or inactive');
     }
 
-    if (decoded.tokenVersion !== undefined && decoded.tokenVersion !== actor.tokenVersion) {
+    // See the matching check in the per-role middleware (e.g. restaurantAuth.js) for why a
+    // raw version mismatch isn't itself grounds to end the session.
+    if (
+      decoded.tokenVersion !== undefined &&
+      decideRotation(actor, decoded.tokenVersion) === ROTATION_DECISION.REVOKE
+    ) {
       return errorResponse(res, 401, 'Session expired or revoked. Please log in again.');
     }
 
