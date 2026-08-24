@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Menu,
@@ -13,7 +13,33 @@ import {
   Users,
   AlertCircle,
   ArrowRight,
+  AlertTriangle,
+  Ban,
+  Bell,
+  Building2,
+  CheckCircle2,
+  CreditCard,
+  DollarSign,
+  FolderTree,
+  Gift,
+  Image,
+  IndianRupee,
+  Info,
+  LayoutDashboard,
+  LogIn,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Phone,
+  PiggyBank,
+  Receipt,
+  RotateCcw,
+  Shield,
+  Truck,
+  Utensils,
+  Wallet,
 } from "lucide-react";
+import { adminSidebarMenu } from "../utils/adminSidebarMenu";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +62,74 @@ import { getCachedSettings, loadBusinessSettings } from "@/lib/utils/businessSet
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
+
+// Matches AdminSidebar.jsx's own icon lookup, so a menu entry renders the same icon in both
+// places rather than needing a second icon list kept in sync by hand.
+const sidebarIconMap = {
+  AlertTriangle,
+  Ban,
+  Bell,
+  Building2,
+  CheckCircle2,
+  CreditCard,
+  DollarSign,
+  FileText,
+  FolderTree,
+  Gift,
+  Image,
+  IndianRupee,
+  Info,
+  LayoutDashboard,
+  LogIn,
+  Mail,
+  MapPin,
+  MessageSquare,
+  Package,
+  Phone,
+  PiggyBank,
+  Receipt,
+  RotateCcw,
+  Settings,
+  Shield,
+  Truck,
+  Users,
+  Utensils,
+  UtensilsCrossed,
+  Wallet,
+};
+
+// The search dialog used to search a hand-maintained list of four shortcuts, so anything
+// added to the sidebar - which is most of the admin panel - was invisible to search. This
+// flattens the same adminSidebarMenu the sidebar itself renders, so the two can never drift
+// apart again: add a page to the sidebar and it is searchable for free.
+const flattenSidebarMenu = (menu, section = null) =>
+  menu.flatMap((item) => {
+    if (item.type === "link") {
+      return [{
+        type: section || "Menu",
+        title: item.label,
+        description: section ? `Go to ${item.label} in ${section}` : `Go to ${item.label}`,
+        icon: sidebarIconMap[item.icon] || Utensils,
+        path: item.path,
+        keywords: [item.label.toLowerCase()],
+      }];
+    }
+    if (item.type === "section") {
+      return flattenSidebarMenu(item.items, item.label);
+    }
+    if (item.type === "expandable") {
+      const parentIcon = sidebarIconMap[item.icon] || Utensils;
+      return (item.subItems || []).map((subItem) => ({
+        type: section || item.label,
+        title: subItem.label,
+        description: `Go to ${subItem.label} in ${item.label}`,
+        icon: parentIcon,
+        path: subItem.path,
+        keywords: [subItem.label.toLowerCase(), item.label.toLowerCase()],
+      }));
+    }
+    return [];
+  });
 
 
 export default function AdminNavbar({ onMenuClick }) {
@@ -131,40 +225,17 @@ export default function AdminNavbar({ onMenuClick }) {
     }
   }, [searchOpen]);
 
-  const searchActions = [
-    {
-      type: "Orders",
-      title: "Orders",
-      description: "Open all order management",
-      icon: Package,
-      path: "/admin/orders/all",
-      keywords: ["order", "orders", "delivery", "pending", "accepted", "processing", "refund"],
-    },
-    {
-      type: "Users",
-      title: "Users",
-      description: "Open customer management",
-      icon: Users,
-      path: "/admin/customers",
-      keywords: ["user", "users", "customer", "customers", "profile"],
-    },
-    {
-      type: "Products",
-      title: "Products",
-      description: "Open food and product list",
-      icon: UtensilsCrossed,
-      path: "/admin/foods",
-      keywords: ["product", "products", "food", "foods", "item", "items", "menu"],
-    },
-    {
-      type: "Reports",
-      title: "Reports",
-      description: "Open transaction reports",
-      icon: FileText,
-      path: "/admin/transaction-report",
-      keywords: ["report", "reports", "analytics", "sales", "transactions"],
-    },
+  // Four fixed shortcuts shown before the admin has typed anything - unrelated to search
+  // matching, so unlike searchActions before it, this one staying curated is fine.
+  const quickActions = [
+    { type: "Orders", title: "Orders", icon: Package, path: "/admin/orders/all" },
+    { type: "Users", title: "Users", icon: Users, path: "/admin/customers" },
+    { type: "Products", title: "Products", icon: UtensilsCrossed, path: "/admin/foods" },
+    { type: "Reports", title: "Reports", icon: FileText, path: "/admin/transaction-report" },
   ];
+
+  // Every page in the sidebar, flattened once - see flattenSidebarMenu above.
+  const searchActions = useMemo(() => flattenSidebarMenu(adminSidebarMenu), []);
 
   const searchResults = searchActions.filter((item) => {
     const query = searchQuery.trim().toLowerCase();
@@ -409,7 +480,7 @@ export default function AdminNavbar({ onMenuClick }) {
               <div className="space-y-4">
                 <div className="text-sm text-neutral-500 mb-4">Quick Actions</div>
                 <div className="grid grid-cols-2 gap-3">
-                  {searchActions.map((action, idx) => (
+                  {quickActions.map((action, idx) => (
                     <button
                       key={idx}
                       onClick={() => handleSearchNavigation(action.path, action.title)}
