@@ -450,19 +450,37 @@ export default function OrdersPage({ statusKey = "all" }) {
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
 
-    try {
-      if (!silent) setIsLoading(true)
-      if (!silent) setLoadError("")
-      const params = {
-        ...buildOrderQuery(),
-        page: currentPage,
-        limit: PAGE_SIZE,
-        _t: Date.now(),
-      }
+    if (!silent) setIsLoading(true)
+    if (!silent) setLoadError("")
 
-      const response = await adminAPI.getOrders(params)
+    // A dropped packet or a momentary token-refresh hiccup produces exactly one failed
+    // request, not a real outage - the admin auth flow correctly keeps sessions alive
+    // through those (see axios.js), but this page still needs to ride out the one request
+    // that got caught in it instead of putting up an error card that a human then has to
+    // click through. One retry after a short pause covers that; a failure that survives
+    // the retry is worth actually showing. Looping in one call, rather than the fetch
+    // recursing into itself, keeps isLoading/finally state honest across both attempts.
+    const attempts = silent ? 1 : 2
+    let lastError = null
 
-      if (response.data?.success && response.data?.data?.orders) {
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const params = {
+          ...buildOrderQuery(),
+          page: currentPage,
+          limit: PAGE_SIZE,
+          _t: Date.now(),
+        }
+
+        const response = await adminAPI.getOrders(params)
+
+        if (!(response.data?.success && response.data?.data?.orders)) {
+          throw Object.assign(new Error(response.data?.message || "Failed to fetch orders"), {
+            response,
+          })
+        }
+
+        lastError = null
         const nextOrders = response.data.data.orders
         const pagination = response.data.data.pagination
         if (pagination) {
@@ -509,26 +527,24 @@ export default function OrdersPage({ statusKey = "all" }) {
         seenOrderIdsRef.current = nextOrderIds
         isFirstLoadRef.current = false
         setOrders(nextOrders)
-      } else {
-        debugError("Failed to fetch orders:", response.data)
-        const message = response.data?.message || "Failed to fetch orders"
-        if (!silent) {
-          setLoadError(message)
-          toast.error(message)
-          setOrders([])
+        break
+      } catch (error) {
+        debugError(`Error fetching orders (attempt ${attempt}/${attempts}):`, error)
+        lastError = error
+        if (attempt < attempts) {
+          await new Promise((resolve) => setTimeout(resolve, 1200))
         }
       }
-    } catch (error) {
-      debugError("Error fetching orders:", error)
-      const message = error.response?.data?.message || "Failed to fetch orders"
-      if (!silent) {
-        setLoadError(message)
-        toast.error(message)
-        setOrders([])
-      }
-    } finally {
-      if (!silent) setIsLoading(false)
     }
+
+    if (lastError && !silent) {
+      const message = lastError.response?.data?.message || "Failed to fetch orders"
+      setLoadError(message)
+      toast.error(message)
+      setOrders([])
+    }
+
+    if (!silent) setIsLoading(false)
   }, [statusKey, buildOrderQuery, currentPage, playDefaultRing, showBrowserNotification, startAlertLoop])
 
   // A changed filter/search/status makes the current page number meaningless - go back
