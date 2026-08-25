@@ -163,6 +163,16 @@ const restaurantSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Closing an account deactivates it rather than destroying it, so the menu, images and
+    // every past order stay attached and an admin can reopen it by making it active again.
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedBy: {
+      type: String,
+      default: null,
+    },
     // The version retired by the most recent rotation, and when. Together they let a refresh
     // that replays the immediately-previous token within the grace window be answered instead
     // of revoked - see shared/utils/refreshRotation.js.

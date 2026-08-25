@@ -1229,49 +1229,37 @@ export const deleteRestaurantAccount = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Restaurant not found');
     }
 
-    // Delete Cloudinary images if they exist
-    try {
-      // Delete profile image
-      if (restaurant.profileImage?.publicId) {
-        try {
-          await deleteFromCloudinary(restaurant.profileImage.publicId);
-        } catch (error) {
-          console.error('Error deleting profile image from Cloudinary:', error);
-          // Continue with account deletion even if image deletion fails
-        }
-      }
-
-      // Delete menu images
-      if (restaurant.menuImages && Array.isArray(restaurant.menuImages)) {
-        for (const menuImage of restaurant.menuImages) {
-          if (menuImage?.publicId) {
-            try {
-              await deleteFromCloudinary(menuImage.publicId);
-            } catch (error) {
-              console.error('Error deleting menu image from Cloudinary:', error);
-              // Continue with account deletion even if image deletion fails
-            }
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error deleting images from Cloudinary:', error);
-      // Continue with account deletion even if image deletion fails
+    // Soft delete. This used to destroy the restaurant, its menu and its images outright,
+    // from a single tap in the restaurant's own app - no admin approval, no confirmation
+    // here, no undo. It took out a branch with 299 orders and 96 menu items, and survived
+    // only because a backup happened to have run ten hours earlier. It also left every one
+    // of those orders pointing at a record that no longer existed, so order history and
+    // invoices broke with it.
+    //
+    // Deactivating achieves everything the restaurant actually wants - they disappear from
+    // customers immediately and can take no further orders - while their history stays
+    // attached and an admin can put them back by ticking "Restaurant is active".
+    if (restaurant.isActive === false && restaurant.deletedAt) {
+      return successResponse(res, 200, 'Restaurant account is already closed');
     }
 
-    await deleteRestaurantRelatedData(restaurantId);
+    restaurant.isActive = false;
+    restaurant.isAcceptingOrders = false;
+    restaurant.deletedAt = new Date();
+    restaurant.deletedBy = 'restaurant_self_service';
+    await restaurant.save();
 
-    // Delete the restaurant from database
-    await Restaurant.findByIdAndDelete(restaurantId);
-
-    console.log(`Restaurant account deleted: ${restaurantId}`, { 
+    console.log(`Restaurant account closed (soft delete): ${restaurantId}`, {
       restaurantId: restaurant.restaurantId,
-      name: restaurant.name 
+      name: restaurant.name,
+      // Recorded so a deletion can be traced to a device without reading raw request logs.
+      requestedFrom: req.headers['x-requested-with'] || 'unknown-client',
+      ip: req.headers['x-real-ip'] || req.ip || 'unknown',
     });
 
-    return successResponse(res, 200, 'Restaurant account deleted successfully');
+    return successResponse(res, 200, 'Restaurant account closed successfully');
   } catch (error) {
-    console.error('Error deleting restaurant account:', error);
+    console.error('Error closing restaurant account:', error);
     return errorResponse(res, 500, 'Failed to delete restaurant account');
   }
 });
