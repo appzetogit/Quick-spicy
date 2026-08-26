@@ -7,6 +7,7 @@ import PushSoundEnableButton from "@/components/PushSoundEnableButton"
 import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { useRestaurantNotifications } from "@/module/restaurant/hooks/useRestaurantNotifications"
+import { useAppBackGuard } from "@/lib/hooks/useAppBackGuard"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -200,6 +201,27 @@ function DeliverySignupFlowGuard({ children }) {
   return children
 }
 
+// Back-button guard for the modules that never had one.
+//
+// The user module guards itself inside UserLayout, but the delivery and restaurant apps
+// did not - and both run in the same Flutter WebView, where a back press on a screen with
+// no history behind it closes the app. Mounted once here rather than in each module's
+// router, because the restaurant routes are declared flat in this file and have no layout
+// of their own. See BUGFIX_IMPLEMENTATION_GUIDE.md #019.
+function ModuleBackGuard() {
+  const { pathname } = useLocation()
+
+  let homePath = null
+  if (pathname.startsWith("/delivery")) homePath = "/delivery"
+  else if (pathname.startsWith("/restaurant")) homePath = "/restaurant"
+  else if (pathname.startsWith("/admin")) homePath = "/admin"
+  // The user module is deliberately absent: UserLayout already guards it, and a second
+  // guard would push a duplicate history entry.
+
+  useAppBackGuard(homePath)
+  return null
+}
+
 export default function App() {
   const location = useLocation()
 
@@ -242,6 +264,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <ModuleBackGuard />
       <RestaurantGlobalNotificationListener />
       <PushSoundEnableButton />
       <Suspense fallback={<Loader />}>
