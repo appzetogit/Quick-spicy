@@ -515,7 +515,32 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
 
     const freeDeliveryPartners = await filterOutBusyDeliveryPartners(cashEligibleDeliveryPartners);
     console.log(`Free delivery partners (no active order): ${freeDeliveryPartners.length}`);
+
+    // One line naming the stage that emptied the pool. The per-stage counts above are
+    // spread over many lines and interleaved with other requests, which made it
+    // impossible to tell from production logs WHY an order went unassigned -
+    // every partner busy, everyone over their COD cash limit, or a zone mismatch.
+    // See BUGFIX_IMPLEMENTATION_GUIDE.md #027.
+    const logFunnel = (blockedAt) => {
+      console.warn(
+        `[Assignment Funnel] blockedAt=${blockedAt} ` +
+        `online=${deliveryPartners?.length || 0} ` +
+        `cashEligible=${cashEligibleDeliveryPartners.length} ` +
+        `free=${freeDeliveryPartners?.length || 0} ` +
+        `zone=${zone?.name || zone?.zoneName || 'none'} ` +
+        `excluded=${excludeIds?.length || 0} ` +
+        `maxDistanceKm=${maxDistance}`
+      );
+    };
+
     if (!freeDeliveryPartners || freeDeliveryPartners.length === 0) {
+      logFunnel(
+        (deliveryPartners?.length || 0) === 0
+          ? 'no-partners-online'
+          : cashEligibleDeliveryPartners.length === 0
+            ? 'cash-limit'
+            : 'all-busy'
+      );
       console.log('⚠️ No online delivery partners found');
       console.log('⚠️ Checking all delivery partners to see why...');
       
@@ -568,6 +593,7 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
 
     if (deliveryPartnersWithDistance.length === 0) {
       console.log(`⚠️ No delivery partners found within ${maxDistance}km`);
+      logFunnel('zone-or-distance');
       return null;
     }
 
