@@ -38,6 +38,26 @@ const logger = winston.createLogger({
 
 const DELIVERY_OPEN_ACCEPT_STATUSES = ['preparing', 'ready'];
 
+// A cancelled order is finished. Nobody - admin, restaurant, or customer - expects it
+// to keep moving, but only acceptOrder checked the status: confirmReachedPickup,
+// confirmReachedDrop and completeDelivery did not. A partner already holding an order
+// that was cancelled underneath them could still walk it all the way to "delivered",
+// which credited delivery earnings and settled COD against an order that no longer
+// existed commercially.
+const ORDER_CANCELLED_STATUSES = ['cancelled'];
+
+/**
+ * Guard for any delivery action that moves an order forward.
+ * Returns an error message when the order must not be advanced, otherwise null.
+ */
+const getBlockedProgressReason = (order) => {
+  if (!order) return null;
+  if (ORDER_CANCELLED_STATUSES.includes(order.status)) {
+    return 'This order has been cancelled and can no longer be updated.';
+  }
+  return null;
+};
+
 let getIO = null;
 async function getIOInstance() {
   if (!getIO) {
@@ -1408,6 +1428,11 @@ export const confirmReachedPickup = asyncHandler(async (req, res) => {
       return errorResponse(res, 404, 'Order not found or not assigned to you');
     }
 
+    const blockedReason = getBlockedProgressReason(order);
+    if (blockedReason) {
+      return errorResponse(res, 409, blockedReason);
+    }
+
     console.log(`✅ Order found: ${order.orderId}, Current phase: ${order.deliveryState?.currentPhase || 'none'}, Status: ${order.deliveryState?.status || 'none'}, Order status: ${order.status || 'none'}`);
 
     // Initialize deliveryState if it doesn't exist
@@ -1594,6 +1619,11 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
     if (!order) {
       console.error(`❌ Order ${orderId} not found or not assigned to delivery ${deliveryId}`);
       return errorResponse(res, 404, 'Order not found or not assigned to you');
+    }
+
+    const blockedReason = getBlockedProgressReason(order);
+    if (blockedReason) {
+      return errorResponse(res, 409, blockedReason);
     }
 
     // Verify order ID matches (accept either public orderId or Mongo _id for compatibility)
@@ -1951,6 +1981,11 @@ export const confirmReachedDrop = asyncHandler(async (req, res) => {
       console.error(`❌ Order ${orderId} not found or not assigned to delivery ${deliveryId}`);
       return errorResponse(res, 404, 'Order not found or not assigned to you');
     }
+
+    const blockedReason = getBlockedProgressReason(order);
+    if (blockedReason) {
+      return errorResponse(res, 409, blockedReason);
+    }
     
     console.log(`✅ Order found: ${order.orderId || order._id}, Status: ${order.status}, Phase: ${order.deliveryState?.currentPhase || 'N/A'}`);
 
@@ -2261,6 +2296,11 @@ export const completeDelivery = asyncHandler(async (req, res) => {
 
     if (!order) {
       return errorResponse(res, 404, 'Order not found or not assigned to you');
+    }
+
+    const blockedReason = getBlockedProgressReason(order);
+    if (blockedReason) {
+      return errorResponse(res, 409, blockedReason);
     }
 
     // Check if order is already delivered/completed (idempotent - allow if already completed)
