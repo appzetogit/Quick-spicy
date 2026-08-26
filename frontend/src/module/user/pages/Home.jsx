@@ -2300,7 +2300,13 @@ export default function Home() {
           <div className="absolute inset-0 z-0 bg-gray-100" />
         )}
 
-        <div className="relative z-30 w-full md:hidden">
+        {/* The address block used to sit directly on top of the hero image, so whether
+            a customer could read their own address depended on whichever banner artwork
+            happened to be showing - and dark or busy images made it unreadable and hard
+            to tap. The header strip now paints its own opaque background, so the banner
+            starts below the address instead of running underneath it.
+            See BUGFIX_IMPLEMENTATION_GUIDE.md #020. */}
+        <div className="relative z-30 w-full md:hidden bg-white dark:bg-[#0a0a0a]">
           <motion.div
             className="relative z-50 pt-2 sm:pt-3 lg:pt-4"
             initial={{ opacity: 0, y: -20 }}

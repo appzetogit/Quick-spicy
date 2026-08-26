@@ -68,10 +68,24 @@ export default function OfferBannerCarousel({ zoneId }) {
     const link = String(banner?.linkUrl || "").trim()
     if (!link) return // decorative banner
     if (/^https?:\/\//i.test(link)) {
-      window.open(link, "_blank", "noopener,noreferrer")
+      // Inside the Flutter InAppWebView `window.open` is a no-op unless the native side
+      // opts into multiple windows, so a `_blank` external link silently does nothing on
+      // the phone while working fine in a desktop browser. Fall back to navigating the
+      // current view when the popup is refused.
+      const opened = window.open(link, "_blank", "noopener,noreferrer")
+      if (!opened) {
+        window.location.href = link
+      }
       return
     }
-    navigate(link.startsWith("/") ? link : `/${link}`)
+
+    // Reject anything that is not a plain in-app path. A banner link is authored in
+    // the Back Office, so a typo (or a "javascript:" / "//host" value) must not be
+    // handed straight to the router. See BUGFIX_IMPLEMENTATION_GUIDE.md #021.
+    const path = link.startsWith("/") ? link : `/${link}`
+    if (path.startsWith("//") || /^\/[a-z][a-z0-9+.-]*:/i.test(path)) return
+
+    navigate(path)
   }
 
   if (loading) {

@@ -1847,14 +1847,40 @@ export default function LandingPageManagement() {
                   <Label htmlFor="offer-banner-link" className="text-xs font-semibold text-slate-700">
                     On tap, open <span className="font-normal text-slate-400">(optional)</span>
                   </Label>
+                  {/* Banners were shipping with this field blank, so tapping one did
+                      nothing - the customer could not reach the store being advertised.
+                      Typing a path by hand is easy to get wrong, so offer a store picker
+                      that fills in the correct one.
+                      See BUGFIX_IMPLEMENTATION_GUIDE.md #021. */}
+                  <select
+                    id="offer-banner-store"
+                    value=""
+                    onChange={(e) => {
+                      const restaurant = allRestaurants.find((r) => String(r._id) === e.target.value)
+                      if (restaurant?.slug) setOfferBannerLink(`/user/restaurants/${restaurant.slug}`)
+                    }}
+                    className="mt-1 w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={restaurantsLoading}
+                  >
+                    <option value="">Pick a store to advertise...</option>
+                    {allRestaurants
+                      .filter((r) => r?.slug)
+                      .map((restaurant) => (
+                        <option key={restaurant._id} value={String(restaurant._id)}>
+                          {restaurant.name}
+                        </option>
+                      ))}
+                  </select>
                   <Input
                     id="offer-banner-link"
                     value={offerBannerLink}
                     onChange={(e) => setOfferBannerLink(e.target.value)}
                     placeholder="/user/offers"
-                    className="mt-1"
+                    className="mt-2"
                   />
-                  <p className="text-[11px] text-slate-500 mt-1">Leave blank and the banner is just an image.</p>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Pick a store above, or type any in-app path. Leave blank and the banner is just an image.
+                  </p>
                 </div>
 
                 <div>
