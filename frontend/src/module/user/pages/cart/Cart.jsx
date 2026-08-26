@@ -22,6 +22,7 @@ import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailabil
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
 import { safeBack } from "../../utils/safeBack"
+import { resolveIsVeg, resolveIsVegForPayload } from "../../utils/foodType"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -1058,7 +1059,7 @@ export default function Cart() {
           quantity: item.quantity || 1,
           image: item.image,
           description: item.description,
-          isVeg: item.isVeg !== false
+          isVeg: resolveIsVegForPayload(item)
         }))
 
         const response = await orderAPI.calculateOrder({
@@ -1334,7 +1335,7 @@ export default function Cart() {
           quantity: item.quantity || 1,
           image: item.image,
           description: item.description,
-          isVeg: item.isVeg !== false
+          isVeg: resolveIsVegForPayload(item)
         }))
 
         const response = await orderAPI.calculateOrder({
@@ -1397,7 +1398,7 @@ export default function Cart() {
         quantity: item.quantity || 1,
         image: item.image,
         description: item.description,
-        isVeg: item.isVeg !== false
+        isVeg: resolveIsVegForPayload(item)
       }))
 
       const response = await orderAPI.calculateOrder({
@@ -1456,7 +1457,7 @@ export default function Cart() {
           quantity: item.quantity || 1,
           image: item.image,
           description: item.description,
-          isVeg: item.isVeg !== false
+          isVeg: resolveIsVegForPayload(item)
         }))
 
         const response = await orderAPI.calculateOrder({
@@ -1560,7 +1561,7 @@ export default function Cart() {
         quantity: item.quantity || 1,
         image: item.image || "",
         description: item.description || "",
-        isVeg: item.isVeg !== false
+        isVeg: resolveIsVegForPayload(item)
       }))
 
       debugLog("📋 Order items to send:", orderItems)
@@ -2306,10 +2307,19 @@ export default function Cart() {
                 <div className="space-y-3 md:space-y-4">
                   {cart.map((item) => (
                     <div key={item.id} className="flex items-start gap-3 md:gap-4">
-                      {/* Veg/Non-veg indicator */}
-                      <div className={`w-4 h-4 md:w-5 md:h-5 border-2 ${item.isVeg !== false ? 'border-green-600' : 'border-red-600'} flex items-center justify-center mt-1 flex-shrink-0`}>
-                        <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${item.isVeg !== false ? 'bg-green-600' : 'bg-red-600'}`} />
-                      </div>
+                      {/* Veg/Non-veg indicator.
+                          Three states: veg, non-veg, and unknown. Unknown renders
+                          nothing - never fall back to the green (veg) marker. */}
+                      {(() => {
+                        const isVeg = resolveIsVeg(item)
+                        if (isVeg === null) return null
+                        return (
+                          <div className={`w-4 h-4 md:w-5 md:h-5 border-2 ${isVeg ? 'border-green-600' : 'border-red-600'} flex items-center justify-center mt-1 flex-shrink-0`}
+                            aria-label={isVeg ? 'Veg' : 'Non-veg'}>
+                            <div className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-full ${isVeg ? 'bg-green-600' : 'bg-red-600'}`} />
+                          </div>
+                        )
+                      })()}
 
                       <div className="flex-1 min-w-0">
                         <p className="text-sm md:text-base font-medium text-gray-800 dark:text-gray-200 leading-tight">{item.name}</p>
@@ -2497,7 +2507,8 @@ export default function Cart() {
                                   price: addon.price,
                                   image: addon.image || (addon.images && addon.images[0]) || "",
                                   description: addon.description || "",
-                                  isVeg: true,
+                                  foodType: addon.foodType,
+                                  isVeg: resolveIsVeg(addon),
                                   restaurant: cartRestaurantName,
                                   restaurantId: cartRestaurantId
                                 });

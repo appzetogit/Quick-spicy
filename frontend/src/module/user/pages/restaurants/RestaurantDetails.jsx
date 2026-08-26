@@ -50,6 +50,12 @@ import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 import fssaiLogo from "@/assets/fssai.png"
 import { safeBack } from "../../utils/safeBack"
+import { resolveIsVeg } from "../../utils/foodType"
+import { useScrollLock } from "../../hooks/useScrollLock"
+
+// Sentinel index for the synthetic "All items" section rendered while a price sort
+// is active. Negative so it can never collide with a real menu section index.
+const FLAT_SORT_SECTION_INDEX = -1
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -136,6 +142,12 @@ function RestaurantDetailsContent() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
   const [expandedCoupons, setExpandedCoupons] = useState(new Set())
   const [showMenuSheet, setShowMenuSheet] = useState(false)
+  // Which category the customer is currently looking at, so the menu sheet can show
+  // it as selected. Tracks manual scrolling too, not just taps.
+  const [activeCategoryIndex, setActiveCategoryIndex] = useState(null)
+  // Set when a category is picked; the effect below expands it, waits for paint,
+  // then scrolls. Scrolling before the expansion paints lands at the wrong offset.
+  const [pendingCategoryScroll, setPendingCategoryScroll] = useState(null)
   const [showSearch, setShowSearch] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [availabilityTick, setAvailabilityTick] = useState(Date.now())
@@ -143,7 +155,8 @@ function RestaurantDetailsContent() {
   const [showShareModal, setShowShareModal] = useState(false)
   const [sharePayload, setSharePayload] = useState(null)
   const [expandedAddButtons, setExpandedAddButtons] = useState(new Set())
-  const [expandedSections, setExpandedSections] = useState(new Set([0])) // Default: Recommended section is expanded
+  // Seeded once the menu loads (see the fetch effect) so every section is open.
+  const [expandedSections, setExpandedSections] = useState(new Set([0]))
   const [loadingMenuItems, setLoadingMenuItems] = useState(true)
   const [filters, setFilters] = useState({
     sortBy: null, // "low-to-high" | "high-to-low"
@@ -727,9 +740,12 @@ function RestaurantDetailsContent() {
                   menuSections: finalMenuSections,
                 }))
 
-                // Set first 3 sections (Recommended, Starters, Main Course) as expanded by default
+                // Every section starts expanded. Previously only the first three were,
+                // so everything from the fourth category down was invisible until the
+                // customer found and tapped it - the store looked half-empty.
+                // See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#016.
                 const defaultExpandedSections = new Set(
-                  Array.from({ length: Math.min(3, finalMenuSections.length) }, (_, idx) => idx)
+                  finalMenuSections.map((_, idx) => idx)
                 )
                 setExpandedSections(defaultExpandedSections)
                 fetchedMenuKeyRef.current = menuLookupKey
@@ -872,6 +888,24 @@ function RestaurantDetailsContent() {
       fetchedSlugRef.current = null
       fetchedMenuKeyRef.current = null
       fetchingMenuKeyRef.current = null
+
+      // Drop the previous store's data before loading the new one.
+      //
+      // The refs were reset here but `restaurant` was not, so navigating from one
+      // store to another kept rendering the PREVIOUS store until the new fetch
+      // resolved - and if that fetch failed, indefinitely. The most visible symptom
+      // is the address: the customer sees a street, area, or state belonging to the
+      // store they just came from. See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#005.
+      //
+      // This only fires when the slug actually CHANGES, so the deliberate
+      // "keep content visible during background retries of the same slug"
+      // behaviour above is preserved.
+      setRestaurant(null)
+      setLoadingRestaurant(true)
+      setLoadingMenuItems(true)
+      setExpandedSections(new Set([0]))
+      setActiveCategoryIndex(null)
+      setPendingCategoryScroll(null)
     }
 
     fetchRestaurant()
@@ -1043,7 +1077,11 @@ function RestaurantDetailsContent() {
       restaurantId: validRestaurantId, // Use validated restaurantId
       description: item.description,
       originalPrice: item.originalPrice,
-      isVeg: item.isVeg !== false // Add isVeg property
+      // Menu items carry `foodType`, not `isVeg`. Resolving with `!== false`
+      // marked every store item Veg. Carry foodType through so downstream
+      // screens can re-resolve if needed.
+      foodType: item.foodType,
+      isVeg: resolveIsVeg(item)
     }
 
     // Get source position for animation from event target
@@ -1141,6 +1179,65 @@ function RestaurantDetailsContent() {
   }
 
   // Menu categories - dynamically generated from restaurant menu sections
+  // Lock the page behind any open sheet. Without this, dragging inside the category
+  // sheet scrolled the menu underneath it. See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#014.
+  useScrollLock(showMenuSheet || showFilterSheet || showMenuOptionsSheet)
+
+  // Scroll to a picked category once its section has actually expanded and painted.
+  // A fixed setTimeout was unreliable: it fired against the pre-expansion layout and
+  // landed at the wrong offset. See REQ#017.
+  useEffect(() => {
+    if (pendingCategoryScroll === null) return
+
+    let frame2 = null
+    const frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        const target = document.getElementById(`menu-section-${pendingCategoryScroll}`)
+        if (target) {
+          target.scrollIntoView({ behavior: "smooth", block: "start" })
+        }
+        setPendingCategoryScroll(null)
+      })
+    })
+
+    return () => {
+      cancelAnimationFrame(frame1)
+      if (frame2) cancelAnimationFrame(frame2)
+    }
+  }, [pendingCategoryScroll])
+
+  // Keep the selected category in step with manual scrolling, so the sheet always
+  // opens showing where the customer actually is. See REQ#011.
+  useEffect(() => {
+    const sections = restaurant?.menuSections
+    if (!Array.isArray(sections) || sections.length === 0) return
+    if (typeof IntersectionObserver === "undefined") return
+    // The flat price-sorted list has no per-category sections to observe.
+    if (filters.sortBy) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
+        if (!visible) return
+
+        const index = Number(visible.target.id.replace("menu-section-", ""))
+        if (!Number.isNaN(index)) setActiveCategoryIndex(index)
+      },
+      // Bias towards the top of the viewport: the heading nearest the top is the
+      // one the customer considers themselves to be reading.
+      { rootMargin: "-80px 0px -70% 0px", threshold: 0 }
+    )
+
+    const nodes = sections
+      .map((_, index) => document.getElementById(`menu-section-${index}`))
+      .filter(Boolean)
+    nodes.forEach((node) => observer.observe(node))
+
+    return () => observer.disconnect()
+  }, [restaurant?.menuSections, filters.sortBy, showOnlyUnder250])
+
   const menuCategories = (restaurant?.menuSections && Array.isArray(restaurant.menuSections))
     ? restaurant.menuSections.map((section, index) => {
       // Handle section name - check for valid non-empty string
@@ -1510,10 +1607,69 @@ function RestaurantDetailsContent() {
     return false;
   }
 
+  // Every item in the store, flattened out of its section/subsection, each tagged
+  // with the category it came from so the card can still show context.
+  //
+  // Price sorting has to work across the WHOLE store. Sorting inside each section
+  // (which is what happened before) just ordered each category internally while the
+  // categories themselves stayed in menu order, so "Price: Low to High" never showed
+  // the cheapest item first. See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#006.
+  const getAllMenuItemsFlat = () => {
+    if (!restaurant?.menuSections) return []
+
+    const flat = []
+    const pushItems = (items, categoryName) => {
+      toRenderableArray(items).forEach((item) => {
+        if (!item) return
+        flat.push(categoryName ? { ...item, sourceCategory: categoryName } : item)
+      })
+    }
+
+    restaurant.menuSections.forEach((section) => {
+      const sectionName = isRecommendedSection(section)
+        ? "Recommended for you"
+        : (section?.name?.trim?.() || section?.title?.trim?.() || "")
+
+      pushItems(section?.items, sectionName)
+
+      toRenderableArray(section?.subsections).forEach((subsection) => {
+        const subName = subsection?.name?.trim?.() || subsection?.title?.trim?.() || sectionName
+        pushItems(subsection?.items, subName)
+      })
+    })
+
+    // The same dish can appear both in its own category and in "Recommended for
+    // you". In a flat list that reads as a duplicate, so keep the first occurrence.
+    const seen = new Set()
+    return flat.filter((item) => {
+      const key = String(item?.id ?? item?._id ?? item?.itemId ?? "")
+      if (!key) return true
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
   // Filter sections to only show those with items under Rs 250
   // Returns array of { section, originalIndex } to preserve original index for expanded sections
   const getFilteredSections = () => {
     if (!restaurant?.menuSections) return [];
+
+    // Price sort active: collapse the whole menu into one synthetic section so the
+    // sort applies across every category instead of within each one. Category
+    // grouping must not override the customer's chosen sort.
+    if (filters.sortBy) {
+      return [{
+        section: {
+          name: "All items",
+          items: getAllMenuItemsFlat(),
+          subsections: [],
+          __isFlatSortSection: true,
+        },
+        originalIndex: FLAT_SORT_SECTION_INDEX,
+      }]
+    }
+
     if (!showOnlyUnder250) {
       return restaurant.menuSections.map((section, index) => ({ section, originalIndex: index }));
     }
@@ -1911,7 +2067,10 @@ function RestaurantDetailsContent() {
               const sectionItems = toRenderableArray(section?.items)
               const sectionSubsections = toRenderableArray(section?.subsections)
 
-              const isExpanded = expandedSections.has(originalIndex)
+              // The synthetic flat-sort section is always open; there is nothing to
+              // collapse it back into.
+              const isFlatSortSection = section?.__isFlatSortSection === true
+              const isExpanded = isFlatSortSection || expandedSections.has(originalIndex)
 
               return (
                 <div key={sectionIndex} id={sectionId} className="space-y-1 scroll-mt-20">
@@ -1959,26 +2118,33 @@ function RestaurantDetailsContent() {
                           </button>
                         )}
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setExpandedSections(prev => {
-                            const newSet = new Set(prev)
-                            if (newSet.has(originalIndex)) {
-                              newSet.delete(originalIndex)
-                            } else {
-                              newSet.add(originalIndex)
-                            }
-                            return newSet
-                          })
-                        }}
-                        className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-                      >
-                        <ChevronDown
-                          className={`h-5 w-5 text-gray-600 dark:text-gray-400 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'
-                            }`}
-                        />
-                      </button>
+                      {!isFlatSortSection && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpandedSections(prev => {
+                              const newSet = new Set(prev)
+                              if (newSet.has(originalIndex)) {
+                                newSet.delete(originalIndex)
+                              } else {
+                                newSet.add(originalIndex)
+                              }
+                              return newSet
+                            })
+                          }}
+                          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                        >
+                          <ChevronDown
+                            className={`h-5 w-5 text-gray-600 dark:text-gray-400 transition-transform duration-200 ${isExpanded ? '' : '-rotate-90'
+                              }`}
+                          />
+                        </button>
+                      )}
+                      {isFlatSortSection && (
+                        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                          {filters.sortBy === "low-to-high" ? "Price: low to high" : "Price: high to low"}
+                        </span>
+                      )}
                     </div>
                   )}
 
@@ -2028,6 +2194,13 @@ function RestaurantDetailsContent() {
                                   </div>
                                 )}
                                 {item.isSpicy && <span className="text-xs font-semibold text-red-500">Spicy</span>}
+                                {/* Flat price-sorted list loses the section headings, so
+                                    each card carries its category for context. */}
+                                {isFlatSortSection && item.sourceCategory && (
+                                  <span className="text-[10px] font-medium uppercase tracking-wide text-gray-400 dark:text-gray-500 truncate">
+                                    {item.sourceCategory}
+                                  </span>
+                                )}
                               </div>
 
                               <h3 className="font-bold text-gray-800 dark:text-white text-lg leading-tight">{item.name}</h3>
@@ -2475,23 +2648,33 @@ function RestaurantDetailsContent() {
                       {menuCategories.map((category, index) => (
                         <button
                           key={index}
-                          className="w-full flex items-center justify-between py-3 px-2 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors text-left"
+                          aria-current={activeCategoryIndex === category.sectionIndex ? "true" : undefined}
+                          className={`w-full flex items-center justify-between py-3 px-2 rounded-lg transition-colors text-left ${activeCategoryIndex === category.sectionIndex
+                            ? "bg-[#FFF2EB] dark:bg-[#EB590E]/15"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                            }`}
                           onClick={() => {
+                            // Expand the target section BEFORE scrolling. Previously the
+                            // sheet only scrolled, so picking a collapsed category landed
+                            // the customer on a closed header that needed a second tap.
+                            // See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#017.
+                            // A price sort collapses the menu into one flat list with no
+                            // per-category sections, so there would be nothing to jump to.
+                            // Choosing a category is an explicit request for the grouped
+                            // view, so drop the sort.
+                            if (filters.sortBy) {
+                              setFilters(prev => ({ ...prev, sortBy: null }))
+                            }
+                            setExpandedSections(prev => new Set(prev).add(category.sectionIndex))
+                            setActiveCategoryIndex(category.sectionIndex)
                             setShowMenuSheet(false)
-                            // Scroll to category section
-                            setTimeout(() => {
-                              const sectionId = `menu-section-${category.sectionIndex}`
-                              const sectionElement = document.getElementById(sectionId)
-                              if (sectionElement) {
-                                sectionElement.scrollIntoView({
-                                  behavior: 'smooth',
-                                  block: 'start'
-                                })
-                              }
-                            }, 300) // Small delay to allow sheet to close
+                            setPendingCategoryScroll(category.sectionIndex)
                           }}
                         >
-                          <span className="text-base font-medium text-gray-900 dark:text-white">
+                          <span className={`text-base ${activeCategoryIndex === category.sectionIndex
+                            ? "font-bold text-[#EB590E]"
+                            : "font-medium text-gray-900 dark:text-white"
+                            }`}>
                             {category.name}
                           </span>
                           <div className="flex items-center gap-2">
