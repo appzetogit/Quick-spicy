@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { restaurantAPI } from "@/lib/api"
 import { useProfile } from "../context/ProfileContext"
+import { useLocation } from "../hooks/useLocation"
+import { useZone } from "../hooks/useZone"
 
 const SEARCH_HISTORY_KEY = "user_recent_searches_v1"
 const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
@@ -12,6 +14,10 @@ const USER_VEG_MODE_OPTION_KEY = "userVegModeOption"
 export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchChange }) {
   const navigate = useNavigate()
   const { vegMode } = useProfile()
+  const { location } = useLocation()
+  // Search suggestions must stay inside the customer's serviceable area, same as the
+  // results page. See BUGFIX_IMPLEMENTATION_GUIDE.md #029.
+  const { zoneId, zoneStatus } = useZone(location)
   const inputRef = useRef(null)
   const [allFoods, setAllFoods] = useState([])
   const [filteredFoods, setFilteredFoods] = useState([])
@@ -28,6 +34,21 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
 
   useEffect(() => {
     if (!isOpen) return
+
+    // Wait for the zone to resolve rather than fetching unscoped.
+    if (!zoneId && zoneStatus === 'loading') {
+      setLoadingFoods(true)
+      return
+    }
+
+    // No serviceable zone: there is nothing this customer can order, so suggest
+    // nothing rather than every restaurant in the country.
+    if (!zoneId) {
+      setAllFoods([])
+      setAllCategories([])
+      setLoadingFoods(false)
+      return
+    }
 
     const pureVegOnly =
       vegMode &&
@@ -67,7 +88,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
     const fetchSearchData = async () => {
       setLoadingFoods(true)
       try {
-        const restaurantsRes = await restaurantAPI.getRestaurants({ limit: 500 })
+        const restaurantsRes = await restaurantAPI.getRestaurants({ limit: 500, zoneId })
         const restaurants =
           restaurantsRes?.data?.data?.restaurants ||
           restaurantsRes?.data?.restaurants ||
@@ -157,7 +178,7 @@ export default function SearchOverlay({ isOpen, onClose, searchValue, onSearchCh
 
     loadRecentSuggestions()
     fetchSearchData()
-  }, [isOpen, vegMode])
+  }, [isOpen, vegMode, zoneId, zoneStatus])
 
   useEffect(() => {
     const handleEscape = (e) => {

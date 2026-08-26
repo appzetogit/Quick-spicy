@@ -300,3 +300,38 @@ export const getRestaurantAvailabilityStatus = (restaurant, now = new Date(), op
         : "open"),
   }
 }
+
+/**
+ * Order a restaurant list so open stores come first and offline ones sink to the
+ * bottom, without removing anything.
+ *
+ * Offline stores were previously interleaved with open ones in Under-250, and
+ * Search had no availability handling at all - so a customer could tap through to
+ * a store that could not accept the order. Product chose to keep offline stores
+ * visible (browsing value, and customers plan ahead) but demote them.
+ * See BUGFIX_IMPLEMENTATION_GUIDE.md #022.
+ *
+ * The partition is STABLE: whatever sort the caller already applied (rating,
+ * delivery time, distance, relevance) is preserved within each group. This must
+ * run last, after the caller's own sorting.
+ *
+ * @param {Array} restaurants
+ * @param {Date} [now]
+ * @returns {Array} new array; input is not mutated
+ */
+export const sortOpenRestaurantsFirst = (restaurants, now = new Date()) => {
+  if (!Array.isArray(restaurants) || restaurants.length === 0) return []
+
+  const open = []
+  const offline = []
+
+  for (const restaurant of restaurants) {
+    // Unknown availability is treated as open - never hide or demote a store
+    // because of missing data.
+    const status = getRestaurantAvailabilityStatus(restaurant, now)
+    if (status?.isOpen === false) offline.push(restaurant)
+    else open.push(restaurant)
+  }
+
+  return open.concat(offline)
+}

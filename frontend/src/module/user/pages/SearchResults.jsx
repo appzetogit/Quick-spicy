@@ -9,6 +9,7 @@ import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
 import { restaurantAPI, adminAPI } from "@/lib/api"
+import { getRestaurantAvailabilityStatus, sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 
 const debugLog = () => {}
 const debugWarn = () => {}
@@ -31,7 +32,7 @@ export default function SearchResults() {
   const navigate = useNavigate()
   const routerLocation = useRouterLocation()
   const { location } = useLocation()
-  const { zoneId, isOutOfService } = useZone(location)
+  const { zoneId, zoneStatus, isOutOfService } = useZone(location)
   const { addFavorite, removeFavorite, isFavorite, vegMode } = useProfile()
   const [searchQuery, setSearchQuery] = useState(query)
   const [selectedCategory, setSelectedCategory] = useState('all')
@@ -315,15 +316,33 @@ export default function SearchResults() {
 
   // Fetch restaurants from API
   useEffect(() => {
+    // Search must never reach outside the customer's serviceable area.
+    //
+    // The zoneId was passed to the API only when it happened to be known, and the
+    // backend filters by zone ONLY when it receives one - so an unresolved zone meant
+    // the request came back with every restaurant in the country. Customers in a
+    // non-serviceable town were being shown stores that could never deliver to them.
+    // See BUGFIX_IMPLEMENTATION_GUIDE.md #029.
+    //
+    // Under250 already guards this way; Search now matches it.
+    if (!zoneId && zoneStatus === 'loading') {
+      setLoadingRestaurants(true)
+      return
+    }
+
+    if (!zoneId) {
+      setRestaurantsData([])
+      setLoadingRestaurants(false)
+      return
+    }
+
     const fetchRestaurants = async () => {
       try {
         setLoadingRestaurants(true)
         debugLog('🔄 Fetching restaurants from API...')
-        // Optional: Add zoneId if available (for sorting/filtering, but show all restaurants)
-        const params = {}
-        if (zoneId) {
-          params.zoneId = zoneId
-        }
+        // Always scoped to the customer's zone - the backend only applies its
+        // same-zone filter when this is present.
+        const params = { zoneId }
         const response = await restaurantAPI.getRestaurants(params)
 
         debugLog('📦 Full API Response:', response)
@@ -627,7 +646,7 @@ export default function SearchResults() {
     }
 
     fetchRestaurants()
-  }, [zoneId, isOutOfService, pureVegOnly])
+  }, [zoneId, zoneStatus, isOutOfService, pureVegOnly])
 
   // Update search query when URL changes
   useEffect(() => {
@@ -760,7 +779,10 @@ export default function SearchResults() {
       filtered = filtered.filter(r => r.offer && r.offer.includes('50%'))
     }
 
-    return uniqueRestaurants(filtered)
+    // Offline stores stay visible but sink below open ones. Search had no
+    // availability handling at all, so a customer could tap straight through to a
+    // store that could not take the order. Must run last, after the filters above.
+    return sortOpenRestaurantsFirst(uniqueRestaurants(filtered))
   }, [query, selectedCategory, activeFilters, restaurantsData, categoryKeywords, loadingCategories, matchedCategory, pureVegOnly])
   const _matchingDishes = useMemo(() => {
     const dishes = []
@@ -1040,10 +1062,14 @@ export default function SearchResults() {
             {filteredAllRestaurants.map((restaurant) => {
               const restaurantSlug = restaurant.name.toLowerCase().replace(/\s+/g, "-")
               const restaurantIsFavorite = isFavorite(restaurant.slug || restaurantSlug)
+              // Offline stores are sorted to the bottom (sortOpenRestaurantsFirst)
+              // and marked here, so it is obvious before the customer taps in.
+              const availability = getRestaurantAvailabilityStatus(restaurant)
+              const isRestaurantOffline = availability?.isOpen === false
 
               return (
                 <Link key={restaurant.id} to={`/user/restaurants/${restaurant.slug || restaurantSlug}`} className="h-full flex">
-                  <Card className={`overflow-hidden cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] shadow-md hover:shadow-xl transition-all duration-300 py-0 rounded-md flex flex-col h-full w-full ${shouldShowGrayscale ? 'grayscale opacity-75' : ''
+                  <Card className={`overflow-hidden cursor-pointer border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] shadow-md hover:shadow-xl transition-all duration-300 py-0 rounded-md flex flex-col h-full w-full ${shouldShowGrayscale || isRestaurantOffline ? 'grayscale opacity-75' : ''
                     }`}>
                     {/* Image Section */}
                     <div className="relative h-44 sm:h-52 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0 bg-gray-200 dark:bg-gray-800">
@@ -1059,6 +1085,16 @@ export default function SearchResults() {
                       ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-200 dark:bg-gray-800">
                           <span className="text-4xl">🍽️</span>
+                        </div>
+                      )}
+
+                      {/* Closed/offline marker. Matches the Under-250 wording so the
+                          two screens read the same. */}
+                      {isRestaurantOffline && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                          <span className="rounded-full bg-white/95 px-3 py-1 text-xs font-semibold text-gray-800 shadow">
+                            {availability?.openingCountdownLabel || "Currently offline"}
+                          </span>
                         </div>
                       )}
 
@@ -1158,8 +1194,23 @@ export default function SearchResults() {
               )
             })}
 
-            {/* Empty State */}
-            {filteredAllRestaurants.length === 0 && (
+            {/* Empty State.
+                With no serviceable zone there are deliberately no results, so say why -
+                "No restaurants found" with a Clear filters button would read as a bug
+                and send the customer round in circles clearing filters that are not the
+                cause. See BUGFIX_IMPLEMENTATION_GUIDE.md #029. */}
+            {filteredAllRestaurants.length === 0 && !loadingRestaurants && !zoneId && (
+              <div className="text-center py-12">
+                <p className="font-medium text-gray-700 dark:text-gray-300">
+                  We do not deliver to your area yet
+                </p>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  Try changing your delivery address to somewhere we cover.
+                </p>
+              </div>
+            )}
+
+            {filteredAllRestaurants.length === 0 && zoneId && (
               <div className="text-center py-12">
                 <p className="text-gray-500 dark:text-gray-400">
                   {query
