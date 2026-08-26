@@ -1,14 +1,67 @@
 import { Link, useLocation } from "react-router-dom"
 import { Tag, User, Truck, Users } from "lucide-react"
 
+// Route -> tab map. Routes are mounted under both `/*` and `/user/*`, so each
+// entry is matched with and without the `/user` prefix.
+// Order matters: the first matching entry wins, so list specific prefixes
+// before broader ones.
+const TAB_ROUTES = [
+  { tab: "under250", exact: ["/under-250"] },
+  { tab: "forOthers", prefix: ["/order-for-someone-else"] },
+  // Account area. There is no dedicated Orders tab, so order/wallet/
+  // notification screens belong to Profile.
+  { tab: "profile", prefix: ["/profile", "/orders", "/wallet", "/notifications"] },
+  // Browse & order flow.
+  {
+    tab: "delivery",
+    exact: ["", "/"],
+    prefix: [
+      "/restaurants",
+      "/category",
+      "/search",
+      "/product",
+      "/cart",
+      "/offers",
+      "/collections",
+      "/top-10",
+      "/gourmet",
+    ],
+  },
+]
+
+export function resolveActiveTab(pathname) {
+  const raw = String(pathname || "")
+  // Normalise: strip the optional `/user` prefix and any trailing slash.
+  const stripped = raw.replace(/^\/user(?=\/|$)/, "")
+  const path = stripped.length > 1 ? stripped.replace(/\/+$/, "") : stripped
+
+  for (const entry of TAB_ROUTES) {
+    if (entry.exact?.some((p) => path === p)) return entry.tab
+    if (entry.prefix?.some((p) => path === p || path.startsWith(`${p}/`))) return entry.tab
+  }
+
+  // Unmapped route - highlight nothing rather than guessing.
+  return null
+}
+
 export default function BottomNavigation() {
   const location = useLocation()
 
-  // Check active routes - support both /user/* and /* paths
-  const isUnder250 = location.pathname === "/under-250" || location.pathname === "/user/under-250"
-  const isProfile = location.pathname.startsWith("/profile") || location.pathname.startsWith("/user/profile")
-  const isForOthers = location.pathname.startsWith("/user/order-for-someone-else")
-  const isDelivery = !isUnder250 && !isProfile && !isForOthers && (location.pathname === "/" || location.pathname === "/user" || (location.pathname.startsWith("/") && !location.pathname.startsWith("/restaurant") && !location.pathname.startsWith("/delivery") && !location.pathname.startsWith("/admin") && !location.pathname.startsWith("/usermain")))
+  // Active-tab resolution.
+  //
+  // This was previously an exclusion-based catch-all: `isDelivery` matched any
+  // path that wasn't explicitly excluded, so /orders (not in the exclusion list)
+  // lit up the Delivery tab while the user was looking at Your Orders.
+  // See BUGFIX_IMPLEMENTATION_GUIDE.md #028b.
+  //
+  // Now: an explicit allowlist, most specific first. Anything unmapped
+  // highlights nothing - better than confidently highlighting the wrong tab.
+  const activeTab = resolveActiveTab(location.pathname)
+
+  const isDelivery = activeTab === "delivery"
+  const isUnder250 = activeTab === "under250"
+  const isForOthers = activeTab === "forOthers"
+  const isProfile = activeTab === "profile"
 
   return (
     <div

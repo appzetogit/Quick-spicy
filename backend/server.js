@@ -1212,6 +1212,32 @@ function initializeScheduledTasks() {
     console.error('❌ Failed to initialize auto-reject service:', error);
   });
 
+  // Retry delivery assignment for orders that never got a partner.
+  //
+  // Assignment happened once, when the restaurant marked the order preparing. If no
+  // partner was free at that instant the order stayed unassigned forever - the
+  // "sometimes not assigned to any delivery agent at all" report. This sweeper is the
+  // thing that was missing behind the promise "will be assigned when a partner comes
+  // online". See BUGFIX_IMPLEMENTATION_GUIDE.md #027.
+  import('./modules/order/services/pendingAssignmentService.js').then(({ processPendingAssignments }) => {
+    // Every 30 seconds: fast enough that a waiting customer does not notice, slow
+    // enough that it costs nothing when there is no backlog.
+    cron.schedule('*/30 * * * * *', async () => {
+      try {
+        const result = await processPendingAssignments();
+        if (result.assigned > 0 || result.stale > 0) {
+          console.log(`[Assignment Retry Cron] ${result.message}`);
+        }
+      } catch (error) {
+        console.error('[Assignment Retry Cron] Error:', error);
+      }
+    });
+
+    console.log('✅ Delivery assignment retry scheduler initialized (runs every 30 seconds)');
+  }).catch((error) => {
+    console.error('❌ Failed to initialize delivery assignment retry service:', error);
+  });
+
   // Import scheduled admin push notification processor
   import('./modules/admin/controllers/pushNotificationController.js').then(({ processDueScheduledPushNotifications }) => {
     // Run every minute to send due scheduled notifications.

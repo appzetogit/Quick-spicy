@@ -279,6 +279,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const reverseGeocodeTimeoutRef = useRef(null) // Debounce timeout for reverse geocoding
   const lastReverseGeocodeCoordsRef = useRef(null) // Track last coordinates to avoid duplicate calls
   const activePinLookupIdRef = useRef(0) // Ignore stale reverse-geocode responses from older pin moves
+  // Set before any programmatic recentre so the resulting 'idle' does not reverse-geocode
+  // over an address the customer just picked or typed. Without it, map->fields and
+  // fields->map feed each other in a loop.
+  const suppressNextIdleRef = useRef(false)
   const searchCacheRef = useRef(new Map())
   const autocompleteCacheRef = useRef(new Map())
   const autocompleteServiceRef = useRef(null)
@@ -363,6 +367,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     }))
 
     if (googleMapRef.current) {
+      // Programmatic recentre: the resulting 'idle' must not reverse-geocode
+      // back over the address that caused it. See REQ#035.
+      suppressNextIdleRef.current = true
       googleMapRef.current.panTo({ lat, lng })
       googleMapRef.current.setZoom(17)
     }
@@ -806,31 +813,45 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           placesServiceRef.current = new google.maps.places.PlacesService(map)
         }
 
-        // Create Green Marker (draggable for address selection)
-        const greenMarker = new google.maps.Marker({
-          position: initialLocation,
-          map: map,
-          icon: {
-            url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            scaledSize: new google.maps.Size(40, 40),
-            anchor: new google.maps.Point(20, 40)
-          },
-          draggable: true,
-          title: "Drag to select location"
+        // The pin is FIXED at the centre of the map; the customer moves the map beneath
+        // it. It used to be a draggable marker, which meant aiming a fingertip at a 40px
+        // target that sits under the finger doing the dragging - hard on a phone, and
+        // impossible to fine-tune near the edge of the viewport. Moving the map instead
+        // keeps the target dead centre and always visible.
+        // The pin itself is drawn as a DOM overlay in the JSX below, not as a Marker, so
+        // it never lags behind the map while panning.
+        // See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#035.
+        greenMarkerRef.current = null
+
+        // The map fires 'idle' once as soon as it first renders. Initial address
+        // resolution is already handled by the addListenerOnce('idle') block further
+        // down, so skip that first one here rather than reverse-geocoding twice.
+        suppressNextIdleRef.current = true
+
+        // Any interaction that will change the centre invalidates the current address.
+        google.maps.event.addListener(map, 'dragstart', function () {
+          prepareForFreshPinLookup()
         })
-
-        greenMarkerRef.current = greenMarker
-
-        google.maps.event.addListener(greenMarker, 'dragstart', function () {
+        google.maps.event.addListener(map, 'zoom_changed', function () {
           prepareForFreshPinLookup()
         })
 
-        // Handle marker drag - update address
-        google.maps.event.addListener(greenMarker, 'dragend', function () {
-          const newPos = greenMarker.getPosition()
-          const newLat = newPos.lat()
-          const newLng = newPos.lng()
-          prepareForFreshPinLookup()
+        // 'idle' fires once the map has settled after any pan or zoom - the equivalent of
+        // the old 'dragend', but it also covers zooming and programmatic recentres.
+        google.maps.event.addListener(map, 'idle', function () {
+          // Suppressed while the code itself is recentring the map (e.g. after picking a
+          // saved address or typing an address), otherwise the resulting 'idle' would
+          // reverse-geocode straight back over the address just chosen.
+          if (suppressNextIdleRef.current) {
+            suppressNextIdleRef.current = false
+            return
+          }
+
+          const center = map.getCenter()
+          if (!center) return
+
+          const newLat = center.lat()
+          const newLng = center.lng()
           setMapPosition([newLat, newLng])
           handleMapMoveEnd(newLat, newLng)
         })
@@ -1259,6 +1280,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         // Update map if it's initialized
         if (googleMapRef.current && window.google && window.google.maps) {
           try {
+            // Programmatic recentre: the resulting 'idle' must not reverse-geocode
+            // back over the address that caused it. See REQ#035.
+            suppressNextIdleRef.current = true
             googleMapRef.current.panTo({ lat: locationData.latitude, lng: locationData.longitude })
             googleMapRef.current.setZoom(17)
 
@@ -2586,6 +2610,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           debugLog("🗺️ Updating Google Map to:", { lat, lng })
 
           // Pan to current location
+          // Programmatic recentre: the resulting 'idle' must not reverse-geocode
+          // back over the address that caused it. See REQ#035.
+          suppressNextIdleRef.current = true
           googleMapRef.current.panTo({ lat, lng })
           googleMapRef.current.setZoom(17)
 
@@ -2688,6 +2715,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               // Update Google Maps with cached location
               if (googleMapRef.current && window.google && window.google.maps) {
                 try {
+                  // Programmatic recentre: the resulting 'idle' must not reverse-geocode
+                  // back over the address that caused it. See REQ#035.
+                  suppressNextIdleRef.current = true
                   googleMapRef.current.panTo({ lat: cachedLocation.latitude, lng: cachedLocation.longitude });
                   googleMapRef.current.setZoom(17);
 
@@ -2929,6 +2959,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       // Update Google Maps to show selected address
       if (googleMapRef.current && window.google && window.google.maps) {
         try {
+          // Programmatic recentre: the resulting 'idle' must not reverse-geocode
+          // back over the address that caused it. See REQ#035.
+          suppressNextIdleRef.current = true
           googleMapRef.current.panTo({ lat: latitude, lng: longitude })
           googleMapRef.current.setZoom(17)
 
@@ -3082,6 +3115,24 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               left: 0,
               zIndex: 1
             }}
+          />
+
+          {/* Fixed centre pin. Sits above the map and never moves - the map moves under
+              it. pointer-events-none so it can never swallow a drag meant for the map.
+              Offset upward by its own height so the POINT of the pin, not its middle,
+              marks the centre pixel the coordinates are read from. */}
+          <div
+            className="absolute left-1/2 top-1/2 z-10 pointer-events-none"
+            style={{ transform: 'translate(-50%, -100%)' }}
+            aria-hidden="true"
+          >
+            <MapPin className="h-10 w-10 text-green-600 drop-shadow-lg" fill="currentColor" strokeWidth={1.5} />
+          </div>
+          {/* Small dot marking the exact centre pixel, so the customer can see precisely
+              what the pin is pointing at. */}
+          <div
+            className="absolute left-1/2 top-1/2 z-10 pointer-events-none h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-green-800/70"
+            aria-hidden="true"
           />
 
           {/* Loading State */}
@@ -3423,6 +3474,11 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                   })
                   .map((address, index) => {
                     const IconComponent = getAddressIcon(address)
+                    // Selecting an address persists it as the default, so isDefault is
+                    // what "currently delivering here" means. Without a marker the list
+                    // gave no clue which address was actually in use.
+                    // See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#035.
+                    const isSelected = address.isDefault === true
                     return (
                       <div
                         key={address.id}
@@ -3434,16 +3490,31 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                         >
                           <button
                             onClick={() => handleSelectSavedAddress(address)}
-                            className="w-full flex items-start gap-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg transition-colors p-2 -m-2"
+                            aria-current={isSelected ? "true" : undefined}
+                            className={`w-full flex items-start gap-4 text-left rounded-lg transition-colors p-2 -m-2 ${isSelected
+                              ? 'bg-green-50 dark:bg-green-900/20 ring-1 ring-green-600/40'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                              }`}
                           >
                             <div className="flex flex-col items-center">
-                              <div className="h-10 w-10 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                                <IconComponent className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                              <div className={`h-10 w-10 rounded-full flex items-center justify-center ${isSelected
+                                ? 'bg-green-100 dark:bg-green-900/40'
+                                : 'bg-gray-100 dark:bg-gray-800'
+                                }`}>
+                                <IconComponent className={`h-5 w-5 ${isSelected
+                                  ? 'text-green-700 dark:text-green-400'
+                                  : 'text-gray-600 dark:text-gray-400'
+                                  }`} />
                               </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 dark:text-white">
+                              <p className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                                 {address.label || address.additionalDetails || "Home"}
+                                {isSelected && (
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/40 rounded-full px-2 py-0.5">
+                                    Delivering here
+                                  </span>
+                                )}
                               </p>
                               <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {[

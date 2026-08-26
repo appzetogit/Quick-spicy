@@ -21,7 +21,7 @@ import OptimizedImage from "@/components/OptimizedImage"
 import api from "@/lib/api"
 import { restaurantAPI } from "@/lib/api"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
-import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
+import { getRestaurantAvailabilityStatus, sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -408,7 +408,9 @@ export default function Under250() {
       // No additional sorting needed
     }
 
-    return filtered
+    // Offline stores keep their badge but sink below open ones. Runs last so the
+    // customer's chosen sort still applies within each group.
+    return sortOpenRestaurantsFirst(filtered)
   }, [under250Restaurants, selectedSort, under30MinsFilter])
 
   // Fetch under 250 banners from API

@@ -642,6 +642,25 @@ Order again from this restaurant in the ${companyName} app.`
               order.paymentMethod === 'cod' ||
               order.paymentMethod === 'wallet'
 
+            // Which refund note (if any) a cancelled order should carry.
+            //
+            // Cash on delivery is never paid up front, so there is nothing to refund
+            // no matter who cancelled - admin, restaurant, or the customer. Wallet
+            // orders are auto-reversed. Online payments only warrant a refund promise
+            // if the payment actually completed; a pending or failed one took no money.
+            const paymentMethodRaw = String(order.payment?.method || order.paymentMethod || '').toLowerCase()
+            const isCod = paymentMethodRaw === 'cash' || paymentMethodRaw === 'cod'
+            const isWalletPayment = paymentMethodRaw === 'wallet'
+            const paymentCaptured = (order.payment?.status || order.paymentStatus) === 'completed'
+
+            const refundNote = isCod
+              ? null
+              : isWalletPayment
+                ? "Refunded to your wallet automatically"
+                : paymentCaptured
+                  ? "Refund will be processed in 24-48 hours"
+                  : null
+
             // Payment failed only for online payments that actually failed
             // Don't show payment failed for COD/wallet or cancelled orders
             const isCancelled = order.status === 'cancelled' || order.status === 'restaurant_cancelled'
@@ -920,11 +939,16 @@ Order again from this restaurant in the ${companyName} app.`
                           {isRestaurantCancelled ? "Restaurant Cancelled" : "Cancelled by Admin"}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 ml-7">
-                        {order.paymentMethod === 'wallet'
-                          ? "Refunded to your wallet automatically"
-                          : "Refund will be processed in 24-48 hours"}
-                      </p>
+                      {/* Refund note. Only promise a refund when money actually
+                          changed hands - a COD order that was cancelled was never
+                          paid for, so "Refund will be processed" was simply untrue
+                          and generated support contacts.
+                          See BUGFIX_IMPLEMENTATION_GUIDE.md #028a. */}
+                      {refundNote && (
+                        <p className="text-xs text-gray-600 dark:text-gray-300 ml-7">
+                          {refundNote}
+                        </p>
+                      )}
                     </div>
                   ) : paymentFailed ? (
                     <div className="flex items-center gap-2">

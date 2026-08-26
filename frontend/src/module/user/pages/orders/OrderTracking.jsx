@@ -1166,7 +1166,11 @@ export default function OrderTracking() {
       >
         {/* Navigation bar */}
         <div className="flex items-center justify-between px-4 py-3">
-          <Link to="/user/orders">
+          {/* A cancelled order is a dead end - there is nothing left to track and
+              nothing to return to in the order flow, so back goes Home rather than
+              into the orders list. Live orders still return to the list.
+              See BUGFIX_IMPLEMENTATION_GUIDE.md #028a. */}
+          <Link to={orderStatus === "cancelled" ? "/user" : "/user/orders"}>
             <motion.button
               className="w-10 h-10 flex items-center justify-center"
               whileTap={{ scale: 0.9 }}

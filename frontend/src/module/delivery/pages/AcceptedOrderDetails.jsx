@@ -23,6 +23,7 @@ import {
 import { 
   getDeliveryOrderPaymentStatus 
 } from "../utils/deliveryWalletState"
+import { deliveryAPI } from "@/lib/api"
 
 export default function AcceptedOrderDetails() {
   const navigate = useNavigate()
@@ -47,6 +48,56 @@ export default function AcceptedOrderDetails() {
       window.removeEventListener('deliveryOrderStatusUpdated', handleStatusUpdate)
       window.removeEventListener('deliveryWalletStateUpdated', handleStatusUpdate)
       window.removeEventListener('storage', handleStatusUpdate)
+    }
+  }, [orderId])
+
+  // The status above is read from localStorage, which only ever records what THIS
+  // device did. An order cancelled from the admin panel changes nothing locally, so
+  // the partner kept seeing live action buttons and could walk a dead order all the
+  // way to "Delivered". The server is the authority on cancellation, so ask it.
+  //
+  // Polled rather than pushed: this screen has no socket subscription, and a partner
+  // may sit on it for a long time while the order is cancelled underneath them.
+  useEffect(() => {
+    if (!orderId) return
+
+    let cancelled = false
+
+    const syncFromServer = async () => {
+      try {
+        const response = await deliveryAPI.getOrderDetails(orderId)
+        const serverOrder = response?.data?.data?.order || response?.data?.order
+        if (cancelled || !serverOrder) return
+
+        if (String(serverOrder.status || "").toLowerCase() === "cancelled") {
+          // Persist it so every other delivery screen agrees, and the buttons
+          // disappear on this one.
+          saveDeliveryOrderStatus(orderId, DELIVERY_ORDER_STATUS.CANCELLED)
+          setOrderStatus(DELIVERY_ORDER_STATUS.CANCELLED)
+        }
+      } catch {
+        // Network blips are common on a delivery phone. Leaving the local status
+        // as-is is safe: the backend rejects progress on a cancelled order anyway.
+      }
+    }
+
+    syncFromServer()
+    const intervalId = setInterval(syncFromServer, 30000)
+
+    // A backgrounded WebView throttles timers hard - on Android the interval can stall
+    // entirely while the partner is in another app or the screen is off. Re-sync the
+    // moment they come back, so they never act on a status that went stale while away.
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") syncFromServer()
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+    window.addEventListener("focus", handleVisibility)
+
+    return () => {
+      cancelled = true
+      clearInterval(intervalId)
+      document.removeEventListener("visibilitychange", handleVisibility)
+      window.removeEventListener("focus", handleVisibility)
     }
   }, [orderId])
 

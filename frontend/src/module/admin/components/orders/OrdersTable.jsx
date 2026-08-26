@@ -91,7 +91,37 @@ export default function OrdersTable({
   onPageChange,
 }) {
 
+  // A cancelled or delivered order is finished. Nothing may be done to it.
+  //
+  // Every helper below tests `backendStatus || displayStatus`, so a single actionable-
+  // looking value in EITHER field was enough to render a button. That is permissive by
+  // default, and it broke in two ways for cancelled orders:
+  //   - the display status is derived server-side as `statusMap[order.status] || 'Pending'`,
+  //     so a missing or unmapped status silently reads as "Pending" - the most actionable
+  //     state there is;
+  //   - the "Handover" override further down that mapping replaces the display status
+  //     whenever a rider had reached pickup, regardless of the order being cancelled.
+  // The server correctly refuses these actions, so the admin got a button that only ever
+  // produced an error.
+  //
+  // This guard is checked FIRST in every helper and looks at both fields: if either says
+  // the order is finished, it is finished.
+  // See BUGFIX_IMPLEMENTATION_GUIDE.md - admin panel cancelled-order actions.
+  const isOrderTerminal = (order) => {
+    const values = [order?.status, order?.orderStatus]
+      .map((value) => String(value || "").toLowerCase())
+      .filter(Boolean)
+
+    return values.some((value) =>
+      value === "delivered" ||
+      value.includes("cancel") ||   // cancelled / canceled / "Cancelled by Admin"
+      value.includes("reject") ||
+      value.includes("refund")
+    )
+  }
+
   const isOrderAcceptable = (order) => {
+    if (isOrderTerminal(order)) return false
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
     return (
@@ -103,6 +133,7 @@ export default function OrdersTable({
   }
 
   const isOrderRejectable = (order) => {
+    if (isOrderTerminal(order)) return false
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
     return (
@@ -112,6 +143,7 @@ export default function OrdersTable({
   }
 
   const isOrderReadyMarkable = (order) => {
+    if (isOrderTerminal(order)) return false
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
     return (
@@ -127,6 +159,7 @@ export default function OrdersTable({
   // handover - stuck at confirmed or preparing - could not be completed from here at all.
   // Pending is excluded on both sides: nothing has been accepted, so nothing should be paid.
   const isOrderDeliveredMarkable = (order) => {
+    if (isOrderTerminal(order)) return false
     const displayStatus = String(order?.orderStatus || "").toLowerCase()
     const backendStatus = String(order?.status || "").toLowerCase()
     const completable = ["confirmed", "preparing", "ready", "out_for_delivery"]
