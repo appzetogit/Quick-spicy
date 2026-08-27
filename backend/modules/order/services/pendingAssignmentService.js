@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import Order from '../models/Order.js';
+import Restaurant from '../../restaurant/models/Restaurant.js';
 import { assignOrderToDeliveryBoy } from './deliveryAssignmentService.js';
 import { notifyDeliveryBoyNewOrder } from './deliveryNotificationService.js';
 
@@ -41,6 +43,39 @@ const minutesSince = (date) => {
   return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
 };
 
+/**
+ * Load the restaurant behind an order.
+ *
+ * Order.restaurantId is a plain String, NOT a mongoose ref, so `.populate('restaurantId')`
+ * is a silent no-op - it hands back the id string untouched. The first version of this
+ * sweeper populated and then read `.location` off that string, so every single order fell
+ * through to "restaurant has no usable coordinates" and NOTHING was ever assigned. The
+ * retry ran perfectly and achieved nothing, which is worse than not running: it looked
+ * healthy in the logs.
+ *
+ * The id is usually the Mongo _id, but some orders carry the business `restaurantId`
+ * field instead, so both are tried. Results are cached per sweep - the same restaurant
+ * commonly owns several stuck orders.
+ */
+const loadRestaurant = async (rawId, cache) => {
+  const key = String(rawId?._id || rawId || '').trim();
+  if (!key) return null;
+  if (cache.has(key)) return cache.get(key);
+
+  const FIELDS = 'name restaurantId location onboarding.step1.location';
+  let doc = null;
+
+  if (mongoose.Types.ObjectId.isValid(key) && key.length === 24) {
+    doc = await Restaurant.findById(key).select(FIELDS).lean();
+  }
+  if (!doc) {
+    doc = await Restaurant.findOne({ restaurantId: key }).select(FIELDS).lean();
+  }
+
+  cache.set(key, doc);
+  return doc;
+};
+
 const extractRestaurantCoords = (restaurant) => {
   const location = restaurant?.location || restaurant?.onboarding?.step1?.location || null;
   if (!location) return { lat: null, lng: null };
@@ -68,7 +103,9 @@ export async function processPendingAssignments() {
   })
     .sort({ createdAt: 1 }) // oldest first - nobody should be overtaken while waiting
     .limit(MAX_PER_RUN)
-    .populate('restaurantId', 'name location onboarding.step1.location');
+    // No .populate here: restaurantId is a String, so populate silently does nothing.
+    // The restaurant is fetched per order by loadRestaurant() below.
+    ;
 
   if (pendingOrders.length === 0) {
     return { processed: 0, assigned: 0, stale: 0, message: 'No unassigned orders awaiting a partner' };
@@ -76,19 +113,22 @@ export async function processPendingAssignments() {
 
   let assigned = 0;
   let stale = 0;
+  const restaurantCache = new Map();
 
   for (const order of pendingOrders) {
     const waitingMinutes = minutesSince(order.tracking?.preparing?.timestamp || order.createdAt);
 
     try {
-      const { lat, lng } = extractRestaurantCoords(order.restaurantId);
+      const restaurant = await loadRestaurant(order.restaurantId, restaurantCache);
+      const { lat, lng } = extractRestaurantCoords(restaurant);
 
       if (lat === null || lng === null) {
         // Without coordinates there is no "nearest" partner to find. This is a data
         // problem on the restaurant record and will never resolve on its own.
         console.error(
           `[Assignment Retry] Order ${order.orderId} cannot be assigned: restaurant ` +
-          `${order.restaurantId?.name || order.restaurantId} has no usable coordinates.`
+          `${restaurant?.name || order.restaurantId} ` +
+          `${restaurant ? 'has no usable coordinates' : 'could not be loaded'}.`
         );
         stale += 1;
         continue;
@@ -98,7 +138,7 @@ export async function processPendingAssignments() {
         order,
         lat,
         lng,
-        order.restaurantId?._id || order.restaurantId
+        restaurant?._id || order.restaurantId
       );
 
       if (result?.deliveryPartnerId) {
