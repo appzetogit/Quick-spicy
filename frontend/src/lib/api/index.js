@@ -733,6 +733,14 @@ export const restaurantAPI = {
   getAddons: () => {
     return apiClient.get(API_ENDPOINTS.RESTAURANT.ADDONS);
   },
+
+  // "Spend X, get Y free" - the restaurant's own threshold rewards.
+  getFreebieOffer: () => {
+    return apiClient.get("/restaurant/freebie-offer");
+  },
+  updateFreebieOffer: (payload) => {
+    return apiClient.put("/restaurant/freebie-offer", payload);
+  },
   updateAddon: (id, addonData) => {
     return apiClient.put(
       API_ENDPOINTS.RESTAURANT.ADDON_BY_ID.replace(":id", id),
@@ -1753,6 +1761,13 @@ export const adminAPI = {
   // Paths are literal here rather than routed through API_ENDPOINTS: these four are only
   // used by the two admin screens that own them.
   getRewardSettings: () => apiClient.get("/admin/reward-settings"),
+
+  // "Spend X, get Y free" for a specific restaurant. Same config the restaurant edits
+  // in its own panel; admin can read any and (as super admin) write any.
+  getRestaurantFreebieOffer: (restaurantId) =>
+    apiClient.get(`/admin/restaurants/${restaurantId}/freebie-offer`),
+  updateRestaurantFreebieOffer: (restaurantId, payload) =>
+    apiClient.put(`/admin/restaurants/${restaurantId}/freebie-offer`, payload),
   updateRewardSettings: (data) => apiClient.put("/admin/reward-settings", data),
   getCustomerWallets: (params = {}) => apiClient.get("/admin/customer-wallets", { params }),
   updateCustomerWalletBalance: (userId, data) =>

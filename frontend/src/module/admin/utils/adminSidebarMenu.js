@@ -109,6 +109,12 @@ export const adminSidebarMenu = [
         path: "/admin/push-notification",
         icon: "Bell",
       },
+      {
+        type: "link",
+        label: "Free Item on Order Value",
+        path: "/admin/restaurant-freebies",
+        icon: "Gift",
+      },
     ],
   },
   {

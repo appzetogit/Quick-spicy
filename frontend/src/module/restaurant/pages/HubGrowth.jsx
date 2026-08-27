@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import { useNavigate } from "react-router-dom"
-import { ChevronRight, Menu } from "lucide-react"
+import { ChevronRight, Menu, Gift } from "lucide-react"
 import BottomNavOrders from "../components/BottomNavOrders"
 import offersAndDiscountsIcon from "@/assets/hub/icons/offersanddiscounts.png"
 
@@ -44,6 +44,26 @@ export default function HubGrowth() {
               <div className="flex-1">
                 <h3 className="text-base font-bold text-gray-900 mb-1">Offers and discounts</h3>
                 <p className="text-sm text-gray-600">Start your own offers and grow your business</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-blue-600 shrink-0" />
+            </motion.div>
+
+            {/* "Spend X, get Y free". Its own entry rather than a step inside the offers
+                wizard: it needs no goal, timings or targeting, and it is the one the
+                checkout actually reads. */}
+            <motion.div
+              whileTap={{ scale: 0.98 }}
+              onClick={() => navigate("/restaurant/free-item-on-order-value")}
+              className="bg-white rounded-lg p-4 flex items-center gap-4 border border-gray-200 cursor-pointer"
+            >
+              <div className="shrink-0">
+                <div className="w-12 h-12 rounded-lg bg-orange-50 flex items-center justify-center">
+                  <Gift className="w-6 h-6 text-[#EB590E]" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-gray-900 mb-1">Free item on order value</h3>
+                <p className="text-sm text-gray-600">Give a free dish or addon once an order reaches an amount</p>
               </div>
               <ChevronRight className="w-5 h-5 text-blue-600 shrink-0" />
             </motion.div>

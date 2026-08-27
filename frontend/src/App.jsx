@@ -91,6 +91,7 @@ const ChooseDiscountType = lazy(() => import("@/module/restaurant/pages/ChooseDi
 const ChooseMenuDiscountType = lazy(() => import("@/module/restaurant/pages/ChooseMenuDiscountType"))
 const CreatePercentageDiscount = lazy(() => import("@/module/restaurant/pages/CreatePercentageDiscount"))
 const CreateFreebies = lazy(() => import("@/module/restaurant/pages/CreateFreebies"))
+const FreeItemOnOrderValue = lazy(() => import("@/module/restaurant/pages/FreeItemOnOrderValue"))
 const FreebiesTiming = lazy(() => import("@/module/restaurant/pages/FreebiesTiming"))
 const CreatePercentageMenuDiscount = lazy(() => import("@/module/restaurant/pages/CreatePercentageMenuDiscount"))
 const CreateFlatPriceMenuDiscount = lazy(() => import("@/module/restaurant/pages/CreateFlatPriceMenuDiscount"))
@@ -746,6 +747,17 @@ export default function App() {
             element={
               <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
                 <ChooseMenuDiscountType />
+              </ProtectedRoute>
+            }
+          />
+          {/* "Spend X, get Y free" - the configuration the checkout actually reads.
+              Separate from the Create Offers wizard below, whose freebies output is not
+              consulted by order pricing. */}
+          <Route
+            path="/restaurant/free-item-on-order-value"
+            element={
+              <ProtectedRoute requiredRole="restaurant" loginPath="/restaurant/login">
+                <FreeItemOnOrderValue />
               </ProtectedRoute>
             }
           />
