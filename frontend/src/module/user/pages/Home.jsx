@@ -2300,13 +2300,15 @@ export default function Home() {
           <div className="absolute inset-0 z-0 bg-gray-100" />
         )}
 
-        {/* The address block used to sit directly on top of the hero image, so whether
-            a customer could read their own address depended on whichever banner artwork
-            happened to be showing - and dark or busy images made it unreadable and hard
-            to tap. The header strip now paints its own opaque background, so the banner
-            starts below the address instead of running underneath it.
+        {/* #020 (banner overlapping the address) is NOT fixed here - deliberately.
+            An opaque background was tried on this strip so the banner would start below
+            the address rather than run under it. It made the address legible, but the hero
+            keeps its fixed aspect ratio, so the image was squeezed into what was left and
+            - being object-fill - stretched. On a phone it looked broken, so it was reverted.
+            A real fix gives the address its own layout slot outside the hero shell, which
+            changes the home screen's proportions and needs an approved design.
             See BUGFIX_IMPLEMENTATION_GUIDE.md #020. */}
-        <div className="relative z-30 w-full md:hidden bg-white dark:bg-[#0a0a0a]">
+        <div className="relative z-30 w-full md:hidden">
           <motion.div
             className="relative z-50 pt-2 sm:pt-3 lg:pt-4"
             initial={{ opacity: 0, y: -20 }}
