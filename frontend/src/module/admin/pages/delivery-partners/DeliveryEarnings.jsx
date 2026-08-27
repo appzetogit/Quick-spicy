@@ -43,6 +43,14 @@ export default function DeliveryEarnings() {
   })
   const [deliveryPartners, setDeliveryPartners] = useState([])
 
+  // Local date, not toISOString() - that converts to UTC and in IST hands back
+  // yesterday for most of the evening, quietly making today unpickable.
+  const todayISO = (() => {
+    const d = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+  })()
+
   // Fetch delivery partners for filter dropdown
   const fetchDeliveryPartners = useCallback(async () => {
     try {
@@ -64,7 +72,9 @@ export default function DeliveryEarnings() {
       const params = {
         page: pagination.page,
         limit: pagination.limit,
-        period: filters.period,
+        // 'custom' is a UI state, not something the API understands - when a range is
+        // set the dates carry the filter on their own.
+        ...(filters.period !== 'custom' && { period: filters.period }),
         ...(filters.deliveryPartnerId && { deliveryPartnerId: filters.deliveryPartnerId }),
         ...(filters.fromDate && { fromDate: filters.fromDate }),
         ...(filters.toDate && { toDate: filters.toDate }),
@@ -100,8 +110,35 @@ export default function DeliveryEarnings() {
     fetchEarnings()
   }, [fetchEarnings])
 
+  // Period and the date range are mutually exclusive on the server: it uses the dates
+  // whenever either is set and ignores period entirely. The UI let both be set at once,
+  // so it could read "All Time" while silently filtering to a date range - which looked
+  // like the filter was broken when it was doing exactly what it was told.
+  //
+  // Choosing a period now clears the dates; typing a date switches period to "custom".
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
+    setFilters(prev => {
+      if (key === 'period') {
+        return value === 'custom'
+          ? { ...prev, period: 'custom' }
+          : { ...prev, period: value, fromDate: '', toDate: '' }
+      }
+
+      if (key === 'fromDate' || key === 'toDate') {
+        const next = { ...prev, [key]: value, period: 'custom' }
+        // A range that runs backwards returns nothing and looks like a bug. Keep the
+        // other end in step rather than letting it happen.
+        if (next.fromDate && next.toDate && next.toDate < next.fromDate) {
+          if (key === 'fromDate') next.toDate = value
+          else next.fromDate = value
+        }
+        // Clearing both hands control back to the period selector.
+        if (!next.fromDate && !next.toDate) next.period = 'all'
+        return next
+      }
+
+      return { ...prev, [key]: value }
+    })
     setPagination(prev => ({ ...prev, page: 1 }))
   }
 
@@ -254,6 +291,7 @@ export default function DeliveryEarnings() {
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
                 <option value="month">This Month</option>
+                <option value="custom">Custom range</option>
               </select>
             </div>
             <div>
@@ -269,11 +307,15 @@ export default function DeliveryEarnings() {
                 ))}
               </select>
             </div>
+            {/* max is today: earnings cannot exist in the future, and a future range was
+                being picked by accident and returning an empty table that read as a bug.
+                From/To also bound each other so the range cannot run backwards. */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">From Date</label>
               <input
                 type="date"
                 value={filters.fromDate}
+                max={filters.toDate || todayISO}
                 onChange={(e) => handleFilterChange('fromDate', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -283,10 +325,35 @@ export default function DeliveryEarnings() {
               <input
                 type="date"
                 value={filters.toDate}
+                min={filters.fromDate || undefined}
+                max={todayISO}
                 onChange={(e) => handleFilterChange('toDate', e.target.value)}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+          </div>
+
+          {/* Says plainly which filter is in force, since only one of the two ever is. */}
+          <div className="mt-3 flex items-center gap-3 flex-wrap">
+            {(filters.fromDate || filters.toDate) ? (
+              <>
+                <span className="text-xs text-slate-600">
+                  Showing <strong>{filters.fromDate || 'the beginning'}</strong> to{' '}
+                  <strong>{filters.toDate || 'today'}</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFilters(prev => ({ ...prev, period: 'all', fromDate: '', toDate: '' }))}
+                  className="text-xs font-medium text-blue-600 hover:underline"
+                >
+                  Clear dates
+                </button>
+              </>
+            ) : (
+              <span className="text-xs text-slate-500">
+                Showing {filters.period === 'all' ? 'all time' : filters.period === 'today' ? 'today' : filters.period === 'week' ? 'this week' : 'this month'}
+              </span>
+            )}
           </div>
         </div>
 

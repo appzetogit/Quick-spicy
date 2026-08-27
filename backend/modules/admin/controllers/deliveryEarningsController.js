@@ -93,12 +93,39 @@ export const getDeliveryEarnings = asyncHandler(async (req, res) => {
     endDate.setHours(23, 59, 59, 999);
 
     if (fromDate || toDate) {
+      // A supplied range wins over `period` - which is why the admin UI must never show
+      // both at once. Guarded here as well so a bad range cannot silently return an
+      // empty table and read as a broken page.
       if (fromDate) {
-        startDate = new Date(fromDate);
-        startDate.setHours(0, 0, 0, 0);
+        const parsed = new Date(fromDate);
+        if (!Number.isNaN(parsed.getTime())) {
+          startDate = parsed;
+          startDate.setHours(0, 0, 0, 0);
+        }
       }
       if (toDate) {
-        endDate = new Date(toDate);
+        const parsed = new Date(toDate);
+        if (!Number.isNaN(parsed.getTime())) {
+          endDate = parsed;
+          endDate.setHours(23, 59, 59, 999);
+        }
+      }
+
+      // Earnings cannot exist in the future; a future range is always empty.
+      const now = new Date();
+      if (endDate > now) {
+        endDate = now;
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      // Reversed range returns nothing at all. Swap rather than hand back an empty set
+      // the caller cannot explain.
+      if (startDate && endDate && startDate > endDate) {
+        console.warn('[deliveryEarnings] fromDate is after toDate; swapping', { fromDate, toDate });
+        const swap = startDate;
+        startDate = endDate;
+        endDate = swap;
+        startDate.setHours(0, 0, 0, 0);
         endDate.setHours(23, 59, 59, 999);
       }
     } else {
