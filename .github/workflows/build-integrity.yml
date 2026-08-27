@@ -1,0 +1,37 @@
+# Blocks obfuscated code from reaching main.
+#
+# An obfuscated payload has been appended to frontend/vite.config.js three times in this
+# repository, each time under an innocuous commit message, and it reached the production
+# server at least once. There was no CI, no hooks, and nothing that would notice - a
+# reviewer scrolling a diff does not see column 900 of a single 31,000-character line.
+#
+# This runs on every push and pull request to main and fails loudly.
+name: Build integrity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Lets a maintainer re-run the scan on demand without pushing anything.
+  workflow_dispatch:
+
+jobs:
+  scan:
+    name: Scan tracked source for injected code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history: the scan walks tracked files, and a shallow clone is enough,
+          # but keeping history available makes it easy to bisect a hit.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No dependencies - the script uses only Node built-ins, so this stays fast and
+      # cannot itself be compromised by a malicious postinstall.
+      - name: Check build integrity
+        run: node scripts/check-build-integrity.mjs --strict
