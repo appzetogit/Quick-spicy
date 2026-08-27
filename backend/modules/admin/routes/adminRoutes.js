@@ -244,6 +244,10 @@ import {
   getCustomerWallets,
   updateCustomerWalletBalance,
 } from "../controllers/rewardSettingsController.js";
+import {
+  getRestaurantFreebieOffer,
+  updateRestaurantFreebieOffer,
+} from "../../restaurant/controllers/freebieOfferController.js";
 import zoneRoutes from "./zoneRoutes.js";
 import { authenticateAdmin, authorizeAdmin } from "../middleware/adminAuth.js";
 import { uploadMiddleware } from "../../../shared/utils/cloudinaryService.js";
@@ -368,6 +372,12 @@ router.patch("/categories/home-visibility", updateCategoryHomeVisibility);
 // Reward payouts and customer wallets. Reading is open to any admin; WRITING is
 // super-admin only - both endpoints move money, and the wallet one moves it into a
 // customer account directly. Same bar the delivery-boy wallet already sits behind.
+// "Spend X, get Y free" per restaurant. Admin can read and edit any restaurant's
+// scheme; the restaurant edits its own through the restaurant panel. Same controller
+// on both sides so the validation cannot drift.
+router.get("/restaurants/:restaurantId/freebie-offer", getRestaurantFreebieOffer);
+router.put("/restaurants/:restaurantId/freebie-offer", requireSuperAdmin, updateRestaurantFreebieOffer);
+
 router.get("/reward-settings", getRewardSettings);
 router.put("/reward-settings", requireSuperAdmin, updateRewardSettings);
 router.get("/customer-wallets", getCustomerWallets);

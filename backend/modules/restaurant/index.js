@@ -13,6 +13,7 @@ import { scheduleItemAvailability, cancelScheduledAvailability, getItemSchedule 
 import { getInventory, updateInventory, getInventoryByRestaurantId } from './controllers/inventoryController.js';
 import { addStaff, getStaff, getStaffById, updateStaff, deleteStaff } from './controllers/staffManagementController.js';
 import { createOffer, getOffers, getOfferById, updateOfferStatus, deleteOffer, getCouponsByItemId, getCouponsByItemIdPublic, getPublicOffers } from './controllers/offerController.js';
+import { getMyFreebieOffer, updateMyFreebieOffer, getPublicFreebieOffer } from './controllers/freebieOfferController.js';
 import categoryRoutes from './routes/categoryRoutes.js';
 import restaurantOrderRoutes from './routes/restaurantOrderRoutes.js';
 import outletTimingsRoutes from './routes/outletTimingsRoutes.js';
@@ -64,6 +65,13 @@ router.get('/offers/public', getPublicOffers);
 router.get('/offers/:id', authenticate, getOfferById);
 router.put('/offers/:id/status', authenticate, updateOfferStatus);
 router.delete('/offers/:id', authenticate, deleteOffer);
+
+// "Spend X, get Y free" threshold rewards.
+// The public route is registered before any /:id route so a restaurant id in the path
+// cannot swallow it, the same reason /offers/public sits where it does above.
+router.get('/freebie-offer/public/:restaurantId', getPublicFreebieOffer);
+router.get('/freebie-offer', authenticate, getMyFreebieOffer);
+router.put('/freebie-offer', authenticate, updateMyFreebieOffer);
 
 // Staff Management routes (authenticated - for restaurant module)
 // Must come before /:id to avoid route conflicts

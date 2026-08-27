@@ -1,5 +1,6 @@
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Offer from '../../restaurant/models/Offer.js';
+import FreebieOffer from '../../restaurant/models/FreebieOffer.js';
 import FeeSettings from '../../admin/models/FeeSettings.js';
 import Menu from '../../restaurant/models/Menu.js';
 import { areOffersEnabled } from '../../../shared/utils/offersSwitch.js';
@@ -477,6 +478,54 @@ export const calculateOrderPricing = async ({
 
     const normalizedTipAmount = Math.max(0, Number(tipAmount) || 0);
     
+    // "Spend X, get Y free".
+    //
+    // Resolved against the subtotal BEFORE any coupon discount: the customer earned it by
+    // what they put in the basket, and a coupon should not silently take the free food
+    // away again. Deliberately does not change the total - the reward is an item, not
+    // money off - so it never interacts with GST, delivery or settlement maths.
+    let freebie = null;
+    try {
+      if (restaurantId) {
+        let freebieRestaurantId = null;
+        if (mongoose.Types.ObjectId.isValid(restaurantId) && String(restaurantId).length === 24) {
+          freebieRestaurantId = new mongoose.Types.ObjectId(String(restaurantId));
+        }
+        if (freebieRestaurantId) {
+          const freebieOffer = await FreebieOffer.findOne({ restaurant: freebieRestaurantId });
+          const tier = freebieOffer ? freebieOffer.resolveTierFor(subtotal) : null;
+          const next = freebieOffer ? freebieOffer.nextTierAfter(subtotal) : null;
+
+          if (tier) {
+            freebie = {
+              earned: true,
+              tierId: String(tier._id),
+              minOrderValue: Number(tier.minOrderValue),
+              rewardType: tier.rewardType,
+              rewardId: tier.rewardId,
+              rewardName: tier.rewardName,
+              rewardImage: tier.rewardImage || '',
+              rewardIsVeg: typeof tier.rewardIsVeg === 'boolean' ? tier.rewardIsVeg : null,
+              rewardValue: Number(tier.rewardValue) || 0,
+            };
+          } else if (next) {
+            // Not earned yet - tell the cart how close they are so it can nudge.
+            freebie = {
+              earned: false,
+              minOrderValue: Number(next.minOrderValue),
+              amountAway: Math.max(0, Math.round(Number(next.minOrderValue) - subtotal)),
+              rewardName: next.rewardName,
+              rewardImage: next.rewardImage || '',
+              rewardIsVeg: typeof next.rewardIsVeg === 'boolean' ? next.rewardIsVeg : null,
+            };
+          }
+        }
+      }
+    } catch (freebieError) {
+      // A broken freebie config must never block an order being priced.
+      console.error('[freebie] Could not resolve threshold reward:', freebieError?.message);
+    }
+
     // Calculate total
     const total = subtotal - discount + finalDeliveryFee + platformFee + gst + normalizedTipAmount;
     
@@ -499,6 +548,8 @@ export const calculateOrderPricing = async ({
         minOrder: appliedCoupon.minOrder || 0
       } : null,
       deliveryFeeBreakdown,
+      // Null when the restaurant runs no scheme. earned:false carries the nudge.
+      freebie,
       items: resolvedItems,
       breakdown: {
         itemTotal: Math.round(subtotal),
