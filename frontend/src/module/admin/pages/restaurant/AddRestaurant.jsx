@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { sanitizeDeliveryTimeInput, formatDeliveryTimeForSave, parseDeliveryTimeValue } from "@/lib/utils/deliveryTime"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -813,7 +814,13 @@ export default function AddRestaurant() {
         <h2 className="text-lg font-semibold text-black">Restaurant Display Information</h2>
         <div>
           <Label className="text-xs text-gray-700">Estimated Delivery Time*</Label>
-          <Input value={step4.estimatedDeliveryTime || ""} onChange={(e) => setStep4({ ...step4, estimatedDeliveryTime: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., 25-30 mins" />
+          <Input
+            value={parseDeliveryTimeValue(step4.estimatedDeliveryTime)}
+            onChange={(e) => setStep4({ ...step4, estimatedDeliveryTime: sanitizeDeliveryTimeInput(e.target.value) })}
+            onBlur={(e) => setStep4({ ...step4, estimatedDeliveryTime: formatDeliveryTimeForSave(e.target.value) })}
+            inputMode="numeric"
+            className="mt-1 bg-white text-sm"
+            placeholder="e.g., 25-30" />
         </div>
         <div className="space-y-3">
           <div className="flex items-center justify-between gap-3">

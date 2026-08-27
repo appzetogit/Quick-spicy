@@ -21,6 +21,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { determineStepToShow } from "../utils/onboardingUtils"
 import { toast } from "sonner"
 import { useCompanyName } from "@/lib/hooks/useCompanyName"
+import { sanitizeDeliveryTimeInput, formatDeliveryTimeForSave, parseDeliveryTimeValue, validateDeliveryTime } from "@/lib/utils/deliveryTime"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -913,8 +914,10 @@ export default function RestaurantOnboarding() {
 
   const validateStep4 = () => {
     const errors = []
-    if (!step4.estimatedDeliveryTime || !step4.estimatedDeliveryTime.trim()) {
-      errors.push("Estimated delivery time is required")
+    // Presence alone was not enough: "Ergggvcf" is present and passed.
+    const deliveryTimeCheck = validateDeliveryTime(step4.estimatedDeliveryTime)
+    if (!deliveryTimeCheck.valid) {
+      errors.push(deliveryTimeCheck.error)
     }
     if (!step4.featuredDish || !step4.featuredDish.trim()) {
       errors.push("Featured dish name is required")
@@ -2262,12 +2265,19 @@ export default function RestaurantOnboarding() {
 
         <div>
           <Label className="text-xs text-gray-700">Estimated Delivery Time*</Label>
+          {/* Digits and one range hyphen only. This was free text, so a restaurant
+              could save "Ergggvcf" as its delivery estimate and customers saw it -
+              and the under-30-mins filter, which parses this as a number, silently
+              dropped that restaurant. */}
           <Input
-            value={step4.estimatedDeliveryTime || ""}
-            onChange={(e) => setStep4({ ...step4, estimatedDeliveryTime: e.target.value })}
+            value={parseDeliveryTimeValue(step4.estimatedDeliveryTime)}
+            onChange={(e) => setStep4({ ...step4, estimatedDeliveryTime: sanitizeDeliveryTimeInput(e.target.value) })}
+            onBlur={(e) => setStep4({ ...step4, estimatedDeliveryTime: formatDeliveryTimeForSave(e.target.value) })}
+            inputMode="numeric"
             className="mt-1 bg-white text-sm"
-            placeholder="e.g., 25-30 mins"
+            placeholder="e.g., 25-30"
           />
+          <p className="text-[11px] text-gray-500 mt-1">Minutes only, e.g. 25 or 25-30.</p>
         </div>
 
         <div>

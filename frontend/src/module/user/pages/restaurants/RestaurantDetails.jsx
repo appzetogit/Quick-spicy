@@ -300,6 +300,24 @@ function RestaurantDetailsContent() {
 
           const hasPlusCode = (value) => PLUS_CODE_RE.test(String(value || ""))
 
+          // A reverse-geocode that resolved to open water. Several restaurant records
+          // store addressLine1 "Atlantic Ocean" (one says "Indian Ocean") - the answer
+          // Google gives for coordinates at or near 0,0, which is where these records
+          // were geocoded before real coordinates were entered. The coordinates were
+          // later corrected; the saved address line never was. So a Cumbum restaurant
+          // reads "Atlantic Ocean, Markapuram district, Cumbum, Andhra Pradesh".
+          //
+          // No street address in this business is an ocean, so a line naming one is
+          // machine residue and gets dropped, exactly like a Plus Code.
+          const OCEAN_ONLY_RE = /^\s*(atlantic|pacific|indian|arctic|southern)\s+ocean\s*$/i
+
+          const isUnusableAddressLine = (value) => {
+            const text = String(value || "").trim()
+            if (!text) return true
+            if (hasPlusCode(text)) return true
+            return OCEAN_ONLY_RE.test(text)
+          }
+
           // Drop the code and any separator trailing it, then tidy stray commas.
           const stripPlusCode = (value) =>
             String(value || "")
@@ -348,14 +366,12 @@ function RestaurantDetailsContent() {
             // bundled with the code describes wherever it reverse-geocoded to, which can be
             // a different district or state. The area/city/state/pincode gathered below come
             // from the store's own record and are trustworthy.
-            if (locationObj.addressLine1 && locationObj.addressLine1.trim() !== ""
-              && !hasPlusCode(locationObj.addressLine1)) {
+            if (!isUnusableAddressLine(locationObj.addressLine1)) {
               addressParts.push(locationObj.addressLine1.trim())
             }
 
             // Add addressLine2 if available
-            if (locationObj.addressLine2 && locationObj.addressLine2.trim() !== ""
-              && !hasPlusCode(locationObj.addressLine2)) {
+            if (!isUnusableAddressLine(locationObj.addressLine2)) {
               addressParts.push(locationObj.addressLine2.trim())
             }
 

@@ -11,6 +11,7 @@ import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailabil
 import locationIcon from "../../assets/Dashboard-icons/image1.png"
 import restaurantIcon from "../../assets/Dashboard-icons/image2.png"
 import inactiveIcon from "../../assets/Dashboard-icons/image3.png"
+import { sanitizeDeliveryTimeInput, formatDeliveryTimeForSave, parseDeliveryTimeValue } from "@/lib/utils/deliveryTime"
 const debugLog = () => {}
 const debugWarn = () => {}
 const debugError = () => {}
@@ -1785,7 +1786,14 @@ export default function RestaurantsList() {
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">Estimated Delivery Time</label>
-                      <input type="text" value={detailsForm.estimatedDeliveryTime} onChange={(e) => setDetailsForm((prev) => ({ ...prev, estimatedDeliveryTime: e.target.value }))} className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="e.g., 25-30"
+                        value={parseDeliveryTimeValue(detailsForm.estimatedDeliveryTime)}
+                        onChange={(e) => setDetailsForm((prev) => ({ ...prev, estimatedDeliveryTime: sanitizeDeliveryTimeInput(e.target.value) }))}
+                        onBlur={(e) => setDetailsForm((prev) => ({ ...prev, estimatedDeliveryTime: formatDeliveryTimeForSave(e.target.value) }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" />
                     </div>
                     <div>
                       <label className="block text-xs text-slate-500 mb-1">Offer</label>
