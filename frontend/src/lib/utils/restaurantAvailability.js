@@ -125,6 +125,12 @@ const formatTimeLabel = (timeValue) => {
   return `${hours12}:${String(minutes).padStart(2, "0")} ${period}`
 }
 
+// The closing notice appears only inside the final 30 minutes (requirements #013 and
+// #026). It used to announce closings all day - "Closing in 9 hours 54 mins" at lunch -
+// which is noise at best and reads as urgency the situation does not have. A store not
+// yet near closing shows nothing.
+const CLOSING_SOON_WINDOW_MINUTES = 30
+
 const formatClosingCountdown = (minutesUntilClose, closingTime) => {
   if (minutesUntilClose === null || minutesUntilClose === undefined) return null
 
@@ -133,18 +139,9 @@ const formatClosingCountdown = (minutesUntilClose, closingTime) => {
     return closingLabel ? `Closes at ${closingLabel}` : null
   }
 
-  if (minutesUntilClose < 60) {
-    return `Closing in ${minutesUntilClose} mins`
-  }
+  if (minutesUntilClose > CLOSING_SOON_WINDOW_MINUTES) return null
 
-  const hours = Math.floor(minutesUntilClose / 60)
-  const minutes = minutesUntilClose % 60
-
-  if (minutes === 0) {
-    return `Closing in ${hours} ${hours === 1 ? "hour" : "hours"}`
-  }
-
-  return `Closing in ${hours} ${hours === 1 ? "hour" : "hours"} ${minutes} ${minutes === 1 ? "min" : "mins"}`
+  return `Closing in ${minutesUntilClose} ${minutesUntilClose === 1 ? "min" : "mins"}`
 }
 
 const formatOpeningCountdown = (minutesUntilOpen, openingTime) => {

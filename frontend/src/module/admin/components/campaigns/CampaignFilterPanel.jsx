@@ -51,6 +51,7 @@ export default function CampaignFilterPanel({ isOpen, onClose, filters, setFilte
               <input
                 type="date"
                 value={filters.fromDate || ""}
+                max={filters.toDate || undefined}
                 onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
@@ -62,6 +63,7 @@ export default function CampaignFilterPanel({ isOpen, onClose, filters, setFilte
               <input
                 type="date"
                 value={filters.toDate || ""}
+                min={filters.fromDate || undefined}
                 onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value }))}
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />

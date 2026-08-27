@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo, useCallback } from "react"
 import { Search } from "lucide-react"
 import { adminAPI } from "@/lib/api"
+import { todayLocalISO } from "@/lib/utils/localDate"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
 
 
 export default function Coupons() {
-  const today = new Date().toISOString().split("T")[0]
+  // Local date, not toISOString(): that converts to UTC, and in IST it says
+  // yesterday from 5:30pm onwards - letting coupons end in the past all evening.
+  const today = todayLocalISO()
   const [searchQuery, setSearchQuery] = useState("")
   const [restaurantSearch, setRestaurantSearch] = useState("")
   const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false)

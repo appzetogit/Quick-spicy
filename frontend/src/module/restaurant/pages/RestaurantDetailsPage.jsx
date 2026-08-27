@@ -187,17 +187,26 @@ export default function RestaurantDetailsPage() {
               <p className="text-gray-600 text-sm md:text-base mb-2">
                 {restaurantData.address || "House: 00, Road: 00, Test City"}
               </p>
+              {/* No invented numbers. This showed "4.7 | 3 Ratings" for restaurants nobody
+                  had reviewed - the owner was reading a score and a count the platform made
+                  up. Same rule as the consumer app: a star only once someone has given one. */}
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1">
-                  <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                  <span className="text-gray-900 font-semibold text-sm md:text-base">
-                    {restaurantData.rating || 4.7}
-                  </span>
-                </div>
-                <span className="text-gray-400">|</span>
-                <span className="text-gray-600 text-sm md:text-base underline">
-                  {restaurantData.totalRatings || 3} Ratings
-                </span>
+                {(Number(restaurantData.rating) > 0 && Number(restaurantData.totalRatings) > 0) ? (
+                  <>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="text-gray-900 font-semibold text-sm md:text-base">
+                        {Number(restaurantData.rating).toFixed(1)}
+                      </span>
+                    </div>
+                    <span className="text-gray-400">|</span>
+                    <span className="text-gray-600 text-sm md:text-base underline">
+                      {Number(restaurantData.totalRatings)} Ratings
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-gray-500 text-sm md:text-base">No ratings yet</span>
+                )}
               </div>
             </div>
           </div>

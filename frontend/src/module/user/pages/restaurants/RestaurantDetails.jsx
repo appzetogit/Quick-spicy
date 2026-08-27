@@ -533,7 +533,14 @@ function RestaurantDetailsContent() {
             // customers had given it. null means unrated, and the header shows "New".
             rating: actualRestaurant?.rating || apiRestaurant?.rating || actualRestaurant?.averageRating || apiRestaurant?.averageRating || null,
             reviews: actualRestaurant?.totalRatings || apiRestaurant?.totalRatings || actualRestaurant?.reviewCount || apiRestaurant?.reviewCount || actualRestaurant?.reviews?.length || apiRestaurant?.reviews?.length || 0,
-            deliveryTime: actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || "25-30 mins",
+            // The estimate field was free text until recently, so records like "Ergggvcf"
+            // exist and were shown to customers verbatim. A value with no digits is not a
+            // time; fall back to the default rather than display it. Input is validated
+            // now, but the stored junk outlives the fix.
+            deliveryTime: (() => {
+              const raw = actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || ""
+              return /\d/.test(String(raw)) ? raw : "25-30 mins"
+            })(),
             distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "",
             location: formattedAddress,
             locationObject: locationObj, // Store full location object for reference

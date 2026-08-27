@@ -3,6 +3,7 @@ import { Search, Download, ChevronDown, DollarSign, Calendar, Filter, Loader2, F
 import { adminAPI } from "@/lib/api"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
+import { todayLocalISO } from "@/lib/utils/localDate"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -43,13 +44,8 @@ export default function DeliveryEarnings() {
   })
   const [deliveryPartners, setDeliveryPartners] = useState([])
 
-  // Local date, not toISOString() - that converts to UTC and in IST hands back
-  // yesterday for most of the evening, quietly making today unpickable.
-  const todayISO = (() => {
-    const d = new Date()
-    const pad = (n) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-  })()
+  // Local date, not toISOString() - see lib/utils/localDate.js for why.
+  const todayISO = todayLocalISO()
 
   // Fetch delivery partners for filter dropdown
   const fetchDeliveryPartners = useCallback(async () => {

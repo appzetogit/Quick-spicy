@@ -1,4 +1,5 @@
 import { X } from "lucide-react"
+import { todayLocalISO } from "@/lib/utils/localDate"
 
 export default function DispatchFilterPanel({ isOpen, onClose, filters, setFilters, onApply, onReset, restaurants = [] }) {
   if (!isOpen) return null
@@ -60,6 +61,7 @@ export default function DispatchFilterPanel({ isOpen, onClose, filters, setFilte
                 <input
                   type="date"
                   value={filters.fromDate || ""}
+                max={filters.toDate || todayLocalISO()}
                   onChange={(e) => setFilters(prev => ({ ...prev, fromDate: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
@@ -68,6 +70,8 @@ export default function DispatchFilterPanel({ isOpen, onClose, filters, setFilte
                 <input
                   type="date"
                   value={filters.toDate || ""}
+                min={filters.fromDate || undefined}
+                max={todayLocalISO()}
                   onChange={(e) => setFilters(prev => ({ ...prev, toDate: e.target.value }))}
                   className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />

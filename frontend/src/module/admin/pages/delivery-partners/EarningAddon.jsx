@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { todayLocalISO, toLocalISODate } from "@/lib/utils/localDate"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -96,8 +97,8 @@ export default function EarningAddon() {
         title: addon.title || "",
         requiredOrders: addon.requiredOrders?.toString() || "",
         earningAmount: addon.earningAmount?.toString() || "",
-        startDate: addon.startDate ? new Date(addon.startDate).toISOString().split('T')[0] : "",
-        endDate: addon.endDate ? new Date(addon.endDate).toISOString().split('T')[0] : "",
+        startDate: addon.startDate ? toLocalISODate(addon.startDate) : "",
+        endDate: addon.endDate ? toLocalISODate(addon.endDate) : "",
         maxRedemptions: addon.maxRedemptions?.toString() || "",
       })
     } else {
@@ -571,7 +572,7 @@ export default function EarningAddon() {
                   required
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayLocalISO()}
                   className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm"
                 />
               </div>
@@ -584,7 +585,7 @@ export default function EarningAddon() {
                   required
                   value={formData.endDate}
                   onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  min={formData.startDate || new Date().toISOString().split('T')[0]}
+                  min={formData.startDate || todayLocalISO()}
                   className="w-full px-3 py-2.5 border-2 border-slate-200 rounded-lg bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all text-sm"
                 />
               </div>

@@ -3,6 +3,7 @@ import { Settings, Building, ShoppingBag, Download, ChevronDown, FileText, FileS
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { exportDisbursementsToCSV, exportDisbursementsToExcel, exportDisbursementsToPDF, exportDisbursementsToJSON } from "./disbursementExportUtils"
+import { todayLocalISO } from "@/lib/utils/localDate"
 
 export default function DisbursementPage({ 
   title, 
@@ -297,6 +298,7 @@ export default function DisbursementPage({
               <input
                 type="date"
                 value={filters.dateRange.start}
+                max={filters.dateRange.end || todayLocalISO()}
                 onChange={(e) => setFilters({ ...filters, dateRange: { ...filters.dateRange, start: e.target.value } })}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
@@ -306,6 +308,8 @@ export default function DisbursementPage({
               <input
                 type="date"
                 value={filters.dateRange.end}
+                min={filters.dateRange.start || undefined}
+                max={todayLocalISO()}
                 onChange={(e) => setFilters({ ...filters, dateRange: { ...filters.dateRange, end: e.target.value } })}
                 className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />

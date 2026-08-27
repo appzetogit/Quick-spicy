@@ -336,7 +336,10 @@ export default function Feedback() {
               userName: userName,
               userImage: userImage,
               ordersCount: userOrdersCount,
-              rating: rating || 5, // Default to 5 if no rating
+              // Null stays null. Defaulting to 5 painted every unrated review as
+              // five stars AND fed 5s into the average below, since its null-filter
+              // then had nothing to filter.
+              rating: rating,
               date: formattedDate,
               reviewText: reviewText,
               reply: order.review?.reply || order.feedback?.reply || null,
@@ -422,9 +425,10 @@ export default function Feedback() {
           case "oldest":
             return dateA - dateB
           case "bestRated":
-            return b.rating - a.rating
+            // Unrated reviews sort to the end either way, not as an accidental zero-star.
+            return (b.rating ?? -1) - (a.rating ?? -1)
           case "worstRated":
-            return a.rating - b.rating
+            return (a.rating ?? 6) - (b.rating ?? 6)
           default:
             return 0
         }
@@ -949,7 +953,7 @@ export default function Feedback() {
                       <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-100"></div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                          {review.rating}★
+                          {review.rating !== null ? `${review.rating}★` : 'No rating'}
                         </span>
                         <span className="text-[11px] text-gray-500">
                           {review.date}
@@ -1062,7 +1066,7 @@ export default function Feedback() {
                   <div className="absolute -top-2 left-4 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-gray-50"></div>
                   <div className="flex items-center justify-between mb-1">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-700 text-white text-[11px] font-semibold">
-                      {selectedReview.rating}★
+                      {selectedReview.rating !== null ? `${selectedReview.rating}★` : 'No rating'}
                     </span>
                     <span className="text-[11px] text-gray-500">
                       {selectedReview.date}
