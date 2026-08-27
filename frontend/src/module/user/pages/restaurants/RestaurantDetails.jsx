@@ -284,6 +284,30 @@ function RestaurantDetailsContent() {
           // Check if this is a dining restaurant with nested restaurant data
           const actualRestaurant = apiRestaurant?.restaurant || apiRestaurant
 
+          // A Google Plus Code (Open Location Code) such as "W6XW+76" is a machine
+          // reverse-geocode, not something a human typed - and the text it arrives bundled
+          // with is often flatly wrong. Confirmed on the live site: POOJITHA FAMILY
+          // RESTAURANT, a Prakasam (Andhra Pradesh) store, has
+          //   location.addressLine1 = "W6XW+76 Relva Buzurg, Madhya Pradesh, India"
+          // which is how customers ended up reading a Madhya Pradesh address on an Andhra
+          // Pradesh restaurant. See BUGFIX_IMPLEMENTATION_GUIDE.md REQ#005.
+          //
+          // The previous strip only matched a Plus Code followed by a comma, so
+          // "W6XW+76 Relva ..." (space) passed straight through.
+          //
+          // Plus Codes use a restricted alphabet: 23456789CFGHJMPQRVWX.
+          const PLUS_CODE_RE = /\b[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}\b/i
+
+          const hasPlusCode = (value) => PLUS_CODE_RE.test(String(value || ""))
+
+          // Drop the code and any separator trailing it, then tidy stray commas.
+          const stripPlusCode = (value) =>
+            String(value || "")
+              .replace(new RegExp(PLUS_CODE_RE.source + "[,\\s]*", "gi"), "")
+              .replace(/\s*,\s*,/g, ", ")
+              .replace(/^[\s,]+|[\s,]+$/g, "")
+              .trim()
+
           // Helper function to format address with zone and pin code
           const formatRestaurantAddress = (locationObj) => {
             if (!locationObj) return "Location"
@@ -304,12 +328,12 @@ function RestaurantDetailsContent() {
                 // If it has pin code, it's complete - use it directly
                 if (hasPinCode) {
                   // Clean up the address - remove Google Plus Code if present (e.g., "PV6X+JXX, ")
-                  const cleanedAddr = formattedAddr.replace(/^[A-Z0-9]+\+[A-Z0-9]+,\s*/i, '')
+                  const cleanedAddr = stripPlusCode(formattedAddr)
                   return cleanedAddr
                 }
                 // If it has multiple parts (3+), it's likely complete
                 if (formattedAddr.split(',').length >= 3) {
-                  const cleanedAddr = formattedAddr.replace(/^[A-Z0-9]+\+[A-Z0-9]+,\s*/i, '')
+                  const cleanedAddr = stripPlusCode(formattedAddr)
                   return cleanedAddr
                 }
               }
@@ -319,13 +343,19 @@ function RestaurantDetailsContent() {
             // This ensures we always show zone and pin code if available
             const addressParts = []
 
-            // Add addressLine1 if available
-            if (locationObj.addressLine1 && locationObj.addressLine1.trim() !== "") {
+            // Add addressLine1 if available.
+            // A line carrying a Plus Code is dropped whole rather than salvaged: the text
+            // bundled with the code describes wherever it reverse-geocoded to, which can be
+            // a different district or state. The area/city/state/pincode gathered below come
+            // from the store's own record and are trustworthy.
+            if (locationObj.addressLine1 && locationObj.addressLine1.trim() !== ""
+              && !hasPlusCode(locationObj.addressLine1)) {
               addressParts.push(locationObj.addressLine1.trim())
             }
 
             // Add addressLine2 if available
-            if (locationObj.addressLine2 && locationObj.addressLine2.trim() !== "") {
+            if (locationObj.addressLine2 && locationObj.addressLine2.trim() !== ""
+              && !hasPlusCode(locationObj.addressLine2)) {
               addressParts.push(locationObj.addressLine2.trim())
             }
 
@@ -364,7 +394,7 @@ function RestaurantDetailsContent() {
             if (locationObj.formattedAddress && locationObj.formattedAddress.trim() !== "" && locationObj.formattedAddress !== "Select location") {
               const isCoordinates = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(locationObj.formattedAddress.trim())
               if (!isCoordinates) {
-                const cleanedAddr = locationObj.formattedAddress.trim().replace(/^[A-Z0-9]+\+[A-Z0-9]+,\s*/i, '')
+                const cleanedAddr = stripPlusCode(locationObj.formattedAddress)
                 return cleanedAddr
               }
             }
@@ -1189,21 +1219,52 @@ function RestaurantDetailsContent() {
   useEffect(() => {
     if (pendingCategoryScroll === null) return
 
-    let frame2 = null
-    const frame1 = requestAnimationFrame(() => {
-      frame2 = requestAnimationFrame(() => {
-        const target = document.getElementById(`menu-section-${pendingCategoryScroll}`)
-        if (target) {
+    // Retry rather than fire once.
+    //
+    // Verified failing on the live site: the section expanded but the page stayed at
+    // scrollY 0. Two causes, both of which a single attempt loses to.
+    //   1. useScrollLock's cleanup restores window.scrollTo(0, savedY) when the sheet
+    //      closes, which lands AFTER a requestAnimationFrame pair and undoes the scroll.
+    //   2. Picking a category also clears an active price sort, swapping one flat list
+    //      back to eighteen grouped sections - a re-render far larger than two frames,
+    //      during which the target element does not yet exist at its final offset.
+    //
+    // Each attempt re-reads the element and re-issues the scroll, so whichever of those
+    // lands last, the next tick corrects it. Stops once the section has held near the
+    // top for two consecutive ticks. See REQ#017.
+    const SETTLE_PX = 120
+    const MAX_ATTEMPTS = 14
+    const INTERVAL_MS = 80
+
+    let attempts = 0
+    let settledTicks = 0
+
+    const timer = setInterval(() => {
+      attempts += 1
+      const target = document.getElementById(`menu-section-${pendingCategoryScroll}`)
+
+      if (target) {
+        const top = target.getBoundingClientRect().top
+        if (Math.abs(top) <= SETTLE_PX) {
+          settledTicks += 1
+          if (settledTicks >= 2) {
+            clearInterval(timer)
+            setPendingCategoryScroll(null)
+            return
+          }
+        } else {
+          settledTicks = 0
           target.scrollIntoView({ behavior: "smooth", block: "start" })
         }
-        setPendingCategoryScroll(null)
-      })
-    })
+      }
 
-    return () => {
-      cancelAnimationFrame(frame1)
-      if (frame2) cancelAnimationFrame(frame2)
-    }
+      if (attempts >= MAX_ATTEMPTS) {
+        clearInterval(timer)
+        setPendingCategoryScroll(null)
+      }
+    }, INTERVAL_MS)
+
+    return () => clearInterval(timer)
   }, [pendingCategoryScroll])
 
   // Keep the selected category in step with manual scrolling, so the sheet always
