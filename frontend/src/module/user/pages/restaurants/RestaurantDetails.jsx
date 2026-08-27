@@ -512,7 +512,10 @@ function RestaurantDetailsContent() {
             name: actualRestaurant?.name || apiRestaurant?.name || apiRestaurant?.restaurantName || "Unknown Restaurant",
             cuisine: resolvedTopCategory,
             topCategory: resolvedTopCategory,
-            rating: actualRestaurant?.rating || apiRestaurant?.rating || actualRestaurant?.averageRating || apiRestaurant?.averageRating || 4.5,
+            // No invented rating. This used to fall back to 4.5, so a restaurant nobody had
+            // reviewed displayed "4.5 by 0+" - a score the platform made up, shown as if
+            // customers had given it. null means unrated, and the header shows "New".
+            rating: actualRestaurant?.rating || apiRestaurant?.rating || actualRestaurant?.averageRating || apiRestaurant?.averageRating || null,
             reviews: actualRestaurant?.totalRatings || apiRestaurant?.totalRatings || actualRestaurant?.reviewCount || apiRestaurant?.reviewCount || actualRestaurant?.reviews?.length || apiRestaurant?.reviews?.length || 0,
             deliveryTime: actualRestaurant?.estimatedDeliveryTime || apiRestaurant?.estimatedDeliveryTime || actualRestaurant?.deliveryTime || apiRestaurant?.deliveryTime || actualRestaurant?.avgDeliveryTime || apiRestaurant?.avgDeliveryTime || "25-30 mins",
             distance: calculatedDistance || actualRestaurant?.distance || apiRestaurant?.distance || actualRestaurant?.distanceFromUser || apiRestaurant?.distanceFromUser || "",
@@ -1985,12 +1988,26 @@ function RestaurantDetailsContent() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{restaurant?.name || "Unknown Restaurant"}</h1>
               <Info className="h-5 w-5 text-gray-400" />
             </div>
+            {/* A star score is only shown once somebody has actually given one. With no
+                reviews this showed "4.5 by 0+" - a rating the platform invented and
+                presented as customer opinion. "New" is what the home and branch lists
+                already show for an unrated restaurant, so it stays consistent. */}
             <div className="flex flex-col items-end">
-              <Badge className="bg-green-600 text-white mb-1 flex items-center gap-1 px-2 py-1">
-                <Star className="h-3 w-3 fill-white" />
-                {restaurant?.rating || 4.5}
-              </Badge>
-              <span className="text-xs text-gray-500">By {(restaurant.reviews || 0).toLocaleString()}+</span>
+              {(Number(restaurant?.reviews) > 0 && Number(restaurant?.rating) > 0) ? (
+                <>
+                  <Badge className="bg-green-600 text-white mb-1 flex items-center gap-1 px-2 py-1">
+                    <Star className="h-3 w-3 fill-white" />
+                    {Number(restaurant.rating).toFixed(1)}
+                  </Badge>
+                  <span className="text-xs text-gray-500">
+                    By {Number(restaurant.reviews).toLocaleString()}+
+                  </span>
+                </>
+              ) : (
+                <Badge className="bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300 mb-1 px-2 py-1">
+                  New
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -2995,16 +3012,25 @@ function RestaurantDetailsContent() {
                                   <span>{outlet?.distance || ""}</span>
                                 </div>
                               </div>
+                              {/* Same rule as the header: no reviews, no invented score. */}
                               <div className="flex flex-col items-end gap-0.5">
-                                <div className="flex items-center gap-1">
-                                  <Star className="h-3.5 w-3.5 text-green-600 dark:text-green-500 fill-green-600 dark:fill-green-500" />
-                                  <span className="text-xs font-medium text-gray-900 dark:text-white">
-                                    {outlet?.rating || 4.5}
-                                  </span>
-                                </div>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
-                                  By {(outlet?.reviews || 0) >= 1000 ? `${((outlet.reviews || 0) / 1000).toFixed(1)}K+` : `${outlet?.reviews || 0}+`}
-                                </span>
+                                {(Number(outlet?.reviews) > 0 && Number(outlet?.rating) > 0) ? (
+                                  <>
+                                    <div className="flex items-center gap-1">
+                                      <Star className="h-3.5 w-3.5 text-green-600 dark:text-green-500 fill-green-600 dark:fill-green-500" />
+                                      <span className="text-xs font-medium text-gray-900 dark:text-white">
+                                        {Number(outlet.rating).toFixed(1)}
+                                      </span>
+                                    </div>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      By {Number(outlet.reviews) >= 1000
+                                        ? `${(Number(outlet.reviews) / 1000).toFixed(1)}K+`
+                                        : `${Number(outlet.reviews)}+`}
+                                    </span>
+                                  </>
+                                ) : (
+                                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">New</span>
+                                )}
                               </div>
                             </div>
                           </div>
