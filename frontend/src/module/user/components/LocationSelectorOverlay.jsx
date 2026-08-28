@@ -10,6 +10,11 @@ import { toast } from "sonner"
 import { locationAPI, userAPI } from "@/lib/api"
 import { Loader } from '@googlemaps/js-api-loader'
 import { formatSavedAddressLine, dedupeAddressText } from "../utils/addressFormat"
+// Bumped on every deploy that touches this screen. Three fixes in a row were judged
+// from phone screenshots with no way to tell WHICH bundle the phone was running - the
+// WebView had been serving day-old JS. This makes every screenshot self-identifying.
+const ADDRESS_SCREEN_BUILD = "AS-08"
+
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -3098,6 +3103,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               <ChevronLeft className="h-6 w-6 text-gray-700 dark:text-gray-300" />
             </Button>
             <h1 className="text-lg font-bold text-gray-900 dark:text-white">Select delivery location</h1>
+            <span className="ml-auto text-[10px] text-gray-300 dark:text-gray-600 select-none">{ADDRESS_SCREEN_BUILD}</span>
           </div>
         </div>
 
@@ -3648,6 +3654,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           100% { transform: scale(2.5); opacity: 0; }
         }
       `}</style>
+      <p className="pb-2 text-center text-[10px] text-gray-300 dark:text-gray-600 select-none">
+        {ADDRESS_SCREEN_BUILD}
+      </p>
     </div>
   )
 }
