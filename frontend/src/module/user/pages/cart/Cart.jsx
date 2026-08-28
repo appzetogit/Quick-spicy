@@ -22,6 +22,7 @@ import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailabil
 import zoopSound from "@/assets/audio/zomato_sms.mp3"
 import appLogo from "@/assets/logo.png"
 import { safeBack } from "../../utils/safeBack"
+import { dedupeAddressText } from "../../utils/addressFormat"
 import { resolveIsVeg, resolveIsVegForPayload } from "../../utils/foodType"
 
 const debugLog = (...args) => {}
@@ -36,9 +37,12 @@ const debugError = (...args) => {}
 const formatFullAddress = (address) => {
   if (!address) return ""
 
+  // Every branch runs through dedupeAddressText: the record's own fields overlap
+  // (additionalDetails usually contains the whole address again), which is how the
+  // cart header ended up reading "Cumbum, Cumbum, Andhra Pradesh, 523333, Cumbum...".
   // Priority 1: Use formattedAddress if available (for live location addresses)
   if (address.formattedAddress && address.formattedAddress !== "Select location") {
-    return address.formattedAddress
+    return dedupeAddressText(address.formattedAddress)
   }
 
   // Priority 2: Build address from parts
@@ -50,12 +54,12 @@ const formatFullAddress = (address) => {
   if (address.zipCode) addressParts.push(address.zipCode)
 
   if (addressParts.length > 0) {
-    return addressParts.join(', ')
+    return dedupeAddressText(addressParts.join(', '))
   }
 
   // Priority 3: Use address field if available
   if (address.address && address.address !== "Select location") {
-    return address.address
+    return dedupeAddressText(address.address)
   }
 
   return ""
@@ -1288,8 +1292,8 @@ export default function Cart() {
         state: address.state,
         area: address.additionalDetails || "",
         formattedAddress: address.additionalDetails
-          ? `${address.additionalDetails}, ${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`
-          : `${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`
+          ? dedupeAddressText(`${address.additionalDetails}, ${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`)
+          : dedupeAddressText(`${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`)
       })
 
       // Update the location in localStorage
@@ -1302,8 +1306,8 @@ export default function Cart() {
         latitude,
         longitude,
         formattedAddress: address.additionalDetails
-          ? `${address.additionalDetails}, ${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`
-          : `${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`
+          ? dedupeAddressText(`${address.additionalDetails}, ${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`)
+          : dedupeAddressText(`${address.street}, ${address.city}, ${address.state}${address.zipCode ? ` ${address.zipCode}` : ''}`)
       }
       localStorage.setItem("userLocation", JSON.stringify(locationData))
 

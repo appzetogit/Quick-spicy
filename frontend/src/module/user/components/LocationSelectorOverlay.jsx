@@ -9,6 +9,7 @@ import { useProfile } from "../context/ProfileContext"
 import { toast } from "sonner"
 import { locationAPI, userAPI } from "@/lib/api"
 import { Loader } from '@googlemaps/js-api-loader'
+import { formatSavedAddressLine } from "../utils/addressFormat"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -44,60 +45,6 @@ const stripIndiaSuffix = (value = "") => value.replace(/,\s*India\s*$/i, "").tri
 
 const isCoordinateLike = (value = "") => /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test((value || "").trim())
 
-// Open Location Code, e.g. "PV6X+9XP". Saved addresses store one in `street`, and it is
-// a machine reverse-geocode rather than a street the customer would recognise.
-const SAVED_ADDRESS_PLUS_CODE = /\b[23456789CFGHJMPQRVWX]{4,8}\+[23456789CFGHJMPQRVWX]{2,3}\b/gi
-
-/**
- * One readable line for a saved address.
- *
- * The list used to join additionalDetails + street + city + state + zipCode, but
- * `additionalDetails` is already the fully formatted address - it contains the street,
- * city, state and pincode itself. Appending them again repeated every part, so a saved
- * address rendered as:
- *
- *   "Cumbum, Cumbum, Andhra Pradesh, 523333, Cumbum, Andhra Pradesh 523333,
- *    Cumbum, Andhra Pradesh, 523333"
- *
- * `street` compounds it further by holding a Plus Code ("PV6X+9XP"), which is noise to a
- * human reader.
- *
- * So: drop Plus Codes, then add each part only when the line so far does not already
- * contain it (case-insensitive), which collapses the repetition regardless of which
- * fields a given record happens to have filled in.
- */
-const formatSavedAddressLine = (address = {}) => {
-  const clean = (value) =>
-    String(value || "").replace(SAVED_ADDRESS_PLUS_CODE, "").replace(/\s{2,}/g, " ")
-      .replace(/^[\s,]+|[\s,]+$/g, "").trim()
-
-  const parts = []
-  for (const raw of [address.additionalDetails, address.street, address.city, address.state, address.zipCode]) {
-    const value = clean(raw)
-    if (!value) continue
-    const seen = parts.join(", ").toLowerCase()
-    if (seen.includes(value.toLowerCase())) continue
-    parts.push(value)
-  }
-
-  // The records themselves also repeat internally - additionalDetails is often built by
-  // concatenating fields that already overlap, giving "Cumbum, Cumbum, Andhra Pradesh".
-  // A second pass over the comma-separated tokens collapses that, keeping first order.
-  const seenTokens = new Set()
-  const tokens = parts
-    .join(", ")
-    .split(",")
-    .map((t) => t.trim())
-    .filter((t) => {
-      if (!t) return false
-      const key = t.toLowerCase()
-      if (seenTokens.has(key)) return false
-      seenTokens.add(key)
-      return true
-    })
-
-  return stripIndiaSuffix(tokens.join(", "))
-}
 
 const addressPartCount = (value = "") =>
   stripIndiaSuffix(value)
