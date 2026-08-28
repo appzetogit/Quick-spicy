@@ -31,20 +31,28 @@ const stripPlusCodes = (value) =>
  * @returns {string}
  */
 export const dedupeAddressText = (text) => {
-  const seen = new Set()
-  return stripPlusCodes(text)
-    .split(",")
-    .map((t) => t.trim())
-    .filter((t) => {
-      if (!t) return false
-      const key = t.toLowerCase()
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
+  const kept = []
+  for (const raw of stripPlusCodes(text).split(",")) {
+    const t = raw.trim()
+    if (!t) continue
+    const key = t.toLowerCase()
+    // Redundant when: an exact repeat; a token a kept token already begins with
+    // ("Andhra Pradesh" next to "Andhra Pradesh 523333"); or an extension of a kept
+    // token whose extra words all appear elsewhere in the line ("Andhra Pradesh
+    // 523333" when both "Andhra Pradesh" and "523333" are already kept).
+    const lineSoFar = kept.join(", ").toLowerCase()
+    const redundant = kept.some((k) => {
+      const kl = k.toLowerCase()
+      if (kl === key || kl.startsWith(key + " ")) return true
+      if (key.startsWith(kl + " ")) {
+        const extraWords = key.slice(kl.length).trim().split(/\s+/)
+        return extraWords.every((w) => lineSoFar.includes(w))
+      }
+      return false
     })
-    .join(", ")
-    .replace(/,\s*India\s*$/i, "")
-    .trim()
+    if (!redundant) kept.push(t)
+  }
+  return kept.join(", ").replace(/,\s*India\s*$/i, "").trim()
 }
 
 /**

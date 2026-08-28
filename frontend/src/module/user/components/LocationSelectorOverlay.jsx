@@ -802,7 +802,15 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           // map" overlay - on a screen whose whole job is dragging a pin to your door, that
           // is a fight with the customer. 'greedy' is what the other maps in this app
           // already use.
-          gestureHandling: 'greedy'
+          gestureHandling: 'greedy',
+          // Raster tiles, not the default WebGL vector map. Inside the Android WebView the
+          // vector map draws on a GL surface the browser composites separately from the
+          // DOM, and that surface OUTLIVED this screen: after leaving the form, bands of
+          // stale map kept painting over the address list - even after listeners were
+          // cleared and the container emptied, because the artifact is the surface itself,
+          // not our DOM. Raster maps are ordinary tiles in ordinary layers; there is no
+          // separate surface to leak. The visual difference on this small picker is nil.
+          renderingType: google.maps.RenderingType?.RASTER ?? 'RASTER'
         })
 
         googleMapRef.current = map
