@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight, MapPin, Search, Star, Users } from "lucide-rea
 import { restaurantAPI, zoneAPI } from "@/lib/api"
 import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
 import { safeBack } from "../utils/safeBack"
+import { sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 
 /**
  * Pick the area the food is going to, then browse that area's restaurants without leaving
@@ -58,7 +59,8 @@ export default function OrderForSomeoneElse() {
       // snap the list back to the customer's own area, which is the opposite of the intent.
       const res = await restaurantAPI.getRestaurants({ zoneId: targetZoneId, limit: 100, _ts: Date.now() })
       const list = res?.data?.data?.restaurants || res?.data?.restaurants || []
-      setRestaurants(Array.isArray(list) ? list : [])
+      // Closed stores sink below open ones here too (#022).
+      setRestaurants(sortOpenRestaurantsFirst(Array.isArray(list) ? list : []))
     } catch (err) {
       setRestaurantsError(err?.response?.data?.message || "Could not load restaurants for this area")
       setRestaurants([])

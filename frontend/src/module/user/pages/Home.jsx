@@ -44,7 +44,7 @@ import offerImage from "@/assets/offerimage.png"
 import api, { restaurantAPI, zoneAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
 import OptimizedImage from "@/components/OptimizedImage"
-import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
+import { getRestaurantAvailabilityStatus, sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 // Explore More Icons
 import exploreOffers from "@/assets/explore more icons/offers.png"
 import exploreGourmet from "@/assets/explore more icons/gourmet.png"
@@ -1817,7 +1817,11 @@ export default function Home() {
       })
     }
 
-    return filtered
+    // Whatever sort the customer chose, closed stores sink below open ones (#022).
+    // The default branch above already partitions; the explicit price/rating sorts
+    // skipped it, so a closed store could sit at the top of "price: low to high".
+    // Stable, so the chosen order is preserved within each group.
+    return sortOpenRestaurantsFirst(filtered)
   }, [restaurantsData, matchesVegMode, activeFilters, selectedCuisine, sortBy, availabilityTick])
 
   const recommendedForYouRestaurants = useMemo(() => {
@@ -1878,7 +1882,9 @@ export default function Home() {
     // branch being shown, so the server already returns the right ones. Filtering again on
     // the client emptied the section outright: the landing payload carries no zone field, so
     // every entry looked like it belonged to another area.
-    return [...orderedFromSettings, ...fromFetchedMissing]
+    // Recommended rail follows the same rule as every other list: closed stores
+    // stay visible but never ahead of open ones (#022).
+    return sortOpenRestaurantsFirst([...orderedFromSettings, ...fromFetchedMissing])
       .filter(matchesVegMode)
       .slice(0, 12)
   }, [

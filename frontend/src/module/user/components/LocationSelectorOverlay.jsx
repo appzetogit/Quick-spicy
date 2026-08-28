@@ -1117,6 +1117,56 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     }
   }, [isOpen, onClose])
 
+  // The overlay is not a route, so the phone's back button used to pop the page
+  // UNDERNEATH it: pick a location on the map, press back, and the app navigated away
+  // while the overlay stayed mounted over the wrong screen - the reported "select
+  // current location, then back, and it breaks".
+  //
+  // One history entry is pushed while the overlay is open. Back then closes the map
+  // form first if it is showing, and the overlay itself otherwise - matching what a
+  // person pressing back on a sheet means - and never touches the page behind.
+  const backEntryPushedRef = useRef(false)
+  const closingViaPopRef = useRef(false)
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    window.history.pushState({ locationOverlay: true }, "")
+    backEntryPushedRef.current = true
+
+    const handlePop = () => {
+      if (showAddressFormRef.current) {
+        // Back out of the map form to the list, keeping the guard entry in place
+        // so the next back press closes the overlay.
+        setShowAddressForm(false)
+        window.history.pushState({ locationOverlay: true }, "")
+        return
+      }
+      backEntryPushedRef.current = false
+      closingViaPopRef.current = true
+      onClose()
+    }
+
+    window.addEventListener("popstate", handlePop)
+    return () => {
+      window.removeEventListener("popstate", handlePop)
+      // Overlay closed by its own UI (X, saved-address pick): consume the guard
+      // entry so the NEXT back press does not need pressing twice. When close came
+      // from popstate the entry is already gone.
+      if (backEntryPushedRef.current && !closingViaPopRef.current) {
+        backEntryPushedRef.current = false
+        window.history.back()
+      }
+      closingViaPopRef.current = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen])
+
+  // The popstate handler must see the CURRENT form state, not the one captured when
+  // the overlay opened.
+  const showAddressFormRef = useRef(false)
+  useEffect(() => { showAddressFormRef.current = showAddressForm }, [showAddressForm])
+
   const handleUseCurrentLocation = async () => {
     try {
       setUserLocationPreference("live")

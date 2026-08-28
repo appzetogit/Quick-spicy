@@ -1541,8 +1541,20 @@ export default function RestaurantsList() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex flex-col gap-1">
+                            {/* A bare "Offline" hid WHICH of the three causes applied, so
+                                admins toggled Status (isActive), saw no change, and filed it
+                                as a sync bug - when the store was actually outside its own
+                                hours, or had switched itself off. Name the cause. */}
                             <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${restaurant.availability?.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
-                              {restaurant.availability?.isOpen ? "Online" : "Offline"}
+                              {restaurant.availability?.isOpen
+                                ? "Online"
+                                : restaurant.availability?.reason === "manual-offline"
+                                  ? "Offline — switched off by store"
+                                  : restaurant.availability?.reason === "outside-hours"
+                                    ? "Offline — outside its hours"
+                                    : restaurant.availability?.reason === "offline-no-timings"
+                                      ? "Offline — no timings set"
+                                      : "Offline"}
                             </span>
                             {restaurant.availability?.closingCountdownLabel ? (
                               <span className="text-[11px] text-slate-500">

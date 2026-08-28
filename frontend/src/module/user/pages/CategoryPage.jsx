@@ -15,6 +15,7 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
+import { sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -461,7 +462,8 @@ export default function CategoryPage() {
           })
 
           const transformedRestaurants = await Promise.all(menuPromises)
-          setRestaurantsData(transformedRestaurants)
+          // Closed stores sink below open ones (#022).
+          setRestaurantsData(sortOpenRestaurantsFirst(transformedRestaurants))
 
           // Prefer real categories derived from menu sections that are common across restaurants.
           const sectionStatsMap = new Map()

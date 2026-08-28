@@ -12,7 +12,7 @@ import { useZone } from "../../hooks/useZone"
 import { useLocation } from "../../hooks/useLocation"
 import { restaurantAPI } from "@/lib/api"
 import { API_BASE_URL } from "@/lib/api/config"
-import { getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
+import { getRestaurantAvailabilityStatus, sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
 
 const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "")
 const BLOCKED_CLOUDINARY_HOSTS = [/^https?:\/\/res\.cloudinary\.com\/dbubwu3lf(?:\/|$)/i]
@@ -99,7 +99,8 @@ export default function Restaurants() {
           }
         })
 
-        setRestaurants(transformed)
+        // Same rule as every list: closed stores visible, never ahead of open ones (#022).
+        setRestaurants(sortOpenRestaurantsFirst(transformed))
       } catch (error) {
         if (!cancelled) {
           setRestaurants([])
