@@ -13,7 +13,7 @@ import { formatSavedAddressLine, dedupeAddressText } from "../utils/addressForma
 // Bumped on every deploy that touches this screen. Three fixes in a row were judged
 // from phone screenshots with no way to tell WHICH bundle the phone was running - the
 // WebView had been serving day-old JS. This makes every screenshot self-identifying.
-const ADDRESS_SCREEN_BUILD = "AS-08"
+const ADDRESS_SCREEN_BUILD = "AS-09"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -3087,9 +3087,15 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   if (!isOpen) return null
 
   // If showing address form, render full-screen address form
+  // The key on each root forces React to build and destroy these two views as separate
+  // elements. Both branches return a <div> in the same position, so without distinct
+  // keys React REUSES the DOM node - and the subtree Google Maps injects into the map
+  // container is inherited by the list that replaces it, rendering the map full-screen
+  // behind the address cards. Clearing listeners could never fix that: the DOM was
+  // being inherited, not leaked.
   if (showAddressForm) {
     return (
-      <div className="fixed inset-0 z-[10000] bg-white dark:bg-[#0a0a0a] flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden">
+      <div key="address-form" className="fixed inset-0 z-[10000] bg-white dark:bg-[#0a0a0a] flex flex-col h-[100dvh] max-h-[100dvh] overflow-hidden">
         {/* Header */}
         <div className="flex-shrink-0 bg-white dark:bg-[#1a1a1a] border-b border-gray-100 dark:border-gray-800 px-4 py-3">
           <div className="flex items-center gap-4">
@@ -3375,6 +3381,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
   return (
     <div
+      key="address-list"
       className="fixed inset-0 z-[9999] flex flex-col bg-white dark:bg-[#0a0a0a]"
       style={{
         animation: 'fadeIn 0.3s ease-out'
