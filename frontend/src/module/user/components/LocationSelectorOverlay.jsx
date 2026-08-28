@@ -9,7 +9,7 @@ import { useProfile } from "../context/ProfileContext"
 import { toast } from "sonner"
 import { locationAPI, userAPI } from "@/lib/api"
 import { Loader } from '@googlemaps/js-api-loader'
-import { formatSavedAddressLine } from "../utils/addressFormat"
+import { formatSavedAddressLine, dedupeAddressText } from "../utils/addressFormat"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -351,7 +351,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     prepareForFreshPinLookup()
     setMapPosition([lat, lng])
     setShowAddressForm(true)
-    setCurrentAddress(formattedAddress || additionalDetails || "")
+    setCurrentAddress(dedupeAddressText(formattedAddress || additionalDetails || ""))
     setLoadingAddress(false)
     setAddressFormData((prev) => ({
       ...prev,
@@ -359,7 +359,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
       city: city || prev.city,
       state: state || prev.state,
       zipCode: zipCode || prev.zipCode,
-      additionalDetails: additionalDetails || formattedAddress || prev.additionalDetails,
+      // Stored records carry internally duplicated text ("Cumbum, Cumbum, ..."); the
+      // form must not present it back for re-saving, which is how the duplication
+      // compounds each time an address is edited.
+      additionalDetails: dedupeAddressText(additionalDetails || formattedAddress || prev.additionalDetails),
       recipientName: prev.recipientName || userProfile?.name || "",
       phone: prev.phone || userProfile?.phone || "",
     }))
@@ -1037,6 +1040,34 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           debugWarn("Error cleaning up accuracy circle:", e)
         }
       }
+
+      // Destroy the map itself, not just its markers. Only the markers were cleaned
+      // before: the map instance stayed referenced with its listeners attached, and in
+      // the Android WebView its leftover GL surface kept compositing through the list
+      // that replaced the form - the reported "broken screen" of address cards
+      // interleaved with stale map bands after tapping the back arrow. Clearing the
+      // listeners, dropping the reference, and emptying the container removes the
+      // surface the WebView was still drawing.
+      if (googleMapRef.current) {
+        try {
+          if (window.google?.maps?.event?.clearInstanceListeners) {
+            window.google.maps.event.clearInstanceListeners(googleMapRef.current)
+          }
+        } catch (e) {
+          debugWarn("Error clearing map listeners:", e)
+        }
+        googleMapRef.current = null
+      }
+      greenMarkerRef.current = null
+      userLocationMarkerRef.current = null
+      blueDotCircleRef.current = null
+      if (mapContainerRef.current) {
+        try {
+          mapContainerRef.current.innerHTML = ""
+        } catch (e) {
+          debugWarn("Error emptying map container:", e)
+        }
+      }
     }
   }, [showAddressForm, GOOGLE_MAPS_API_KEY])
 
@@ -1304,7 +1335,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
             city: locationData.city || prev.city,
             state: locationData.state || prev.state,
             zipCode: locationData.postalCode || prev.zipCode,
-            additionalDetails: preferredAddress || prev.additionalDetails,
+            additionalDetails: dedupeAddressText(preferredAddress || prev.additionalDetails),
           }))
         }
 
