@@ -13,7 +13,7 @@ import { formatSavedAddressLine, dedupeAddressText } from "../utils/addressForma
 // Bumped on every deploy that touches this screen. Three fixes in a row were judged
 // from phone screenshots with no way to tell WHICH bundle the phone was running - the
 // WebView had been serving day-old JS. This makes every screenshot self-identifying.
-const ADDRESS_SCREEN_BUILD = "AS-09"
+const ADDRESS_SCREEN_BUILD = "AS-10"
 
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
@@ -824,17 +824,22 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           placesServiceRef.current = new google.maps.places.PlacesService(map)
         }
 
-        // Create Green Marker (draggable for address selection)
+        // Draggable pin, and nothing else is allowed to move it. The map opens at one
+        // position and then holds: the customer drags the pin, or pans the map under it,
+        // and it stays exactly where they leave it.
         const greenMarker = new google.maps.Marker({
           position: initialLocation,
           map: map,
           icon: {
-            url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+            url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
             scaledSize: new google.maps.Size(40, 40),
             anchor: new google.maps.Point(20, 40)
           },
           draggable: true,
-          title: "Drag to select location"
+          // Lifts the pin while dragging so it is not hidden under the fingertip.
+          animation: null,
+          cursor: "grab",
+          title: "Drag to set your exact location"
         })
 
         greenMarkerRef.current = greenMarker
@@ -986,32 +991,17 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               }
             )
 
-            // Then, watch for position updates (live tracking)
-            const watchId = navigator.geolocation.watchPosition(
-              (position) => {
-                if (!isMounted) return
-                debugLog("📍 Live location update:", {
-                  lat: position.coords.latitude,
-                  lng: position.coords.longitude,
-                  accuracy: position.coords.accuracy
-                })
-                createBlueDotWithCircle(position, position.coords.accuracy)
-              },
-              (error) => {
-                // Suppress timeout errors - they're non-critical
-                if (error.code !== 3) {
-                  debugWarn("Geolocation watchPosition error:", error)
-                }
-              },
-              {
-                enableHighAccuracy: true,
-                timeout: 10000,
-                maximumAge: 5000 // Allow 5 second old cached location
-              }
-            )
-
-            // Store watch ID for cleanup
-            watchPositionIdRef.current = watchId
+            // No watchPosition here, deliberately.
+            //
+            // This screen used to track the device live: every GPS update - and with
+            // enableHighAccuracy that is roughly every second, drifting tens of metres
+            // indoors - destroyed and rebuilt the blue dot and its accuracy circle. The
+            // result was a picker that never settled, so a customer could not place the
+            // pin: it moved under them while they aimed.
+            //
+            // An address picker wants ONE fix to open at, then stillness. The position
+            // is taken once above; from there the pin only moves when the customer moves
+            // it, or when they explicitly tap "Use current location".
           } else {
             debugWarn("Geolocation not supported")
             handleMapMoveEnd(initialLocation.lat, initialLocation.lng)
@@ -1777,507 +1767,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   }, [showAddressForm])
 
   // Track user's live location with blue dot indicator
-  const trackUserLocation = (mapInstance, sdkInstance) => {
-    if (!navigator.geolocation) {
-      debugWarn("⚠️ Geolocation is not supported by this browser")
-      return
-    }
-
-    debugLog("🔵🔵🔵 STARTING USER LOCATION TRACKING...")
-    debugLog("🔵 Map instance:", mapInstance)
-    debugLog("🔵 SDK instance:", sdkInstance)
-    debugLog("🔵 SDK instance type:", typeof sdkInstance)
-    debugLog("🔵 SDK instance keys:", sdkInstance ? Object.keys(sdkInstance).slice(0, 20) : 'null')
-    debugLog("🔵 Has addMarker:", !!(sdkInstance && sdkInstance.addMarker))
-    debugLog("🔵 Has Marker:", !!(sdkInstance && sdkInstance.Marker))
-
-    // Clear any existing watchPosition
-    if (watchPositionIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchPositionIdRef.current)
-      watchPositionIdRef.current = null
-    }
-
-    // Helper function to calculate distance between two coordinates (in meters)
-    const calculateDistance = (lat1, lon1, lat2, lon2) => {
-      const R = 6371e3 // Earth's radius in meters
-      const lat1Rad = lat1 * Math.PI / 180
-      const lat2Rad = lat2 * Math.PI / 180
-      const deltaLat = (lat2 - lat1) * Math.PI / 180
-      const deltaLon = (lon2 - lon1) * Math.PI / 180
-
-      const a = Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
-        Math.cos(lat1Rad) * Math.cos(lat2Rad) *
-        Math.sin(deltaLon / 2) * Math.sin(deltaLon / 2)
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-
-      return R * c // Distance in meters
-    }
-
-    // Helper function to create/update marker (with throttling)
-    const createOrUpdateMarker = (latitude, longitude, heading, accuracy = null) => {
-      // Check if location changed significantly (at least 10 meters)
-      if (lastUserLocationRef.current) {
-        const distance = calculateDistance(
-          lastUserLocationRef.current.latitude,
-          lastUserLocationRef.current.longitude,
-          latitude,
-          longitude
-        )
-
-        // If distance is less than 10 meters, skip update (unless it's the first time)
-        if (distance < 10) {
-          // Only log occasionally to avoid console spam
-          if (Math.random() < 0.1) { // Log 10% of skipped updates
-            debugLog(`⏭️ Skipping location update - only moved ${distance.toFixed(2)}m (threshold: 10m)`)
-          }
-          return
-        }
-
-        debugLog(`📍 Location changed by ${distance.toFixed(2)}m - updating marker`)
-      }
-
-      // Update last location
-      lastUserLocationRef.current = { latitude, longitude, heading }
-
-      // 1. Custom Blue Dot Element Banana
-      let el = null
-      if (userLocationMarkerRef.current) {
-        // If marker exists, get its element
-        el = userLocationMarkerRef.current.getElement?.() ||
-          userLocationMarkerRef.current._element ||
-          document.querySelector('.user-location-marker')
-      }
-
-      if (!el) {
-        el = document.createElement('div')
-        el.className = 'user-location-marker'
-        // Ensure element is visible with inline styles (same pattern as green pin)
-        el.style.cssText = `
-          width: 20px;
-          height: 20px;
-          background-color: #4285F4;
-          border: 3px solid white;
-          border-radius: 50%;
-          box-shadow: 0 0 10px rgba(0,0,0,0.3);
-          position: relative;
-          z-index: 1001;
-          display: block;
-          visibility: visible;
-          opacity: 1;
-          cursor: default;
-        `
-        debugLog("✅ Created blue dot element with styles")
-      } else {
-        // Ensure existing element styles are correct
-        el.style.display = 'block'
-        el.style.visibility = 'visible'
-        el.style.opacity = '1'
-        el.style.zIndex = '1001'
-      }
-
-      // 2. Update accuracy circle if it exists
-      if (userLocationAccuracyCircleRef.current) {
-        try {
-          if (userLocationAccuracyCircleRef.current.update) {
-            userLocationAccuracyCircleRef.current.update(latitude, longitude, accuracy)
-            debugLog("✅ Updated accuracy circle position and radius")
-          }
-        } catch (circleError) {
-          debugWarn("⚠️ Error updating accuracy circle:", circleError.message)
-        }
-      }
-
-      // 3. Agar marker pehle se hai to update karein, nahi to naya banayein
-      if (userLocationMarkerRef.current) {
-        try {
-          if (userLocationMarkerRef.current.setLngLat) {
-            userLocationMarkerRef.current.setLngLat([longitude, latitude])
-            debugLog("✅ Updated existing marker position")
-          } else if (userLocationMarkerRef.current.setPosition) {
-            userLocationMarkerRef.current.setPosition([longitude, latitude])
-            debugLog("✅ Updated existing marker position (setPosition)")
-          } else {
-            debugWarn("⚠️ Marker exists but no update method found")
-          }
-        } catch (error) {
-          debugError("❌ Error updating user location marker:", error)
-        }
-      } else {
-        try {
-          // Try different marker creation methods - EXACT SAME PATTERN AS GREEN PIN
-          let newMarker = null
-
-          debugLog("🔵 Creating blue dot marker with:", {
-            hasSdkInstance: !!sdkInstance,
-            hasMapInstance: !!mapInstance,
-            sdkAddMarker: !!(sdkInstance && sdkInstance.addMarker),
-            sdkMarker: !!(sdkInstance && sdkInstance.Marker),
-            element: !!el
-          })
-
-          // Method 1: Try SDK's addMarker method (EXACT SAME AS GREEN PIN)
-          if (sdkInstance && sdkInstance.addMarker) {
-            debugLog("🔵 Method 1: Using sdkInstance.addMarker (same as green pin)")
-            try {
-              newMarker = sdkInstance.addMarker({
-                element: el,
-                anchor: 'center',
-                draggable: false
-              }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("✅✅✅ Blue dot created using addMarker method:", newMarker)
-            } catch (err) {
-              debugError("❌ Error in addMarker:", err)
-            }
-          }
-          // Method 2: Try SDK's Marker class (EXACT SAME AS GREEN PIN)
-          else if (sdkInstance && sdkInstance.Marker) {
-            debugLog("🔵 Method 2: Using sdkInstance.Marker (same as green pin)")
-            try {
-              newMarker = new sdkInstance.Marker({
-                element: el,
-                anchor: 'center',
-                draggable: false
-              }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("✅✅✅ Blue dot created using Marker class:", newMarker)
-            } catch (err) {
-              debugError("❌ Error in Marker constructor:", err)
-            }
-          }
-          // Method 3: Try using MapLibre Marker (fallback - same as green pin)
-          else if (window.maplibregl && window.maplibregl.Marker) {
-            debugLog("🔵 Method 3: Using maplibregl.Marker (fallback)")
-            try {
-              newMarker = new window.maplibregl.Marker({
-                element: el,
-                anchor: 'center'
-              }).setLngLat([longitude, latitude]).addTo(mapInstance)
-              debugLog("✅ Blue dot created using maplibregl.Marker")
-            } catch (err) {
-              debugError("❌ Error in maplibregl.Marker:", err)
-            }
-          }
-          else {
-            debugError("❌❌❌ NO MARKER API FOUND for blue dot. Available:", {
-              sdkInstance: !!sdkInstance,
-              sdkAddMarker: !!(sdkInstance && sdkInstance.addMarker),
-              sdkMarker: !!(sdkInstance && sdkInstance.Marker),
-              maplibregl: !!window.maplibregl,
-              mapInstance: !!mapInstance,
-              elementCreated: !!el
-            })
-          }
-
-          if (newMarker) {
-            userLocationMarkerRef.current = newMarker
-            debugLog("✅ User location marker (blue dot) added successfully:", newMarker)
-
-            // Verify blue dot is visible (same pattern as green pin)
-            setTimeout(() => {
-              const markerEl = newMarker.getElement?.() || newMarker._element
-              if (markerEl) {
-                debugLog("✅ Blue dot element found on map:", markerEl)
-                // Ensure element is visible (same as green pin)
-                markerEl.style.display = 'block'
-                markerEl.style.visibility = 'visible'
-                markerEl.style.opacity = '1'
-                markerEl.style.zIndex = '1001'
-                debugLog("✅ Blue dot visibility ensured")
-
-                // Also check the inner element (the actual blue dot div)
-                const innerEl = markerEl.querySelector('.user-location-marker') || markerEl
-                if (innerEl) {
-                  innerEl.style.display = 'block'
-                  innerEl.style.visibility = 'visible'
-                  innerEl.style.opacity = '1'
-                  debugLog("✅ Blue dot inner element styles ensured")
-                }
-              } else {
-                debugWarn("⚠️ Blue dot element not found in DOM")
-              }
-            }, 500)
-
-            // Additional check after 1 second
-            setTimeout(() => {
-              const markerEl = newMarker.getElement?.() || newMarker._element
-              if (markerEl) {
-                const computedStyle = window.getComputedStyle(markerEl)
-                debugLog("🔍 Blue dot computed styles:", {
-                  display: computedStyle.display,
-                  visibility: computedStyle.visibility,
-                  opacity: computedStyle.opacity,
-                  zIndex: computedStyle.zIndex
-                })
-              }
-            }, 1000)
-
-            // Create accuracy circle around blue dot (like Google Maps)
-            const accuracyRadius = accuracy || 50 // Default to 50m if accuracy not available
-            try {
-              // Remove existing circle if any
-              if (userLocationAccuracyCircleRef.current) {
-                if (userLocationAccuracyCircleRef.current.remove) {
-                  userLocationAccuracyCircleRef.current.remove()
-                } else if (mapInstance.removeLayer) {
-                  mapInstance.removeLayer(userLocationAccuracyCircleRef.current)
-                }
-              }
-
-              // Try to create circle using MapLibre/Mapbox API
-              if (mapInstance.addSource && mapInstance.addLayer) {
-                const circleId = 'user-location-accuracy-circle'
-                const sourceId = 'user-location-accuracy-circle-source'
-
-                // Remove existing source/layer if present
-                if (mapInstance.getLayer(circleId)) {
-                  mapInstance.removeLayer(circleId)
-                }
-                if (mapInstance.getSource(sourceId)) {
-                  mapInstance.removeSource(sourceId)
-                }
-
-                // Add circle source
-                mapInstance.addSource(sourceId, {
-                  type: 'geojson',
-                  data: {
-                    type: 'Feature',
-                    geometry: {
-                      type: 'Point',
-                      coordinates: [longitude, latitude]
-                    },
-                    properties: {
-                      radius: accuracyRadius
-                    }
-                  }
-                })
-
-                // Add circle layer
-                // Convert meters to pixels: use zoom-based scaling
-                // At zoom 15: ~1.2 meters per pixel, at zoom 18: ~0.15 meters per pixel
-                mapInstance.addLayer({
-                  id: circleId,
-                  type: 'circle',
-                  source: sourceId,
-                  paint: {
-                    'circle-radius': [
-                      'interpolate',
-                      ['exponential', 2],
-                      ['zoom'],
-                      10, ['/', accuracyRadius, 2],
-                      15, ['/', accuracyRadius, 1.2],
-                      18, ['/', accuracyRadius, 0.15],
-                      20, ['/', accuracyRadius, 0.04]
-                    ],
-                    'circle-color': '#4285F4',
-                    'circle-opacity': 0.15,
-                    'circle-stroke-color': '#4285F4',
-                    'circle-stroke-opacity': 0.4,
-                    'circle-stroke-width': 1
-                  }
-                })
-
-                userLocationAccuracyCircleRef.current = {
-                  sourceId,
-                  layerId: circleId,
-                  update: (newLat, newLng, newAccuracy) => {
-                    if (mapInstance.getSource(sourceId)) {
-                      mapInstance.getSource(sourceId).setData({
-                        type: 'Feature',
-                        geometry: {
-                          type: 'Point',
-                          coordinates: [newLng, newLat]
-                        },
-                        properties: {
-                          radius: newAccuracy || accuracyRadius
-                        }
-                      })
-                    }
-                  },
-                  remove: () => {
-                    if (mapInstance.getLayer(circleId)) {
-                      mapInstance.removeLayer(circleId)
-                    }
-                    if (mapInstance.getSource(sourceId)) {
-                      mapInstance.removeSource(sourceId)
-                    }
-                  }
-                }
-
-                debugLog("✅ Accuracy circle created around blue dot:", { radius: accuracyRadius })
-              }
-            } catch (circleError) {
-              debugWarn("⚠️ Could not create accuracy circle (non-critical):", circleError.message)
-            }
-
-            // Don't auto-fly to user location - let green pin stay at center
-            // User can use "Use current location" button if needed
-          } else {
-            debugError("❌ Failed to create blue dot marker - all methods failed")
-            debugError("🔍 Debug info:", {
-              sdkInstance: !!sdkInstance,
-              mapInstance: !!mapInstance,
-              element: !!el,
-              sdkAddMarker: !!(sdkInstance && sdkInstance.addMarker),
-              sdkMarker: !!(sdkInstance && sdkInstance.Marker)
-            })
-          }
-        } catch (markerError) {
-          debugError("❌ Could not create user location marker:", markerError)
-          debugError("Error details:", {
-            message: markerError.message,
-            stack: markerError.stack,
-            name: markerError.name
-          })
-        }
-      }
-
-      // 3. Arrow Direction (Heading) agar available ho
-      // Heading is in degrees (0-360), where 0 is North
-      if (heading !== null && heading !== undefined && !isNaN(heading)) {
-        el.style.transform = `rotate(${heading}deg)`
-      } else {
-        // Reset transform if no heading
-        el.style.transform = 'rotate(0deg)'
-      }
-    }
-
-    // First, try to get current position immediately
-    // Use a small delay to ensure map is fully ready
-    debugLog("🔵 About to request geolocation...")
-    setTimeout(() => {
-      debugLog("🔵 Requesting geolocation with getCurrentPosition...")
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude, heading } = position.coords
-          debugLog("📍📍📍 Initial location received:", { latitude, longitude, heading })
-          debugLog("🔵 Calling createOrUpdateMarker with:", { latitude, longitude, heading })
-          createOrUpdateMarker(latitude, longitude, heading, position.coords.accuracy)
-
-          // Then start watching for updates (with throttling)
-          watchPositionIdRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-              const { latitude, longitude, heading, accuracy } = position.coords
-
-              // Clear any pending update
-              if (locationUpdateTimeoutRef.current) {
-                clearTimeout(locationUpdateTimeoutRef.current)
-              }
-
-              // Throttle updates - only process after 2 seconds of no new updates
-              locationUpdateTimeoutRef.current = setTimeout(() => {
-                // Only log significant updates to avoid console spam
-                if (!lastUserLocationRef.current ||
-                  calculateDistance(
-                    lastUserLocationRef.current.latitude,
-                    lastUserLocationRef.current.longitude,
-                    latitude,
-                    longitude
-                  ) >= 10) {
-                  debugLog("📍 Location update (throttled):", { latitude, longitude, heading })
-                }
-                createOrUpdateMarker(latitude, longitude, heading, accuracy)
-              }, 2000) // Wait 2 seconds before processing update
-            },
-            (error) => {
-              // Suppress timeout errors - they're non-critical and will retry
-              if (error.code === 3) {
-                // Timeout - silently ignore, will retry automatically
-                return
-              } else if (error.code === 1) {
-                debugWarn("⚠️ Location permission denied by user")
-              } else if (error.code === 2) {
-                debugWarn("⚠️ Location unavailable")
-              }
-              // Don't log timeout errors repeatedly
-            },
-            {
-              enableHighAccuracy: false, // Less strict for better compatibility
-              timeout: 30000, // Longer timeout (30 seconds)
-              maximumAge: 60000 // Allow cached location up to 1 minute old
-            }
-          )
-          debugLog("✅ watchPosition started, ID:", watchPositionIdRef.current)
-        },
-        (error) => {
-          // Suppress timeout errors - they're non-critical
-          if (error.code === 3) {
-            // Timeout - try to use cached location or continue without location
-            debugWarn("⚠️ Location request timeout - will retry or use cached location")
-
-            // Try to get cached location from localStorage
-            try {
-              const cachedLocation = localStorage.getItem(USER_LOCATION_STORAGE_KEY)
-              if (cachedLocation) {
-                const location = JSON.parse(cachedLocation)
-                if (location.latitude && location.longitude) {
-                  debugLog("📍 Using cached location due to timeout:", location)
-                  createOrUpdateMarker(location.latitude, location.longitude, null, location.accuracy)
-                }
-              }
-            } catch (cacheError) {
-              // Ignore cache errors
-            }
-          } else if (error.code === 1) {
-            debugWarn("⚠️ Location permission denied")
-          } else if (error.code === 2) {
-            debugWarn("⚠️ Location unavailable")
-          } else {
-            // Only log non-timeout errors
-            debugWarn("⚠️ Location error (code:", error.code + "):", error.message)
-          }
-
-          // Even if initial location fails, try watchPosition with less strict options
-          watchPositionIdRef.current = navigator.geolocation.watchPosition(
-            (position) => {
-              const { latitude, longitude, heading, accuracy } = position.coords
-
-              // Clear any pending update
-              if (locationUpdateTimeoutRef.current) {
-                clearTimeout(locationUpdateTimeoutRef.current)
-              }
-
-              // Throttle updates - only process after 2 seconds of no new updates
-              locationUpdateTimeoutRef.current = setTimeout(() => {
-                // Only log significant updates to avoid console spam
-                if (!lastUserLocationRef.current ||
-                  calculateDistance(
-                    lastUserLocationRef.current.latitude,
-                    lastUserLocationRef.current.longitude,
-                    latitude,
-                    longitude
-                  ) >= 10) {
-                  debugLog("📍 Location update (after initial error, throttled):", { latitude, longitude, heading })
-                }
-                createOrUpdateMarker(latitude, longitude, heading, accuracy)
-              }, 2000) // Wait 2 seconds before processing update
-            },
-            (error) => {
-              // Suppress timeout errors in watchPosition too
-              if (error.code === 3) {
-                // Timeout - silently ignore, will retry
-                return
-              } else if (error.code === 1) {
-                debugWarn("⚠️ Please enable location permission in browser settings")
-              }
-              // Don't log other errors repeatedly
-            },
-            {
-              enableHighAccuracy: false, // Less strict for better compatibility
-              timeout: 30000, // Longer timeout
-              maximumAge: 60000 // Allow cached location up to 1 minute old
-            }
-          )
-          debugLog("✅ watchPosition started (fallback), ID:", watchPositionIdRef.current)
-        },
-        {
-          enableHighAccuracy: false, // Less strict for better compatibility
-          timeout: 30000, // Longer timeout (30 seconds)
-          maximumAge: 60000 // Allow cached location up to 1 minute old
-        }
-      )
-    }, 500) // Small delay to ensure map is ready
-
-    debugLog("✅ watchPosition started, ID:", watchPositionIdRef.current)
-  }
+  // trackUserLocation lived here: a second live-tracking watch that was never called,
+  // and which overwrote the shared watch id so the first watch could never be cleared.
+  // Removed with live tracking itself - this screen takes one position fix and holds.
 
   const handleMapMoveEnd = async (lat, lng) => {
     const lookupId = beginPinLookup()
