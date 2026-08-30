@@ -282,38 +282,73 @@ export const getOrders = asyncHandler(async (req, res) => {
     // Search filter (orderId, customer name, customer phone)
     if (search) {
       const safeSearch = escapeRegex(search);
+      const trimmed = String(search).trim();
+      // Digits only, ignoring the punctuation people paste with phone numbers.
+      const digitsOnly = trimmed.replace(/\D/g, '');
+      const looksLikePhone = digitsOnly.length >= 4 && /^[\d\s+\-()]+$/.test(trimmed);
+
       query.$or = [
         { orderId: { $regex: safeSearch, $options: 'i' } }
       ];
 
-      // If search looks like a phone number, search in customer data
-      const phoneRegex = /[\d\s\+\-()]+/;
-      if (phoneRegex.test(search)) {
-        const User = (await import('../../auth/models/User.js')).default;
-        const cleanSearch = search.replace(/\D/g, '');
-        const userSearchQuery = { phone: { $regex: escapeRegex(cleanSearch), $options: 'i' } };
-        if (mongoose.Types.ObjectId.isValid(search)) {
-          userSearchQuery._id = search;
-        }
-        const users = await User.find(userSearchQuery).select('_id').lean();
-        const userIds = users.map(u => u._id);
-        if (userIds.length > 0) {
-          query.$or.push({ userId: { $in: userIds } });
-        }
-      }
-
-      // Also search by customer name
       const User = (await import('../../auth/models/User.js')).default;
-      const usersByName = await User.find({
-        name: { $regex: safeSearch, $options: 'i' }
-      }).select('_id').lean();
-      const userIdsByName = usersByName.map(u => u._id);
-      if (userIdsByName.length > 0) {
-        if (!query.$or) query.$or = [];
-        query.$or.push({ userId: { $in: userIdsByName } });
+
+      // The two customer lookups used to run one after the other, on EVERY search, each
+      // an unanchored case-insensitive regex over the whole users collection - so the
+      // admin waited for two collection scans before the orders query even started.
+      //
+      // Now: only the lookups that can possibly match are run, and they run together.
+      // A digit string is never a customer NAME, so name matching is skipped for it -
+      // that alone removes a full scan from the common "search by phone number" case.
+      const lookups = [];
+
+      if (looksLikePhone) {
+        // Stored phones vary: "9553728630", "+919553728630", "+91 9553728630". Matching
+        // the digits with optional separators between them finds all three, where the
+        // old plain-digits regex missed any number stored with spaces.
+        // Match on the digits as typed AND on the last ten. Numbers are stored
+        // inconsistently - "6264560457", "+91 9553728630" - so a pasted "+916264560457"
+        // used to find nothing at all when the stored value carried no country code.
+        // Comparing the last ten digits makes the two forms meet.
+        const digitVariants = Array.from(new Set(
+          [digitsOnly, digitsOnly.slice(-10)].filter((d) => d && d.length >= 4)
+        ));
+        const orClauses = digitVariants.map((variant) => ({
+          phone: {
+            $regex: variant.split('').map((d) => escapeRegex(d)).join('[\s\-()]*'),
+            $options: 'i',
+          },
+        }));
+        if (mongoose.Types.ObjectId.isValid(trimmed)) {
+          orClauses.push({ _id: trimmed });
+        }
+        lookups.push(
+          User.find({ $or: orClauses }).select('_id').limit(500).lean()
+        );
+      } else {
+        lookups.push(Promise.resolve([]));
       }
 
-      // Ensure $or array is not empty
+      // Name search only when the term contains a letter.
+      if (/[a-z]/i.test(trimmed)) {
+        lookups.push(
+          User.find({ name: { $regex: safeSearch, $options: 'i' } }).select('_id').limit(500).lean()
+        );
+      } else {
+        lookups.push(Promise.resolve([]));
+      }
+
+      const [usersByPhone, usersByName] = await Promise.all(lookups);
+
+      const matchedUserIds = [
+        ...usersByPhone.map((u) => u._id),
+        ...usersByName.map((u) => u._id),
+      ];
+
+      if (matchedUserIds.length > 0) {
+        query.$or.push({ userId: { $in: matchedUserIds } });
+      }
+
       if (query.$or && query.$or.length === 0) {
         delete query.$or;
       }

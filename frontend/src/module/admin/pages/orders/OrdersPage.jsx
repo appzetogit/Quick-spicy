@@ -50,6 +50,7 @@ export default function OrdersPage({ statusKey = "all" }) {
   // page: doing so unmounted the search box mid-keystroke, which is what looked like a
   // full refresh while typing.
   const hasLoadedOnceRef = useRef(false)
+  const activeFetchControllerRef = useRef(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [loadError, setLoadError] = useState("")
   const [processingRefund, setProcessingRefund] = useState(null)
@@ -389,8 +390,22 @@ export default function OrdersPage({ statusKey = "all" }) {
   // Search now hits the server, so debounce it instead of querying per keystroke.
   const [debouncedSearch, setDebouncedSearch] = useState("")
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 400)
+    const next = searchQuery.trim()
+    // Clearing the box is not a search, it is a cancellation - the admin wants the full
+    // list back NOW. Waiting the debounce made "clear the field" feel like the slowest
+    // action on the page, which is exactly how it was reported. Only actual typing waits.
+    if (next === "") {
+      setDebouncedSearch("")
+      return undefined
+    }
+    const timer = setTimeout(() => setDebouncedSearch(next), 400)
     return () => clearTimeout(timer)
+  }, [searchQuery])
+
+  // Enter should search immediately rather than sitting out the debounce. Pressing it
+  // previously did nothing at all, which read as "search is broken".
+  const submitSearchNow = useCallback(() => {
+    setDebouncedSearch(searchQuery.trim())
   }, [searchQuery])
 
   // Status + filters + search, shared by the table fetch and the export fetch so both
@@ -455,6 +470,18 @@ export default function OrdersPage({ statusKey = "all" }) {
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
 
+    // Abort whatever is still in flight. Without this, typing "9553728630" left several
+    // slow queries running, and clearing the field queued the full-list request BEHIND
+    // them - the admin waited for searches they had already abandoned, and a late
+    // response could overwrite the newer results.
+    if (!silent) {
+      if (activeFetchControllerRef.current) {
+        activeFetchControllerRef.current.abort()
+      }
+      activeFetchControllerRef.current = new AbortController()
+    }
+    const abortSignal = silent ? undefined : activeFetchControllerRef.current?.signal
+
     // Only the very first load may take over the whole page. Later non-silent loads
     // (a search, a filter, a page change) show an inline indicator instead, so the
     // input keeps its DOM node and its focus.
@@ -480,10 +507,9 @@ export default function OrdersPage({ statusKey = "all" }) {
           ...buildOrderQuery(),
           page: currentPage,
           limit: PAGE_SIZE,
-          _t: Date.now(),
         }
 
-        const response = await adminAPI.getOrders(params)
+        const response = await adminAPI.getOrders(params, { signal: abortSignal })
 
         if (!(response.data?.success && response.data?.data?.orders)) {
           throw Object.assign(new Error(response.data?.message || "Failed to fetch orders"), {
@@ -540,6 +566,12 @@ export default function OrdersPage({ statusKey = "all" }) {
         setOrders(nextOrders)
         break
       } catch (error) {
+        // A cancelled request means the admin has already moved on. It is not a failure:
+        // retrying it would re-run the query we just abandoned, and surfacing it would
+        // flash an error card during normal typing.
+        if (error?.name === "CanceledError" || error?.name === "AbortError" || error?.code === "ERR_CANCELED") {
+          return
+        }
         debugError(`Error fetching orders (attempt ${attempt}/${attempts}):`, error)
         lastError = error
         if (attempt < attempts) {
@@ -1126,6 +1158,7 @@ This completes the order and releases payment to the restaurant and the delivery
         title={config.title}
         count={totalOrders}
         isSearching={isRefreshing}
+        onSubmitSearch={submitSearchNow}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onFilterClick={() => setIsFilterOpen(true)}

@@ -1568,8 +1568,10 @@ export const adminAPI = {
   },
 
   // Get orders
-  getOrders: (params = {}) => {
-    return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS, { params });
+  // Accepts an AbortSignal so the orders page can cancel a search the admin has already
+  // moved past, instead of making the next query queue behind it.
+  getOrders: (params = {}, options = {}) => {
+    return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS, { params, ...options });
   },
 
   // Accept order (admin)
