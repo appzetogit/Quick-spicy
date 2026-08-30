@@ -1,4 +1,4 @@
-import { Search, Filter, Download, ChevronDown, Settings } from "lucide-react"
+import { Search, Filter, Download, ChevronDown, Settings, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,6 +14,7 @@ export default function OrdersTopbar({
   count,
   searchQuery,
   setSearchQuery,
+  isSearching = false,
   onFilterClick,
   activeFiltersCount,
   onExport,
@@ -40,8 +41,13 @@ export default function OrdersTopbar({
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-4 pr-12 py-2.5 w-full sm:w-80 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-slate-400 transition-all"
             />
-            <button className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-slate-100">
-              <Search className="w-4 h-4 text-slate-500" />
+            {/* Spinner in place of the icon while a search is in flight. The page used
+                to be replaced by a full-screen loader on every keystroke, which threw
+                away the input and its focus; feedback belongs here instead. */}
+            <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-md hover:bg-slate-100">
+              {isSearching
+                ? <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
+                : <Search className="w-4 h-4 text-slate-500" />}
             </button>
           </div>
           <DropdownMenu>

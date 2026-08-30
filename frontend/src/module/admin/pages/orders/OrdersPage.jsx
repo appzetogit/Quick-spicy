@@ -46,6 +46,11 @@ export default function OrdersPage({ statusKey = "all" }) {
   const [orders, setOrders] = useState([])
   const [zones, setZones] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  // True once the first load has painted. After that a refetch must never replace the
+  // page: doing so unmounted the search box mid-keystroke, which is what looked like a
+  // full refresh while typing.
+  const hasLoadedOnceRef = useRef(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [loadError, setLoadError] = useState("")
   const [processingRefund, setProcessingRefund] = useState(null)
   const [processingActionOrderId, setProcessingActionOrderId] = useState(null)
@@ -450,8 +455,14 @@ export default function OrdersPage({ statusKey = "all" }) {
   const fetchOrders = useCallback(async (options = {}) => {
     const { silent = false, withRingCheck = false } = options
 
-    if (!silent) setIsLoading(true)
-    if (!silent) setLoadError("")
+    // Only the very first load may take over the whole page. Later non-silent loads
+    // (a search, a filter, a page change) show an inline indicator instead, so the
+    // input keeps its DOM node and its focus.
+    if (!silent) {
+      if (hasLoadedOnceRef.current) setIsRefreshing(true)
+      else setIsLoading(true)
+      setLoadError("")
+    }
 
     // A dropped packet or a momentary token-refresh hiccup produces exactly one failed
     // request, not a real outage - the admin auth flow correctly keeps sessions alive
@@ -544,7 +555,11 @@ export default function OrdersPage({ statusKey = "all" }) {
       setOrders([])
     }
 
-    if (!silent) setIsLoading(false)
+    if (!silent) {
+      setIsLoading(false)
+      setIsRefreshing(false)
+      hasLoadedOnceRef.current = true
+    }
   }, [statusKey, buildOrderQuery, currentPage, playDefaultRing, showBrowserNotification, startAlertLoop])
 
   // A changed filter/search/status makes the current page number meaningless - go back
@@ -1073,7 +1088,10 @@ This completes the order and releases payment to the restaurant and the delivery
     }
   }
 
-  if (isLoading) {
+  // Deliberately `isLoading && !hasLoadedOnceRef.current`: an early return that
+  // replaces the page is only acceptable before anything has been shown. Once the
+  // table exists, a refetch keeps it on screen and dims it instead.
+  if (isLoading && !hasLoadedOnceRef.current) {
     return (
       <div className="p-4 lg:p-6 bg-slate-50 min-h-screen w-full max-w-full overflow-x-hidden flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -1107,6 +1125,7 @@ This completes the order and releases payment to the restaurant and the delivery
       <OrdersTopbar 
         title={config.title}
         count={totalOrders}
+        isSearching={isRefreshing}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
         onFilterClick={() => setIsFilterOpen(true)}
