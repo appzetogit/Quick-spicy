@@ -269,6 +269,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   // allowed to update the blue dot, never to yank the pin away from the spot the
   // customer chose. This is the "stop the map moving continuously" requirement.
   const userAdjustedPinRef = useRef(false)
+  // True between a gesture starting on the map and the centre being committed back
+  // into the address fields. Only real gestures set it, so it is also what keeps
+  // programmatic recentres from being mistaken for customer input.
+  const pendingCentreCommitRef = useRef(false)
   const googleMapRef = useRef(null) // Google Maps instance
   const greenMarkerRef = useRef(null) // Green marker for address selection
   const blueDotCircleRef = useRef(null) // Blue dot circle for Google Maps
@@ -855,6 +859,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         const commitCentre = () => {
           const centre = map.getCenter()
           if (!centre) return
+          pendingCentreCommitRef.current = false
           const newLat = centre.lat()
           const newLng = centre.lng()
           greenMarker.setPosition({ lat: newLat, lng: newLng })
@@ -864,6 +869,7 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
         google.maps.event.addListener(map, 'dragstart', function () {
           userAdjustedPinRef.current = true
+          pendingCentreCommitRef.current = true
           setIsPinSettling(true)
           prepareForFreshPinLookup()
         })
@@ -873,11 +879,17 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           commitCentre()
         })
 
-        // Zooming re-centres on the same point, but the centre can shift by a few
-        // metres; re-read it once the map settles.
-        google.maps.event.addListener(map, 'zoom_changed', function () {
-          if (!userAdjustedPinRef.current) return
-          google.maps.event.addListenerOnce(map, 'idle', commitCentre)
+        // Safety net. 'dragstart' blanks the address fields ready for the new lookup,
+        // and only a commit refills them - so a drag that starts but never reports a
+        // 'dragend' (an interrupted gesture, a pointercancel on touch) would strand the
+        // customer with an empty form and no way to recover but to start over. 'idle'
+        // fires whenever the map settles, so it always arrives. It commits ONLY when a
+        // real gesture set the pending flag, which is why this cannot echo: panTo() and
+        // setCenter() raise 'idle' too, but they never set the flag.
+        google.maps.event.addListener(map, 'idle', function () {
+          if (!pendingCentreCommitRef.current) return
+          setIsPinSettling(false)
+          commitCentre()
         })
 
         // Function to create/update blue dot and accuracy circle
