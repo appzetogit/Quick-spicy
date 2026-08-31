@@ -15,7 +15,7 @@ import { API_BASE_URL } from "@/lib/api/config"
 import { useProfile } from "../context/ProfileContext"
 import { useLocation } from "../hooks/useLocation"
 import { useZone } from "../hooks/useZone"
-import { sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
+import { sortOpenRestaurantsFirst, getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -1089,10 +1089,11 @@ export default function CategoryPage() {
               {filteredAllRestaurants.map((restaurant) => {
                 const restaurantSlug = restaurant.name.toLowerCase().replace(/\s+/g, "-")
                 const isFavorite = favorites.has(restaurant.id)
+                const availability = getRestaurantAvailabilityStatus(restaurant)
 
                 return (
                   <Link key={restaurant.id} to={`/user/restaurants/${restaurantSlug}`} className="h-full flex">
-                    <Card className={`overflow-hidden cursor-pointer gap-0 border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] shadow-md hover:shadow-xl transition-all duration-300 py-0 rounded-md h-full flex flex-col w-full ${shouldShowGrayscale ? 'grayscale opacity-75' : ''
+                    <Card className={`overflow-hidden cursor-pointer gap-0 border-0 dark:border-gray-800 group bg-white dark:bg-[#1a1a1a] shadow-md hover:shadow-xl transition-all duration-300 py-0 rounded-md h-full flex flex-col w-full ${shouldShowGrayscale || !availability.isOpen ? 'grayscale opacity-75' : ''
                       }`}>
                       {/* Image Section */}
                       <div className="relative h-44 sm:h-52 md:h-60 lg:h-64 xl:h-72 w-full overflow-hidden rounded-t-md flex-shrink-0">
@@ -1181,6 +1182,11 @@ export default function CategoryPage() {
                             <Star className="h-3 w-3 md:h-4 md:w-4 lg:h-5 lg:w-5 fill-white text-white" />
                           </div>
                         </div>
+
+                        {/* Store availability - offline stores stay visible but are clearly marked (#022) */}
+                        <span className={`inline-flex w-fit mb-2 rounded-full px-2 py-0.5 text-[10px] md:text-xs font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
+                          {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
+                        </span>
 
                         {/* Delivery Time & Distance */}
                         <div className="flex items-center gap-1 text-sm md:text-base lg:text-lg text-gray-500 dark:text-gray-400 mb-2 lg:mb-3">

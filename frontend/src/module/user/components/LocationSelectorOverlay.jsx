@@ -259,8 +259,16 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   })
   const [loadingAddress, setLoadingAddress] = useState(false)
   const [mapLoading, setMapLoading] = useState(false)
+  // Lifts the fixed centre pin while the map is being dragged, so it reads as
+  // hovering over the map rather than stuck to it.
+  const [isPinSettling, setIsPinSettling] = useState(false)
   const [searchingLocation, setSearchingLocation] = useState(false)
   const mapContainerRef = useRef(null)
+  // Set once the customer pans/zooms the map themselves. After that, nothing
+  // repositions the map on its own - late-arriving GPS or cached coordinates are
+  // allowed to update the blue dot, never to yank the pin away from the spot the
+  // customer chose. This is the "stop the map moving continuously" requirement.
+  const userAdjustedPinRef = useRef(false)
   const googleMapRef = useRef(null) // Google Maps instance
   const greenMarkerRef = useRef(null) // Green marker for address selection
   const blueDotCircleRef = useRef(null) // Blue dot circle for Google Maps
@@ -764,6 +772,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
   // Initialize Google Maps with Loader (ZOMATO-STYLE)
   useEffect(() => {
+    // Each time the form opens, the customer has not adjusted anything yet.
+    if (showAddressForm) userAdjustedPinRef.current = false
+
     if (!showAddressForm || !mapContainerRef.current || !GOOGLE_MAPS_API_KEY) {
       return
     }
@@ -830,32 +841,43 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         const greenMarker = new google.maps.Marker({
           position: initialLocation,
           map: map,
-          icon: {
-            url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png",
-            scaledSize: new google.maps.Size(40, 40),
-            anchor: new google.maps.Point(20, 40)
-          },
-          draggable: true,
-          // Lifts the pin while dragging so it is not hidden under the fingertip.
-          animation: null,
-          cursor: "grab",
-          title: "Drag to set your exact location"
+          visible: false,
+          draggable: false,
+          animation: null
         })
 
         greenMarkerRef.current = greenMarker
 
-        google.maps.event.addListener(greenMarker, 'dragstart', function () {
+        // The pin is fixed at the centre of the viewport and the MAP moves beneath it
+        // (REQ#035). 'dragstart'/'dragend' fire only for gestures the customer makes -
+        // panTo() and setCenter() do not raise them - so reading the centre here can
+        // never echo back into the programmatic moves that set it.
+        const commitCentre = () => {
+          const centre = map.getCenter()
+          if (!centre) return
+          const newLat = centre.lat()
+          const newLng = centre.lng()
+          greenMarker.setPosition({ lat: newLat, lng: newLng })
+          setMapPosition([newLat, newLng])
+          handleMapMoveEnd(newLat, newLng)
+        }
+
+        google.maps.event.addListener(map, 'dragstart', function () {
+          userAdjustedPinRef.current = true
+          setIsPinSettling(true)
           prepareForFreshPinLookup()
         })
 
-        // Handle marker drag - update address
-        google.maps.event.addListener(greenMarker, 'dragend', function () {
-          const newPos = greenMarker.getPosition()
-          const newLat = newPos.lat()
-          const newLng = newPos.lng()
-          prepareForFreshPinLookup()
-          setMapPosition([newLat, newLng])
-          handleMapMoveEnd(newLat, newLng)
+        google.maps.event.addListener(map, 'dragend', function () {
+          setIsPinSettling(false)
+          commitCentre()
+        })
+
+        // Zooming re-centres on the same point, but the centre can shift by a few
+        // metres; re-read it once the map settles.
+        google.maps.event.addListener(map, 'zoom_changed', function () {
+          if (!userAdjustedPinRef.current) return
+          google.maps.event.addListenerOnce(map, 'idle', commitCentre)
         })
 
         // Function to create/update blue dot and accuracy circle
@@ -2273,8 +2295,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               debugLog("📍 Using cached location due to timeout:", cachedLocation)
               setMapPosition([cachedLocation.latitude, cachedLocation.longitude])
 
-              // Update Google Maps with cached location
-              if (googleMapRef.current && window.google && window.google.maps) {
+              // Update Google Maps with cached location. Skipped once the customer
+              // has positioned the pin themselves - a late GPS timeout must not
+              // move the map out from under them (REQ#035).
+              if (!userAdjustedPinRef.current && googleMapRef.current && window.google && window.google.maps) {
                 try {
                   googleMapRef.current.panTo({ lat: cachedLocation.latitude, lng: cachedLocation.longitude });
                   googleMapRef.current.setZoom(17);
@@ -2678,6 +2702,27 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
               zIndex: 1
             }}
           />
+
+          {/* Fixed centre pin (REQ#035). The pin never moves - the map moves under it -
+              so whatever sits at the centre of the viewport is the chosen point. It is a
+              pointer-events-none sibling of the map, positioned the same way as the
+              "Use current location" button below, so it cannot affect the layout of the
+              form around it. translate(-50%,-100%) puts the pin's TIP on the centre. */}
+          {GOOGLE_MAPS_API_KEY && (
+            <div className="pointer-events-none absolute inset-0 z-10">
+              <div
+                className="absolute left-1/2 top-1/2"
+                style={{ transform: `translate(-50%, -100%) translateY(${isPinSettling ? -8 : 0}px)`, transition: 'transform 150ms ease-out' }}
+              >
+                <MapPin className="h-9 w-9 text-green-600 drop-shadow-md" fill="#16a34a" strokeWidth={1.5} />
+              </div>
+              {/* Ground dot marking the exact centre the pin refers to */}
+              <div
+                className="absolute left-1/2 top-1/2 rounded-full bg-black/30"
+                style={{ width: 6, height: 6, transform: 'translate(-50%, -50%)' }}
+              />
+            </div>
+          )}
 
           {/* Loading State */}
           {mapLoading && (

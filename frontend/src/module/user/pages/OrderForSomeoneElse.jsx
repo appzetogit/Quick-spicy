@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronRight, MapPin, Search, Star, Users } from "lucide-rea
 import { restaurantAPI, zoneAPI } from "@/lib/api"
 import { useOrderForSomeoneElse } from "../hooks/useOrderForSomeoneElse"
 import { safeBack } from "../utils/safeBack"
-import { sortOpenRestaurantsFirst } from "@/lib/utils/restaurantAvailability"
+import { sortOpenRestaurantsFirst, getRestaurantAvailabilityStatus } from "@/lib/utils/restaurantAvailability"
 
 /**
  * Pick the area the food is going to, then browse that area's restaurants without leaving
@@ -244,11 +244,12 @@ export default function OrderForSomeoneElse() {
                       pick(Array.isArray(restaurant?.coverImages) ? restaurant.coverImages[0] : restaurant?.coverImages) ||
                       pick(Array.isArray(restaurant?.menuImages) ? restaurant.menuImages[0] : restaurant?.menuImages)
                     const cuisines = Array.isArray(restaurant?.cuisines) ? restaurant.cuisines.slice(0, 2).join(", ") : ""
+                    const availability = getRestaurantAvailabilityStatus(restaurant)
                     return (
                       <Link
                         key={String(restaurant?._id || slug)}
                         to={`/user/restaurants/${slug}`}
-                        className="flex gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-gray-800 dark:bg-[#1a1a1a]"
+                        className={`flex gap-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-gray-800 dark:bg-[#1a1a1a] ${availability.isOpen ? "" : "grayscale opacity-70"}`}
                       >
                         <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-100 dark:bg-gray-800">
                           {image ? (
@@ -262,6 +263,10 @@ export default function OrderForSomeoneElse() {
                           {cuisines && (
                             <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-gray-400">{cuisines}</p>
                           )}
+                          {/* Offline stores stay visible but are clearly marked (#022) */}
+                          <span className={`mt-1 inline-flex w-fit rounded-full px-2 py-0.5 text-[10px] font-semibold ${availability.isOpen ? "bg-emerald-100 text-emerald-700" : "bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300"}`}>
+                            {availability.isOpen ? "Open now" : (availability.openingCountdownLabel || "Offline")}
+                          </span>
                           <div className="mt-1.5 flex items-center gap-3">
                             <span className="flex items-center gap-1 text-xs font-medium text-slate-700 dark:text-gray-300">
                               {Number(restaurant?.rating) > 0 ? (
