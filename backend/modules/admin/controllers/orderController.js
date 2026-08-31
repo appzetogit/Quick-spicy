@@ -313,9 +313,15 @@ export const getOrders = asyncHandler(async (req, res) => {
         const digitVariants = Array.from(new Set(
           [digitsOnly, digitsOnly.slice(-10)].filter((d) => d && d.length >= 4)
         ));
+        // String.raw, and the dash last inside the class so it is a literal rather than
+        // a range. Written as a normal quoted string this was '[\s\-()]*', which JS
+        // collapses to [s-()] - a character class asking for the range s..( - and Mongo
+        // rejected the whole query with "range out of order in character class". Every
+        // numeric search 500'd. Building it raw removes the escaping step that broke it.
+        const separators = String.raw`[\s()-]*`;
         const orClauses = digitVariants.map((variant) => ({
           phone: {
-            $regex: variant.split('').map((d) => escapeRegex(d)).join('[\s\-()]*'),
+            $regex: variant.split('').map((d) => escapeRegex(d)).join(separators),
             $options: 'i',
           },
         }));
