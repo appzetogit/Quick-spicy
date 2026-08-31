@@ -1371,6 +1371,15 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
         'onboarding.step1.location',
         'deliveryFee',
         'freeDelivery',
+        // Availability. Without these the client cannot tell an offline store from an
+        // open one: getRestaurantAvailabilityStatus() reads them as undefined, every
+        // "!== false" test passes, a missing timing window counts as always-open, and a
+        // closed store renders "Open now" and sorts among the open ones. See REQ#022.
+        'isActive',
+        'isAcceptingOrders',
+        'outletTimings',
+        'openDays',
+        'deliveryTimings',
       ].join(' '))
       .lean();
 

@@ -1028,8 +1028,13 @@ export default function Under250() {
                 key={restaurant.id}
                 className={`pt-4 sm:pt-6 md:pt-8 lg:pt-10 ${isRestaurantOffline ? "grayscale opacity-70" : ""}`}
               >
-                {/* Restaurant Header */}
-                <div className="flex items-start justify-between mb-3 md:mb-4 lg:mb-6">
+                {/* Restaurant Header - the whole header is the way into the store. Only the
+                    header is wrapped: the menu items below carry their own add-to-cart
+                    controls, and wrapping the section would swallow those taps. */}
+                <Link
+                  to={`/user/restaurants/${restaurantSlug}?under250=true`}
+                  className="flex items-start justify-between mb-3 md:mb-4 lg:mb-6"
+                >
                   <div className="flex-1">
                     <h3 className="text-lg sm:text-xl md:text-2xl lg:text-3xl xl:text-4xl font-bold text-gray-900 dark:text-white mb-1 md:mb-2">
                       {restaurant.name}
@@ -1053,7 +1058,7 @@ export default function Under250() {
                       {restaurant.totalRatings > 0 ? `By ${restaurant.totalRatings >= 1000 ? `${(restaurant.totalRatings / 1000).toFixed(1)}K+` : `${restaurant.totalRatings}+`}` : ''}
                     </span>
                   </div>
-                </div>
+                </Link>
 
                 {/* Menu Items Horizontal Scroll */}
                 {restaurant.menuItems && restaurant.menuItems.length > 0 && (
