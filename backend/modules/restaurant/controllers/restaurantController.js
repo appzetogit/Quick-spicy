@@ -1512,6 +1512,15 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
         image: restaurant.profileImage?.url || restaurant.menuImages?.[0]?.url || '',
         restaurantZoneId,
         ...(userZoneId ? { isInUserZone: true } : {}),
+        // Availability, so the card can tell an offline store from an open one.
+        // The response is built field by field, so widening the query projection
+        // alone was not enough - these have to be copied across too. Without them
+        // every closed store rendered "Open now". See REQ#022.
+        isActive: restaurant.isActive !== false,
+        isAcceptingOrders: restaurant.isAcceptingOrders !== false,
+        outletTimings: restaurant.outletTimings || null,
+        openDays: restaurant.openDays || null,
+        deliveryTimings: restaurant.deliveryTimings || null,
         under250ItemCount: dishesUnder250.length,
         menuItems: previewDishes.map((item) => {
           const finalPrice = getFinalPrice(item);
