@@ -259,13 +259,15 @@ export const getCouponsByItemId = asyncHandler(async (req, res) => {
     
     // End date should be >= now (or null)
     // Add 1 day buffer to include offers that end today
-    const endOfToday = new Date(now);
-    endOfToday.setHours(23, 59, 59, 999);
-    const endValid = !endDate || endDate >= endOfToday;
+    // Valid until its expiry passes - not "must survive until midnight". Requiring
+    // endDate >= end of today hid every coupon that expires later the same day, which
+    // is exactly what a limited-time offer is. It only ever looked right because
+    // expiries used to be forced to 23:59:59, making the comparison trivially true.
+    const endValid = !endDate || endDate >= now;
     
     console.log(`[COUPONS] Offer ${offer._id}:`);
     console.log(`  startDate: ${startDate?.toISOString()}, now: ${now.toISOString()}, startValid: ${startValid}`);
-    console.log(`  endDate: ${endDate?.toISOString()}, endOfToday: ${endOfToday.toISOString()}, endValid: ${endValid}`);
+    console.log(`  endDate: ${endDate?.toISOString()}, now: ${now.toISOString()}, endValid: ${endValid}`);
     
     return startValid && endValid;
   });
@@ -396,9 +398,11 @@ export const getCouponsByItemIdPublic = asyncHandler(async (req, res) => {
     const endDate = getEffectiveOfferEndDate(offer.endDate);
     
     const startValid = !startDate || startDate <= now;
-    const endOfToday = new Date(now);
-    endOfToday.setHours(23, 59, 59, 999);
-    const endValid = !endDate || endDate >= endOfToday;
+    // Valid until its expiry passes - not "must survive until midnight". Requiring
+    // endDate >= end of today hid every coupon that expires later the same day, which
+    // is exactly what a limited-time offer is. It only ever looked right because
+    // expiries used to be forced to 23:59:59, making the comparison trivially true.
+    const endValid = !endDate || endDate >= now;
     
     return startValid && endValid;
   });
@@ -479,9 +483,8 @@ export const getPublicOffers = asyncHandler(async (req, res) => {
       const endDate = getEffectiveOfferEndDate(offer.endDate);
       
       const startValid = !startDate || startDate <= now;
-      const endOfToday = new Date(now);
-      endOfToday.setHours(23, 59, 59, 999);
-      const endValid = !endDate || endDate >= endOfToday;
+      // See the note above: a same-day expiry is valid until it actually passes.
+      const endValid = !endDate || endDate >= now;
       
       if (!startValid || !endValid) {
         return; // Skip expired or not yet started offers
