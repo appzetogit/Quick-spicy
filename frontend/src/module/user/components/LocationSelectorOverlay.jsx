@@ -1554,6 +1554,18 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
 
     setSearchingLocation(true)
     const pickedText = suggestion.description || searchValue
+
+    // Kill any autocomplete already on its way back. Its callback only checks for a
+    // NEWER search, and picking a suggestion starts no new search - so the reply to
+    // the text the customer typed before choosing was still considered current, and
+    // landed after this handler had cleared the list, refilling and re-opening it.
+    // Bumping the request id makes that late reply fail its own staleness check.
+    activeAutocompleteRequestRef.current += 1
+    if (searchDebounceTimeoutRef.current) {
+      clearTimeout(searchDebounceTimeoutRef.current)
+      searchDebounceTimeoutRef.current = null
+    }
+
     suppressSearchForValueRef.current = pickedText
     setSearchValue(pickedText)
     setShowSearchSuggestions(false)
