@@ -11,6 +11,7 @@ import {
   syncLegacyFcmFields,
   upsertNotificationDevice,
 } from '../../notification/utils/deviceTokens.js';
+import { validatePersonName } from '../../../shared/utils/personName.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -63,6 +64,14 @@ export const updateUserProfile = asyncHandler(async (req, res) => {
 
     // Update fields
     if (name !== undefined && name !== null) {
+      // Enforced here, not only in the app. The name reaches the restaurant and the
+      // rider, and customers were using it to send messages - orders went out under
+      // "Please cancel my order". The client checks this too, but that check is only
+      // a convenience: this endpoint can be called directly.
+      const nameCheck = validatePersonName(name, { required: false, label: 'Name' });
+      if (!nameCheck.valid) {
+        return errorResponse(res, 400, nameCheck.error);
+      }
       user.name = name.trim();
     }
     

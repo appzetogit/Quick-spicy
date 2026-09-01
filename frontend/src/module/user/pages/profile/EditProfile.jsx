@@ -28,6 +28,7 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import { safeBack } from "../../utils/safeBack"
+import { validatePersonName } from "@/lib/utils/personName"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -253,6 +254,11 @@ export default function EditProfile() {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? "" : "Please enter a valid email"
   }
 
+  // The name goes to the restaurant and the rider. Customers were using it to send
+  // messages ("Please cancel my order") because nothing on the order screen offered
+  // a way to ask for help; that outlet now exists, and this keeps the field a name.
+  const validateName = (value) => validatePersonName(value, { required: false }).error
+
   const validateDateOfBirth = (value) => {
     if (!value) return ""
     const dob = dayjs(value)
@@ -267,6 +273,8 @@ export default function EditProfile() {
     if (field === "email") {
       normalizedValue = String(value || "").trim()
       errorMessage = validateEmail(normalizedValue)
+    } else if (field === "name") {
+      errorMessage = validateName(normalizedValue)
     } else if (field === "dateOfBirth") {
       errorMessage = validateDateOfBirth(normalizedValue)
     }
@@ -276,7 +284,7 @@ export default function EditProfile() {
       [field]: normalizedValue
     }))
 
-    if (field === "email" || field === "dateOfBirth") {
+    if (field === "email" || field === "dateOfBirth" || field === "name") {
       setFieldErrors((prev) => ({
         ...prev,
         [field]: errorMessage
@@ -432,6 +440,7 @@ export default function EditProfile() {
   const validateForm = () => {
     const nextErrors = {
       mobile: "",
+      name: validateName(formData.name),
       email: validateEmail(formData.email),
       dateOfBirth: validateDateOfBirth(formData.dateOfBirth),
     }
@@ -588,6 +597,9 @@ export default function EditProfile() {
                   </button>
                 )}
               </div>
+              {fieldErrors.name && (
+                <p className="text-xs text-red-600">{fieldErrors.name}</p>
+              )}
             </div>
 
             {/* Mobile Field */}

@@ -613,7 +613,12 @@ export default function UserOrderDetails() {
         </button>
       </div>
 
-      {/* Restaurant Complaint Button - Below Order Details */}
+      {/* The way to reach us about this order.
+          Labelled "Restaurant Complaint" before, which reads as "complain about the
+          restaurant" - so customers who wanted to cancel, chase, or ask about payment
+          did not recognise it as the place to do that, and typed their message into
+          the only other free-text box they could find: their own name. Orders went out
+          under "Please cancel my order". The destination is unchanged. */}
       {order && (
         <div className="p-4 pb-24">
           <button
@@ -643,7 +648,7 @@ export default function UserOrderDetails() {
             className="w-full bg-orange-50 border border-orange-200 text-orange-700 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 hover:bg-orange-100 transition-colors"
           >
             <FileText className="w-4 h-4" />
-            Restaurant Complaint
+            Need help with this order?
           </button>
         </div>
       )}
