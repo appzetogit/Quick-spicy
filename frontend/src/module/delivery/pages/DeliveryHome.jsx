@@ -73,6 +73,10 @@ const DELIVERY_LOCATION_SEND_INTERVAL_MS = 3000
 const DELIVERY_LOCATION_FALLBACK_INTERVAL_MS = 3000
 const POLYLINE_WIPE_INTERVAL_MS = 4000
 const BILL_UPLOAD_TIMEOUT_MS = 45000
+// The native camera bridge resolves on the Flutter side; if that never happens the
+// rider is stranded mid-delivery, so the wait is bounded and falls back to the web
+// file input.
+const CAMERA_BRIDGE_TIMEOUT_MS = 30000
 
 const buildDeliveryAudioCandidates = (source, fileName, cacheKey = "delivery-alert") => {
   if (!source) return []
@@ -3956,13 +3960,26 @@ export default function DeliveryHome() {
       if (window.flutter_inappwebview && typeof window.flutter_inappwebview.callHandler === 'function') {
         debugLog('📸 Using Flutter InAppWebView camera handler')
         
-        // Call Flutter handler to open camera
-        const result = await window.flutter_inappwebview.callHandler('openCamera', {
-          source: 'camera', // 'camera' for camera, 'gallery' for file picker
-          accept: 'image/*',
-          multiple: false,
-          quality: 0.8 // Image quality (0.0 to 1.0)
-        })
+        // Call Flutter handler to open camera.
+        //
+        // Bounded, because this promise is resolved by the native side and nothing
+        // guarantees it ever will be: a shell without the 'openCamera' handler, a
+        // denied camera permission that reports nothing back, or a crash in the native
+        // picker all leave it pending forever. An unbounded await here strands the
+        // rider on this screen with no error and no way to retry - they cannot reach
+        // the customer and cannot complete the delivery. On timeout we fall through to
+        // the browser file input, which can still take a photo.
+        const result = await Promise.race([
+          window.flutter_inappwebview.callHandler('openCamera', {
+            source: 'camera', // 'camera' for camera, 'gallery' for file picker
+            accept: 'image/*',
+            multiple: false,
+            quality: 0.8 // Image quality (0.0 to 1.0)
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('CAMERA_BRIDGE_TIMEOUT')), CAMERA_BRIDGE_TIMEOUT_MS)
+          )
+        ])
         
         debugLog('📸 Flutter handler response:', result)
         
@@ -4027,8 +4044,12 @@ export default function DeliveryHome() {
       }
     } catch (error) {
       debugError('❌ Error opening camera:', error)
-      toast.error('Failed to open camera. Please try again.')
-      
+      toast.error(
+        error?.message === 'CAMERA_BRIDGE_TIMEOUT'
+          ? 'Camera did not respond. Opening the photo picker instead.'
+          : 'Failed to open camera. Please try again.'
+      )
+
       // Fallback to standard file input
       if (cameraInputRef.current) {
         cameraInputRef.current.click()

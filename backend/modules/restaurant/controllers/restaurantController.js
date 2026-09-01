@@ -484,11 +484,15 @@ export const getRestaurants = async (req, res) => {
       // We'll filter this in application logic since it's a string field
     }
     
-    // Price range filter
+    // Price filter, on the real dish price rather than the $/$$/$$$ bucket.
+    // Every restaurant in this catalogue carries priceRange '$$', so the old bucket
+    // map made "under 200" ($ only) match NOTHING and "under 500" ($ or $$) match
+    // EVERYTHING - the price filter appeared to do nothing at all. featuredPrice is
+    // a real number and is set on every restaurant.
     if (maxPrice) {
-      const priceMap = { 200: ['$'], 500: ['$', '$$'] };
-      if (priceMap[maxPrice]) {
-        query.priceRange = { $in: priceMap[maxPrice] };
+      const maxPriceValue = Number(maxPrice);
+      if (Number.isFinite(maxPriceValue) && maxPriceValue > 0) {
+        query.featuredPrice = { $gt: 0, $lte: maxPriceValue };
       }
     }
     
@@ -505,11 +509,13 @@ export const getRestaurants = async (req, res) => {
     
     if (sortBy) {
       switch (sortBy) {
+        // Sorted on featuredPrice, not priceRange: priceRange is '$$' for all 159
+        // restaurants, so sorting by it never changed the order by a single row.
         case 'price-low':
-          sortObj = { priceRange: 1, rating: -1 }; // $ < $$ < $$$, then by rating
+          sortObj = { featuredPrice: 1, rating: -1 };
           break;
         case 'price-high':
-          sortObj = { priceRange: -1, rating: -1 }; // $$$$ > $$$ > $$ > $, then by rating
+          sortObj = { featuredPrice: -1, rating: -1 };
           break;
         case 'rating-high':
           sortObj = { rating: -1, totalRatings: -1 }; // Highest rating first

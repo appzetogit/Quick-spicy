@@ -1723,11 +1723,19 @@ export default function Home() {
     filtered = filtered.filter(matchesVegMode)
 
     // Apply filters
+    // Filtered on the real dish price. priceRange is '$$' for every restaurant in the
+    // catalogue, so "under 200" ($ or $$) and "under 500" (not $$$) both matched the
+    // entire list - picking either changed nothing, which is why the price filters
+    // looked broken.
+    const dishPriceOf = (r) => {
+      const value = Number(r?.featuredPrice)
+      return Number.isFinite(value) && value > 0 ? value : null
+    }
     if (activeFilters.has('price-under-200')) {
-      filtered = filtered.filter(r => r.priceRange === "$" || r.priceRange === "$$")
+      filtered = filtered.filter(r => { const p = dishPriceOf(r); return p === null || p <= 200 })
     }
     if (activeFilters.has('price-under-500')) {
-      filtered = filtered.filter(r => r.priceRange !== "$$$")
+      filtered = filtered.filter(r => { const p = dishPriceOf(r); return p === null || p <= 500 })
     }
     if (activeFilters.has('delivery-under-30')) {
       filtered = filtered.filter(r => {
@@ -1782,18 +1790,13 @@ export default function Home() {
     }
 
     // Apply sorting
+    // Sorted on the real dish price for the same reason as the filters above: every
+    // restaurant maps to the same $$ bucket, so the old comparator returned 0 for
+    // every pair and the list never moved.
     if (sortBy === 'price-low') {
-      filtered.sort((a, b) => {
-        const aPrice = a.priceRange === "$" ? 1 : a.priceRange === "$$" ? 2 : 3
-        const bPrice = b.priceRange === "$" ? 1 : b.priceRange === "$$" ? 2 : 3
-        return aPrice - bPrice
-      })
+      filtered.sort((a, b) => (dishPriceOf(a) ?? Infinity) - (dishPriceOf(b) ?? Infinity))
     } else if (sortBy === 'price-high') {
-      filtered.sort((a, b) => {
-        const aPrice = a.priceRange === "$" ? 1 : a.priceRange === "$$" ? 2 : 3
-        const bPrice = b.priceRange === "$" ? 1 : b.priceRange === "$$" ? 2 : 3
-        return bPrice - aPrice
-      })
+      filtered.sort((a, b) => (dishPriceOf(b) ?? -Infinity) - (dishPriceOf(a) ?? -Infinity))
     } else if (sortBy === 'rating-high') {
       filtered.sort((a, b) => b.rating - a.rating)
     } else if (sortBy === 'rating-low') {

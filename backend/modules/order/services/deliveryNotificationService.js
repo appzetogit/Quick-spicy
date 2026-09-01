@@ -596,10 +596,49 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
     if (!deliveryPartnerIds || deliveryPartnerIds.length === 0) {
       return { success: false, notified: 0 };
     }
-    const busyPartnerIds = await getBusyDeliveryPartnerIds(deliveryPartnerIds, order?._id);
-    const freeDeliveryPartnerIds = deliveryPartnerIds.filter((id) => !busyPartnerIds.has(String(id || '').trim()));
-    if (freeDeliveryPartnerIds.length !== deliveryPartnerIds.length) {
-      console.log(`Filtered ${deliveryPartnerIds.length - freeDeliveryPartnerIds.length} busy delivery partner(s) from ${phase} notification`);
+
+    const idOf = (value) => String(value?._id || value || '').trim();
+
+    // An order that already has a rider is not up for grabs. Eligibility above is
+    // judged on status alone, and an accepted order stays 'preparing'/'ready' until
+    // pickup - so without this the order kept being broadcast to every other online
+    // partner after someone had already accepted it, and they were offered a job
+    // that was gone. Re-notifying the assigned rider is still allowed.
+    const assignedPartnerId = idOf(order?.deliveryPartnerId);
+    let candidateIds = deliveryPartnerIds;
+    if (assignedPartnerId) {
+      candidateIds = candidateIds.filter((id) => idOf(id) === assignedPartnerId);
+      if (candidateIds.length === 0) {
+        console.log(
+          `Order ${order.orderId} is already assigned to ${assignedPartnerId}; skipping ${phase} broadcast to ${deliveryPartnerIds.length} partner(s).`
+        );
+        return { success: false, notified: 0, reason: 'already_assigned' };
+      }
+    }
+
+    // A partner who declined this order must never be offered it again. Denying adds
+    // them to excludedDeliveryPartners, but nothing here consulted that list, so every
+    // later dispatch round re-offered the same order to the rider who had just said no.
+    const excludedPartnerIds = new Set(
+      (order?.excludedDeliveryPartners || []).map(idOf).filter(Boolean)
+    );
+    if (excludedPartnerIds.size > 0) {
+      const beforeExclusion = candidateIds.length;
+      candidateIds = candidateIds.filter((id) => !excludedPartnerIds.has(idOf(id)));
+      if (candidateIds.length !== beforeExclusion) {
+        console.log(
+          `Filtered ${beforeExclusion - candidateIds.length} delivery partner(s) who declined order ${order.orderId} from ${phase} notification`
+        );
+      }
+      if (candidateIds.length === 0) {
+        return { success: false, notified: 0, reason: 'all_candidates_declined' };
+      }
+    }
+
+    const busyPartnerIds = await getBusyDeliveryPartnerIds(candidateIds, order?._id);
+    const freeDeliveryPartnerIds = candidateIds.filter((id) => !busyPartnerIds.has(String(id || '').trim()));
+    if (freeDeliveryPartnerIds.length !== candidateIds.length) {
+      console.log(`Filtered ${candidateIds.length - freeDeliveryPartnerIds.length} busy delivery partner(s) from ${phase} notification`);
     }
     if (freeDeliveryPartnerIds.length === 0) {
       return { success: false, notified: 0 };

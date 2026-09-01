@@ -927,9 +927,10 @@ export default function RestaurantOnboarding() {
     if (!step4.featuredPrice || !/^\d+$/.test(String(step4.featuredPrice)) || Number(step4.featuredPrice) <= 0) {
       errors.push("Featured dish price is required and must be greater than 0")
     }
-    if (!step4.offer || !step4.offer.trim()) {
-      errors.push("Special offer/promotion is required")
-    }
+    // Deliberately not required. A promotion is something a restaurant may or may
+    // not be running, and demanding one to finish sign-up left restaurants with no
+    // current offer unable to complete onboarding at all - they had to invent a
+    // discount to get past this screen.
     return errors
   }
 
@@ -2313,7 +2314,7 @@ export default function RestaurantOnboarding() {
         </div>
 
         <div>
-          <Label className="text-xs text-gray-700">Special Offer/Promotion*</Label>
+          <Label className="text-xs text-gray-700">Special Offer/Promotion <span className="text-gray-400">(optional)</span></Label>
           <Input
             value={step4.offer || ""}
             onChange={(e) => setStep4({ ...step4, offer: e.target.value })}

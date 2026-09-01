@@ -311,11 +311,19 @@ function RestaurantDetailsContent() {
           // machine residue and gets dropped, exactly like a Plus Code.
           const OCEAN_ONLY_RE = /^\s*(atlantic|pacific|indian|arctic|southern)\s+ocean\s*$/i
 
+          // Same residue, one zoom level out. 0,0 sits in the Gulf of Guinea off West
+          // Africa, so the same records that geocoded to an ocean can come back naming
+          // the continent instead - a Cumbum restaurant reading "Africa, Markapuram
+          // district, Cumbum, Andhra Pradesh". A continent is not a street address in
+          // any business, so it is dropped like the ocean and the Plus Code.
+          const CONTINENT_ONLY_RE =
+            /^\s*(africa|asia|europe|antarctica|oceania|australia|(north|south|central|latin)\s+america)\s*$/i
+
           const isUnusableAddressLine = (value) => {
             const text = String(value || "").trim()
             if (!text) return true
             if (hasPlusCode(text)) return true
-            return OCEAN_ONLY_RE.test(text)
+            return OCEAN_ONLY_RE.test(text) || CONTINENT_ONLY_RE.test(text)
           }
 
           // Drop the code and any separator trailing it, then tidy stray commas.
