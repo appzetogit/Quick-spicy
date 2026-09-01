@@ -427,9 +427,14 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     const query = (searchValue || "").trim()
 
     // This text came from picking a suggestion, not from typing: do not search it.
+    //
+    // The flag is NOT cleared here. This effect also re-runs on mapPosition and on
+    // the location coords, and picking a suggestion moves the map - so it fires again
+    // a moment later with the same picked text. Clearing on the first run let that
+    // second run search the address and re-open the list about a second after the
+    // customer had chosen, which is exactly what they saw. Only typing lifts it.
     if (suppressSearchForValueRef.current !== null &&
         query === String(suppressSearchForValueRef.current).trim()) {
-      suppressSearchForValueRef.current = null
       setSearchSuggestions([])
       setShowSearchSuggestions(false)
       setActiveSuggestionIndex(-1)
@@ -1540,6 +1545,8 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   }
 
   const handleSearchInputChange = (event) => {
+    // The customer is typing again, so the picked-address suppression no longer applies.
+    suppressSearchForValueRef.current = null
     setSearchValue(event.target.value)
     setShowSearchSuggestions(true)
     setActiveSuggestionIndex(-1)
