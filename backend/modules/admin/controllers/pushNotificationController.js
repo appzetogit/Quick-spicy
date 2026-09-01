@@ -8,6 +8,8 @@ import Restaurant from "../../restaurant/models/Restaurant.js";
 import ScheduledPushNotification from "../models/ScheduledPushNotification.js";
 import { extractNotificationTokens } from "../../notification/utils/deviceTokens.js";
 import { normalizePhoneNumber } from "../../../shared/utils/phoneUtils.js";
+import mongoose from "mongoose";
+import Zone from "../models/Zone.js";
 
 const BATCH_SIZE = 500;
 const PARTNER_ANDROID_CHANNEL_ID = "quick_spicy_popup_v2";
@@ -15,6 +17,12 @@ const PARTNER_ANDROID_SOUND = "original";
 const INVALID_FCM_TOKEN_CODES = new Set([
   "messaging/invalid-argument",
   "messaging/registration-token-not-registered",
+  // A token that is malformed or belongs to another Firebase project is just as dead
+  // as an unregistered one, but was not being pruned - so it failed on every send
+  // from then on and kept inflating the failure count.
+  "messaging/invalid-registration-token",
+  "messaging/mismatched-credential",
+  "messaging/invalid-recipient",
 ]);
 
 const normalizeTarget = (target = "customer") => {
@@ -141,34 +149,66 @@ const chunk = (arr = [], size = BATCH_SIZE) => {
   return result;
 };
 
-async function getTargetTokens(target, platform) {
+// A customer has no zone of their own - the app never stores one on the account -
+// so their zone is taken from the address they order to. Default address first,
+// then any address that has coordinates.
+const isUserInZone = (user, zone) => {
+  const addresses = Array.isArray(user?.addresses) ? user.addresses : [];
+  if (addresses.length === 0) return false;
+
+  const ordered = [
+    ...addresses.filter((a) => a?.isDefault),
+    ...addresses.filter((a) => !a?.isDefault),
+  ];
+
+  for (const address of ordered) {
+    const coords = address?.location?.coordinates;
+    if (!Array.isArray(coords) || coords.length < 2) continue;
+    const [lng, lat] = coords;
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    if (typeof zone.containsPoint === "function" && zone.containsPoint(lat, lng)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+async function getTargetTokens(target, platform, zoneDoc = null) {
   const baseFilter = buildActiveOrLegacyFilter();
+  const zoneIdString = zoneDoc?._id?.toString?.() || "";
 
   if (target === "customer") {
     const users = await User.find({ role: "user", ...baseFilter })
-      .select("phone fcmtokenweb fcmtokenmobile notificationDevices createdAt updatedAt")
+      .select("phone fcmtokenweb fcmtokenmobile notificationDevices createdAt updatedAt addresses")
       .lean();
-    return extractCustomerTokensByPhone(users, platform);
+    const scoped = zoneDoc ? users.filter((user) => isUserInZone(user, zoneDoc)) : users;
+    return extractCustomerTokensByPhone(scoped, platform);
   }
 
   if (target === "delivery") {
-    const deliveryPartners = await Delivery.find(baseFilter)
+    const deliveryPartners = await Delivery.find({
+      ...baseFilter,
+      ...(zoneIdString ? { zones: zoneIdString } : {}),
+    })
       .select("fcmtokenweb fcmtokenmobile notificationDevices")
       .lean();
     return extractTokensByPlatform(deliveryPartners, platform);
   }
 
   if (target === "restaurant") {
-    const restaurants = await Restaurant.find(baseFilter)
+    const restaurants = await Restaurant.find({
+      ...baseFilter,
+      ...(zoneIdString ? { zoneId: zoneIdString } : {}),
+    })
       .select("fcmtokenweb fcmtokenmobile notificationDevices")
       .lean();
     return extractTokensByPlatform(restaurants, platform);
   }
 
   const [userTokens, deliveryTokens, restaurantTokens] = await Promise.all([
-    getTargetTokens("customer", platform),
-    getTargetTokens("delivery", platform),
-    getTargetTokens("restaurant", platform),
+    getTargetTokens("customer", platform, zoneDoc),
+    getTargetTokens("delivery", platform, zoneDoc),
+    getTargetTokens("restaurant", platform, zoneDoc),
   ]);
 
   return {
@@ -238,7 +278,7 @@ const pruneInvalidFcmTokens = async (target = "customer", failures = []) => {
     ),
   ];
 
-  if (invalidTokens.length === 0) return;
+  if (invalidTokens.length === 0) return 0;
 
   const targetModels = getTargetModels(target);
 
@@ -264,6 +304,8 @@ const pruneInvalidFcmTokens = async (target = "customer", failures = []) => {
       ),
     ]),
   );
+
+  return invalidTokens.length;
 };
 
 const executePushNotification = async ({
@@ -321,7 +363,25 @@ const executePushNotification = async ({
     };
   }
 
-  const targetTokens = await getTargetTokens(normalizedTarget, normalizedPlatform);
+  // "All" means every zone. A specific zone is resolved once here and passed down,
+  // so the audience is actually narrowed - picking a zone used to change nothing at
+  // all: it was recorded on the notification and then ignored when choosing who to
+  // send to, so every send went to everyone.
+  let zoneDoc = null;
+  if (normalizedZone && normalizedZone.toLowerCase() !== "all") {
+    zoneDoc = mongoose.Types.ObjectId.isValid(normalizedZone)
+      ? await Zone.findById(normalizedZone)
+      : await Zone.findOne({ name: normalizedZone });
+    if (!zoneDoc) {
+      return {
+        ok: false,
+        statusCode: 400,
+        message: `Zone "${normalizedZone}" was not found`,
+      };
+    }
+  }
+
+  const targetTokens = await getTargetTokens(normalizedTarget, normalizedPlatform, zoneDoc);
   const { webTokens, mobileTokens } = dedupeCrossChannelTokens(
     targetTokens.webTokens,
     targetTokens.mobileTokens,
@@ -464,7 +524,17 @@ const executePushNotification = async ({
     });
   }
 
-  await pruneInvalidFcmTokens(normalizedTarget, failedTokens);
+  const prunedCount = await pruneInvalidFcmTokens(normalizedTarget, failedTokens);
+
+  // Recorded server-side, not just returned to the browser. The counts and the
+  // reason codes only ever existed in the HTTP response, so once the admin closed
+  // the page there was no way to find out who failed or why - a report of "~700
+  // failed" left nothing to investigate.
+  console.log(
+    `[PUSH] target=${normalizedTarget} platform=${normalizedPlatform} zone=${normalizedZone} ` +
+    `tokens=${totalTokens} sent=${sentCount} failed=${failedCount} ` +
+    `pruned=${prunedCount || 0} codes=${JSON.stringify(failureCodeCounts)}`
+  );
 
   const responseMessage =
     sentCount > 0

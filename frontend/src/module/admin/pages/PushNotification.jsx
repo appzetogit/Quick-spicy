@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react"
+import { useState, useMemo, useRef, useEffect } from "react"
 import { Search, Bell, Edit, Trash2, Upload, Image as ImageIcon } from "lucide-react"
 import { toast } from "sonner"
 import { adminAPI, uploadAPI } from "@/lib/api"
@@ -18,6 +18,34 @@ export default function PushNotification() {
   const fileInputRef = useRef(null)
   const sendingRef = useRef(false)
   const [scheduledDates, setScheduledDates] = useState([])
+  // The zone list used to be two hardcoded options, "Asia" and "Europe", left over
+  // from scaffolding - neither is a place this business delivers to. These are the
+  // real serving zones, and the value sent is the zone's id so the backend can
+  // actually narrow the audience to it.
+  const [zones, setZones] = useState([])
+
+  // Saved notifications store the zone id; show the zone's name rather than the raw id.
+  const zoneLabel = (value) => {
+    if (!value || String(value).toLowerCase() === "all") return "All zones"
+    const match = zones.find((z) => String(z._id) === String(value))
+    return match ? (match.name || match.zoneName) : String(value)
+  }
+
+  useEffect(() => {
+    const loadZones = async () => {
+      try {
+        const response = await adminAPI.getZones({ page: 1, limit: 500, isActive: true, summary: "dropdown" })
+        if (response?.data?.data?.zones) {
+          setZones(response.data.data.zones)
+        }
+      } catch (error) {
+        // A failure here leaves only "All", which still sends - better than blocking
+        // the form over a dropdown.
+        toast.error("Could not load zones. You can still send to All.")
+      }
+    }
+    loadZones()
+  }, [])
   const [editingNotificationId, setEditingNotificationId] = useState(null)
   const [formData, setFormData] = useState({
     title: "",
@@ -395,9 +423,12 @@ export default function PushNotification() {
                   onChange={(e) => handleInputChange("zone", e.target.value)}
                   className="w-full px-4 py-2.5 border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
-                  <option value="All">All</option>
-                  <option value="Asia">Asia</option>
-                  <option value="Europe">Europe</option>
+                  <option value="All">All zones</option>
+                  {zones.map((zone) => (
+                    <option key={zone._id} value={zone._id}>
+                      {zone.name || zone.zoneName}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -659,7 +690,7 @@ export default function PushNotification() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-slate-700">{notification.zone}</span>
+                      <span className="text-sm text-slate-700">{zoneLabel(notification.zone)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-slate-700">{notification.target}</span>
