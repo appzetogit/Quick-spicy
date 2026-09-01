@@ -303,6 +303,15 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const autocompleteServiceRef = useRef(null)
   const placesServiceRef = useRef(null)
   const searchDebounceTimeoutRef = useRef(null)
+  // Holds the text that a suggestion pick just wrote into the search box.
+  //
+  // Picking a suggestion closes the dropdown AND sets the input to the chosen
+  // address. The suggestion effect watches the input, so it immediately re-ran on
+  // that new text and re-opened the dropdown - straight from the autocomplete cache,
+  // so instantly - leaving the list sitting over the map after the customer had
+  // already chosen. The value written by the pick is skipped exactly once; anything
+  // the customer types afterwards, including the same text again, still searches.
+  const suppressSearchForValueRef = useRef(null)
   const activeAutocompleteRequestRef = useRef(0)
   const searchSessionTokenRef = useRef(null)
   const lastSearchQueryRef = useRef("")
@@ -416,6 +425,20 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     }
 
     const query = (searchValue || "").trim()
+
+    // This text came from picking a suggestion, not from typing: do not search it.
+    if (suppressSearchForValueRef.current !== null &&
+        query === String(suppressSearchForValueRef.current).trim()) {
+      suppressSearchForValueRef.current = null
+      setSearchSuggestions([])
+      setShowSearchSuggestions(false)
+      setActiveSuggestionIndex(-1)
+      if (searchDebounceTimeoutRef.current) {
+        clearTimeout(searchDebounceTimeoutRef.current)
+      }
+      return
+    }
+
     if (query.length < 3) {
       setSearchSuggestions([])
       setShowSearchSuggestions(false)
@@ -1530,7 +1553,9 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
     }
 
     setSearchingLocation(true)
-    setSearchValue(suggestion.description || searchValue)
+    const pickedText = suggestion.description || searchValue
+    suppressSearchForValueRef.current = pickedText
+    setSearchValue(pickedText)
     setShowSearchSuggestions(false)
     setSearchSuggestions([])
 
