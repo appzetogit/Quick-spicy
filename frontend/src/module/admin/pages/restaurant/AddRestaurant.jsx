@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
-import { sanitizeDeliveryTimeInput, formatDeliveryTimeForSave, parseDeliveryTimeValue } from "@/lib/utils/deliveryTime"
+import { sanitizeDeliveryTimeInput, formatDeliveryTimeForSave, parseDeliveryTimeValue, validateDeliveryTime } from "@/lib/utils/deliveryTime"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -238,7 +238,11 @@ export default function AddRestaurant() {
 
   const validateStep4 = () => {
     const errors = []
-    if (!step4.estimatedDeliveryTime?.trim()) errors.push("Estimated delivery time is required")
+    // Presence alone is not enough - that is what let "Ergggvcf" through and out to
+    // customers. Same check the restaurant panel's onboarding uses; this admin copy
+    // of the form had been left on the old presence-only test.
+    const deliveryTimeCheck = validateDeliveryTime(step4.estimatedDeliveryTime)
+    if (!deliveryTimeCheck.valid) errors.push(deliveryTimeCheck.error)
     const validSpecialDishes = (step4.specialDishes || []).filter((dish) => dish.name?.trim() || dish.price?.trim())
     if (validSpecialDishes.length === 0) errors.push("At least one special dish is required")
     validSpecialDishes.forEach((dish, index) => {
@@ -248,7 +252,8 @@ export default function AddRestaurant() {
         errors.push(`Special dish ${index + 1} price must be greater than 0`)
       }
     })
-    if (!step4.offer?.trim()) errors.push("Special offer/promotion is required")
+    // Optional, matching restaurant onboarding: a promotion is something a restaurant
+    // may or may not be running, and requiring one blocked the form outright.
     return errors
   }
 
@@ -889,7 +894,7 @@ export default function AddRestaurant() {
           </div>
         </div>
         <div>
-          <Label className="text-xs text-gray-700">Special Offer/Promotion*</Label>
+          <Label className="text-xs text-gray-700">Special Offer/Promotion <span className="text-gray-400">(optional)</span></Label>
           <Input value={step4.offer || ""} onChange={(e) => setStep4({ ...step4, offer: e.target.value })} className="mt-1 bg-white text-sm" placeholder="e.g., Flat 50 Rs. OFF on Order Above Rs.199" />
         </div>
       </section>
