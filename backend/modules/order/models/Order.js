@@ -374,6 +374,22 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: null
   },
+  // Set when a rider confirmed the order with no bill image because the upload kept
+  // failing. Without these the skip could not be recorded at all - the schema is
+  // strict, so an unknown field is dropped silently and the order would be
+  // indistinguishable from one whose bill simply went missing.
+  billSkipped: {
+    type: Boolean,
+    default: false
+  },
+  billSkipReason: {
+    type: String,
+    default: null
+  },
+  billSkippedAt: {
+    type: Date,
+    default: null
+  },
   cancelledAt: {
     type: Date
   },

@@ -1563,7 +1563,7 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
   try {
     const delivery = req.delivery;
     const { orderId } = req.params;
-    const { confirmedOrderId, billImageUrl } = req.body; // Order ID confirmed by delivery boy, bill image URL
+    const { confirmedOrderId, billImageUrl, billSkipped, billSkipReason } = req.body; // Order ID confirmed by delivery boy, bill image URL
     const { currentLat, currentLng } = req.body; // Current location for route calculation
 
     // Find order by _id or orderId - try multiple methods for better compatibility
@@ -1867,6 +1867,16 @@ export const confirmOrderId = asyncHandler(async (req, res) => {
         console.error(`❌ Invalid bill image URL format: ${billImageUrl}`, urlError);
         return errorResponse(res, 400, 'Invalid bill image URL format');
       }
+    } else if (billSkipped === true) {
+      // The rider could not upload a bill after repeated failures and chose to carry
+      // on rather than be stranded at the restaurant. Recorded explicitly so this
+      // order reads as a deliberate skip, not a bill that quietly went missing.
+      updateData.billSkipped = true;
+      updateData.billSkipReason = typeof billSkipReason === 'string' ? billSkipReason : 'upload_failed';
+      updateData.billSkippedAt = now;
+      console.warn(
+        `⚠️ Order ${order.orderId} confirmed with NO bill image (reason: ${updateData.billSkipReason}) by delivery partner ${deliveryId || 'unknown'}`
+      );
     }
 
     const updatedOrder = await Order.findByIdAndUpdate(

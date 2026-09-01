@@ -770,6 +770,15 @@ export default function DeliveryHome() {
   const [billImageUrl, setBillImageUrl] = useState(null)
   const [isUploadingBill, setIsUploadingBill] = useState(false)
   const [billImageUploaded, setBillImageUploaded] = useState(false)
+  // A bill that will not upload must not strand the rider mid-delivery. After this
+  // many genuine failed attempts they may continue without one, and the delivery is
+  // recorded as having no bill rather than silently looking like a normal one.
+  const BILL_UPLOAD_FAILURES_BEFORE_SKIP = 2
+  const [billUploadFailures, setBillUploadFailures] = useState(0)
+  const [billSkipped, setBillSkipped] = useState(false)
+  // What the confirm gate actually requires: a bill, or a deliberate skip earned by
+  // repeated upload failures.
+  const canConfirmOrderId = billImageUploaded || billSkipped
   const billUploadRequestIdRef = useRef(0)
   const fileInputRef = useRef(null)
   const cameraInputRef = useRef(null)
@@ -4112,6 +4121,8 @@ export default function DeliveryHome() {
           // The bill image URL will be sent when confirming order ID
           debugLog('✅ Bill image uploaded to Cloudinary, ready to save to database')
           setBillImageUploaded(true)
+          setBillUploadFailures(0)
+          setBillSkipped(false)
           toast.success('Bill image uploaded! You can now confirm order ID.')
         } else {
           throw new Error('Failed to get image URL from upload response')
@@ -4128,6 +4139,10 @@ export default function DeliveryHome() {
       }
       setBillImageUrl(null)
       setBillImageUploaded(false)
+      // Only real failures count towards the skip; a superseded upload is not one.
+      if (requestId === billUploadRequestIdRef.current) {
+        setBillUploadFailures((count) => count + 1)
+      }
     } finally {
       if (requestId === billUploadRequestIdRef.current) {
         setIsUploadingBill(false)
@@ -4147,8 +4162,8 @@ export default function DeliveryHome() {
   }
 
   const handleOrderIdConfirmTouchEnd = (e) => {
-    // Disable swipe if bill image is not uploaded
-    if (!billImageUploaded) {
+    // Disable swipe until there is a bill, or the rider has earned the skip.
+    if (!canConfirmOrderId) {
       toast.error('Please upload bill image first')
       setOrderIdConfirmButtonProgress(0)
       return
@@ -4284,7 +4299,11 @@ export default function DeliveryHome() {
             lat: currentLocation[0],
             lng: currentLocation[1]
           }, {
-            billImageUrl: billImageUrl
+            billImageUrl: billImageUrl,
+            // Recorded so a delivery with no bill is visibly a skip after failed
+            // uploads, not a bill that quietly went missing.
+            billSkipped: billSkipped && !billImageUrl,
+            billSkipReason: billSkipped && !billImageUrl ? 'upload_failed' : undefined
           })
           
           debugLog('✅ Order ID confirmed, response:', response.data)
@@ -11670,7 +11689,11 @@ selectedRestaurant?.lng || null,
             {/* Bill Image Upload Section */}
             <div className="mb-6">
               <p className="text-gray-600 text-sm mb-3 text-center">
-                {billImageUploaded ? '✅ Bill image uploaded' : 'Please capture bill image'}
+                {billImageUploaded
+                  ? '✅ Bill image uploaded'
+                  : billSkipped
+                    ? '⚠️ Continuing without a bill image'
+                    : 'Please capture bill image'}
               </p>
               
               {/* Camera Button */}
@@ -11705,6 +11728,44 @@ selectedRestaurant?.lng || null,
                 </button>
               </div>
 
+              {/* Way out of a bill that will not upload. Offered only after real failed
+                  attempts, never up front: a rider stuck at the restaurant with a
+                  failing upload could not confirm the order ID, so they could not
+                  reach the customer and the delivery could not be completed at all.
+                  Choosing it is recorded on the order as a skip. */}
+              {!billImageUploaded && billUploadFailures >= BILL_UPLOAD_FAILURES_BEFORE_SKIP && !billSkipped && (
+                <div className="flex flex-col items-center gap-1 mb-2">
+                  <p className="text-xs text-gray-500 text-center px-4">
+                    Upload failed {billUploadFailures} times. You can continue without the bill
+                    image - this will be recorded on the order.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBillSkipped(true)
+                      toast.info('Continuing without bill image. This is recorded on the order.')
+                    }}
+                    disabled={isUploadingBill}
+                    className="text-sm font-medium text-orange-600 underline underline-offset-2 disabled:opacity-50"
+                  >
+                    Continue without bill image
+                  </button>
+                </div>
+              )}
+
+              {billSkipped && !billImageUploaded && (
+                <p className="text-xs text-center text-gray-500 mb-2">
+                  Continuing without a bill.{' '}
+                  <button
+                    type="button"
+                    onClick={() => setBillSkipped(false)}
+                    className="text-orange-600 underline underline-offset-2"
+                  >
+                    Try uploading again
+                  </button>
+                </p>
+              )}
+
               {/* Hidden file input for camera (sr-only keeps it in DOM for mobile camera) */}
               <input
                 id="bill-camera-input"
@@ -11722,16 +11783,16 @@ selectedRestaurant?.lng || null,
               <motion.div
                 ref={orderIdConfirmButtonRef}
                 className={`relative w-full rounded-full overflow-hidden shadow-xl ${
-                  billImageUploaded ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
+                  canConfirmOrderId ? 'bg-green-600' : 'bg-gray-400 cursor-not-allowed'
                 }`}
                 style={{ 
-                  touchAction: billImageUploaded ? 'pan-x' : 'none',
-                  opacity: billImageUploaded ? 1 : 0.6
+                  touchAction: canConfirmOrderId ? 'pan-x' : 'none',
+                  opacity: canConfirmOrderId ? 1 : 0.6
                 }}
-                onTouchStart={billImageUploaded ? handleOrderIdConfirmTouchStart : undefined}
-                onTouchMove={billImageUploaded ? handleOrderIdConfirmTouchMove : undefined}
-                onTouchEnd={billImageUploaded ? handleOrderIdConfirmTouchEnd : undefined}
-                onTouchCancel={billImageUploaded ? handleOrderIdConfirmTouchCancel : undefined}
+                onTouchStart={canConfirmOrderId ? handleOrderIdConfirmTouchStart : undefined}
+                onTouchMove={canConfirmOrderId ? handleOrderIdConfirmTouchMove : undefined}
+                onTouchEnd={canConfirmOrderId ? handleOrderIdConfirmTouchEnd : undefined}
+                onTouchCancel={canConfirmOrderId ? handleOrderIdConfirmTouchCancel : undefined}
                 whileTap={billImageUploaded ? { scale: 0.98 } : {}}
               >
                 {/* Swipe progress background */}
