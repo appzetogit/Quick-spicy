@@ -11,6 +11,23 @@ export default function Coupons() {
   // Local date, not toISOString(): that converts to UTC, and in IST it says
   // yesterday from 5:30pm onwards - letting coupons end in the past all evening.
   const today = todayLocalISO()
+
+  // Local "YYYY-MM-DDTHH:mm" for the datetime-local input's min attribute, so the
+  // picker cannot offer a moment that has already passed.
+  const nowLocalInput = (() => {
+    const d = new Date()
+    const pad = (v) => String(v).padStart(2, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  })()
+
+  // The input hands back local wall-clock text with no timezone ("2026-09-01T21:00").
+  // Sending that raw would be read as UTC by the API and expire the offer at the wrong
+  // moment - 5.5 hours early here. Converting through Date gives a real instant.
+  const toExpiryInstant = (localValue) => {
+    if (!localValue) return undefined
+    const parsed = new Date(localValue)
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed.toISOString()
+  }
   const [searchQuery, setSearchQuery] = useState("")
   const [restaurantSearch, setRestaurantSearch] = useState("")
   const [showRestaurantSuggestions, setShowRestaurantSuggestions] = useState(false)
@@ -329,9 +346,18 @@ export default function Coupons() {
       return
     }
 
-    if (formData.endDate && formData.endDate < today) {
-      setSubmitError("Expiry date cannot be in the past")
-      return
+    if (formData.endDate) {
+      const expiryAt = new Date(formData.endDate)
+      if (Number.isNaN(expiryAt.getTime())) {
+        setSubmitError("Please enter a valid expiry date and time")
+        return
+      }
+      // Compared as an instant, not as text. A same-day expiry time that has already
+      // passed has to be caught too, which a date-only string compare could not do.
+      if (expiryAt.getTime() <= Date.now()) {
+        setSubmitError("Expiry must be in the future")
+        return
+      }
     }
 
     try {
@@ -346,7 +372,7 @@ export default function Coupons() {
         restaurantScope: formData.restaurantScope,
         restaurantIds: formData.restaurantScope === "selected" ? formData.restaurantIds : undefined,
         zoneId: formData.zoneId || undefined,
-        endDate: formData.endDate || undefined,
+        endDate: toExpiryInstant(formData.endDate),
         productScope: formData.restaurantScope === "selected" && formData.restaurantIds.length === 1 ? formData.productScope : "all",
         selectedProducts: formData.restaurantScope === "selected" && formData.restaurantIds.length === 1 && formData.productScope === "selected" ? formData.selectedProducts : undefined,
       })
@@ -703,14 +729,18 @@ export default function Coupons() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Expiry Date (Optional)</label>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Expires On (Optional)</label>
                   <input
-                    type="date"
-                    min={today}
+                    type="datetime-local"
+                    min={nowLocalInput}
                     value={formData.endDate}
                     onChange={(e) => handleFormChange("endDate", e.target.value)}
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    Set a date and time. The coupon stops working the moment this passes.
+                    Leave empty for no expiry.
+                  </p>
                 </div>
 
                 {formData.restaurantScope === "selected" && (
@@ -1053,7 +1083,12 @@ export default function Coupons() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-slate-700">
-                          {offer.endDate ? new Date(offer.endDate).toLocaleDateString() : 'No expiry'}
+                          {offer.endDate
+                            ? new Date(offer.endDate).toLocaleString(undefined, {
+                                day: '2-digit', month: 'short', year: 'numeric',
+                                hour: '2-digit', minute: '2-digit',
+                              })
+                            : 'No expiry'}
                         </span>
                       </td>
                     </tr>

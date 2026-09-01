@@ -12,6 +12,7 @@ import {
   upsertNotificationDevice,
 } from '../../notification/utils/deviceTokens.js';
 import { validatePersonName } from '../../../shared/utils/personName.js';
+import Order from '../../order/models/Order.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -162,6 +163,28 @@ export const deleteUserProfile = asyncHandler(async (req, res) => {
 
     if (!userId) {
       return errorResponse(res, 401, 'User not authenticated');
+    }
+
+    // An account cannot be deleted out from under a live order. Deleting is a HARD
+    // delete, so the customer row disappears while the order stays - which is how 92
+    // existing orders ended up with no customer to point at, and why the admin panel
+    // showed no phone for them. For a cash-on-delivery order that is also an
+    // accountability hole: order, delete the account, and the order loses the person
+    // behind it. Finished orders keep their own name/phone snapshot, so deleting
+    // after delivery stays fine.
+    const ACTIVE_ORDER_STATUSES = ['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery'];
+    const activeOrderCount = await Order.countDocuments({
+      userId,
+      status: { $in: ACTIVE_ORDER_STATUSES },
+    });
+
+    if (activeOrderCount > 0) {
+      return errorResponse(
+        res,
+        409,
+        `You have ${activeOrderCount} order${activeOrderCount === 1 ? '' : 's'} in progress. ` +
+        'Your account can be deleted once they are delivered or cancelled.'
+      );
     }
 
     const deletedUser = await User.findByIdAndDelete(userId);

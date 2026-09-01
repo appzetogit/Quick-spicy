@@ -3760,7 +3760,16 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       if (Number.isNaN(parsedEndDate.getTime())) {
         return errorResponse(res, 400, "Invalid endDate");
       }
-      parsedEndDate.setHours(23, 59, 59, 999);
+
+      // A bare "YYYY-MM-DD" carries no time and has always meant "to the end of that
+      // day", so it still does. Anything with a time is an instant the admin chose
+      // deliberately - a limited-time offer that must stop at, say, 9pm - and is kept
+      // exactly. This used to push EVERY expiry to 23:59:59.999, which silently
+      // extended such an offer to the end of the day and made a timed offer impossible.
+      const isDateOnly = typeof endDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(endDate.trim());
+      if (isDateOnly) {
+        parsedEndDate.setHours(23, 59, 59, 999);
+      }
     }
 
     const customerGroup = customerScope === "first-time" ? "new" : "all";
