@@ -29,6 +29,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import { safeBack } from "../../utils/safeBack"
 import { validatePersonName } from "@/lib/utils/personName"
+import { openNativeCamera, isBridgeTimeout } from "@/lib/utils/nativeBridge"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -390,12 +391,7 @@ export default function EditProfile() {
         return
       }
 
-      const result = await window.flutter_inappwebview.callHandler("openCamera", {
-        source: "camera",
-        accept: "image/*",
-        multiple: false,
-        quality: 0.8,
-      })
+      const result = await openNativeCamera()
 
       if (!result || !result.success) return
 
@@ -419,7 +415,14 @@ export default function EditProfile() {
       setPhotoPickerOpen(false)
     } catch (error) {
       debugError("openCamera bridge failed:", error)
-      toast.error("Failed to open camera")
+      // A bridge that never answers used to hang here forever. It now rejects, and
+      // the ordinary file picker still lets someone choose a photo.
+      toast.error(
+        isBridgeTimeout(error)
+          ? "Camera did not respond. Opening the photo picker instead."
+          : "Failed to open camera"
+      )
+      fileInputRef.current?.click()
     }
   }
 

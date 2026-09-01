@@ -21,6 +21,7 @@ import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 import OutletTimings from '../../restaurant/models/OutletTimings.js';
 import { randomInt } from 'crypto';
 import { findZoneWithinBuffer } from '../../../shared/utils/zoneGeometry.js';
+import { toRefId } from '../../../shared/utils/refId.js';
 
 // How long after confirmation a customer may still cancel. Kept here rather than only in the
 // app, because the app's countdown is advisory and this endpoint is the thing that decides.
@@ -114,7 +115,8 @@ function escapeRegex(value = '') {
 
 async function resolveRestaurantForOrder(restaurantId) {
   if (!restaurantId) return null;
-  const restaurantIdStr = String(restaurantId);
+  // May arrive populated or as the bare id string; both are normal.
+  const restaurantIdStr = toRefId(restaurantId);
   const query = mongoose.Types.ObjectId.isValid(restaurantIdStr)
     ? { _id: restaurantIdStr }
     : {

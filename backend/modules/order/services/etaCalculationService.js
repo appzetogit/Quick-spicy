@@ -5,6 +5,7 @@ import Restaurant from '../../restaurant/models/Restaurant.js';
 import Delivery from '../../delivery/models/Delivery.js';
 import OrderEvent from '../models/OrderEvent.js';
 import ETALog from '../models/ETALog.js';
+import { toRefId } from '../../../shared/utils/refId.js';
 
 /**
  * ETA Calculation Service
@@ -49,7 +50,7 @@ class ETACalculationService {
       // the separate human-readable restaurantId field, so the query almost never matched
       // and 1079 orders were created without an ETA. Match either form, as the order
       // controller already does.
-      const restaurantKey = String(restaurantId || '').trim();
+      const restaurantKey = toRefId(restaurantId);
       const restaurant = mongoose.Types.ObjectId.isValid(restaurantKey)
         ? await Restaurant.findById(restaurantKey)
         : await Restaurant.findOne({ $or: [{ restaurantId: restaurantKey }, { slug: restaurantKey }] });

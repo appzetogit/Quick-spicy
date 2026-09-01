@@ -31,6 +31,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { restaurantAPI } from "@/lib/api"
+import { openNativeCamera } from "@/lib/utils/nativeBridge"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -315,12 +316,7 @@ export default function InviteUser() {
         return
       }
 
-      const result = await window.flutter_inappwebview.callHandler("openCamera", {
-        source: "camera",
-        accept: "image/*",
-        multiple: false,
-        quality: 0.8,
-      })
+      const result = await openNativeCamera()
 
       if (!result || !result.success) return
 

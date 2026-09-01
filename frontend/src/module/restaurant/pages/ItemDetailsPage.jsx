@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch"
 import api from "@/lib/api"
 import { restaurantAPI, adminAPI, uploadAPI } from "@/lib/api"
 import { toast } from "sonner"
+import { openNativeCamera } from "@/lib/utils/nativeBridge"
 const debugLog = (...args) => {}
 const debugWarn = (...args) => {}
 const debugError = (...args) => {}
@@ -529,12 +530,7 @@ export default function ItemDetailsPage() {
         return
       }
 
-      const result = await window.flutter_inappwebview.callHandler("openCamera", {
-        source: "camera",
-        accept: "image/*",
-        multiple: false,
-        quality: 0.8,
-      })
+      const result = await openNativeCamera()
 
       if (!result || !result.success) {
         setIsImageSourcePickerOpen(false)

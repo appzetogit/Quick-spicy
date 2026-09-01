@@ -102,7 +102,19 @@ const orderSchema = new mongoose.Schema({
     }
   },
   restaurantId: {
+    // Stored as a String because it holds the restaurant's Mongo _id as text, and
+    // a great deal of code compares and stores it that way. The ref is what makes
+    // .populate('restaurantId') actually work: 43 call sites across admin, delivery,
+    // restaurant and order already asked for it, and without this every one of them
+    // silently did nothing - which is why the delivery app read the pickup
+    // coordinates as undefined and showed "Calculating..." instead of a distance.
+    //
+    // Consequence: after a populate this field is the restaurant DOCUMENT, not the
+    // id. Anything that needs the id from a value that may be either should use
+    // toRefId() (shared/utils/refId.js); String() on a populated doc yields
+    // "[object Object]" and fails silently.
     type: String,
+    ref: 'Restaurant',
     required: true
   },
   restaurantName: {
