@@ -414,10 +414,14 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
       // support can reach whoever actually placed it.
       customerName: (order.orderType === 'someone_else' && order.recipient?.name)
         ? order.recipient.name
-        : (orderWithUser.userId?.name || 'Customer'),
+        : (orderWithUser.userId?.name || order.customerName || 'Customer'),
+      // Falls back to the number captured on the order. Reading only the linked
+      // account meant that if it could not be resolved - a deleted customer - the
+      // rider was handed a blank phone and had no way to call the person waiting
+      // for the food.
       customerPhone: (order.orderType === 'someone_else' && order.recipient?.phone)
         ? order.recipient.phone
-        : (orderWithUser.userId?.phone || ''),
+        : (orderWithUser.userId?.phone || order.customerPhone || ''),
       orderType: order.orderType || 'self',
       recipient: order.orderType === 'someone_else' ? {
         name: order.recipient?.name || '',
@@ -790,10 +794,14 @@ export async function notifyMultipleDeliveryBoys(order, deliveryPartnerIds, phas
       // support can reach whoever actually placed it.
       customerName: (order.orderType === 'someone_else' && order.recipient?.name)
         ? order.recipient.name
-        : (orderWithUser.userId?.name || 'Customer'),
+        : (orderWithUser.userId?.name || order.customerName || 'Customer'),
+      // Falls back to the number captured on the order. Reading only the linked
+      // account meant that if it could not be resolved - a deleted customer - the
+      // rider was handed a blank phone and had no way to call the person waiting
+      // for the food.
       customerPhone: (order.orderType === 'someone_else' && order.recipient?.phone)
         ? order.recipient.phone
-        : (orderWithUser.userId?.phone || ''),
+        : (orderWithUser.userId?.phone || order.customerPhone || ''),
       orderType: order.orderType || 'self',
       recipient: order.orderType === 'someone_else' ? {
         name: order.recipient?.name || '',

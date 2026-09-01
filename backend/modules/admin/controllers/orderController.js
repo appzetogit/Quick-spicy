@@ -499,8 +499,15 @@ export const getOrders = asyncHandler(async (req, res) => {
         hour12: true 
       }).toUpperCase();
 
-      // Get customer phone (unmasked - show full number for admin)
-      const customerPhone = order.userId?.phone || '';
+      // Get customer phone (unmasked - show full number for admin).
+      //
+      // The phone captured on the order comes first, and the linked account is only a
+      // fallback. Reading the account alone meant that whenever it could not be
+      // resolved - a deleted customer, most often - the phone came back empty and the
+      // order rendered "Phone: N/A", even though the number given when the order was
+      // placed was sitting on the order itself. The customer NAME already worked this
+      // way, which is why these orders showed a name but no number.
+      const customerPhone = order.customerPhone || order.userId?.phone || '';
 
       // Map payment status
       const paymentStatusMap = {
@@ -1422,8 +1429,9 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
         hour12: true 
       }).toUpperCase();
 
-      // Get customer phone (masked for display)
-      const customerPhone = order.userId?.phone || '';
+      // Get customer phone (masked for display). Order snapshot first, account as
+      // fallback - see the note in getOrders; a deleted account left this empty.
+      const customerPhone = order.customerPhone || order.userId?.phone || '';
       let maskedPhone = '';
       if (customerPhone && customerPhone.length > 2) {
         maskedPhone = `+${customerPhone.slice(0, 1)}${'*'.repeat(Math.max(0, customerPhone.length - 2))}${customerPhone.slice(-1)}`;
@@ -1607,8 +1615,9 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
         hour12: true 
       }).toUpperCase();
 
-      // Get customer phone (masked for display)
-      const customerPhone = order.userId?.phone || '';
+      // Get customer phone (masked for display). Order snapshot first, account as
+      // fallback - see the note in getOrders; a deleted account left this empty.
+      const customerPhone = order.customerPhone || order.userId?.phone || '';
       let maskedPhone = '';
       if (customerPhone && customerPhone.length > 2) {
         maskedPhone = `+${customerPhone.slice(0, 1)}${'*'.repeat(Math.max(0, customerPhone.length - 2))}${customerPhone.slice(-1)}`;
@@ -2453,7 +2462,8 @@ export const getRefundRequests = asyncHandler(async (req, res) => {
         hour12: true 
       }).toUpperCase();
 
-      const customerPhone = order.userId?.phone || '';
+      // Order snapshot first, account as fallback - a deleted account left this empty.
+      const customerPhone = order.customerPhone || order.userId?.phone || '';
       
       // Check refund status from settlement
       const refundStatus = settlement?.cancellationDetails?.refundStatus || 'pending';
