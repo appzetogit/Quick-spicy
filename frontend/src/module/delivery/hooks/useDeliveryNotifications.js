@@ -134,7 +134,11 @@ export const useDeliveryNotifications = () => {
 
   const shouldProcessOrderAlert = (orderData = {}) => {
     const key = getOrderAlertKey(orderData);
-    if (!key) return true;
+    // No identifiable order means there is nothing to alert about. This used to
+    // return true, so an empty or unrecognised payload passed straight through and
+    // set off the full alert - which is where phones buzzed with no order on screen.
+    // Every real order carries one of the six id fields getOrderAlertKey looks at.
+    if (!key) return false;
     const now = Date.now();
     const last = lastAlertAtByOrderRef.current.get(key) || 0;
     if (now - last < ALERT_DEDUPE_MS) return false;
@@ -181,7 +185,9 @@ export const useDeliveryNotifications = () => {
     try {
       const usedNativeBridge = await triggerWebViewNativeNotification(orderData);
 
-      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      // Only buzz for something the rider can actually act on.
+      if (getOrderAlertKey(orderData)
+        && typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
         navigator.vibrate([200, 100, 200, 100, 300]);
       }
 
@@ -279,7 +285,11 @@ export const useDeliveryNotifications = () => {
       return;
     }
 
-    activeOrderRef.current = orderData || { id: Date.now() };
+    // Never stand in a placeholder order here. It used to fall back to
+    // `{ id: Date.now() }`, which is truthy - so the repeating alert loop's
+    // "stop when there is no active order" guard could never fire, and the phone
+    // vibrated every 4.5s for the full two minutes with nothing to accept.
+    activeOrderRef.current = orderData;
     playNotificationSound(orderData);
     startAlertLoop(playNotificationSound);
 

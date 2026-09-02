@@ -349,9 +349,21 @@ async function playPushSound(payload = {}) {
     });
     const usedNativeBridge = await triggerWebViewNativeNotification(payload);
 
-    if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
+    // Only vibrate for a push the person will actually see. Firebase also delivers
+    // silent data-only messages - order sync, token refresh, status housekeeping -
+    // and this used to buzz for every one of them, so phones vibrated with nothing on
+    // screen. A user-facing push carries a title or body; a sync message does not.
+    const hasVisibleContent = Boolean(
+      payload?.notification?.title || payload?.notification?.body ||
+      payload?.data?.title || payload?.data?.body,
+    );
+
+    if (hasVisibleContent
+      && typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
       pushDebugLog(PUSH_DEBUG_PREFIX, "Triggering vibration");
       navigator.vibrate([200, 100, 200, 100, 300]);
+    } else if (!hasVisibleContent) {
+      pushDebugLog(PUSH_DEBUG_PREFIX, "Silent data push - no vibration");
     }
 
     if (usedNativeBridge) {

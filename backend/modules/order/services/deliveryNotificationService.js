@@ -357,16 +357,31 @@ export async function notifyDeliveryBoyNewOrder(order, deliveryPartnerId) {
     let pickupDistance = null;
     let deliveryDistance = null;
     
-    if (deliveryPartner.availability?.currentLocation?.coordinates && restaurant?.location?.coordinates) {
-      const [deliveryLng, deliveryLat] = deliveryPartner.availability.currentLocation.coordinates;
-      const [restaurantLng, restaurantLat] = restaurant.location.coordinates;
-      const [customerLng, customerLat] = order.address.location.coordinates;
+    // These two distances need different things, so they are no longer computed
+    // together. The drop distance is restaurant -> customer and does not involve the
+    // rider at all, but it used to be gated on the rider's live GPS as well - and 326
+    // of 371 partners have never reported one. For them the drop distance stayed null,
+    // earnings were calculated from a distance of 0, and the card offered the job at
+    // "₹0.00" with both distances stuck on "Calculating...".
+    const restaurantCoords = restaurant?.location?.coordinates;
+    const customerCoords = order?.address?.location?.coordinates;
 
-      // Calculate pickup distance (delivery boy to restaurant)
-      pickupDistance = calculateDistance(deliveryLat, deliveryLng, restaurantLat, restaurantLng);
-      
-      // Calculate delivery distance (restaurant to customer)
+    if (Array.isArray(restaurantCoords) && restaurantCoords.length >= 2
+      && Array.isArray(customerCoords) && customerCoords.length >= 2) {
+      const [restaurantLng, restaurantLat] = restaurantCoords;
+      const [customerLng, customerLat] = customerCoords;
       deliveryDistance = calculateDistance(restaurantLat, restaurantLng, customerLat, customerLng);
+    }
+
+    // Pickup distance genuinely depends on where the rider is right now, so it stays
+    // null when that is unknown - the card shows it as "Calculating..." rather than
+    // inventing a number, and the payout is unaffected either way.
+    const partnerCoords = deliveryPartner?.availability?.currentLocation?.coordinates;
+    if (Array.isArray(partnerCoords) && partnerCoords.length >= 2
+      && Array.isArray(restaurantCoords) && restaurantCoords.length >= 2) {
+      const [deliveryLng, deliveryLat] = partnerCoords;
+      const [restaurantLng, restaurantLat] = restaurantCoords;
+      pickupDistance = calculateDistance(deliveryLat, deliveryLng, restaurantLat, restaurantLng);
     }
 
     // Calculate estimated earnings using delivery boy commission rules only
