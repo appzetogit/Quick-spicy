@@ -1212,6 +1212,24 @@ function initializeScheduledTasks() {
     console.error('❌ Failed to initialize auto-reject service:', error);
   });
 
+  // Tripwire for orders stranded in the delivery leg. Reports only - it never
+  // cancels or refunds. See stuckOrderMonitorService for why detection, not action.
+  import('./modules/order/services/stuckOrderMonitorService.js').then(({ checkStuckDeliveryOrders }) => {
+    // Every 5 minutes is plenty: this watches for a condition that currently never
+    // happens, and a stranded order is not more actionable 30 seconds sooner.
+    cron.schedule('*/5 * * * *', async () => {
+      try {
+        await checkStuckDeliveryOrders();
+      } catch (error) {
+        console.error('[Stuck Orders Cron] Error:', error);
+      }
+    });
+
+    console.log('✅ Stuck-order monitor initialized (reports only, runs every 5 minutes)');
+  }).catch((error) => {
+    console.error('❌ Failed to initialize stuck-order monitor:', error);
+  });
+
   // Retry delivery assignment for orders that never got a partner.
   //
   // Assignment happened once, when the restaurant marked the order preparing. If no
