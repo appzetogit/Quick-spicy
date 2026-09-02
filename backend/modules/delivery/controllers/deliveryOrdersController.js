@@ -605,14 +605,61 @@ export const getOrders = asyncHandler(async (req, res) => {
       }
     }
 
-    const enrichedOrders = hydratedOrders.map((order) => {
+    // The order card is fed from this endpoint too, not only from the socket push -
+    // when a rider comes online the app resyncs through here and shows whatever comes
+    // back. Raw order documents carry no earnings or distance, so the card offered
+    // jobs at "Estimated earnings ₹0.00" with both distances stuck on "Calculating...".
+    // Computing them here makes the card show the same figures either way.
+    const enrichedOrders = await Promise.all(hydratedOrders.map(async (order) => {
       const paymentRecord = paymentMap.get(order?._id?.toString?.());
       const paymentMeta = buildDeliveryPaymentMeta(order, paymentRecord);
+
+      let deliveryDistance = null;
+      let estimatedEarnings = order?.estimatedEarnings ?? null;
+      try {
+        const restaurantCoords =
+          order?.restaurantId?.location?.coordinates || order?.restaurant?.location?.coordinates;
+        const customerCoords = order?.address?.location?.coordinates;
+        if (Array.isArray(restaurantCoords) && restaurantCoords.length >= 2
+          && Array.isArray(customerCoords) && customerCoords.length >= 2) {
+          const [rLng, rLat] = restaurantCoords;
+          const [cLng, cLat] = customerCoords;
+          const R = 6371;
+          const dLat = (cLat - rLat) * Math.PI / 180;
+          const dLng = (cLng - rLng) * Math.PI / 180;
+          const a = Math.sin(dLat / 2) ** 2
+            + Math.cos(rLat * Math.PI / 180) * Math.cos(cLat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+          deliveryDistance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        }
+
+        if (!estimatedEarnings) {
+          const DeliveryBoyCommission = (await import('../../admin/models/DeliveryBoyCommission.js')).default;
+          const commission = await DeliveryBoyCommission.calculateCommission(deliveryDistance || 0);
+          const base = commission?.breakdown?.basePayout ?? 0;
+          const perKm = commission?.breakdown?.commissionPerKm ?? 0;
+          const distanceCommission = commission?.breakdown?.distanceCommission ?? 0;
+          estimatedEarnings = {
+            basePayout: base,
+            distance: deliveryDistance ? Math.round(deliveryDistance * 100) / 100 : 0,
+            commissionPerKm: perKm,
+            distanceCommission,
+            totalEarning: commission?.totalCommission ?? (base + distanceCommission),
+          };
+        }
+      } catch (earningsError) {
+        // A pricing lookup must never stop the rider seeing the order at all.
+        logger.warn(`Earnings enrichment failed for order ${order?.orderId}: ${earningsError.message}`);
+      }
+
       return sanitizeDeliveryVerificationForDelivery({
         ...order,
-        ...paymentMeta
+        ...paymentMeta,
+        ...(estimatedEarnings ? { estimatedEarnings } : {}),
+        ...(deliveryDistance !== null
+          ? { deliveryDistance: `${deliveryDistance.toFixed(2)} km`, deliveryDistanceRaw: deliveryDistance }
+          : {}),
       });
-    });
+    }));
 
     return successResponse(res, 200, 'Orders retrieved successfully', {
       orders: enrichedOrders,
