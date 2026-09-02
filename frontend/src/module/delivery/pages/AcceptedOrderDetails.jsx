@@ -24,6 +24,7 @@ import {
   getDeliveryOrderPaymentStatus 
 } from "../utils/deliveryWalletState"
 import { deliveryAPI } from "@/lib/api"
+import { openExternalUrl } from "@/lib/utils/nativeBridge"
 
 export default function AcceptedOrderDetails() {
   const navigate = useNavigate()
@@ -238,7 +239,7 @@ export default function AcceptedOrderDetails() {
                 <button 
                   onClick={() => {
                     const address = encodeURIComponent(orderData.restaurant.address)
-                    window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank')
+                    openExternalUrl(`https://www.google.com/maps/search/?api=1&query=${address}`)
                   }}
                   className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-300 flex items-center justify-center hover:bg-gray-400 transition-colors flex-shrink-0"
                 >
@@ -285,7 +286,7 @@ export default function AcceptedOrderDetails() {
                 <button 
                   onClick={() => {
                     const address = encodeURIComponent(orderData.restaurant.address)
-                    window.open(`https://www.google.com/maps/search/?api=1&query=${address}`, '_blank')
+                    openExternalUrl(`https://www.google.com/maps/search/?api=1&query=${address}`)
                   }}
                   className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-300 flex items-center justify-center hover:bg-gray-400 transition-colors flex-shrink-0"
                 >

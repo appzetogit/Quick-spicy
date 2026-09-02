@@ -58,6 +58,7 @@ import {
   calculateDistance
 } from "../utils/liveTrackingPolyline"
 import referralBonusBg from "../../../assets/referralbonuscardbg.png"
+import { openExternalUrl } from "@/lib/utils/nativeBridge"
 // import dropLocationBanner from "../../../assets/droplocationbanner.png" // File not found - commented out
 import alertSound from "../../../assets/audio/alert.mp3"
 import originalSound from "../../../assets/audio/original.mp3"
@@ -5054,10 +5055,12 @@ export default function DeliveryHome() {
     // - intent:// launch failures in browser/device emulation
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${destinationParam}`
 
-    const popup = window.open(mapsUrl, "_blank", "noopener,noreferrer")
-    if (!popup) {
-      window.location.href = mapsUrl
-    }
+    // Never window.location.href here. In the app shell that navigates the WEBVIEW
+    // to Google Maps, so the app is replaced and its own URL becomes the maps link -
+    // coming back re-loads that link and drops the rider on the maps/app-chooser
+    // screen instead of the order they were working. openExternalUrl hands the URL
+    // to the native layer (or a target=_blank anchor) so the app stays loaded.
+    void openExternalUrl(mapsUrl)
 
     toast.success("Opening Google Maps", { duration: 1600 })
     return true

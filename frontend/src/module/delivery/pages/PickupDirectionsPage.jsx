@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import { useGigStore } from "../store/gigStore"
+import { openExternalUrl } from "@/lib/utils/nativeBridge"
 import { 
   ChevronDown,
   Phone,
@@ -145,7 +146,7 @@ export default function PickupDirectionsPage() {
 
   const handleOpenMap = (lat, lng, address) => {
     const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-    window.open(url, '_blank')
+    openExternalUrl(url)
   }
 
   const toggleRestaurantExpansion = (restaurantId) => {
