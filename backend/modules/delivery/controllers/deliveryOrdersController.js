@@ -38,6 +38,15 @@ const logger = winston.createLogger({
 
 const DELIVERY_OPEN_ACCEPT_STATUSES = ['preparing', 'ready'];
 
+// An unassigned order that no rider ever took does not stay offerable forever. Real
+// orders are picked up within minutes of going ready; one still sitting unassigned
+// hours later is dead - the customer is long gone, and often the payment never
+// completed. Without this bound, discover surfaced orders from weeks ago as a fresh
+// "New order" popup to every rider who came online (a paid, 18-day-old order was
+// reported doing exactly this). 3 hours matches the existing active-order staleness
+// threshold used for tracking, and is far beyond any real pickup wait.
+const DISCOVER_MAX_ORDER_AGE_MINUTES = 180;
+
 // A cancelled order is finished. Nobody - admin, restaurant, or customer - expects it
 // to keep moving, but only acceptOrder checked the status: confirmReachedPickup,
 // confirmReachedDrop and completeDelivery did not. A partner already holding an order
@@ -489,12 +498,21 @@ export const getOrders = asyncHandler(async (req, res) => {
     );
 
     // Build query
+    // Only unassigned orders are age-bounded. An order already assigned to THIS rider
+    // must still be shown whatever its age, so they can finish what they accepted -
+    // just not once it is delivered or cancelled (that is how a 37-day-old delivered
+    // test order kept coming back in discover).
+    const discoverCutoff = new Date(Date.now() - DISCOVER_MAX_ORDER_AGE_MINUTES * 60 * 1000);
+    const freshOpen = {
+      status: { $in: DELIVERY_OPEN_ACCEPT_STATUSES },
+      createdAt: { $gte: discoverCutoff },
+    };
     const query = isDiscoverMode
       ? {
           $or: [
-            { deliveryPartnerId: delivery._id },
-            { deliveryPartnerId: null, status: { $in: DELIVERY_OPEN_ACCEPT_STATUSES } },
-            { deliveryPartnerId: { $exists: false }, status: { $in: DELIVERY_OPEN_ACCEPT_STATUSES } },
+            { deliveryPartnerId: delivery._id, status: { $nin: ['delivered', 'cancelled'] } },
+            { deliveryPartnerId: null, ...freshOpen },
+            { deliveryPartnerId: { $exists: false }, ...freshOpen },
           ],
         }
       : { deliveryPartnerId: delivery._id };
