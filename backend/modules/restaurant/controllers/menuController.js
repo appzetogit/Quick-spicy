@@ -993,60 +993,20 @@ export const getMenuByRestaurantId = async (req, res) => {
     }, 0);
     userMenuDebugLog('[USER MENU] Total items shown to user:', totalItems);
 
-    // Safety fallback: if strict approval filtering hides everything, show available items
-    // so a restaurant page doesn't appear empty due status drift on legacy data.
-    let sectionsToReturn = filteredSections;
-    if (totalItems === 0) {
-      userMenuDebugLog('[USER MENU] No items after approval filtering; applying availability-only fallback.');
-      const fallbackSections = (menu.sections || [])
-        .filter((section) => {
-          const sectionNameKey = String(section.name || '').trim().toLowerCase();
-          const categoryExists = categoryStatusByName.has(sectionNameKey);
-          const isCategoryActive = categoryExists ? categoryStatusByName.get(sectionNameKey) : true;
-          return section.isEnabled !== false && isCategoryActive;
-        })
-        .map((section) => {
-          const availableItems = sortNewestFirst(
-            (section.items || []).filter((item) => item.isAvailable !== false)
-          );
-          const availableSubsections = (section.subsections || [])
-            .map((subsection) => {
-              const availableSubsectionItems = sortNewestFirst(
-                (subsection.items || []).filter((item) => item.isAvailable !== false)
-              );
-              if (availableSubsectionItems.length === 0) return null;
-              return {
-                ...subsection,
-                id: subsection.id || `subsection-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-                name: subsection.name || "Subsection",
-                items: availableSubsectionItems,
-              };
-            })
-            .filter((subsection) => subsection !== null);
-
-          if (availableItems.length === 0 && availableSubsections.length === 0) {
-            return null;
-          }
-          return {
-            ...section,
-            name: section.name || "Unnamed Section",
-            items: availableItems,
-            subsections: availableSubsections,
-          };
-        })
-        .filter((section) => section !== null);
-
-      const fallbackItemCount = fallbackSections.reduce((sum, section) => {
-        const sectionItems = (section.items || []).length;
-        const subsectionItems = (section.subsections || []).reduce((subSum, sub) => subSum + (sub.items || []).length, 0);
-        return sum + sectionItems + subsectionItems;
-      }, 0);
-
-      if (fallbackItemCount > 0) {
-        userMenuDebugLog('[USER MENU] Fallback applied. Items shown:', fallbackItemCount);
-        sectionsToReturn = fallbackSections;
-      }
-    }
+    // No fallback here on purpose.
+    //
+    // There used to be one: when approval filtering left a menu empty it re-served the
+    // same items checking only isAvailable, so that a restaurant page would not look
+    // empty because of "status drift on legacy data". The effect was that a restaurant
+    // whose items were ALL unapproved had every one of them put on sale - the approval
+    // gate was bypassed precisely for the restaurants it existed to stop. Two live
+    // restaurants were selling pending items this way, and admin listed those same
+    // items as awaiting approval.
+    //
+    // The legacy data it was written for no longer exists: of 5,589 menu items, zero
+    // are missing approvalStatus. An unapproved menu is supposed to look empty; that is
+    // what approval means. Serving unapproved food is worse than an empty page.
+    const sectionsToReturn = filteredSections;
 
     return successResponse(res, 200, 'Menu retrieved successfully', {
       menu: {
