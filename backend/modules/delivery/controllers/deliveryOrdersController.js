@@ -539,8 +539,17 @@ export const getOrders = asyncHandler(async (req, res) => {
     let total = 0;
 
     if (isDiscoverMode) {
+      // Oldest first. The rider app polls this and offers the FIRST actionable order it
+      // gets back, so newest-first meant a rider finishing a job was handed the freshest
+      // order while the customer who had waited longest kept being passed over - the
+      // reported "instead of the second task, the most recent task gets assigned".
+      // The backend retry sweep already picks oldest-first (pendingAssignmentService),
+      // so this makes the two agree rather than inventing a new rule.
+      //
+      // Only the discover branch changes. The rider's own order list below stays
+      // newest-first, which is right for a history view.
       const allCandidateOrders = await Order.find(query)
-        .sort({ createdAt: -1 })
+        .sort({ createdAt: 1 })
         .populate('restaurantId', 'name slug profileImage address location phone ownerPhone')
         .populate('userId', 'name phone')
         .lean();
