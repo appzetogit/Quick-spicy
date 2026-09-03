@@ -3285,7 +3285,29 @@ export default function DeliveryHome() {
           }
           
           toast.error(errorMessage)
-          
+
+          // An order that is already someone else's is never going to become
+          // acceptable, so stop offering it. Closing the popup alone was not enough:
+          // the alert loop and the pending-order resync both re-surface whatever is
+          // still in newOrder, so the card came straight back and the rider tapped
+          // Accept again. Production logs show one rider doing exactly that against
+          // the same order for about fifty minutes, the server correctly refusing
+          // every time. Dismissing it locally is what actually ends the loop.
+          const takenByAnother =
+            error.response?.status === 403 ||
+            error.response?.status === 409 ||
+            /assigned to another|not available for you/i.test(
+              String(error.response?.data?.message || ''),
+            )
+
+          if (takenByAnother) {
+            const staleIds = resolveCurrentOrderIds().all
+            if (staleIds.length > 0) {
+              persistDismissedOrderIds(staleIds)
+            }
+            setNewOrder(null)
+          }
+
           // Close popup even on error
           setShowNewOrderPopup(false)
           setIsNewOrderPopupMinimized(false) // Reset minimized state
