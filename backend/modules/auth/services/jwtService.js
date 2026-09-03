@@ -20,6 +20,9 @@ class JWTService {
     // already gone. Logout now revokes server-side, so this can be long without
     // becoming unrevokable.
     this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '30d';
+    // Admins are excluded from the long session for the same reason they are excluded
+    // from the long refresh: far more privilege, few of them, and no SMS to save.
+    this.adminAccessTokenExpiry = process.env.JWT_ADMIN_ACCESS_EXPIRY || '24h';
 
     // How long someone stays signed in without touching the OTP flow again.
     //
@@ -39,6 +42,12 @@ class JWTService {
    * Refresh lifetime for a role. Admin sessions stay short; everyone else stays
    * signed in until they log out.
    */
+  getAccessExpiryForRole(role) {
+    return String(role || '').toLowerCase() === 'admin'
+      ? this.adminAccessTokenExpiry
+      : this.accessTokenExpiry;
+  }
+
   getRefreshExpiryForRole(role) {
     return String(role || '').toLowerCase() === 'admin'
       ? this.adminRefreshTokenExpiry
@@ -58,7 +67,7 @@ class JWTService {
       },
       this.secret,
       {
-        expiresIn: this.accessTokenExpiry
+        expiresIn: this.getAccessExpiryForRole(payload?.role)
       }
     );
   }
