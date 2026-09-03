@@ -71,6 +71,38 @@ const getStatusColor = (orderStatus) => {
   return colors[orderStatus] || "bg-slate-100 text-slate-700"
 }
 
+/**
+ * What the money actually did - never what we assume it must have done.
+ *
+ * This used to read: paymentCollectionStatus ? 'Collected' : (status === 'delivered'
+ * ? 'Collected' : 'Not Collected'). So marking an order delivered made this claim the
+ * cash had been collected, with nothing anywhere recording that it had. A real COD
+ * order sat delivered with payment.status still 'pending' while this screen told the
+ * admin it was Collected - and the orders table, which reads the same order, said Not
+ * Collected on the very same row. For a cash business that is the difference between
+ * chasing a rider for money and not knowing it is missing.
+ *
+ * Delivery status is deliberately not consulted. Only an explicit collection record
+ * counts: paymentCollectionStatus, or the payment row saying it completed.
+ */
+const resolveCodPaymentStatus = (order) => {
+  const isCod =
+    order?.paymentType === 'Cash on Delivery' ||
+    order?.payment?.method === 'cash' ||
+    order?.payment?.method === 'cod';
+
+  if (!isCod) return order?.paymentStatus;
+
+  if (order?.paymentCollectionStatus) return order.paymentCollectionStatus;
+
+  const settled = ['paid', 'completed', 'collected', 'success'];
+  if (settled.includes(String(order?.payment?.status || '').toLowerCase())) {
+    return 'Collected';
+  }
+
+  return 'Not Collected';
+};
+
 const getPaymentStatusColor = (paymentStatus) => {
   if (paymentStatus === "Paid" || paymentStatus === "Collected") return "text-emerald-600"
   if (paymentStatus === "Not Collected") return "text-amber-600"
@@ -244,14 +276,8 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
                     <CreditCard className="w-4 h-4" />
                     Payment Status
                   </p>
-                  <p className={`text-sm font-medium ${getPaymentStatusColor(
-                    order.paymentType === 'Cash on Delivery' || order.payment?.method === 'cash' || order.payment?.method === 'cod'
-                      ? (order.paymentCollectionStatus ? 'Collected' : (order.status === 'delivered' ? 'Collected' : 'Not Collected'))
-                      : order.paymentStatus
-                  )}`}>
-                    {order.paymentType === 'Cash on Delivery' || order.payment?.method === 'cash' || order.payment?.method === 'cod'
-                      ? (order.paymentCollectionStatus ? 'Collected' : (order.status === 'delivered' ? 'Collected' : 'Not Collected'))
-                      : order.paymentStatus}
+                  <p className={`text-sm font-medium ${getPaymentStatusColor(resolveCodPaymentStatus(order))}`}>
+                    {resolveCodPaymentStatus(order)}
                   </p>
                 </div>
               )}
