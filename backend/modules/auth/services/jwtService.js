@@ -11,7 +11,15 @@ class JWTService {
     let secret = process.env.JWT_SECRET;
 
     this.secret = secret;
-    this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '24h';
+    // The access token is the only credential that survives closing the app. It is a
+    // Bearer token in localStorage (the rider APK reads that same value to register
+    // FCM), and localStorage persists across app restarts - whereas the refresh cookie
+    // does not, because the Android WebView drops cookies on process death unless the
+    // shell flushes them. So at 24h a rider who closed the app was signed out the next
+    // day no matter how long the refresh token lived: the cookie needed to renew it was
+    // already gone. Logout now revokes server-side, so this can be long without
+    // becoming unrevokable.
+    this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '30d';
 
     // How long someone stays signed in without touching the OTP flow again.
     //

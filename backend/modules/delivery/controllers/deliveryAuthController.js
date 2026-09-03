@@ -355,9 +355,19 @@ export const refreshToken = asyncHandler(async (req, res) => {
  */
 export const logout = asyncHandler(async (req, res) => {
   // Get delivery boy from request (set by auth middleware)
+  // Logout has to end the session server-side, not just drop the cookie.
+  // Access tokens are Bearer tokens held in localStorage (the rider APK reads that
+  // same value to register FCM), and localStorage survives closing the app - so
+  // clearing a cookie left the access token working until it expired on its own.
+  // Bumping tokenVersion and clearing previousTokenVersion makes every outstanding
+  // token fail the decideRotation check the auth middleware already runs, so they
+  // die the moment this returns. Without this, a longer-lived access token could
+  // not be revoked at all.
   if (req.delivery) {
-    // Clear refresh token from database
     req.delivery.refreshToken = null;
+    req.delivery.tokenVersion = Number(req.delivery.tokenVersion || 0) + 1;
+    req.delivery.previousTokenVersion = null;
+    req.delivery.tokenVersionRotatedAt = new Date();
     await req.delivery.save();
   }
 
