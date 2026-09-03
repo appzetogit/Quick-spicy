@@ -1230,6 +1230,27 @@ function initializeScheduledTasks() {
     console.error('❌ Failed to initialize stuck-order monitor:', error);
   });
 
+  // Reclaim orders from riders who never answered the offer. Reclaim only - the retry
+  // sweep below does the re-dispatch, so the two run in that order.
+  import('./modules/order/services/offerTimeoutService.js').then(({ processExpiredOffers }) => {
+    cron.schedule('*/10 * * * * *', async () => {
+      try {
+        const result = await processExpiredOffers();
+        if (result.reclaimed > 0 || result.exhausted > 0) {
+          console.log(
+            `[Offer Timeout Cron] reclaimed=${result.reclaimed} protected=${result.protected} exhausted=${result.exhausted}`
+          );
+        }
+      } catch (error) {
+        console.error('[Offer Timeout Cron] Error:', error);
+      }
+    });
+
+    console.log('✅ Offer-timeout sweep initialized (runs every 10 seconds)');
+  }).catch((error) => {
+    console.error('❌ Failed to initialize offer-timeout service:', error);
+  });
+
   // Retry delivery assignment for orders that never got a partner.
   //
   // Assignment happened once, when the restaurant marked the order preparing. If no
@@ -1240,7 +1261,10 @@ function initializeScheduledTasks() {
   import('./modules/order/services/pendingAssignmentService.js').then(({ processPendingAssignments }) => {
     // Every 30 seconds: fast enough that a waiting customer does not notice, slow
     // enough that it costs nothing when there is no backlog.
-    cron.schedule('*/30 * * * * *', async () => {
+    // Every 10s, not 30s. An order reclaimed from a rider who ignored it waits for this
+    // sweep to be offered to anyone else, so at 30s the effective wait was the 40s
+    // timeout plus up to another 30 - past the point the call asked for.
+    cron.schedule('*/10 * * * * *', async () => {
       try {
         const result = await processPendingAssignments();
         if (result.assigned > 0 || result.stale > 0) {
