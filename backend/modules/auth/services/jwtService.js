@@ -12,8 +12,29 @@ class JWTService {
 
     this.secret = secret;
     this.accessTokenExpiry = process.env.JWT_ACCESS_EXPIRY || '24h';
-    this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '7d';
-    
+
+    // How long someone stays signed in without touching the OTP flow again.
+    //
+    // Every expiry is a login, and every login is an SMS we pay for. At 7 days a
+    // customer who orders monthly paid for an OTP every single time. The access
+    // token is still short and refreshes silently in the background, so this only
+    // controls how long that silent refresh is allowed to continue.
+    //
+    // Admins are deliberately excluded. They hold far more privilege, there are only
+    // a handful of them, and their logins are a rounding error in SMS spend - so
+    // there is nothing to save by weakening them.
+    this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '365d';
+    this.adminRefreshTokenExpiry = process.env.JWT_ADMIN_REFRESH_EXPIRY || '7d';
+  }
+
+  /**
+   * Refresh lifetime for a role. Admin sessions stay short; everyone else stays
+   * signed in until they log out.
+   */
+  getRefreshExpiryForRole(role) {
+    return String(role || '').toLowerCase() === 'admin'
+      ? this.adminRefreshTokenExpiry
+      : this.refreshTokenExpiry;
   }
 
   /**
@@ -47,7 +68,7 @@ class JWTService {
       },
       this.secret,
       {
-        expiresIn: this.refreshTokenExpiry
+        expiresIn: this.getRefreshExpiryForRole(payload?.role)
       }
     );
   }

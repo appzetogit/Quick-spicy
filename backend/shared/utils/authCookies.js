@@ -50,6 +50,17 @@ export const getAccessCookieName = (role) =>
 export const getRefreshCookieName = (role) =>
   resolveRoleCookieName(REFRESH_TOKEN_COOKIE_BY_ROLE, role);
 
+// The refresh cookie has to outlive the refresh token, or the browser throws the
+// cookie away first and the longer token never gets used - the session would still
+// end at 7 days and the OTP would still be sent. Admins keep the short window.
+const REFRESH_COOKIE_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+const ADMIN_REFRESH_COOKIE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+const refreshCookieMaxAge = (role) =>
+  String(role || '').toLowerCase() === 'admin'
+    ? ADMIN_REFRESH_COOKIE_MAX_AGE_MS
+    : REFRESH_COOKIE_MAX_AGE_MS;
+
 export const setAuthCookies = (res, role, tokens = {}) => {
   const { accessToken = null, refreshToken = null } = tokens;
 
@@ -65,7 +76,7 @@ export const setAuthCookies = (res, role, tokens = {}) => {
     res.cookie(
       getRefreshCookieName(role),
       refreshToken,
-      buildCookieOptions(7 * 24 * 60 * 60 * 1000),
+      buildCookieOptions(refreshCookieMaxAge(role)),
     );
   }
 };
