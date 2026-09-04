@@ -52,6 +52,7 @@ export default function Coupons() {
     discountValue: "",
     minOrderValue: "",
     maxDiscount: "",
+    maxDiscountedQuantity: "",
     customerScope: "all",
     restaurantScope: "all",
     restaurantIds: [],
@@ -195,6 +196,7 @@ export default function Coupons() {
       discountValue: "",
       minOrderValue: "",
       maxDiscount: "",
+    maxDiscountedQuantity: "",
       customerScope: "all",
       restaurantScope: "all",
       restaurantIds: [],
@@ -368,6 +370,9 @@ export default function Coupons() {
         discountValue: parsedDiscountValue,
         minOrderValue: parsedMinOrderValue,
         maxDiscount: formData.discountType === "percentage" ? parsedMaxDiscount : undefined,
+        maxDiscountedQuantity: String(formData.maxDiscountedQuantity).trim() !== ""
+          ? Number(formData.maxDiscountedQuantity)
+          : undefined,
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
         restaurantIds: formData.restaurantScope === "selected" ? formData.restaurantIds : undefined,
@@ -492,6 +497,25 @@ export default function Coupons() {
                     disabled={formData.discountType !== "percentage"}
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-400"
                   />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Max Discounted Quantity (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formData.maxDiscountedQuantity}
+                    onChange={(e) => handleFormChange("maxDiscountedQuantity", e.target.value)}
+                    placeholder="e.g. 2"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    The coupon pays for at most this many units. Extra units are charged at
+                    full price. Leave empty for no limit.
+                  </p>
                 </div>
 
                 <div>

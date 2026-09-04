@@ -408,8 +408,18 @@ export const calculateOrderPricing = async ({
                     for (const cItem of validCouponItemsInCart) {
                       const itemInCart = resolvedItems.find(item => item.itemId === cItem.itemId);
                       if (itemInCart) {
-                        const itemQuantity = itemInCart.quantity || 1;
-                        
+                        // The coupon pays for at most maxDiscountedQuantity units. The
+                        // customer can still order as many as they like - anything above
+                        // the cap is simply charged at full price. Without this the
+                        // per-unit discount was multiplied by the whole cart quantity,
+                        // so a 30%-off breakfast item ordered fifty at a time discounted
+                        // all fifty. null keeps the old unlimited behaviour.
+                        const cartQuantity = itemInCart.quantity || 1;
+                        const quantityCap = Number(offer.maxDiscountedQuantity);
+                        const itemQuantity = Number.isFinite(quantityCap) && quantityCap > 0
+                          ? Math.min(cartQuantity, quantityCap)
+                          : cartQuantity;
+
                         let itemDiscountVal = 0;
                         if (offer.discountType === 'percentage') {
                           itemDiscountVal = (itemInCart.price || 0) * ((cItem.discountPercentage || 0) / 100);
@@ -418,7 +428,7 @@ export const calculateOrderPricing = async ({
                         }
                         
                         const itemDiscountSum = Math.round(itemDiscountVal * itemQuantity);
-                        const itemSubtotal = (itemInCart.price || 0) * itemQuantity;
+                        const itemSubtotal = (itemInCart.price || 0) * cartQuantity;
                         discount += Math.min(itemDiscountSum, itemSubtotal);
                       }
                     }

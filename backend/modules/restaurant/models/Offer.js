@@ -67,6 +67,17 @@ const offerSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Cap on how many units of a discounted item the coupon actually pays for.
+    // maxLimit caps the discount in rupees; this caps it in quantity, which is the
+    // one that stops a breakfast offer being bought fifty at a time. Item-specific
+    // coupons multiply the per-unit discount by the cart quantity with nothing
+    // bounding it, so a 30%-off item ordered in bulk discounted every single unit.
+    // null means unlimited, so every existing coupon behaves exactly as before.
+    maxDiscountedQuantity: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
     maxLimit: {
       type: Number,
       default: null,

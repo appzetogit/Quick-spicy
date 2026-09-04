@@ -3499,6 +3499,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             productScope: offer.productScope || (item.itemName === "All Items" ? "all" : "selected"),
             discountPercentage: item.discountPercentage || 0,
             maxDiscount: offer.maxLimit ?? null,
+            maxDiscountedQuantity: offer.maxDiscountedQuantity ?? null,
             minOrderValue: offer.minOrderValue || 0,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
@@ -3547,6 +3548,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       discountType = "percentage",
       discountValue,
       maxDiscount,
+      maxDiscountedQuantity,
       customerScope = "all",
       restaurantScope = "all",
       restaurantId,
@@ -3589,6 +3591,19 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       parsedMaxDiscount = Number(maxDiscount);
       if (!Number.isFinite(parsedMaxDiscount) || parsedMaxDiscount <= 0) {
         return errorResponse(res, 400, "maxDiscount must be greater than 0");
+      }
+    }
+
+    // How many units of a discounted item the coupon will actually pay for.
+    let parsedMaxQuantity = null;
+    if (
+      maxDiscountedQuantity !== undefined &&
+      maxDiscountedQuantity !== null &&
+      String(maxDiscountedQuantity).trim() !== ""
+    ) {
+      parsedMaxQuantity = Number(maxDiscountedQuantity);
+      if (!Number.isFinite(parsedMaxQuantity) || parsedMaxQuantity < 1) {
+        return errorResponse(res, 400, "Max discounted quantity must be at least 1");
       }
     }
 
@@ -3845,6 +3860,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         targetMealtime: "all",
         minOrderValue: parsedMinOrderValue,
         maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
+        maxDiscountedQuantity: parsedMaxQuantity,
         productScope: productScope === "selected" ? "selected" : "all",
         selectedProductIds:
           productScope === "selected"
