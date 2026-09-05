@@ -38,6 +38,20 @@ const STALE_AFTER_MINUTES = 10;
 // one long run holding the event loop.
 const MAX_PER_RUN = 25;
 
+// Past this age an order is abandoned, not merely waiting, and retrying it is provably
+// futile: discover refuses to show a rider anything older than this same window
+// (DISCOVER_MAX_ORDER_AGE_MINUTES in deliveryOrdersController), so even a successful
+// assignment here could never reach anybody.
+//
+// Without the bound one 21-day-old order was swept every tick forever, producing 42% of
+// all error-log output on its own - enough to bury a real failure. Worse, the query takes
+// the OLDEST 25, so a backlog past MAX_PER_RUN would have starved genuinely new orders of
+// the sweep entirely.
+//
+// This does not cancel or alter those orders. They stay exactly as they are; they simply
+// stop being churned. stuckOrderMonitorService is what reports them, once, on purpose.
+const MAX_RETRY_AGE_MINUTES = Number(process.env.ASSIGNMENT_RETRY_MAX_AGE_MINUTES || 180);
+
 const minutesSince = (date) => {
   if (!date) return null;
   return Math.floor((Date.now() - new Date(date).getTime()) / 60000);
@@ -94,8 +108,11 @@ const extractRestaurantCoords = (restaurant) => {
  * @returns {Promise<{processed: number, assigned: number, stale: number, message: string}>}
  */
 export async function processPendingAssignments() {
+  const retryCutoff = new Date(Date.now() - MAX_RETRY_AGE_MINUTES * 60 * 1000);
+
   const pendingOrders = await Order.find({
     status: { $in: ASSIGNABLE_STATUSES },
+    createdAt: { $gte: retryCutoff },
     $or: [
       { deliveryPartnerId: null },
       { deliveryPartnerId: { $exists: false } },
