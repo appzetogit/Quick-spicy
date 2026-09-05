@@ -123,12 +123,22 @@ apiClient.interceptors.request.use(
           requestUrl.match(/\/restaurant\/[^/]+\/inventory/) ||
           requestUrl.match(/\/restaurant\/[^/]+\/offers/)));
 
+    // The customer app was missing from this list, so it never sent its Bearer token
+    // and its session rested entirely on the cookie. The Android WebView drops cookies
+    // when the app is closed, so reopening it meant /auth/me came back 401 and the
+    // customer was thrown to the OTP screen - while the delivery app, which does send
+    // a Bearer token, survived the same restart untouched.
+    //
+    // The token is already in localStorage: OTP.jsx stores it at login, and the
+    // FCM registration path reads it from there. Sending it adds no exposure that
+    // did not already exist, and it is what makes the session outlive the cookie.
     const isAuthenticatedRoute =
       (path.startsWith("/admin") ||
         (path.startsWith("/restaurant") &&
           !path.startsWith("/restaurants") &&
           !isPublicRestaurantRoute) ||
-        path.startsWith("/delivery")) &&
+        path.startsWith("/delivery") ||
+        currentModule === "user") &&
       !isPublicRestaurantRoute;
 
     // For authenticated routes, ALWAYS ensure Authorization header is set if we have a token
