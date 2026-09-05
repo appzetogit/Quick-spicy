@@ -16,6 +16,18 @@ const logger = winston.createLogger({
 
 const isProduction = process.env.NODE_ENV === 'production';
 const getAllowedBypassOtp = () => {
+  // Requires its own explicit opt-in, not merely "we are not production".
+  //
+  // This used to return the bypass whenever NODE_ENV !== 'production', and the live
+  // server runs with NODE_ENV=development - so the bypass path was armed in
+  // production the whole time. It stayed harmless only because BYPASS_OTP happened
+  // to be unset; anyone setting it, including through the admin environment panel,
+  // would have had a code that logs in as any customer. Tying a login bypass to the
+  // absence of a flag is the wrong way round, so it now needs ALLOW_OTP_BYPASS=true
+  // deliberately set alongside it.
+  if (process.env.ALLOW_OTP_BYPASS !== 'true') {
+    return null;
+  }
   if (isProduction) {
     return null;
   }
