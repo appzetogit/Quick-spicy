@@ -52,6 +52,16 @@ export const sendOTP = asyncHandler(async (req, res) => {
       identifierType: result.identifierType
     });
   } catch (error) {
+    // A cooldown or per-number cap is the caller asking too soon, not a server
+    // fault. 500 made the app show a generic failure instead of the wait time, and
+    // retry logic treats 5xx as worth retrying - exactly wrong for a cooldown.
+    if (error?.retryAfterSeconds || /please wait|too many otp/i.test(error?.message || '')) {
+      if (error?.retryAfterSeconds) {
+        res.set('Retry-After', String(error.retryAfterSeconds));
+      }
+      logger.warn(`OTP request throttled: ${error.message}`);
+      return errorResponse(res, 429, error.message);
+    }
     logger.error(`Error sending OTP: ${error.message}`);
     return errorResponse(res, 500, error.message);
   }

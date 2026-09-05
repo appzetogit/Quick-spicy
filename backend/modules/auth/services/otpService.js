@@ -71,17 +71,50 @@ class OTPService {
       const identifier = normalizedPhone || email;
       const identifierType = normalizedPhone ? 'phone' : 'email';
 
-      // Check rate limiting (max 3 OTPs per identifier per hour) - using MongoDB
-      if (process.env.NODE_ENV === 'production') {
+      // Per-number limits. Every send here costs an SMS, so these are the guard that
+      // actually protects spend - the IP limiter in front of the route is shared with
+      // verify-otp and useless behind carrier NAT, where thousands of customers share
+      // one address.
+      //
+      // This used to be wrapped in `if (NODE_ENV === 'production')`. The server runs
+      // with NODE_ENV=development, so it never executed even once in production: there
+      // was no per-number cap at all, and going back and resending sent a real SMS
+      // every single time. The gate is gone - a limit that only runs somewhere other
+      // than production is not a limit.
+      const cooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60);
+      const maxPerHour = Number(process.env.OTP_MAX_PER_HOUR || 3);
+
+      // Cooldown between consecutive sends. This is what stops the back-and-resend
+      // loop, which the hourly cap alone does not: three sends can still go out
+      // back to back within seconds of each other.
+      if (cooldownSeconds > 0) {
+        const lastOtp = await Otp.findOne({ [identifierType]: identifier, purpose })
+          .sort({ createdAt: -1 })
+          .select('createdAt')
+          .lean();
+
+        if (lastOtp?.createdAt) {
+          const elapsedMs = Date.now() - new Date(lastOtp.createdAt).getTime();
+          const remainingMs = cooldownSeconds * 1000 - elapsedMs;
+          if (remainingMs > 0) {
+            const seconds = Math.ceil(remainingMs / 1000);
+            const error = new Error(
+              `Please wait ${seconds} second${seconds === 1 ? '' : 's'} before requesting another OTP.`
+            );
+            error.retryAfterSeconds = seconds;
+            throw error;
+          }
+        }
+      }
+
+      if (maxPerHour > 0) {
         const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const rateLimitQuery = {
+        const recentOtpCount = await Otp.countDocuments({
           [identifierType]: identifier,
           purpose,
           createdAt: { $gte: oneHourAgo }
-        };
-        
-        const recentOtpCount = await Otp.countDocuments(rateLimitQuery);
-        if (recentOtpCount >= 3) {
+        });
+        if (recentOtpCount >= maxPerHour) {
           throw new Error('Too many OTP requests. Please try again after some time.');
         }
       }
