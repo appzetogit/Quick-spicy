@@ -8,6 +8,7 @@ import {
   Share2,
   RefreshCw,
   Phone,
+  Bike,
   User,
   ChevronRight,
   MapPin,
@@ -209,6 +210,27 @@ const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null,
 }
 
 // Section item component - icon container uses overflow-visible so icons are not cut
+// One mapping from the backend order status to this screen's view, used by every fetch
+// path. There were three copies, and all of them sent 'ready' to "Order picked up" - so a
+// customer whose food was still on the restaurant counter was told it was on its way.
+const viewForOrderStatus = (status) => {
+  switch (status) {
+    case 'cancelled': return 'cancelled'
+    case 'delivered': return 'delivered'
+    case 'out_for_delivery': return 'pickup'
+    case 'ready': return 'ready'
+    case 'preparing': return 'preparing'
+    default: return null
+  }
+}
+
+const formatPhoneForDisplay = (raw) => {
+  const digits = String(raw || '').replace(/\D/g, '')
+  if (digits.length === 10) return `+91 ${digits}`
+  if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2)}`
+  return String(raw || '')
+}
+
 const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, rightContent }) => (
   <motion.button
     onClick={onClick}
@@ -320,10 +342,14 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
     additionalTip: Number(apiOrder?.additionalTip || previousOrder?.additionalTip || 0),
     totalTip: Number(apiOrder?.pricing?.tip || 0) + Number(apiOrder?.additionalTip || 0),
     status: apiOrder?.status || previousOrder?.status || 'pending',
+    // The rider's phone arrives with the order and was dropped here, so the customer never
+    // had a number to call. No fallback to the previous rider: if the order has none now,
+    // showing the last one would put a stranger's number on screen.
     deliveryPartner: apiOrder?.deliveryPartnerId ? {
       name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
+      phone: apiOrder.deliveryPartnerId.phone || '',
       avatar: null
-    } : (previousOrder?.deliveryPartner || null),
+    } : null,
     deliveryPartnerId: apiOrder?.deliveryPartnerId?._id || apiOrder?.deliveryPartnerId || apiOrder?.assignmentInfo?.deliveryPartnerId || previousOrder?.deliveryPartnerId || null,
     assignmentInfo: apiOrder?.assignmentInfo || previousOrder?.assignmentInfo || null,
     tracking: apiOrder?.tracking || previousOrder?.tracking || {},
@@ -373,15 +399,8 @@ export default function OrderTracking() {
   const [selectedTipAmount, setSelectedTipAmount] = useState(0)
   const [customTipAmount, setCustomTipAmount] = useState("")
   const [isTipLoading, setIsTipLoading] = useState(false)
-  const [localDeliveryInstruction, setLocalDeliveryInstruction] = useState("")
   const [timerNow, setTimerNow] = useState(Date.now())
   const lastRealtimeRefreshRef = useRef(0)
-
-  useEffect(() => {
-    if (!orderId) return
-    const savedInstruction = localStorage.getItem(`user_order_instruction_${orderId}`) || ""
-    setLocalDeliveryInstruction(savedInstruction)
-  }, [orderId])
 
   const defaultAddress = getDefaultAddress()
   const fallbackCustomerCoords = useMemo(() => {
@@ -475,6 +494,15 @@ export default function OrderTracking() {
     window.location.href = `tel:${cleanPhone}`
   }
 
+  const handleCallRider = () => {
+    const cleanPhone = String(order?.deliveryPartner?.phone || '').replace(/[^\d+]/g, '')
+    if (!cleanPhone) {
+      toast.error('Delivery partner phone number not available')
+      return
+    }
+    window.location.href = `tel:${cleanPhone}`
+  }
+
   const customerDeliveryOtp = useMemo(() => {
     const code = order?.deliveryVerification?.dropOtp?.code
     return code ? String(code) : null
@@ -554,15 +582,8 @@ export default function OrderTracking() {
           const transformedOrder = transformOrderForTracking(apiOrder, order, restaurantCoords);
           setOrder(transformedOrder);
 
-          if (newOrderStatus === 'cancelled') {
-            setOrderStatus('cancelled');
-          } else if (newOrderStatus === 'preparing') {
-            setOrderStatus('preparing');
-          } else if (newOrderStatus === 'ready' || newOrderStatus === 'out_for_delivery') {
-            setOrderStatus('pickup');
-          } else if (newOrderStatus === 'delivered') {
-            setOrderStatus('delivered');
-          }
+          const nextView = viewForOrderStatus(newOrderStatus)
+          if (nextView) setOrderStatus(nextView)
         }
       } catch (err) {
         debugError('Error polling order updates:', err);
@@ -679,17 +700,8 @@ export default function OrderTracking() {
           setOrder(transformOrderForTracking(apiOrder, null, restaurantCoords, restaurantAddress))
 
           // Update orderStatus based on API order status
-          if (apiOrder.status === 'cancelled') {
-            setOrderStatus('cancelled');
-          } else if (apiOrder.status === 'preparing') {
-            setOrderStatus('preparing');
-          } else if (apiOrder.status === 'ready') {
-            setOrderStatus('pickup');
-          } else if (apiOrder.status === 'out_for_delivery') {
-            setOrderStatus('pickup');
-          } else if (apiOrder.status === 'delivered') {
-            setOrderStatus('delivered');
-          }
+          const nextView = viewForOrderStatus(apiOrder.status)
+          if (nextView) setOrderStatus(nextView)
         } else {
           throw new Error('Order not found')
         }
@@ -753,9 +765,9 @@ export default function OrderTracking() {
       debugLog('📢 Order status notification received:', { message, status });
 
       // Update order status in UI
+      // Accepting, or reaching the restaurant, is not the food being picked up. Both used to
+      // flip the screen to "Order picked up"; the refresh below shows them as they are.
       if (status === 'out_for_delivery') {
-        setOrderStatus('pickup');
-      } else if (status === 'reached_pickup' || status === 'accepted') {
         setOrderStatus('pickup');
       } else if (status === 'delivered') {
         setOrderStatus('delivered');
@@ -888,43 +900,6 @@ export default function OrderTracking() {
     navigate("/user/profile/report-safety-emergency");
   };
 
-  const handleOpenDeliveryLocation = () => {
-    const coords = order?.address?.location?.coordinates || order?.address?.coordinates;
-    if (Array.isArray(coords) && coords.length >= 2) {
-      const [lng, lat] = coords;
-      const mapUrl = `https://www.google.com/maps?q=${encodeURIComponent(`${lat},${lng}`)}`;
-      window.open(mapUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    const fallbackAddress =
-      order?.address?.formattedAddress ||
-      [order?.address?.street, order?.address?.additionalDetails, order?.address?.city, order?.address?.state, order?.address?.zipCode]
-        .filter(Boolean)
-        .join(", ");
-
-    if (fallbackAddress) {
-      const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fallbackAddress)}`;
-      window.open(mapUrl, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    toast.info("Delivery location is not available yet");
-  };
-
-  const handleEditDeliveryInstruction = () => {
-    const currentInstruction = order?.note || localDeliveryInstruction || "";
-    const nextInstruction = window.prompt("Add delivery instructions", currentInstruction);
-    if (nextInstruction === null) return;
-
-    const normalized = nextInstruction.trim();
-    setLocalDeliveryInstruction(normalized);
-    if (orderId) {
-      localStorage.setItem(`user_order_instruction_${orderId}`, normalized);
-    }
-    toast.success("Delivery instruction saved");
-  };
-
   const handleRefresh = async () => {
     setIsRefreshing(true)
     try {
@@ -975,17 +950,8 @@ export default function OrderTracking() {
         setOrder(transformOrderForTracking(apiOrder, order, restaurantCoords, restaurantAddress))
 
         // Update order status for UI
-        if (apiOrder.status === 'cancelled') {
-          setOrderStatus('cancelled');
-        } else if (apiOrder.status === 'preparing') {
-          setOrderStatus('preparing')
-        } else if (apiOrder.status === 'ready') {
-          setOrderStatus('pickup')
-        } else if (apiOrder.status === 'out_for_delivery') {
-          setOrderStatus('pickup')
-        } else if (apiOrder.status === 'delivered') {
-          setOrderStatus('delivered')
-        }
+        const nextView = viewForOrderStatus(apiOrder.status)
+        if (nextView) setOrderStatus(nextView)
       }
     } catch (err) {
       debugError('Error refreshing order:', err)
@@ -1071,7 +1037,16 @@ export default function OrderTracking() {
     },
     preparing: {
       title: "Preparing your order",
-      subtitle: arrivalText ? `Arriving in ${arrivalText}` : "On the way",
+      subtitle: arrivalText ? `Arriving in ${arrivalText}` : "Your food is being prepared",
+      color: "bg-[#EB590E]"
+    },
+    ready: {
+      title: order?.deliveryState?.currentPhase === 'at_pickup'
+        ? "Delivery partner at the restaurant"
+        : "Food is ready",
+      subtitle: order?.deliveryPartner?.name
+        ? `${order.deliveryPartner.name} is picking it up`
+        : "Assigning a delivery partner",
       color: "bg-[#EB590E]"
     },
     pickup: {
@@ -1287,6 +1262,40 @@ export default function OrderTracking() {
           </motion.div>
         )}
 
+        {/* The rider, once one is assigned. Their number was always fetched with the order
+            and never shown, so a customer had no way to reach the person bringing the food. */}
+        {order?.deliveryPartner && orderStatus !== 'delivered' && orderStatus !== 'cancelled' && (
+          <motion.div
+            className="bg-white rounded-xl p-4 shadow-sm"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                <Bike className="w-6 h-6 text-[#EB590E]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-gray-500">Your delivery partner</p>
+                <p className="font-semibold text-gray-900 truncate">{order.deliveryPartner.name}</p>
+                {order.deliveryPartner.phone && (
+                  <p className="text-sm text-gray-600">{formatPhoneForDisplay(order.deliveryPartner.phone)}</p>
+                )}
+              </div>
+              {order.deliveryPartner.phone && (
+                <motion.button
+                  className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center"
+                  onClick={handleCallRider}
+                  whileTap={{ scale: 0.9 }}
+                  aria-label="Call delivery partner"
+                >
+                  <Phone className="w-5 h-5 text-[#EB590E]" />
+                </motion.button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         {/* Food Cooking Status - Show until delivery partner accepts pickup */}
         {(() => {
           // Check if delivery partner has accepted pickup
@@ -1459,7 +1468,7 @@ export default function OrderTracking() {
               defaultAddress?.phone ||
               'Phone number not available'
             }
-            onClick={() => navigate("/user/profile/edit")}
+            showArrow={false}
           />
           <SectionItem
             icon={HomeIcon}
@@ -1503,14 +1512,19 @@ export default function OrderTracking() {
 
               return 'Add delivery address'
             })()}
-            onClick={handleOpenDeliveryLocation}
+            showArrow={false}
           />
-          <SectionItem
-            icon={MessageSquare}
-            title="Add delivery instructions"
-            subtitle={order?.note || localDeliveryInstruction || "Tap to add instructions"}
-            onClick={handleEditDeliveryInstruction}
-          />
+          {/* Read-only. Instructions added here after ordering were written only to this
+              phone's localStorage, with a "saved" toast - no restaurant or rider ever saw
+              them. The note given at checkout is what reaches the restaurant. */}
+          {order?.note && (
+            <SectionItem
+              icon={MessageSquare}
+              title="Your note"
+              subtitle={order.note}
+              showArrow={false}
+            />
+          )}
         </motion.div>
 
         {/* Restaurant Section */}
