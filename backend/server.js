@@ -1232,7 +1232,21 @@ function initializeScheduledTasks() {
 
   // Reclaim orders from riders who never answered the offer. Reclaim only - the retry
   // sweep below does the re-dispatch, so the two run in that order.
+  //
+  // OFF unless OFFER_TIMEOUT_ENABLED=true. As shipped it excluded each rider who missed the
+  // 40-second window, permanently, for that order. A zone has only a handful of riders -
+  // Cumbum has three - so after a couple of minutes every one of them was excluded and the
+  // order could never be offered to anybody again. Between 3 and 11 September it reclaimed
+  // 672 times across 276 orders, and 234 of those were finished by an admin with no rider
+  // on record: no rider earnings, cash collected by nobody, nothing for the customer to
+  // track. Leaving the offer with the assigned rider is how dispatch worked for months
+  // before, and stuckOrderMonitorService still reports anything that is genuinely stranded.
+  // Do not re-enable until a timed-out rider is rotated back in rather than excluded.
   import('./modules/order/services/offerTimeoutService.js').then(({ processExpiredOffers }) => {
+    if (process.env.OFFER_TIMEOUT_ENABLED !== 'true') {
+      console.log('⏸  Offer-timeout sweep disabled (set OFFER_TIMEOUT_ENABLED=true to enable)');
+      return;
+    }
     cron.schedule('*/10 * * * * *', async () => {
       try {
         const result = await processExpiredOffers();
