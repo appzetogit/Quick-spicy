@@ -21,6 +21,7 @@ import {
   CircleSlash,
   Loader2
 } from "lucide-react"
+import { viewForOrderStatus, formatPhoneForDisplay, riderFromOrder } from "@/lib/utils/orderPresentation"
 import AnimatedPage from "../../components/AnimatedPage"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -210,27 +211,6 @@ const DeliveryMap = ({ orderId, order, isVisible, fallbackCustomerCoords = null,
 }
 
 // Section item component - icon container uses overflow-visible so icons are not cut
-// One mapping from the backend order status to this screen's view, used by every fetch
-// path. There were three copies, and all of them sent 'ready' to "Order picked up" - so a
-// customer whose food was still on the restaurant counter was told it was on its way.
-const viewForOrderStatus = (status) => {
-  switch (status) {
-    case 'cancelled': return 'cancelled'
-    case 'delivered': return 'delivered'
-    case 'out_for_delivery': return 'pickup'
-    case 'ready': return 'ready'
-    case 'preparing': return 'preparing'
-    default: return null
-  }
-}
-
-const formatPhoneForDisplay = (raw) => {
-  const digits = String(raw || '').replace(/\D/g, '')
-  if (digits.length === 10) return `+91 ${digits}`
-  if (digits.length === 12 && digits.startsWith('91')) return `+91 ${digits.slice(2)}`
-  return String(raw || '')
-}
-
 const SectionItem = ({ icon: Icon, title, subtitle, onClick, showArrow = true, rightContent }) => (
   <motion.button
     onClick={onClick}
@@ -342,14 +322,7 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
     additionalTip: Number(apiOrder?.additionalTip || previousOrder?.additionalTip || 0),
     totalTip: Number(apiOrder?.pricing?.tip || 0) + Number(apiOrder?.additionalTip || 0),
     status: apiOrder?.status || previousOrder?.status || 'pending',
-    // The rider's phone arrives with the order and was dropped here, so the customer never
-    // had a number to call. No fallback to the previous rider: if the order has none now,
-    // showing the last one would put a stranger's number on screen.
-    deliveryPartner: apiOrder?.deliveryPartnerId ? {
-      name: apiOrder.deliveryPartnerId.name || 'Delivery Partner',
-      phone: apiOrder.deliveryPartnerId.phone || '',
-      avatar: null
-    } : null,
+    deliveryPartner: riderFromOrder(apiOrder),
     deliveryPartnerId: apiOrder?.deliveryPartnerId?._id || apiOrder?.deliveryPartnerId || apiOrder?.assignmentInfo?.deliveryPartnerId || previousOrder?.deliveryPartnerId || null,
     assignmentInfo: apiOrder?.assignmentInfo || previousOrder?.assignmentInfo || null,
     tracking: apiOrder?.tracking || previousOrder?.tracking || {},

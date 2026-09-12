@@ -11,7 +11,7 @@
     "seed:admin": "node scripts/upsertAdminUser.js",
     "check:admin": "node scripts/checkAdminPassword.js",
     "reset:admin-password": "node scripts/updateAdminPassword.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node scripts/run-unit-tests.mjs"
   },
   "keywords": [
     "food-delivery",

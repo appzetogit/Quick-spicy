@@ -66,7 +66,7 @@ const hasStartedWork = (order) => {
   return false;
 };
 
-const wasAcceptedByRider = (order) =>
+export const wasAcceptedByRider = (order) =>
   order?.assignmentInfo?.assignedBy === 'delivery_accept' || hasStartedWork(order);
 
 /**
