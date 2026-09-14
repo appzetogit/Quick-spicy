@@ -8,6 +8,7 @@ import { registerWebPushForCurrentModule } from "@/lib/utils/firebaseMessaging"
 import { isModuleAuthenticated } from "@/lib/utils/auth"
 import { useRestaurantNotifications } from "@/module/restaurant/hooks/useRestaurantNotifications"
 import { useAppBackGuard } from "@/lib/hooks/useAppBackGuard"
+import { getDeliverySignupResumePath } from "@/lib/utils/deliverySignup"
 
 // Lazy Loading Components
 const UserRouter = lazy(() => import("@/module/user/components/UserRouter"))
@@ -176,15 +177,6 @@ function RestaurantGlobalNotificationListener() {
   }
 
   return <RestaurantGlobalNotificationListenerInner />
-}
-
-function getDeliverySignupResumePath() {
-  if (localStorage.getItem("delivery_signup_required") !== "true") {
-    return null
-  }
-
-  const hasSavedDetails = Boolean(sessionStorage.getItem("deliverySignupDetails"))
-  return hasSavedDetails ? "/delivery/signup/documents" : "/delivery/signup/details"
 }
 
 function DeliverySignupFlowGuard({ children }) {

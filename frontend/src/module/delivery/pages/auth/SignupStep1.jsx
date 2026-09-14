@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react"
+﻿import { useState, useEffect, useRef } from "react"
 import { useNavigate } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { deliveryAPI } from "@/lib/api"
@@ -66,10 +66,18 @@ export default function SignupStep1() {
   const sanitizeEmailValue = (value) =>
     value.replace(/\s/g, "").toLowerCase()
 
-  // Save data to session storage whenever formData changes
+  // Save whatever the rider actually changes.
+  //
+  // This used to run on mount as well, so merely opening this page marked the account as
+  // needing signup - and because two guards redirect on that flag, an approved rider who
+  // landed here once was sent back to this form on every load afterwards, with no way
+  // through. The flag now means what it says: a signup this rider has started.
+  const untouchedFormData = useRef(JSON.stringify(formData))
   useEffect(() => {
+    const serialised = JSON.stringify(formData)
+    if (serialised === untouchedFormData.current) return
     localStorage.setItem("delivery_signup_required", "true")
-    sessionStorage.setItem("deliverySignupDetails", JSON.stringify(formData))
+    sessionStorage.setItem("deliverySignupDetails", serialised)
   }, [formData])
 
   const handleChange = (e) => {
