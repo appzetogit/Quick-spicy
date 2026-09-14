@@ -124,6 +124,15 @@ const rider = await Delivery.findOneAndUpdate(
       'documents.drivingLicense': { number: 'DEMO-DL-0000', document: IMG, verified: true },
       'documents.vehicleRC': { number: 'DEMO-RC-0000', document: IMG, verified: true },
       'documents.photo': IMG,
+      // The rider home shows a "Submit bank details" card until all four of these are
+      // set (profile.documents.bankDetails), which a reviewer would read as an unfinished
+      // account.
+      'documents.bankDetails': {
+        accountHolderName: 'Play Store Demo',
+        accountNumber: '000000000000',
+        ifscCode: 'DEMO0000000',
+        bankName: 'Demo Bank',
+      },
       verifiedAt: new Date(),
     },
     $unset: { zoneId: '', 'availability.zones': '' },
