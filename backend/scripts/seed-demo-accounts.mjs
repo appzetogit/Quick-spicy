@@ -41,7 +41,18 @@ const DIGITS = process.env.DEMO_LOGIN_PHONE || '9999999999';
 // empty pending account instead, which is why the reviewer kept being asked for
 // documents. OTP verification normalises to digits, so the sign-in itself worked - only
 // the account lookup did not.
-const PHONE = process.env.DEMO_LOGIN_PHONE_STORED || '+91 ' + DIGITS;
+// Two storage formats, because the backend is not consistent about it.
+//
+// Customer and delivery auth store whatever string the client sent, and all three
+// sign-in screens build it as `${countryCode} ${phone}` - "+91 9999999999". Restaurant
+// auth is the exception: it runs the number through normalizePhoneNumber first, which
+// strips non-digits and prefixes the country code, giving "919999999999".
+//
+// A record seeded under the wrong one is invisible to that app: instead of finding it,
+// the app creates its own empty pending account, which is what kept putting the reviewer
+// into onboarding. Matched per module rather than guessed.
+const APP_PHONE = process.env.DEMO_LOGIN_PHONE_STORED || '+91 ' + DIGITS;
+const RESTAURANT_PHONE = '91' + DIGITS;
 const IMG = 'https://placehold.co/600x400/EB590E/white?text=Quick+Spicy+Demo';
 
 await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI);
@@ -50,27 +61,31 @@ const { default: User } = await import('../modules/auth/models/User.js');
 const { default: Delivery } = await import('../modules/delivery/models/Delivery.js');
 const { default: Restaurant } = await import('../modules/restaurant/models/Restaurant.js');
 
-console.log(`Seeding demo accounts for ${PHONE}\n`);
+console.log(`Seeding demo accounts for ${APP_PHONE} (restaurant: ${RESTAURANT_PHONE})\n`);
 
 // Clear up the bare-digit records an earlier version of this script created: no app can
 // reach them, and they only add confusion to the admin lists. Deliberately narrow - demo
 // flagged, this script's own names, and only under the unreachable digits-only phone.
-for (const [label, Model, name] of [
-  ['rider', Delivery, 'Play Store Demo Rider'],
-  ['restaurant', Restaurant, 'Play Store Demo Kitchen'],
+for (const [label, Model, name, keep] of [
+  ['rider', Delivery, 'Play Store Demo Rider', APP_PHONE],
+  ['restaurant', Restaurant, 'Play Store Demo Kitchen', RESTAURANT_PHONE],
 ]) {
-  const stale = await Model.deleteMany({ phone: DIGITS, isDemo: true, name });
-  if (stale.deletedCount) console.log(`  removed ${stale.deletedCount} unreachable ${label} record(s) stored as "${DIGITS}"`);
+  const stale = await Model.deleteMany({
+    phone: { $in: [DIGITS, '+91 ' + DIGITS, '91' + DIGITS].filter((value) => value !== keep) },
+    isDemo: true,
+    name,
+  });
+  if (stale.deletedCount) console.log(`  removed ${stale.deletedCount} unreachable ${label} record(s)`);
 }
 
 
 // --- customer ---------------------------------------------------------------------
-const existingUser = await User.findOne({ phone: PHONE });
+const existingUser = await User.findOne({ phone: APP_PHONE });
 const user = await User.findOneAndUpdate(
-  { phone: PHONE },
+  { phone: APP_PHONE },
   {
     $set: {
-      phone: PHONE,
+      phone: APP_PHONE,
       isActive: true,
       isDemo: true,
       isPhoneVerified: true,
@@ -85,11 +100,11 @@ console.log(`  customer   ${user._id}  ${user.name} | active=${user.isActive} | 
 
 // --- delivery partner -------------------------------------------------------------
 const rider = await Delivery.findOneAndUpdate(
-  { phone: PHONE },
+  { phone: APP_PHONE },
   {
     $set: {
       name: 'Play Store Demo Rider',
-      phone: PHONE,
+      phone: APP_PHONE,
       email: 'demo.rider@quickspicy.in',
       status: 'approved',
       isActive: true,
@@ -129,16 +144,16 @@ const LOCATION = {
 };
 
 const restaurant = await Restaurant.findOneAndUpdate(
-  { phone: PHONE },
+  { phone: RESTAURANT_PHONE },
   {
     $set: {
       name: 'Play Store Demo Kitchen',
       slug: 'play-store-demo-kitchen',
       email: 'demo@quickspicy.in',
-      phone: PHONE,
+      phone: RESTAURANT_PHONE,
       ownerName: 'Play Store Demo',
-      ownerPhone: PHONE,
-      primaryContactNumber: PHONE,
+      ownerPhone: RESTAURANT_PHONE,
+      primaryContactNumber: RESTAURANT_PHONE,
       phoneVerified: true,
       isActive: true,
       isDemo: true,
@@ -158,8 +173,8 @@ const restaurant = await Restaurant.findOneAndUpdate(
         restaurantName: 'Play Store Demo Kitchen',
         ownerName: 'Play Store Demo',
         ownerEmail: 'demo@quickspicy.in',
-        ownerPhone: PHONE,
-        primaryContactNumber: PHONE,
+        ownerPhone: RESTAURANT_PHONE,
+        primaryContactNumber: RESTAURANT_PHONE,
         location: LOCATION,
       },
       'onboarding.step2': {
@@ -199,5 +214,5 @@ const restaurant = await Restaurant.findOneAndUpdate(
 );
 console.log(`  restaurant ${restaurant._id}  ${restaurant.name} | active=${restaurant.isActive} | demo=${restaurant.isDemo} | accepting=${restaurant.isAcceptingOrders} | completedSteps=${restaurant.onboarding?.completedSteps}`);
 
-console.log('\nAll three demo accounts are approved, active and past onboarding.');
+console.log(`\nAll three demo accounts are approved, active and past onboarding, stored as "${APP_PHONE}" and "${RESTAURANT_PHONE}".`);
 await mongoose.disconnect();
