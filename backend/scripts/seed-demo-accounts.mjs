@@ -31,7 +31,17 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const PHONE = process.env.DEMO_LOGIN_PHONE || '9999999999';
+const DIGITS = process.env.DEMO_LOGIN_PHONE || '9999999999';
+
+// The format the apps actually store.
+//
+// All three sign-in screens build the phone as `${countryCode} ${phone}`, and the auth
+// controllers look an account up by that raw string rather than by digits. Seeding the
+// bare ten digits therefore produced records no app could reach: each app created its own
+// empty pending account instead, which is why the reviewer kept being asked for
+// documents. OTP verification normalises to digits, so the sign-in itself worked - only
+// the account lookup did not.
+const PHONE = process.env.DEMO_LOGIN_PHONE_STORED || '+91 ' + DIGITS;
 const IMG = 'https://placehold.co/600x400/EB590E/white?text=Quick+Spicy+Demo';
 
 await mongoose.connect(process.env.MONGO_URI || process.env.MONGODB_URI);
@@ -43,9 +53,20 @@ const { default: Restaurant } = await import('../modules/restaurant/models/Resta
 console.log(`Seeding demo accounts for ${PHONE}\n`);
 
 // --- customer ---------------------------------------------------------------------
+const existingUser = await User.findOne({ phone: PHONE });
 const user = await User.findOneAndUpdate(
   { phone: PHONE },
-  { $set: { name: 'Play Store Demo', phone: PHONE, isActive: true, isDemo: true, isPhoneVerified: true } },
+  {
+    $set: {
+      phone: PHONE,
+      isActive: true,
+      isDemo: true,
+      isPhoneVerified: true,
+      // An account may already exist under this number from the owner's own testing.
+      // Flag it and keep it able to sign in, but never rename data that is not ours.
+      ...(existingUser ? {} : { name: 'Play Store Demo' }),
+    },
+  },
   { new: true, upsert: true, setDefaultsOnInsert: true },
 );
 console.log(`  customer   ${user._id}  ${user.name} | active=${user.isActive} | demo=${user.isDemo}`);
@@ -167,4 +188,15 @@ const restaurant = await Restaurant.findOneAndUpdate(
 console.log(`  restaurant ${restaurant._id}  ${restaurant.name} | active=${restaurant.isActive} | demo=${restaurant.isDemo} | accepting=${restaurant.isAcceptingOrders} | completedSteps=${restaurant.onboarding?.completedSteps}`);
 
 console.log('\nAll three demo accounts are approved, active and past onboarding.');
+// Clear up the bare-digit records an earlier version of this script created: no app can
+// reach them, and they only add confusion to the admin lists. Deliberately narrow - demo
+// flagged, this script's own names, and only under the unreachable digits-only phone.
+for (const [label, Model, name] of [
+  ['rider', Delivery, 'Play Store Demo Rider'],
+  ['restaurant', Restaurant, 'Play Store Demo Kitchen'],
+]) {
+  const stale = await Model.deleteMany({ phone: DIGITS, isDemo: true, name });
+  if (stale.deletedCount) console.log(`  removed ${stale.deletedCount} unreachable ${label} record(s) stored as "${DIGITS}"`);
+}
+
 await mongoose.disconnect();
