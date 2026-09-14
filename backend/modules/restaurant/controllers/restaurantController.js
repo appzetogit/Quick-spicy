@@ -446,7 +446,7 @@ export const getRestaurants = async (req, res) => {
     }
     
     // Build query
-    const query = { isActive: true };
+    const query = { isActive: true, isDemo: { $ne: true } };
     
     // Cuisine filter
     if (cuisine) {
@@ -1351,7 +1351,7 @@ export const getRestaurantsWithDishesUnder250 = async (req, res) => {
     const hasConfiguredDeliveryFee = feeSettings?.deliveryFee !== undefined && feeSettings?.deliveryFee !== null;
     const defaultDeliveryFee = hasConfiguredDeliveryFee ? Number(feeSettings.deliveryFee) : null;
 
-    const restaurantQueryObj = { isActive: true };
+    const restaurantQueryObj = { isActive: true, isDemo: { $ne: true } };
     if (userZoneId) {
       restaurantQueryObj.$or = [
         { zoneId: userZoneId },
@@ -1568,7 +1568,7 @@ export const getPublicDishes = async (req, res) => {
     const { limit = 500 } = req.query;
     const maxItems = Math.min(Math.max(Number(limit) || 500, 1), 2000);
 
-    const activeRestaurants = await Restaurant.find({ isActive: true })
+    const activeRestaurants = await Restaurant.find({ isActive: true, isDemo: { $ne: true } })
       .select("_id profileImage menuImages")
       .lean();
 

@@ -35,6 +35,32 @@ const getAllowedBypassOtp = () => {
 };
 
 /**
+ * The single demo identity used for Google Play and App Store review.
+ *
+ * Both stores require working credentials for an app behind a login. This is scoped to
+ * ONE number: getAllowedBypassOtp above accepts its code for ANY identifier, which would
+ * hand a reviewer - or anyone who guessed the code - a key to every customer account on
+ * the platform. Here the code is accepted only for DEMO_LOGIN_PHONE, and a wrong code
+ * for that number still fails normally.
+ *
+ * Both values come from the environment so the login can be rotated or switched off
+ * without a deploy. Unset either one and the demo login does not exist.
+ */
+const getDemoLogin = () => {
+  const phone = extractPhoneDigits(process.env.DEMO_LOGIN_PHONE || '');
+  const otp = String(process.env.DEMO_LOGIN_OTP || '').trim();
+  if (!phone || !otp) return null;
+  return { phone, otp };
+};
+
+/** True when this number is the store-review account. */
+export const isDemoLoginPhone = (phone) => {
+  const demo = getDemoLogin();
+  if (!demo || !phone) return false;
+  return extractPhoneDigits(phone) === demo.phone;
+};
+
+/**
  * Extract phone number digits (without country code)
  * @param {string} phone - Phone number in format like "+91 9098569620" or "+91-9098569620"
  * @returns {string} - Phone number digits only (e.g., "9098569620")
@@ -93,6 +119,21 @@ class OTPService {
       // was no per-number cap at all, and going back and resending sent a real SMS
       // every single time. The gate is gone - a limit that only runs somewhere other
       // than production is not a limit.
+      // The store-review account never sends an SMS and never stores a code: the
+      // reviewer types the fixed OTP, which verifyOTP accepts for this number alone.
+      // Short-circuited ahead of the rate limits so a reviewer retrying cannot lock
+      // themselves out mid-review, and so it costs nothing to use.
+      const demoLogin = getDemoLogin();
+      if (demoLogin && normalizedPhone === demoLogin.phone) {
+        logger.warn(`Demo login OTP requested for ${identifier} - store-review account, no SMS sent`);
+        return {
+          success: true,
+          message: 'OTP sent successfully to phone',
+          expiresIn: 300,
+          identifierType
+        };
+      }
+
       const cooldownSeconds = Number(process.env.OTP_RESEND_COOLDOWN_SECONDS || 60);
       const maxPerHour = Number(process.env.OTP_MAX_PER_HOUR || 3);
 
@@ -236,6 +277,18 @@ class OTPService {
       const normalizedPhone = phone ? extractPhoneDigits(phone) : null;
       const identifier = normalizedPhone || email;
       const identifierType = normalizedPhone ? 'phone' : 'email';
+
+      // Store-review account: the fixed code works for this one number only. A wrong
+      // code for it falls through and fails like any other, and the fixed code is
+      // meaningless for every other number.
+      const demoLogin = getDemoLogin();
+      if (demoLogin && normalizedPhone === demoLogin.phone && otp === demoLogin.otp) {
+        logger.warn(`Demo login used for ${identifier} - store-review account`);
+        return {
+          success: true,
+          message: 'OTP verified successfully'
+        };
+      }
 
       // Master/Developer OTP bypass (if configured in .env)
       const bypassOtp = getAllowedBypassOtp();

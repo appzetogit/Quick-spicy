@@ -315,6 +315,7 @@ export async function findZoneDeliveryPartnersForBroadcast(zoneId) {
     const partners = await Delivery.find({
       status: { $in: ['approved', 'active'] },
       isActive: true,
+      isDemo: { $ne: true },
       $or: [
         { zoneId: zoneIdString },
         { 'availability.zones': zoneIdString }
@@ -349,6 +350,7 @@ export async function findNearestDeliveryBoys(restaurantLat, restaurantLng, rest
       'availability.isOnline': true,
       status: { $in: ['approved', 'active'] },
       isActive: true,
+      isDemo: { $ne: true },
       'availability.currentLocation.coordinates': {
         $exists: true,
         $ne: [0, 0]
@@ -469,6 +471,7 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
       'availability.isOnline': true,
       status: { $in: ['approved', 'active'] },
       isActive: true,
+      isDemo: { $ne: true },
       'availability.currentLocation.coordinates': {
         $exists: true,
         $ne: [0, 0] // Exclude default/null coordinates

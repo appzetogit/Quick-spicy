@@ -321,6 +321,13 @@ userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
 
+// Marks the app-store review identity. Demo accounts are excluded from delivery dispatch
+// and from customer-facing listings, so a reviewer's account can never be handed a real
+// order or be shown to a real customer.
+userSchema.add({
+  isDemo: { type: Boolean, default: false, index: true },
+});
+
 const User = mongoose.model('User', userSchema);
 
 export default User;
