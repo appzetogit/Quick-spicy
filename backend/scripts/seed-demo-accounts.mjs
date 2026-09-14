@@ -52,6 +52,18 @@ const { default: Restaurant } = await import('../modules/restaurant/models/Resta
 
 console.log(`Seeding demo accounts for ${PHONE}\n`);
 
+// Clear up the bare-digit records an earlier version of this script created: no app can
+// reach them, and they only add confusion to the admin lists. Deliberately narrow - demo
+// flagged, this script's own names, and only under the unreachable digits-only phone.
+for (const [label, Model, name] of [
+  ['rider', Delivery, 'Play Store Demo Rider'],
+  ['restaurant', Restaurant, 'Play Store Demo Kitchen'],
+]) {
+  const stale = await Model.deleteMany({ phone: DIGITS, isDemo: true, name });
+  if (stale.deletedCount) console.log(`  removed ${stale.deletedCount} unreachable ${label} record(s) stored as "${DIGITS}"`);
+}
+
+
 // --- customer ---------------------------------------------------------------------
 const existingUser = await User.findOne({ phone: PHONE });
 const user = await User.findOneAndUpdate(
@@ -188,15 +200,4 @@ const restaurant = await Restaurant.findOneAndUpdate(
 console.log(`  restaurant ${restaurant._id}  ${restaurant.name} | active=${restaurant.isActive} | demo=${restaurant.isDemo} | accepting=${restaurant.isAcceptingOrders} | completedSteps=${restaurant.onboarding?.completedSteps}`);
 
 console.log('\nAll three demo accounts are approved, active and past onboarding.');
-// Clear up the bare-digit records an earlier version of this script created: no app can
-// reach them, and they only add confusion to the admin lists. Deliberately narrow - demo
-// flagged, this script's own names, and only under the unreachable digits-only phone.
-for (const [label, Model, name] of [
-  ['rider', Delivery, 'Play Store Demo Rider'],
-  ['restaurant', Restaurant, 'Play Store Demo Kitchen'],
-]) {
-  const stale = await Model.deleteMany({ phone: DIGITS, isDemo: true, name });
-  if (stale.deletedCount) console.log(`  removed ${stale.deletedCount} unreachable ${label} record(s) stored as "${DIGITS}"`);
-}
-
 await mongoose.disconnect();
