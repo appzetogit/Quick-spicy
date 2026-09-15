@@ -1223,6 +1223,19 @@ export const markOrderDelivered = asyncHandler(async (req, res) => {
     }
     order.deliveryState.status = "delivered";
     order.deliveryState.currentPhase = "completed";
+    order.completedBy = "admin";
+
+    // Closing an order that never had a rider means somebody collected the cash and the
+    // system has no record of who. Say so where it can be found, rather than leaving it to
+    // be discovered during settlement.
+    if (!order.deliveryPartnerId) {
+      const method = String(order.payment?.method || '').toLowerCase();
+      console.warn(
+        `[ADMIN COMPLETE] Order ${order.orderId} marked delivered with no rider assigned ` +
+        `(payment ${method}/${order.payment?.status}). No rider earnings and, for cash, no ` +
+        `record of who holds the money.`
+      );
+    }
 
     const deliveryPartnerId = order.deliveryPartnerId ? String(order.deliveryPartnerId) : null;
     const orderTrackingId = order.orderId || order._id?.toString();
