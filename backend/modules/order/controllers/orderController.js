@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Payment from '../../payment/models/Payment.js';
 import { createCashfreeOrder, verifyCashfreeOrderPayment, mapCashfreePaymentMethod } from '../../payment/services/cashfreeService.js';
+import { cashfreePaymentMethodsValue } from '../../payment/cashfreePaymentMethods.js';
 import Restaurant from '../../restaurant/models/Restaurant.js';
 import Zone from '../../admin/models/Zone.js';
 import User from '../../auth/models/User.js';
@@ -1329,7 +1330,7 @@ export const createOrder = async (req, res) => {
             customerPhone: userCustomer.phone || ''
           },
           orderMeta: {
-            payment_methods: 'upi,cc,dc,nb,wallet',
+            payment_methods: cashfreePaymentMethodsValue(),
             ...(returnUrl ? { return_url: returnUrl } : {})
           },
           orderNote: `Order ${order.orderId}`,
@@ -1354,6 +1355,24 @@ export const createOrder = async (req, res) => {
           status: cashfreeError?.response?.status,
           data: cashfreeError?.response?.data
         });
+
+        // The order row already exists by this point. Left as it was - online, payment
+        // pending, unconfirmed - it is invisible to the admin list, which hides unpaid
+        // online placeholders, and is eventually swept up by the restaurant auto-reject,
+        // so the customer is told "Restaurant did not respond" about a restaurant that
+        // never saw the order. Close it here for what it actually is.
+        try {
+          order.payment.status = 'failed';
+          order.status = 'cancelled';
+          order.cancelledBy = 'system';
+          order.cancellationReason = `Online payment could not be started: ${gatewayMessage}`;
+          order.cancelledAt = new Date();
+          await order.save();
+        } catch (closeError) {
+          logger.error(`Failed to close order after payment setup failure: ${closeError.message}`, {
+            orderId: order.orderId,
+          });
+        }
 
         return res.status(502).json({
           success: false,

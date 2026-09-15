@@ -410,7 +410,10 @@ const orderSchema = new mongoose.Schema({
   },
   cancelledBy: {
     type: String,
-    enum: ['user', 'restaurant', 'admin'],
+    // 'system' covers cancellations nobody chose - an online payment that could not
+    // even be started, for instance. Without it Mongoose drops the value and the
+    // order reads as though a person cancelled it.
+    enum: ['user', 'restaurant', 'admin', 'system'],
     default: null
   },
   adminOrderSmsAlertSentAt: {
