@@ -2478,6 +2478,7 @@ export const completeDelivery = asyncHandler(async (req, res) => {
         timestamp: new Date()
       },
       deliveredAt: new Date(),
+      completedBy: 'rider',
       'deliveryState.status': 'delivered',
       'deliveryState.currentPhase': 'completed'
     };

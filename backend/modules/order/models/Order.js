@@ -408,6 +408,15 @@ const orderSchema = new mongoose.Schema({
   cancellationReason: {
     type: String
   },
+  // Who actually finished the order. A rider completion proves handover with the
+  // customer's drop OTP; an admin completion does not, and when it happens on an order
+  // with no rider the cash has been collected by somebody nobody recorded. 234 orders in
+  // one nine-day stretch were closed that way, so settlement needs to be able to find
+  // them rather than infer it from a missing deliveryPartnerId.
+  completedBy: {
+    type: String,
+    enum: ['rider', 'admin', 'restaurant', 'system'],
+  },
   cancelledBy: {
     type: String,
     // 'system' covers cancellations nobody chose - an online payment that could not
