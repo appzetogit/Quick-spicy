@@ -27,7 +27,10 @@ export function useZone(location, { probe = false } = {}) {
   // Detect zone when location is available
   const detectZone = useCallback(async (lat, lng) => {
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
-      setZoneStatus('OUT_OF_SERVICE')
+      // Not knowing where the customer is is not the same as knowing they are outside
+      // every zone. Reporting OUT_OF_SERVICE here told customers standing in Cumbum that
+      // they were outside the service area, and blocked them from adding to the cart.
+      setZoneStatus('loading')
       setZoneId(null)
       setZone(null)
       return
@@ -116,7 +119,11 @@ export function useZone(location, { probe = false } = {}) {
         setZone(cachedZone ? JSON.parse(cachedZone) : null)
         setZoneStatus('IN_SERVICE')
       } else {
-        setZoneStatus('OUT_OF_SERVICE')
+        // No coordinates yet and nothing cached: still unknown. Only the backend saying
+        // OUT_OF_SERVICE for a real point means the customer is outside a zone - which is
+        // what every consumer of isOutOfService treats as final. decideGate already
+        // handles "no fix yet" separately, via permission/hasCoords/fixTimedOut.
+        setZoneStatus('loading')
         setZoneId(null)
         setZone(null)
       }

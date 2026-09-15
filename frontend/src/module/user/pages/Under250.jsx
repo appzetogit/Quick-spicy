@@ -683,9 +683,12 @@ export default function Under250() {
       return
     }
 
-    // CRITICAL: Check if user is in service zone
-    if (isOutOfService) {
-      toast.error('You are outside the service zone. Please select a location within the service area.')
+    // CRITICAL: Check if user is in service zone.
+    // effectiveZoneId already resolves the branch the customer chose; blocking on the
+    // detected zone alone ignored that and stopped "order for someone else" outright.
+    if (isOutOfService && !effectiveZoneId) {
+      // A fixed id so repeated taps replace the toast instead of stacking a wall of them.
+      toast.error('You are outside the service zone. Please select a location within the service area.', { id: 'outside-service-zone' })
       return
     }
 

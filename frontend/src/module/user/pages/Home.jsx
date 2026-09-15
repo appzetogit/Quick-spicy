@@ -2839,7 +2839,12 @@ export default function Home() {
           >
             <div className="flex flex-col gap-0.5 lg:gap-1">
               <h2 className="text-xs sm:text-sm lg:text-base font-semibold text-gray-400 tracking-widest uppercase">
-                {filteredRestaurants.length} Restaurants {browsingChosenBranch ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}
+                {/* While the fetch is in flight this read "0 Restaurants in <zone>"
+                    directly above the "Loading restaurants..." spinner - a count of zero
+                    stated as fact before anything had arrived. */}
+                {(isLoadingFilterResults || loadingRestaurants) && filteredRestaurants.length === 0
+                  ? `Finding restaurants ${browsingChosenBranch ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}`
+                  : `${filteredRestaurants.length} Restaurants ${browsingChosenBranch ? `in ${orderForOthers.zoneName || selectedZoneLabel}` : "delivering to you"}`}
               </h2>
               <span className="text-base sm:text-lg lg:text-2xl text-gray-500 font-normal">Featured</span>
             </div>

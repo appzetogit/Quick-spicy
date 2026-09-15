@@ -52,6 +52,7 @@ import fssaiLogo from "@/assets/fssai.png"
 import { safeBack } from "../../utils/safeBack"
 import { resolveIsVeg } from "../../utils/foodType"
 import { useScrollLock } from "../../hooks/useScrollLock"
+import { useOrderForSomeoneElse } from "../../hooks/useOrderForSomeoneElse"
 
 // Sentinel index for the synthetic "All items" section rendered while a price sort
 // is active. Negative so it can never collide with a real menu section index.
@@ -124,10 +125,19 @@ function RestaurantDetailsContent() {
     // an address they saved earlier and may be far from.
     return userLocation
   }, [selectedLocation, userLocation])
-  const { zoneId, zone, loading: loadingZone, isOutOfService } = useZone(zoneLookupLocation)
+  const { zoneId, zone, zoneStatus, loading: loadingZone, isOutOfService } = useZone(zoneLookupLocation)
   // Removed: the address-text zone guess. See Under250 for why - it resurrected a zone
   // whenever coordinates said the customer was outside every one of them.
-  const effectiveZoneId = zoneId
+  //
+  // Same branch precedence as Under250 and the home page. Without it this screen knew
+  // only the customer's own detected zone, so somebody ordering for a friend in another
+  // branch - the whole point of "order for someone else" - was told they were outside the
+  // service zone and could not add anything to the cart.
+  const orderForOthers = useOrderForSomeoneElse()
+  const chosenBranchZoneId = orderForOthers.zoneId || null
+  const sessionBranchZoneId = orderForOthers.active ? null : chosenBranchZoneId
+  const fallbackBranchZoneId = zoneStatus === "OUT_OF_SERVICE" ? chosenBranchZoneId : null
+  const effectiveZoneId = sessionBranchZoneId || zoneId || fallbackBranchZoneId
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [highlightIndex, setHighlightIndex] = useState(0)
   const [quantities, setQuantities] = useState({})
@@ -1084,7 +1094,8 @@ function RestaurantDetailsContent() {
 
     // CRITICAL: Check if user is in service zone or restaurant is available
     if (isOutOfService && !effectiveZoneId) {
-      toast.error('You are outside the service zone. Please select a location within the service area.');
+      // A fixed id so repeated taps replace the toast instead of stacking a wall of them.
+      toast.error('You are outside the service zone. Please select a location within the service area.', { id: 'outside-service-zone' });
       return;
     }
 
