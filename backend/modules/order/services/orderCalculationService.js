@@ -66,6 +66,31 @@ const getFeeSettings = async () => {
 };
 
 /**
+ * How far a delivery may be before the distance is treated as bad data rather than a
+ * journey. Deliveries are zone-local - a few kilometres - and cross-zone ordering is
+ * blocked at checkout, so a larger number means coordinates that are wrong, not a rider
+ * about to drive across the state. Left uncapped, the per-km fee ran away with it: a drop
+ * pinned at 0,0 produced a Rs 42,805 delivery fee, and four orders in the last 60 days
+ * were recorded more than 50km from their restaurant, one of them 224km.
+ */
+export const MAX_FEE_DISTANCE_KM = Number(process.env.MAX_FEE_DISTANCE_KM || 50);
+
+/**
+ * @returns {{distanceKm: number, implausible: boolean}} the distance the fee may be based
+ * on. Charging the base fee for nonsense coordinates is wrong by a few rupees; charging
+ * the uncapped figure is wrong by thousands.
+ */
+export const boundedFeeDistanceKm = (rawKm, maxKm = MAX_FEE_DISTANCE_KM) => {
+  // Number(null) is 0, which would pass as a legitimate zero-kilometre delivery rather
+  // than the "we could not work it out" that it actually is.
+  if (rawKm === null || rawKm === undefined || rawKm === '') return { distanceKm: 0, implausible: true };
+  const distance = Number(rawKm);
+  if (!Number.isFinite(distance) || distance < 0) return { distanceKm: 0, implausible: true };
+  if (distance > maxKm) return { distanceKm: maxKm, implausible: true };
+  return { distanceKm: distance, implausible: false };
+};
+
+/**
  * Calculate delivery fee based on distance and fee settings
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
@@ -83,7 +108,15 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
     Array.isArray(deliveryCoordinates) &&
     deliveryCoordinates.length >= 2
   ) {
-    const distanceKm = Math.max(0, calculateDistance(restaurantCoordinates, deliveryCoordinates));
+    const rawDistanceKm = Math.max(0, calculateDistance(restaurantCoordinates, deliveryCoordinates));
+    const { distanceKm, implausible } = boundedFeeDistanceKm(rawDistanceKm);
+    if (implausible) {
+      console.warn(
+        `[DELIVERY FEE] Implausible distance ${rawDistanceKm.toFixed(1)}km between restaurant ` +
+        `${JSON.stringify(restaurantCoordinates)} and drop ${JSON.stringify(deliveryCoordinates)} - ` +
+        `charging as ${distanceKm}km. Check the coordinates on this restaurant or address.`
+      );
+    }
     const extraDistanceKm = Math.max(0, distanceKm - baseDistanceKm);
     const additionalFee = extraDistanceKm * additionalFeePerKm;
     const totalFee = baseDeliveryFee + additionalFee;
@@ -93,6 +126,8 @@ export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddre
       breakdown: {
         source: 'distance',
         distanceKm: round2(distanceKm),
+        rawDistanceKm: round2(rawDistanceKm),
+        implausibleDistance: implausible,
         baseDistanceKm: round2(baseDistanceKm),
         extraDistanceKm: round2(extraDistanceKm),
         basePayout: round2(baseDeliveryFee),
