@@ -1,4 +1,5 @@
 import Delivery from '../models/Delivery.js';
+import { findByPhoneVariants } from '../../../shared/utils/phoneUtils.js';
 import otpService from '../../auth/services/otpService.js';
 import jwtService from '../../auth/services/jwtService.js';
 import { decideRotation, markRotated, ROTATION_DECISION } from '../../../shared/utils/refreshRotation.js';
@@ -88,7 +89,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
     if (purpose === 'register') {
       // Registration flow
       // Check if delivery boy already exists
-      delivery = await Delivery.findOne({ phone });
+      // Exact string first, then any other spelling of the same number - see
+      // findByPhoneVariants. Matching the raw string alone is what let one rider
+      // end up with two accounts depending on which client they signed in from.
+      delivery = await findByPhoneVariants(Delivery, phone);
 
       if (delivery) {
         return errorResponse(res, 400, 'Delivery boy already exists with this phone number. Please login.');
@@ -121,7 +125,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       } catch (createError) {
         // Handle duplicate key error
         if (createError.code === 11000) {
-          delivery = await Delivery.findOne({ phone });
+          // Exact string first, then any other spelling of the same number - see
+          // findByPhoneVariants. Matching the raw string alone is what let one rider
+          // end up with two accounts depending on which client they signed in from.
+          delivery = await findByPhoneVariants(Delivery, phone);
           if (!delivery) {
             throw createError;
           }
@@ -132,7 +139,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       }
     } else {
       // Login (with optional auto-registration)
-      delivery = await Delivery.findOne({ phone });
+      // Exact string first, then any other spelling of the same number - see
+      // findByPhoneVariants. Matching the raw string alone is what let one rider
+      // end up with two accounts depending on which client they signed in from.
+      delivery = await findByPhoneVariants(Delivery, phone);
 
       // Verify OTP first (before creating user)
       await otpService.verifyOTP(phone, otp, purpose, null);
@@ -159,7 +169,10 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           });
         } catch (createError) {
           if (createError.code === 11000) {
-            delivery = await Delivery.findOne({ phone });
+            // Exact string first, then any other spelling of the same number - see
+            // findByPhoneVariants. Matching the raw string alone is what let one rider
+            // end up with two accounts depending on which client they signed in from.
+            delivery = await findByPhoneVariants(Delivery, phone);
             if (!delivery) {
               throw createError;
             }

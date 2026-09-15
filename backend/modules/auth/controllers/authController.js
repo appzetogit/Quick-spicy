@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import { findByPhoneVariants } from '../../../shared/utils/phoneUtils.js';
 import UserWallet from "../../user/models/UserWallet.js";
 import otpService from "../services/otpService.js";
 import jwtService from "../services/jwtService.js";
@@ -297,7 +298,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       const findQuery = phone
         ? { phone, role: userRole }
         : { email, role: userRole };
-      user = await User.findOne(findQuery);
+      // Exact string first, then any other spelling of the same number, so a
+      // customer who signs in from a client that formats the number differently
+      // reaches the account they already have instead of getting a second one.
+      user = phone
+        ? await findByPhoneVariants(User, phone, { role: userRole })
+        : await User.findOne(findQuery);
 
       if (user) {
         return errorResponse(
@@ -352,7 +358,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
           const findQuery = phone
             ? { phone, role: userRole }
             : { email, role: userRole };
-          user = await User.findOne(findQuery);
+          // Exact string first, then any other spelling of the same number, so a
+          // customer who signs in from a client that formats the number differently
+          // reaches the account they already have instead of getting a second one.
+          user = phone
+            ? await findByPhoneVariants(User, phone, { role: userRole })
+            : await User.findOne(findQuery);
           if (!user) {
             throw createError; // Re-throw if still not found
           }
@@ -378,7 +389,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
       const findQuery = phone
         ? { phone, role: userRole }
         : { email, role: userRole };
-      user = await User.findOne(findQuery);
+      // Exact string first, then any other spelling of the same number, so a
+      // customer who signs in from a client that formats the number differently
+      // reaches the account they already have instead of getting a second one.
+      user = phone
+        ? await findByPhoneVariants(User, phone, { role: userRole })
+        : await User.findOne(findQuery);
 
       if (!user && !name) {
         // OTP has NOT been verified yet in this flow.
@@ -468,7 +484,12 @@ export const verifyOTP = asyncHandler(async (req, res) => {
             const findQuery = phone
               ? { phone, role: userRole }
               : { email, role: userRole };
-            user = await User.findOne(findQuery);
+            // Exact string first, then any other spelling of the same number, so a
+            // customer who signs in from a client that formats the number differently
+            // reaches the account they already have instead of getting a second one.
+            user = phone
+              ? await findByPhoneVariants(User, phone, { role: userRole })
+              : await User.findOne(findQuery);
             if (!user) {
               throw createError; // Re-throw if still not found
             }

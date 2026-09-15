@@ -36,3 +36,55 @@ export const normalizePhoneNumber = (phone) => {
   // For other lengths, return as is (could be other country codes)
   return digitsOnly;
 };
+
+/**
+ * Every way this platform has ever stored the same number.
+ *
+ * Account lookup matches the raw string, and the clients disagree about the format: the
+ * customer and delivery apps send "+91 9999999999" (country code, space), restaurant auth
+ * normalises to "919999999999", and older records hold bare ten digits. The same person
+ * signing in from two of them therefore created two accounts - 15 numbers had done so,
+ * and 8 of those had orders or wallet money stranded on both sides, one with Rs 550 on
+ * one account and Rs 800 on the other. The unique index cannot catch it, because the
+ * strings genuinely differ.
+ */
+export const phoneVariants = (phone) => {
+  const raw = String(phone || '').trim();
+  const digits = raw.replace(/\D/g, '');
+  const ten = digits.length >= 10 ? digits.slice(-10) : '';
+  if (!ten) return raw ? [raw] : [];
+  return Array.from(new Set([
+    raw,
+    ten,
+    `91${ten}`,
+    `91 ${ten}`,
+    `+91${ten}`,
+    `+91 ${ten}`,
+    `+91-${ten}`,
+    `0${ten}`,
+  ].filter(Boolean)));
+};
+
+/** A query matching any stored spelling of this number, or null when it is unusable. */
+export const buildPhoneQuery = (phone) => {
+  const variants = phoneVariants(phone);
+  if (!variants.length) return null;
+  return { $or: variants.map((value) => ({ phone: value })) };
+};
+
+/**
+ * Find an account by phone in any stored format.
+ *
+ * Deliberately tries the exact string first. Where a number already has two accounts, the
+ * client keeps reaching the same one it always did - switching somebody to their other
+ * account would hide their order history and wallet balance without warning. The variant
+ * search only catches the case where no exact match exists, which is precisely where a
+ * second account used to be created.
+ */
+export const findByPhoneVariants = async (Model, phone, extraQuery = {}) => {
+  if (!phone) return null;
+  const exact = await Model.findOne({ phone, ...extraQuery });
+  if (exact) return exact;
+  const query = buildPhoneQuery(phone);
+  return query ? Model.findOne({ ...query, ...extraQuery }) : null;
+};
