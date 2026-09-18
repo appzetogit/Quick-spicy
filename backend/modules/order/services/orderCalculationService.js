@@ -131,6 +131,27 @@ export const capPerDish = (lines = [], perDish = Infinity) =>
   }));
 
 /**
+ * Why a coupon must be refused for these quantities, or null when it may apply.
+ * Over the admin-set limits the coupon is disabled outright - not partially applied.
+ *
+ * @param {{name?: string, quantity: number}[]} lines the cart lines the coupon covers
+ */
+export const couponQuantityRejection = (lines = [], maxItems = Infinity, maxPerDish = Infinity) => {
+  const list = Array.isArray(lines) ? lines : [];
+  const qty = (line) => Math.max(0, Math.floor(Number(line?.quantity) || 0));
+  const overDish = list.find((line) => qty(line) > maxPerDish);
+  if (overDish) {
+    return `This coupon allows at most ${maxPerDish} of the same dish` +
+      (overDish.name ? ` (you have ${qty(overDish)} x ${overDish.name})` : '');
+  }
+  const units = list.reduce((sum, line) => sum + qty(line), 0);
+  if (units > maxItems) {
+    return `This coupon is valid for up to ${maxItems} ${maxItems === 1 ? 'item' : 'items'} (you have ${units})`;
+  }
+  return null;
+};
+
+/**
  * Total discount across the order when at most maxUnits units may be discounted.
  *
  * Counts units across the whole order, not per line, and takes the units worth the most
@@ -435,6 +456,7 @@ export const calculateOrderPricing = async ({
     // Calculate coupon discount
     let discount = 0;
     let appliedCoupon = null;
+    let couponRejection = null;
     
     // Honour the platform offers kill switch here too, not just in the listing endpoints.
     // A customer holding a coupon code could otherwise still redeem it at checkout while
@@ -491,7 +513,17 @@ export const calculateOrderPricing = async ({
                 // Check minimum order value
                 const minOrderMet = !offer.minOrderValue || subtotal >= offer.minOrderValue;
                 
-                if (isValidForCart && minOrderMet) {
+                // Over the admin-set quantity limits the coupon is disabled, not trimmed.
+                const quantityRejection = couponQuantityRejection(
+                  isGlobalCoupon
+                    ? resolvedItems
+                    : resolvedItems.filter((item) => validCouponItemsInCart.some((c) => c.itemId === item.itemId)),
+                  couponItemLimit(offer),
+                  couponPerDishLimit(offer),
+                );
+                if (quantityRejection) couponRejection = { code: couponCode, reason: quantityRejection };
+
+                if (isValidForCart && minOrderMet && !quantityRejection) {
                   if (isGlobalCoupon) {
                     // Global coupon applies on order subtotal
                     if (offer.discountType === 'percentage') {
@@ -664,8 +696,11 @@ export const calculateOrderPricing = async ({
         minOrder: appliedCoupon.minOrder || 0,
         // The cart uses this to explain why a big order got a smaller saving than the
         // coupon's percentage suggests. It was computed above and dropped here.
-        maxItems: appliedCoupon.maxItems ?? null
+        maxItems: appliedCoupon.maxItems ?? null,
+        maxPerDish: appliedCoupon.maxPerDish ?? null
       } : null,
+      // Set when a coupon was refused for exceeding its quantity limits; the cart shows it.
+      couponRejection,
       deliveryFeeBreakdown,
       // Null when the restaurant runs no scheme. earned:false carries the nudge.
       freebie,

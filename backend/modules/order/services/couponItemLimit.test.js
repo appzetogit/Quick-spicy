@@ -5,7 +5,7 @@
 // Rs 248 off. A cap existed but was optional, unset on every offer, counted each item line
 // separately, and was skipped entirely by all-items coupons.
 import assert from 'node:assert/strict';
-import { capDiscountedUnits, couponItemLimit, COUPON_DEFAULT_MAX_ITEMS, capPerDish, couponPerDishLimit, COUPON_DEFAULT_MAX_PER_DISH } from './orderCalculationService.js';
+import { capDiscountedUnits, couponItemLimit, COUPON_DEFAULT_MAX_ITEMS, capPerDish, couponPerDishLimit, COUPON_DEFAULT_MAX_PER_DISH, couponQuantityRejection } from './orderCalculationService.js';
 
 const pct75 = (price) => price * 0.75;
 
@@ -69,5 +69,12 @@ for (const unset of [{}, { maxQuantityPerDish: null }, { maxQuantityPerDish: 0 }
   assert.equal(couponPerDishLimit(unset), perDishFallback);
 }
 assert.deepEqual(capPerDish(null, 1), []);
+
+// --- over the limits the coupon is disabled -------------------------------------------
+assert.equal(couponQuantityRejection([{ name: 'Pizza', quantity: 2 }, { quantity: 1 }], 3, 2), null, 'within limits');
+assert.match(couponQuantityRejection([{ name: 'Pizza', quantity: 3 }], 3, 2), /at most 2 of the same dish/);
+assert.match(couponQuantityRejection([{ quantity: 2 }, { quantity: 2 }], 3, 2), /up to 3 items \(you have 4\)/);
+assert.equal(couponQuantityRejection([{ quantity: 50 }], Infinity, Infinity), null, 'no limits, no refusal');
+assert.equal(couponQuantityRejection(null, 3, 2), null);
 
 console.log('couponItemLimit: all assertions passed');

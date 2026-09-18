@@ -1085,6 +1085,9 @@ export default function Cart() {
               setAppliedCoupon(coupon)
             }
           } else if (!response.data.data.pricing.appliedCoupon && (appliedCoupon?.code || couponCode)) {
+            // Quantities changed past the coupon's limits: it is disabled, and we say why.
+            const rejection = response.data.data.pricing.couponRejection
+            if (rejection?.reason) toast.error(`${rejection.code} removed: ${rejection.reason}`, { id: 'coupon-rejected' })
             setAppliedCoupon(null)
             setCouponCode("")
             setManualCouponCode("")
@@ -1353,6 +1356,10 @@ export default function Cart() {
 
         if (response?.data?.success && response?.data?.data?.pricing) {
           setPricing(response.data.data.pricing)
+          if (!response.data.data.pricing.appliedCoupon) {
+            toast.error(response.data.data.pricing.couponRejection?.reason || "This coupon can't be applied to this cart", { id: 'coupon-rejected' })
+            return
+          }
           setAppliedCoupon(coupon)
           setCouponCode(coupon.code)
           setManualCouponCode(coupon.code)
@@ -1421,7 +1428,7 @@ export default function Cart() {
       }
 
       if (!pricingData.appliedCoupon) {
-        toast.error("Invalid or unavailable coupon code")
+        toast.error(pricingData.couponRejection?.reason || "Invalid or unavailable coupon code", { id: 'coupon-rejected' })
         setCouponCode("")
         return
       }
