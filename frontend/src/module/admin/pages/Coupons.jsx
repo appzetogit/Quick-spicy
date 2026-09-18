@@ -501,7 +501,7 @@ export default function Coupons() {
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-600 mb-1">
-                    Max Discounted Quantity (Optional)
+                    Max Items Discounted Per Order (Optional)
                   </label>
                   <input
                     type="number"
@@ -513,8 +513,8 @@ export default function Coupons() {
                     className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <p className="mt-1 text-[11px] text-slate-500">
-                    The coupon pays for at most this many units. Extra units are charged at
-                    full price. Leave empty for no limit.
+                    Counted across the whole order, not per dish. Extra items are charged at
+                    full price. Leave empty to use the platform default limit.
                   </p>
                 </div>
 

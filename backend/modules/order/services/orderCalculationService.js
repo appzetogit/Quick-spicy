@@ -91,6 +91,52 @@ export const boundedFeeDistanceKm = (rawKm, maxKm = MAX_FEE_DISTANCE_KM) => {
 };
 
 /**
+ * How many item units a coupon may discount in one order, unless the coupon sets its own.
+ *
+ * Coupons were being farmed by stacking units under a steep discount: GET75%OFF was
+ * applied to one order of twelve breakfast items for Rs 248 off. A per-coupon cap existed,
+ * but it was optional, unset on every single offer, and counted each item line separately -
+ * so a coupon covering vada, poori, idly and dosa still discounted that many of each. Every
+ * coupon now has a per-order limit. Set COUPON_DEFAULT_MAX_ITEMS=0 to remove the default.
+ */
+export const COUPON_DEFAULT_MAX_ITEMS = Number(process.env.COUPON_DEFAULT_MAX_ITEMS ?? 3);
+
+/** The per-order item limit for this offer: its own maxDiscountedQuantity, else the default. */
+export const couponItemLimit = (offer) => {
+  const own = Number(offer?.maxDiscountedQuantity);
+  if (Number.isFinite(own) && own > 0) return Math.floor(own);
+  const fallback = Number(COUPON_DEFAULT_MAX_ITEMS);
+  return Number.isFinite(fallback) && fallback > 0 ? Math.floor(fallback) : Infinity;
+};
+
+/**
+ * Total discount across the order when at most maxUnits units may be discounted.
+ *
+ * Counts units across the whole order, not per line, and takes the units worth the most
+ * discount first, so the customer always gets the best the limit allows. Anything beyond
+ * the limit is simply charged at full price rather than refused.
+ *
+ * @param {{unitDiscount: number, quantity: number}[]} lines
+ */
+export const capDiscountedUnits = (lines = [], maxUnits = Infinity) => {
+  const units = (Array.isArray(lines) ? lines : [])
+    .map((line) => ({
+      unitDiscount: Math.max(0, Number(line?.unitDiscount) || 0),
+      quantity: Math.max(0, Math.floor(Number(line?.quantity) || 0)),
+    }))
+    .sort((a, b) => b.unitDiscount - a.unitDiscount);
+  let remaining = Number.isFinite(Number(maxUnits)) ? Math.max(0, Math.floor(Number(maxUnits))) : Infinity;
+  let total = 0;
+  for (const line of units) {
+    if (remaining <= 0) break;
+    const take = Math.min(line.quantity, remaining);
+    total += take * line.unitDiscount;
+    remaining -= take;
+  }
+  return total;
+};
+
+/**
  * Calculate delivery fee based on distance and fee settings
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
@@ -428,7 +474,17 @@ export const calculateOrderPricing = async ({
                   if (isGlobalCoupon) {
                     // Global coupon applies on order subtotal
                     if (offer.discountType === 'percentage') {
-                      discount = Math.round(subtotal * ((couponItem.discountPercentage || 0) / 100));
+                      // A percentage of the whole subtotal ignored any item limit, so the more
+                      // items stacked into one order, the bigger the discount. Identical to
+                      // before whenever the order is within the limit.
+                      const rate = (couponItem.discountPercentage || 0) / 100;
+                      discount = Math.round(capDiscountedUnits(
+                        resolvedItems.map((item) => ({
+                          unitDiscount: (item.price || 0) * rate,
+                          quantity: item.quantity || 1,
+                        })),
+                        couponItemLimit(offer),
+                      ));
                       if (Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
                         discount = Math.min(discount, offer.maxLimit);
                       }
@@ -439,34 +495,26 @@ export const calculateOrderPricing = async ({
                     discount = Math.min(Math.max(discount, 0), subtotal);
                   } else {
                     // Item-specific coupon: sum up discounts for all matching items in the cart
-                    discount = 0;
+                    // One limit for the whole order. It used to apply per item line, so a
+                    // coupon covering four different dishes still discounted the limit of
+                    // each, and the twelve-item breakfast order went straight through. The
+                    // customer can still order as many as they like; units beyond the
+                    // limit are charged at full price.
+                    const discountLines = [];
                     for (const cItem of validCouponItemsInCart) {
                       const itemInCart = resolvedItems.find(item => item.itemId === cItem.itemId);
-                      if (itemInCart) {
-                        // The coupon pays for at most maxDiscountedQuantity units. The
-                        // customer can still order as many as they like - anything above
-                        // the cap is simply charged at full price. Without this the
-                        // per-unit discount was multiplied by the whole cart quantity,
-                        // so a 30%-off breakfast item ordered fifty at a time discounted
-                        // all fifty. null keeps the old unlimited behaviour.
-                        const cartQuantity = itemInCart.quantity || 1;
-                        const quantityCap = Number(offer.maxDiscountedQuantity);
-                        const itemQuantity = Number.isFinite(quantityCap) && quantityCap > 0
-                          ? Math.min(cartQuantity, quantityCap)
-                          : cartQuantity;
-
-                        let itemDiscountVal = 0;
-                        if (offer.discountType === 'percentage') {
-                          itemDiscountVal = (itemInCart.price || 0) * ((cItem.discountPercentage || 0) / 100);
-                        } else {
-                          itemDiscountVal = cItem.originalPrice - cItem.discountedPrice;
-                        }
-                        
-                        const itemDiscountSum = Math.round(itemDiscountVal * itemQuantity);
-                        const itemSubtotal = (itemInCart.price || 0) * cartQuantity;
-                        discount += Math.min(itemDiscountSum, itemSubtotal);
-                      }
+                      if (!itemInCart) continue;
+                      const unitPrice = itemInCart.price || 0;
+                      const rawUnitDiscount = offer.discountType === 'percentage'
+                        ? unitPrice * ((cItem.discountPercentage || 0) / 100)
+                        : (cItem.originalPrice || 0) - (cItem.discountedPrice || 0);
+                      discountLines.push({
+                        // Never more off a unit than the unit costs.
+                        unitDiscount: Math.min(Math.max(rawUnitDiscount, 0), unitPrice),
+                        quantity: itemInCart.quantity || 1,
+                      });
                     }
+                    discount = Math.round(capDiscountedUnits(discountLines, couponItemLimit(offer)));
 
                     // Apply max limit on the total coupon discount if specified
                     if (offer.discountType === 'percentage' && Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
@@ -479,6 +527,7 @@ export const calculateOrderPricing = async ({
                     discount: discount,
                     discountPercentage: couponItem.discountPercentage,
                     maxDiscount: offer.maxLimit ?? null,
+                    maxItems: Number.isFinite(couponItemLimit(offer)) ? couponItemLimit(offer) : null,
                     minOrder: offer.minOrderValue || 0,
                     type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
                     itemId: isGlobalCoupon ? 'all' : validCouponItemsInCart.map(item => item.itemId).join(','),

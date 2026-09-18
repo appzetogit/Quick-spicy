@@ -2543,6 +2543,15 @@ export default function Cart() {
                       <div>
                         <p className="text-sm md:text-base font-medium text-orange-800 dark:text-orange-200">'{appliedCoupon.code}' applied</p>
                         <p className="text-xs md:text-sm text-[#EB590E] dark:text-[#EB590E]">You saved {RUPEE_SYMBOL}{discount}</p>
+                        {/* Coupons discount a limited number of items per order. Without this
+                            line a customer with a big order sees "75% OFF" and a much smaller
+                            saving, and reasonably assumes the coupon is broken. */}
+                        {Number(pricing?.appliedCoupon?.maxItems) > 0 &&
+                          cart.reduce((units, item) => units + (Number(item.quantity) || 1), 0) > Number(pricing.appliedCoupon.maxItems) && (
+                          <p className="text-[11px] md:text-xs text-orange-700/80 dark:text-orange-300/80 mt-0.5">
+                            Applied to {pricing.appliedCoupon.maxItems} {Number(pricing.appliedCoupon.maxItems) === 1 ? "item" : "items"} in this order
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium">Remove</button>
