@@ -2552,6 +2552,12 @@ export default function Cart() {
                             Applied to {pricing.appliedCoupon.maxItems} {Number(pricing.appliedCoupon.maxItems) === 1 ? "item" : "items"} in this order
                           </p>
                         )}
+                        {Number(pricing?.appliedCoupon?.maxPerDish) > 0 &&
+                          cart.some((item) => (Number(item.quantity) || 1) > Number(pricing.appliedCoupon.maxPerDish)) && (
+                          <p className="text-[11px] md:text-xs text-orange-700/80 dark:text-orange-300/80 mt-0.5">
+                            Max {pricing.appliedCoupon.maxPerDish} of the same dish discounted
+                          </p>
+                        )}
                       </div>
                     </div>
                     <button onClick={handleRemoveCoupon} className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium">Remove</button>

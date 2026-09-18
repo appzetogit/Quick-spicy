@@ -5,7 +5,7 @@
 // Rs 248 off. A cap existed but was optional, unset on every offer, counted each item line
 // separately, and was skipped entirely by all-items coupons.
 import assert from 'node:assert/strict';
-import { capDiscountedUnits, couponItemLimit, COUPON_DEFAULT_MAX_ITEMS } from './orderCalculationService.js';
+import { capDiscountedUnits, couponItemLimit, COUPON_DEFAULT_MAX_ITEMS, capPerDish, couponPerDishLimit, COUPON_DEFAULT_MAX_PER_DISH } from './orderCalculationService.js';
 
 const pct75 = (price) => price * 0.75;
 
@@ -57,5 +57,17 @@ for (const unset of [{}, { maxDiscountedQuantity: null }, { maxDiscountedQuantit
   assert.equal(couponItemLimit(unset), fallback, `${JSON.stringify(unset)} falls back to the platform default`);
 }
 assert.ok(Number.isFinite(couponItemLimit({})), 'by default every coupon is limited');
+
+// --- same-dish cap -------------------------------------------------------------------
+// 10 of one pizza, per-dish 1, order limit 3: only one pizza is discounted.
+assert.equal(capDiscountedUnits(capPerDish([{ unitDiscount: 27, quantity: 10 }], 1), 3), 27);
+// Two dishes, per-dish 2, order limit 3: 2 of the best + 1 of the next.
+assert.equal(capDiscountedUnits(capPerDish([{ unitDiscount: 30, quantity: 5 }, { unitDiscount: 10, quantity: 5 }], 2), 3), 70);
+assert.equal(couponPerDishLimit({ maxQuantityPerDish: 1 }), 1, "a coupon's own per-dish limit wins");
+const perDishFallback = COUPON_DEFAULT_MAX_PER_DISH > 0 ? COUPON_DEFAULT_MAX_PER_DISH : Infinity;
+for (const unset of [{}, { maxQuantityPerDish: null }, { maxQuantityPerDish: 0 }, null]) {
+  assert.equal(couponPerDishLimit(unset), perDishFallback);
+}
+assert.deepEqual(capPerDish(null, 1), []);
 
 console.log('couponItemLimit: all assertions passed');

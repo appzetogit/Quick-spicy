@@ -53,6 +53,7 @@ export default function Coupons() {
     minOrderValue: "",
     maxDiscount: "",
     maxDiscountedQuantity: "",
+    maxQuantityPerDish: "",
     customerScope: "all",
     restaurantScope: "all",
     restaurantIds: [],
@@ -197,6 +198,7 @@ export default function Coupons() {
       minOrderValue: "",
       maxDiscount: "",
     maxDiscountedQuantity: "",
+    maxQuantityPerDish: "",
       customerScope: "all",
       restaurantScope: "all",
       restaurantIds: [],
@@ -373,6 +375,9 @@ export default function Coupons() {
         maxDiscountedQuantity: String(formData.maxDiscountedQuantity).trim() !== ""
           ? Number(formData.maxDiscountedQuantity)
           : undefined,
+        maxQuantityPerDish: String(formData.maxQuantityPerDish).trim() !== ""
+          ? Number(formData.maxQuantityPerDish)
+          : undefined,
         customerScope: formData.customerScope,
         restaurantScope: formData.restaurantScope,
         restaurantIds: formData.restaurantScope === "selected" ? formData.restaurantIds : undefined,
@@ -515,6 +520,25 @@ export default function Coupons() {
                   <p className="mt-1 text-[11px] text-slate-500">
                     Counted across the whole order, not per dish. Extra items are charged at
                     full price. Leave empty to use the platform default limit.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Max Quantity Of The Same Dish (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={formData.maxQuantityPerDish}
+                    onChange={(e) => handleFormChange("maxQuantityPerDish", e.target.value)}
+                    placeholder="e.g. 1"
+                    className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    How many units of any one dish get the discount (e.g. 1 = only one pizza of
+                    the same kind is discounted). Leave empty to use the platform default.
                   </p>
                 </div>
 

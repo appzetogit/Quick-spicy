@@ -110,6 +110,27 @@ export const couponItemLimit = (offer) => {
 };
 
 /**
+ * Same-dish cap: how many units of any ONE dish a coupon discounts. The order-wide limit
+ * alone still let the whole allowance go on a single dish (3 x the same pizza). Set
+ * COUPON_DEFAULT_MAX_PER_DISH=0 to remove the default; a coupon's own value always wins.
+ */
+export const COUPON_DEFAULT_MAX_PER_DISH = Number(process.env.COUPON_DEFAULT_MAX_PER_DISH ?? 2);
+
+export const couponPerDishLimit = (offer) => {
+  const own = Number(offer?.maxQuantityPerDish);
+  if (Number.isFinite(own) && own > 0) return Math.floor(own);
+  const fallback = Number(COUPON_DEFAULT_MAX_PER_DISH);
+  return Number.isFinite(fallback) && fallback > 0 ? Math.floor(fallback) : Infinity;
+};
+
+/** Clamp each line's quantity to the per-dish limit before the order-wide limit applies. */
+export const capPerDish = (lines = [], perDish = Infinity) =>
+  (Array.isArray(lines) ? lines : []).map((line) => ({
+    ...line,
+    quantity: Math.min(Math.max(0, Math.floor(Number(line?.quantity) || 0)), perDish),
+  }));
+
+/**
  * Total discount across the order when at most maxUnits units may be discounted.
  *
  * Counts units across the whole order, not per line, and takes the units worth the most
@@ -479,10 +500,10 @@ export const calculateOrderPricing = async ({
                       // before whenever the order is within the limit.
                       const rate = (couponItem.discountPercentage || 0) / 100;
                       discount = Math.round(capDiscountedUnits(
-                        resolvedItems.map((item) => ({
+                        capPerDish(resolvedItems.map((item) => ({
                           unitDiscount: (item.price || 0) * rate,
                           quantity: item.quantity || 1,
-                        })),
+                        })), couponPerDishLimit(offer)),
                         couponItemLimit(offer),
                       ));
                       if (Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
@@ -514,7 +535,7 @@ export const calculateOrderPricing = async ({
                         quantity: itemInCart.quantity || 1,
                       });
                     }
-                    discount = Math.round(capDiscountedUnits(discountLines, couponItemLimit(offer)));
+                    discount = Math.round(capDiscountedUnits(capPerDish(discountLines, couponPerDishLimit(offer)), couponItemLimit(offer)));
 
                     // Apply max limit on the total coupon discount if specified
                     if (offer.discountType === 'percentage' && Number.isFinite(offer.maxLimit) && offer.maxLimit > 0) {
@@ -528,6 +549,7 @@ export const calculateOrderPricing = async ({
                     discountPercentage: couponItem.discountPercentage,
                     maxDiscount: offer.maxLimit ?? null,
                     maxItems: Number.isFinite(couponItemLimit(offer)) ? couponItemLimit(offer) : null,
+                    maxPerDish: Number.isFinite(couponPerDishLimit(offer)) ? couponPerDishLimit(offer) : null,
                     minOrder: offer.minOrderValue || 0,
                     type: offer.discountType === 'percentage' ? 'percentage' : 'flat',
                     itemId: isGlobalCoupon ? 'all' : validCouponItemsInCart.map(item => item.itemId).join(','),
