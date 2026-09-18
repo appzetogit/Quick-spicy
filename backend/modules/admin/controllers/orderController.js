@@ -9,6 +9,7 @@ import { notifyUserOrderUpdate } from '../../order/services/userNotificationServ
 import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotificationService.js';
 import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 import { escapeRegex } from '../../../shared/utils/regex.js';
+import { deliveredByRider, cashCollectionStatus } from '../../order/utils/deliveryAttribution.js';
 
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
 const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
@@ -644,8 +645,13 @@ export const getOrders = asyncHandler(async (req, res) => {
             return 'Online';
           }
         })(),
+        // Delivery alone is not evidence the cash was collected. Only a rider completion,
+        // which adds the order total to that rider's cashInHand, is. This used to read
+        // "Collected" for every delivered cash order, including ones an admin closed with
+        // nobody recorded as holding the money - and it overrode the dialog that had been
+        // fixed to refuse exactly that inference.
         paymentCollectionStatus: (order.payment?.method === 'cash' || order.payment?.method === 'cod')
-          ? (order.status === 'delivered' ? 'Collected' : 'Not Collected')
+          ? cashCollectionStatus(order)
           : 'Collected',
         orderStatus: orderStatusDisplay,
         status: order.status, // Backend status
@@ -654,6 +660,10 @@ export const getOrders = asyncHandler(async (req, res) => {
         address: order.address || {},
         deliveryPartnerName: order.deliveryPartnerId?.name || null,
         deliveryPartnerPhone: order.deliveryPartnerId?.phone || null,
+        // Who actually delivered it. deliveryPartnerName above stays the assigned rider,
+        // which live operational views need; invoices use these instead.
+        deliveredByName: deliveredByRider(order)?.name || null,
+        deliveredByPhone: deliveredByRider(order)?.phone || null,
         estimatedDeliveryTime: order.estimatedDeliveryTime || 30,
         deliveredAt: order.deliveredAt,
         cancellationReason: order.cancellationReason || null,
@@ -1707,7 +1717,9 @@ export const getOngoingOrders = asyncHandler(async (req, res) => {
         status: order.status,
         pricing: order.pricing || {},
         deliveryPartnerName: order.deliveryPartnerId?.name || null,
-        deliveryPartnerPhone: order.deliveryPartnerId?.phone || null
+        deliveryPartnerPhone: order.deliveryPartnerId?.phone || null,
+        deliveredByName: deliveredByRider(order)?.name || null,
+        deliveredByPhone: deliveredByRider(order)?.phone || null
       };
     });
 

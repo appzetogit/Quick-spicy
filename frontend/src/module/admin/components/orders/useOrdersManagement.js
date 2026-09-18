@@ -439,12 +439,17 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
         couponCode,
       } = resolveInvoicePricing(order, items)
       const paymentType = order.paymentType || order.payment?.method || order.paymentMethod || "N/A"
-      const deliveryPartnerName = formatDisplayText(
-        order.deliveryPartnerName || order.deliveryBoyName || order.deliveryPartnerId?.name,
-      )
-      const deliveryPartnerPhone = formatDisplayText(
-        order.deliveryPartnerPhone || order.deliveryBoyNumber || order.deliveryPartnerId?.phone,
-      )
+      // A delivered order's invoice credits only the rider who actually handed it over
+      // (deliveredBy*, worked out on the server). Naming whoever was last assigned printed
+      // riders on invoices for deliveries they never made - including riders since blocked.
+      const isDeliveredOrder = String(order.status || "").toLowerCase() === "delivered"
+      const hasAttribution = Object.prototype.hasOwnProperty.call(order, "deliveredByName")
+      const deliveryPartnerName = isDeliveredOrder && hasAttribution
+        ? formatDisplayText(order.deliveredByName, "Not recorded")
+        : formatDisplayText(order.deliveryPartnerName || order.deliveryBoyName || order.deliveryPartnerId?.name)
+      const deliveryPartnerPhone = isDeliveredOrder && hasAttribution
+        ? formatDisplayText(order.deliveredByPhone, "Not recorded")
+        : formatDisplayText(order.deliveryPartnerPhone || order.deliveryBoyNumber || order.deliveryPartnerId?.phone)
       const zoneName = formatDisplayText(order.zoneName, "Not assigned")
       const orderStatus = formatDisplayText(order.orderStatus || order.status)
       const paymentStatus = formatDisplayText(
