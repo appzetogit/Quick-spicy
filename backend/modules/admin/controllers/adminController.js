@@ -3500,6 +3500,7 @@ export const getAllOffers = asyncHandler(async (req, res) => {
             discountPercentage: item.discountPercentage || 0,
             maxDiscount: offer.maxLimit ?? null,
             maxDiscountedQuantity: offer.maxDiscountedQuantity ?? null,
+            maxQuantityPerDish: offer.maxQuantityPerDish ?? null,
             minOrderValue: offer.minOrderValue || 0,
             originalPrice: item.originalPrice || 0,
             discountedPrice: item.discountedPrice || 0,
@@ -3549,6 +3550,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       discountValue,
       maxDiscount,
       maxDiscountedQuantity,
+      maxQuantityPerDish,
       customerScope = "all",
       restaurantScope = "all",
       restaurantId,
@@ -3604,6 +3606,14 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
       parsedMaxQuantity = Number(maxDiscountedQuantity);
       if (!Number.isFinite(parsedMaxQuantity) || parsedMaxQuantity < 1) {
         return errorResponse(res, 400, "Max discounted quantity must be at least 1");
+      }
+    }
+
+    let parsedMaxPerDish = null;
+    if (maxQuantityPerDish !== undefined && maxQuantityPerDish !== null && String(maxQuantityPerDish).trim() !== "") {
+      parsedMaxPerDish = Number(maxQuantityPerDish);
+      if (!Number.isFinite(parsedMaxPerDish) || parsedMaxPerDish < 1) {
+        return errorResponse(res, 400, "Max quantity per dish must be at least 1");
       }
     }
 
@@ -3861,6 +3871,7 @@ export const createAdminOffer = asyncHandler(async (req, res) => {
         minOrderValue: parsedMinOrderValue,
         maxLimit: discountType === "percentage" ? parsedMaxDiscount : null,
         maxDiscountedQuantity: parsedMaxQuantity,
+        maxQuantityPerDish: parsedMaxPerDish,
         productScope: productScope === "selected" ? "selected" : "all",
         selectedProductIds:
           productScope === "selected"

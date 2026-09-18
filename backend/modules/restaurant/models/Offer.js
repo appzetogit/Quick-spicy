@@ -78,6 +78,12 @@ const offerSchema = new mongoose.Schema(
       default: null,
       min: 1,
     },
+    // How many units of any single dish the coupon discounts. null = platform default.
+    maxQuantityPerDish: {
+      type: Number,
+      default: null,
+      min: 1,
+    },
     maxLimit: {
       type: Number,
       default: null,
