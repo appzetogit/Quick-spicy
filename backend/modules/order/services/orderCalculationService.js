@@ -639,7 +639,10 @@ export const calculateOrderPricing = async ({
         code: appliedCoupon.code,
         discount: discount,
         freeDelivery: appliedCoupon.freeDelivery || false,
-        minOrder: appliedCoupon.minOrder || 0
+        minOrder: appliedCoupon.minOrder || 0,
+        // The cart uses this to explain why a big order got a smaller saving than the
+        // coupon's percentage suggests. It was computed above and dropped here.
+        maxItems: appliedCoupon.maxItems ?? null
       } : null,
       deliveryFeeBreakdown,
       // Null when the restaurant runs no scheme. earned:false carries the nudge.
