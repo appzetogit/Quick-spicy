@@ -3538,6 +3538,115 @@ export const getAllOffers = asyncHandler(async (req, res) => {
   }
 });
 
+const parseOptionalPositive = (value, label, { integer = false } = {}) => {
+  if (value === undefined) return { skip: true };
+  if (value === null || String(value).trim() === "") return { value: null };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return { error: `${label} must be at least 1` };
+  return { value: integer ? Math.floor(n) : n };
+};
+
+/**
+ * Edit a coupon (Admin)
+ * PATCH /api/admin/offers/:offerId
+ *
+ * Changes the terms of an existing coupon in place: discount, caps, minimum order, quantity
+ * limits, expiry, customer scope and active/paused. Which restaurants and dishes it covers
+ * is fixed at creation - to change those, delete it and create a new one.
+ */
+export const updateAdminOffer = asyncHandler(async (req, res) => {
+  const { offerId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(offerId)) return errorResponse(res, 400, "Invalid offer id");
+  const offer = await Offer.findById(offerId);
+  if (!offer) return errorResponse(res, 404, "Coupon not found");
+
+  const {
+    discountValue, maxDiscount, minOrderValue, maxDiscountedQuantity,
+    maxQuantityPerDish, endDate, customerScope, status,
+  } = req.body || {};
+
+  if (discountValue !== undefined && String(discountValue).trim() !== "") {
+    const v = Number(discountValue);
+    if (!Number.isFinite(v) || v <= 0) return errorResponse(res, 400, "Discount must be greater than 0");
+    if (offer.discountType === "percentage" && v > 100) return errorResponse(res, 400, "Percentage cannot exceed 100");
+    offer.items.forEach((item) => {
+      const isGlobal = item.itemName === "All Items" || String(item.itemId || "").startsWith("admin-coupon-");
+      if (offer.discountType === "percentage") {
+        const orig = Number(item.originalPrice) || 0;
+        item.discountPercentage = v;
+        item.discountedPrice = Math.max(0, orig - (orig * v) / 100);
+      } else if (isGlobal) {
+        item.originalPrice = v;
+        item.discountedPrice = 0;
+      } else {
+        const orig = Number(item.originalPrice) || 0;
+        item.discountedPrice = Math.max(0, orig - v);
+      }
+    });
+    offer.markModified("items");
+  }
+
+  const cap = parseOptionalPositive(maxDiscount, "Max discount");
+  if (cap.error) return errorResponse(res, 400, cap.error);
+  if (!cap.skip) offer.maxLimit = offer.discountType === "percentage" ? cap.value : null;
+
+  if (minOrderValue !== undefined) {
+    const m = Number(minOrderValue || 0);
+    if (!Number.isFinite(m) || m < 0) return errorResponse(res, 400, "Minimum order cannot be negative");
+    offer.minOrderValue = m;
+  }
+
+  const items = parseOptionalPositive(maxDiscountedQuantity, "Max items per order", { integer: true });
+  if (items.error) return errorResponse(res, 400, items.error);
+  if (!items.skip) offer.maxDiscountedQuantity = items.value;
+
+  const perDish = parseOptionalPositive(maxQuantityPerDish, "Max quantity of the same dish", { integer: true });
+  if (perDish.error) return errorResponse(res, 400, perDish.error);
+  if (!perDish.skip) offer.maxQuantityPerDish = perDish.value;
+
+  if (endDate !== undefined) {
+    if (endDate === null || String(endDate).trim() === "") {
+      offer.endDate = undefined;
+    } else {
+      const d = new Date(endDate);
+      if (Number.isNaN(d.getTime())) return errorResponse(res, 400, "Invalid expiry date");
+      // Same rule as create: a bare date means the end of that day.
+      if (typeof endDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(endDate.trim())) d.setHours(23, 59, 59, 999);
+      offer.endDate = d;
+    }
+  }
+
+  if (customerScope !== undefined) {
+    if (!["all", "first-time"].includes(customerScope)) return errorResponse(res, 400, "customerScope must be all or first-time");
+    offer.customerGroup = customerScope === "first-time" ? "new" : "all";
+  }
+
+  if (status !== undefined) {
+    if (!["active", "paused"].includes(status)) return errorResponse(res, 400, "Status must be active or paused");
+    offer.status = status;
+  }
+
+  await offer.save();
+  logger.info(`Admin updated coupon offer ${offerId}`, { by: req.user?._id || req.admin?._id });
+  return successResponse(res, 200, "Coupon updated", { offerId: offer._id.toString() });
+});
+
+/**
+ * Delete a coupon (Admin)
+ * DELETE /api/admin/offers/:offerId
+ *
+ * Past orders keep their own copy of the code and discount, so removing the offer does not
+ * change any order or invoice - the code simply stops working from now on.
+ */
+export const deleteAdminOffer = asyncHandler(async (req, res) => {
+  const { offerId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(offerId)) return errorResponse(res, 400, "Invalid offer id");
+  const offer = await Offer.findByIdAndDelete(offerId);
+  if (!offer) return errorResponse(res, 404, "Coupon not found");
+  logger.info(`Admin deleted coupon offer ${offerId} (${offer.items?.[0]?.couponCode || "?"})`, { by: req.user?._id || req.admin?._id });
+  return successResponse(res, 200, "Coupon deleted", { offerId });
+});
+
 /**
  * Create Coupon Offer (Admin)
  * POST /api/admin/offers

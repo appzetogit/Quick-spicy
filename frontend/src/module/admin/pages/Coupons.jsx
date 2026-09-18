@@ -398,6 +398,81 @@ export default function Coupons() {
     }
   }
 
+  // Edit / delete act on the whole coupon (one row per dish for dish-specific coupons).
+  const [editing, setEditing] = useState(null)
+  const [editBusy, setEditBusy] = useState(false)
+  const [editError, setEditError] = useState("")
+  const [deletingId, setDeletingId] = useState(null)
+
+  const toDateTimeInput = (value) => {
+    if (!value) return ""
+    const d = new Date(value)
+    if (Number.isNaN(d.getTime())) return ""
+    const pad = (n) => String(n).padStart(2, "0")
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  }
+
+  const openEdit = (offer) => {
+    setEditError("")
+    setEditing({
+      offerId: offer.offerId,
+      couponCode: offer.couponCode,
+      restaurantName: offer.restaurantName,
+      discountType: offer.discountType,
+      discountValue: offer.discountType === "flat-price"
+        ? String((offer.originalPrice || 0) - (offer.discountedPrice || 0))
+        : String(offer.discountPercentage ?? ""),
+      maxDiscount: offer.maxDiscount ?? "",
+      minOrderValue: offer.minOrderValue ?? 0,
+      maxDiscountedQuantity: offer.maxDiscountedQuantity ?? "",
+      maxQuantityPerDish: offer.maxQuantityPerDish ?? "",
+      endDate: toDateTimeInput(offer.endDate),
+      customerScope: offer.customerGroup === "new" ? "first-time" : "all",
+      status: offer.status === "paused" ? "paused" : "active",
+    })
+  }
+
+  const saveEdit = async (e) => {
+    e.preventDefault()
+    if (!editing) return
+    setEditBusy(true)
+    setEditError("")
+    try {
+      await adminAPI.updateAdminOffer(editing.offerId, {
+        discountValue: editing.discountValue,
+        maxDiscount: editing.discountType === "percentage" ? editing.maxDiscount : undefined,
+        minOrderValue: editing.minOrderValue,
+        maxDiscountedQuantity: editing.maxDiscountedQuantity,
+        maxQuantityPerDish: editing.maxQuantityPerDish,
+        endDate: editing.endDate ? new Date(editing.endDate).toISOString() : null,
+        customerScope: editing.customerScope,
+        status: editing.status,
+      })
+      setEditing(null)
+      await fetchOffers()
+    } catch (err) {
+      setEditError(err?.response?.data?.message || "Failed to update coupon")
+    } finally {
+      setEditBusy(false)
+    }
+  }
+
+  const handleDelete = async (offer) => {
+    const ok = window.confirm(
+      `Delete coupon ${offer.couponCode} for ${offer.restaurantName}?\n\nIt stops working immediately. Past orders are not affected. This cannot be undone.`,
+    )
+    if (!ok) return
+    setDeletingId(offer.offerId)
+    try {
+      await adminAPI.deleteAdminOffer(offer.offerId)
+      await fetchOffers()
+    } catch (err) {
+      window.alert(err?.response?.data?.message || "Failed to delete coupon")
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   const handleToggleShowInCart = async (offerId, itemId, currentValue) => {
     const key = `${offerId}-${itemId}`
     try {
@@ -1044,6 +1119,7 @@ export default function Coupons() {
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Show In Cart</th>
                     <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Valid Until</th>
+                    <th className="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
@@ -1139,6 +1215,12 @@ export default function Coupons() {
                             : 'No expiry'}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button type="button" onClick={() => openEdit(offer)} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 text-blue-700 hover:bg-blue-50">Edit</button>
+                          <button type="button" onClick={() => handleDelete(offer)} disabled={deletingId === offer.offerId} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50">{deletingId === offer.offerId ? "Deleting..." : "Delete"}</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1186,6 +1268,64 @@ export default function Coupons() {
           )}
         </div>
       </div>
+      {editing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !editBusy && setEditing(null)}>
+          <form onSubmit={saveEdit} onClick={(e) => e.stopPropagation()} className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+            <h2 className="text-lg font-bold text-slate-900">Edit coupon <span className="font-mono text-blue-600">{editing.couponCode}</span></h2>
+            <p className="mt-1 mb-4 text-xs text-slate-500">{editing.restaurantName}. Restaurants and dishes can't be changed here; delete and recreate the coupon for that.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">{editing.discountType === "percentage" ? "Discount (%)" : "Discount (₹ off)"}</label>
+                  <input type="number" min="1" step="any" required value={editing.discountValue} onChange={(e) => setEditing((p) => ({ ...p, discountValue: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+{editing.discountType === "percentage" && (
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Max Discount ₹ (Optional)</label>
+                  <input type="number" min="1" step="any" value={editing.maxDiscount} onChange={(e) => setEditing((p) => ({ ...p, maxDiscount: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              )}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Minimum Order Value</label>
+                  <input type="number" min="0" step="any" value={editing.minOrderValue} onChange={(e) => setEditing((p) => ({ ...p, minOrderValue: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Max Items Per Order (Optional)</label>
+                  <input type="number" min="1" step="1" value={editing.maxDiscountedQuantity} onChange={(e) => setEditing((p) => ({ ...p, maxDiscountedQuantity: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="mt-1 text-[11px] text-slate-500">Coupon is removed if the cart has more. Empty = platform default.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Max Quantity Of The Same Dish (Optional)</label>
+                  <input type="number" min="1" step="1" value={editing.maxQuantityPerDish} onChange={(e) => setEditing((p) => ({ ...p, maxQuantityPerDish: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="mt-1 text-[11px] text-slate-500">Empty = platform default.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Valid Until</label>
+                  <input type="datetime-local" value={editing.endDate} onChange={(e) => setEditing((p) => ({ ...p, endDate: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  <p className="mt-1 text-[11px] text-slate-500">Empty = no expiry.</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Customer Scope</label>
+                  <select value={editing.customerScope} onChange={(e) => setEditing((p) => ({ ...p, customerScope: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="all">All Users</option>
+                    <option value="first-time">First-time Users</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                  <select value={editing.status} onChange={(e) => setEditing((p) => ({ ...p, status: e.target.value }))} className="w-full px-3 py-2.5 text-sm rounded-lg border border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="active">Active</option>
+                    <option value="paused">Paused</option>
+                  </select>
+                </div>
+            </div>
+            {editError && <p className="mt-4 text-sm text-red-600">{editError}</p>}
+            <div className="mt-6 flex justify-end gap-3">
+              <button type="button" onClick={() => setEditing(null)} disabled={editBusy} className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50">Cancel</button>
+              <button type="submit" disabled={editBusy} className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 disabled:opacity-60">{editBusy ? "Saving..." : "Save changes"}</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

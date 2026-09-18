@@ -1378,6 +1378,10 @@ export const adminAPI = {
   createAdminOffer: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.OFFERS, data);
   },
+  updateAdminOffer: (offerId, data) =>
+    apiClient.patch(`/admin/offers/${encodeURIComponent(offerId)}`, data),
+  deleteAdminOffer: (offerId) =>
+    apiClient.delete(`/admin/offers/${encodeURIComponent(offerId)}`),
   updateAdminOfferCartVisibility: (offerId, itemId, showInCart) => {
     return apiClient.patch(
       `/admin/offers/${encodeURIComponent(offerId)}/items/${encodeURIComponent(itemId)}/cart-visibility`,

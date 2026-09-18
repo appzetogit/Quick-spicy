@@ -35,6 +35,8 @@ import {
   getOffersSwitch,
   updateOffersSwitch,
   createAdminOffer,
+  updateAdminOffer,
+  deleteAdminOffer,
   updateOfferCartVisibility,
   getRestaurantAnalytics,
   getCustomerWalletReport,
@@ -484,6 +486,8 @@ router.get("/offers/switch", getOffersSwitch);
 router.put("/offers/switch", updateOffersSwitch);
 router.get("/offers", getAllOffers);
 router.post("/offers", createAdminOffer);
+router.patch("/offers/:offerId", updateAdminOffer);
+router.delete("/offers/:offerId", deleteAdminOffer);
 router.patch("/offers/:offerId/items/:itemId/cart-visibility", updateOfferCartVisibility);
 
 // Zone Management
