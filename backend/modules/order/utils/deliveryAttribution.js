@@ -17,17 +17,29 @@
 /**
  * True only when the named rider completed the handover themselves.
  *
- * completedBy is authoritative where it exists; it was introduced later, so older orders
- * fall back to the drop OTP, which the rider completion endpoint refuses to proceed
- * without. Orders from before drop OTPs existed carry no code at all, and for those the
- * rider's own engagement with the order is the best evidence left.
+ * In order of strength: the drop OTP verified by this rider (it outranks everything,
+ * including who clicked complete); then completedBy, where it exists; then, for orders
+ * that required an OTP and never got one, no. Orders from before drop OTPs carry no code
+ * at all, and for those the rider's own engagement with the order is the best evidence.
  */
 export const riderCompletedHandover = (order) => {
   if (!order?.deliveryPartnerId) return false;
+  const riderId = String(order.deliveryPartnerId?._id || order.deliveryPartnerId);
+  const dropOtp = order.deliveryVerification?.dropOtp;
+
+  // The rider verifying the customer's drop OTP is the strongest proof of handover there
+  // is: the code exists only on the customer's screen. It outranks whoever clicked
+  // "complete" - an admin sometimes closes an order in the same moment the rider is
+  // handing it over (seen in production: completed 07:06:10, OTP verified 07:06:14 by the
+  // assigned rider), and crediting nobody there would withhold a delivery that happened.
+  if (dropOtp?.verifiedAt && (!dropOtp.verifiedBy || String(dropOtp.verifiedBy) === riderId)) {
+    return true;
+  }
+
   if (order.completedBy) return order.completedBy === 'rider';
 
-  const dropOtp = order.deliveryVerification?.dropOtp;
-  if (dropOtp?.code) return Boolean(dropOtp.verifiedAt);
+  // An order that required the OTP and never got it was not handed over by this rider.
+  if (dropOtp?.code) return false;
 
   const state = order.deliveryState || {};
   return Boolean(state.acceptedAt || state.reachedPickupAt || state.orderIdConfirmedAt);

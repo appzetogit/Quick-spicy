@@ -34,11 +34,25 @@ assert.equal(cashCollectionStatus(verified), 'Collected', 'a rider completion re
 
 // --- completedBy, where it exists, decides ---------------------------------------------
 assert.equal(riderCompletedHandover(otpOrder({ completedBy: 'rider' })), true);
-assert.equal(riderCompletedHandover(otpOrder({
-  completedBy: 'admin',
-  deliveryVerification: { dropOtp: { code: '1', verifiedAt: new Date() } },
-})), false, 'an admin completion is never credited to the rider');
+// An admin completion with no handover from the rider is not credited to them.
+assert.equal(riderCompletedHandover(otpOrder({ completedBy: 'admin' })), false);
 assert.equal(cashCollectionStatus(otpOrder({ completedBy: 'admin' })), 'Not recorded');
+
+// Seen in production: an admin clicked complete at 07:06:10 and the assigned rider
+// verified the customer's drop OTP at 07:06:14. The rider did hand it over - the OTP
+// outranks whoever clicked complete.
+const racedByAdmin = otpOrder({
+  completedBy: 'admin',
+  deliveryVerification: { dropOtp: { code: '1', verifiedAt: new Date(), verifiedBy: 'r1' } },
+});
+assert.equal(riderCompletedHandover(racedByAdmin), true, 'a verified OTP proves handover whoever clicked complete');
+assert.deepEqual(deliveredByRider(racedByAdmin), { name: 'B Vikram', phone: '9000000000' });
+
+// But an OTP verified by a DIFFERENT rider is not this rider's delivery.
+const otherRider = otpOrder({
+  deliveryVerification: { dropOtp: { code: '1', verifiedAt: new Date(), verifiedBy: 'someone-else' } },
+});
+assert.equal(riderCompletedHandover(otherRider), false, "another rider's OTP does not credit this one");
 
 // --- orders from before drop OTPs fall back to engagement ------------------------------
 const legacy = { status: 'delivered', deliveryPartnerId: rider, deliveryState: { acceptedAt: new Date() } };
