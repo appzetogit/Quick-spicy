@@ -2350,7 +2350,24 @@ export default function Cart() {
                           </span>
                           <button
                             className="px-2 md:px-3 py-1 text-[#EB590E] dark:text-[#EB590E] hover:bg-orange-50 dark:hover:bg-[#EB590E]/10"
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => {
+                              // With a coupon on, the cart cannot grow past its admin-set limits.
+                              const limits = pricing?.appliedCoupon
+                              if (limits) {
+                                const perDish = Number(limits.maxPerDish)
+                                const maxItems = Number(limits.maxItems)
+                                const units = cart.reduce((sum, line) => sum + (Number(line.quantity) || 1), 0)
+                                if (perDish > 0 && (Number(item.quantity) || 1) + 1 > perDish) {
+                                  toast.error(`${limits.code} allows at most ${perDish} of the same dish. Remove the coupon to add more.`, { id: 'coupon-limit' })
+                                  return
+                                }
+                                if (maxItems > 0 && units + 1 > maxItems) {
+                                  toast.error(`${limits.code} is valid for up to ${maxItems} items. Remove the coupon to add more.`, { id: 'coupon-limit' })
+                                  return
+                                }
+                              }
+                              updateQuantity(item.id, item.quantity + 1)
+                            }}
                           >
                             <Plus className="h-3 w-3 md:h-4 md:w-4" />
                           </button>

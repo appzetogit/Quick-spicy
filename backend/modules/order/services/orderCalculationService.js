@@ -475,12 +475,20 @@ export const calculateOrderPricing = async ({
           const now = new Date();
           
           // Find active offer with this coupon code for this restaurant
-          const offer = await Offer.findOne({
+          // The same code can exist on several offers (an expired one left "active" next
+          // to its replacement). findOne picked whichever came first - often the expired
+          // one - and the coupon was refused although a valid one existed. Prefer the
+          // newest offer that is still in date.
+          const candidates = await Offer.find({
             restaurant: restaurantObjectId,
             status: 'active',
             'items.couponCode': couponCode,
             startDate: { $lte: now }
-          }).lean();
+          }).sort({ createdAt: -1 }).lean();
+          const offer = candidates.find((o) => {
+            const end = getEffectiveOfferEndDate(o.endDate);
+            return !end || end >= now;
+          }) || candidates[0] || null;
 
           if (offer) {
             const effectiveEndDate = getEffectiveOfferEndDate(offer.endDate);
