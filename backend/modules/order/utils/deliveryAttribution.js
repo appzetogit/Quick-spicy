@@ -75,7 +75,7 @@ export const invoiceRider = (order) => {
  */
 export const cashCollectionStatus = (order) => {
   if (order?.status !== 'delivered') return 'Not Collected';
-  return riderCompletedHandover(order) ? 'Collected' : 'Not recorded';
+  return riderCompletedHandover(order) ? 'Collected' : 'Not received';
 };
 
 export default riderCompletedHandover;

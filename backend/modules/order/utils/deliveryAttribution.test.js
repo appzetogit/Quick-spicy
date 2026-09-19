@@ -20,7 +20,7 @@ const otpOrder = (extra = {}) => ({
 const neverWorked = otpOrder();
 assert.equal(riderCompletedHandover(neverWorked), false, 'an assigned rider who never engaged did not deliver it');
 assert.equal(deliveredByRider(neverWorked), null, 'so the invoice must not name them');
-assert.equal(cashCollectionStatus(neverWorked), 'Not recorded', 'and nobody on record collected the cash');
+assert.equal(cashCollectionStatus(neverWorked), 'Not received', 'and nobody on record collected the cash');
 
 // Even having accepted is not handing over, when the order required an OTP.
 const acceptedOnly = otpOrder({ deliveryState: { acceptedAt: new Date(), reachedPickupAt: new Date() } });
@@ -36,7 +36,7 @@ assert.equal(cashCollectionStatus(verified), 'Collected', 'a rider completion re
 assert.equal(riderCompletedHandover(otpOrder({ completedBy: 'rider' })), true);
 // An admin completion with no handover from the rider is not credited to them.
 assert.equal(riderCompletedHandover(otpOrder({ completedBy: 'admin' })), false);
-assert.equal(cashCollectionStatus(otpOrder({ completedBy: 'admin' })), 'Not recorded');
+assert.equal(cashCollectionStatus(otpOrder({ completedBy: 'admin' })), 'Not received');
 
 // Seen in production: an admin clicked complete at 07:06:10 and the assigned rider
 // verified the customer's drop OTP at 07:06:14. The rider did hand it over - the OTP
@@ -62,7 +62,7 @@ assert.equal(riderCompletedHandover({ status: 'delivered', deliveryPartnerId: ri
 // --- no rider, or only an id --------------------------------------------------------------
 assert.equal(riderCompletedHandover({ status: 'delivered', deliveryPartnerId: null }), false);
 assert.equal(deliveredByRider({ ...verified, deliveryPartnerId: 'r1' }), null, 'an unpopulated id has no name to print');
-assert.equal(cashCollectionStatus({ status: 'delivered', deliveryPartnerId: null }), 'Not recorded');
+assert.equal(cashCollectionStatus({ status: 'delivered', deliveryPartnerId: null }), 'Not received');
 
 // --- not delivered yet ---------------------------------------------------------------------
 assert.equal(cashCollectionStatus(otpOrder({ status: 'out_for_delivery' })), 'Not Collected');
