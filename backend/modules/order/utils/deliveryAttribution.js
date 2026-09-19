@@ -54,6 +54,22 @@ export const deliveredByRider = (order) => {
 };
 
 /**
+ * The rider an invoice may name, at any status. Delivered: only the rider who handed it
+ * over. Before that: only a rider who has accepted the order. Being offered or assigned
+ * it is not enough - dispatch can assign a rider who never sees the request, and the
+ * invoice printed their name anyway.
+ */
+export const invoiceRider = (order) => {
+  if (order?.status === 'delivered') return deliveredByRider(order);
+  const rider = order?.deliveryPartnerId;
+  if (!rider || typeof rider !== 'object') return null;
+  const state = order.deliveryState || {};
+  const accepted = Boolean(state.acceptedAt || state.reachedPickupAt || state.orderIdConfirmedAt) ||
+    ['out_for_delivery', 'picked_up'].includes(order.status);
+  return accepted ? { name: rider.name || null, phone: rider.phone || null } : null;
+};
+
+/**
  * Collection status for a cash order. Delivery on its own is not evidence of collection:
  * only a rider completion, which records the cash against that rider, is.
  */

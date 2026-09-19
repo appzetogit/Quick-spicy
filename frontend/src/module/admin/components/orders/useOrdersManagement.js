@@ -444,11 +444,13 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
       // riders on invoices for deliveries they never made - including riders since blocked.
       const isDeliveredOrder = String(order.status || "").toLowerCase() === "delivered"
       const hasAttribution = Object.prototype.hasOwnProperty.call(order, "deliveredByName")
-      const deliveryPartnerName = isDeliveredOrder && hasAttribution
-        ? formatDisplayText(order.deliveredByName, "Not recorded")
+      // Before delivery the server names only a rider who accepted the order.
+      const noRiderText = isDeliveredOrder ? "Not recorded" : "Not assigned yet"
+      const deliveryPartnerName = hasAttribution
+        ? formatDisplayText(order.deliveredByName, noRiderText)
         : formatDisplayText(order.deliveryPartnerName || order.deliveryBoyName || order.deliveryPartnerId?.name)
-      const deliveryPartnerPhone = isDeliveredOrder && hasAttribution
-        ? formatDisplayText(order.deliveredByPhone, "Not recorded")
+      const deliveryPartnerPhone = hasAttribution
+        ? formatDisplayText(order.deliveredByPhone, noRiderText)
         : formatDisplayText(order.deliveryPartnerPhone || order.deliveryBoyNumber || order.deliveryPartnerId?.phone)
       const zoneName = formatDisplayText(order.zoneName, "Not assigned")
       const orderStatus = formatDisplayText(order.orderStatus || order.status)

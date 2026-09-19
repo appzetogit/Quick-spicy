@@ -5,7 +5,7 @@
 // restaurant and never verified the drop OTP - including riders later blocked - and every
 // delivered cash order read "Collected" whether or not anyone had recorded collecting it.
 import assert from 'node:assert/strict';
-import { riderCompletedHandover, deliveredByRider, cashCollectionStatus } from './deliveryAttribution.js';
+import { riderCompletedHandover, deliveredByRider, cashCollectionStatus, invoiceRider } from './deliveryAttribution.js';
 
 const rider = { _id: 'r1', name: 'B Vikram', phone: '9000000000' };
 const otpOrder = (extra = {}) => ({
@@ -67,5 +67,13 @@ assert.equal(cashCollectionStatus({ status: 'delivered', deliveryPartnerId: null
 // --- not delivered yet ---------------------------------------------------------------------
 assert.equal(cashCollectionStatus(otpOrder({ status: 'out_for_delivery' })), 'Not Collected');
 assert.equal(cashCollectionStatus(otpOrder({ status: 'cancelled' })), 'Not Collected');
+
+// --- invoice before delivery: only a rider who accepted ---------------------------------
+// Production: ORD-1789815508619-499, preparing, assigned to a rider offline for 17 days.
+assert.equal(invoiceRider({ status: 'preparing', deliveryPartnerId: rider, deliveryState: { currentPhase: 'assigned' } }), null);
+assert.deepEqual(invoiceRider({ status: 'preparing', deliveryPartnerId: rider, deliveryState: { acceptedAt: new Date() } }), { name: 'B Vikram', phone: '9000000000' });
+assert.deepEqual(invoiceRider({ status: 'out_for_delivery', deliveryPartnerId: rider, deliveryState: {} }), { name: 'B Vikram', phone: '9000000000' });
+assert.equal(invoiceRider(neverWorked), null, 'delivered: same rule as before');
+assert.equal(invoiceRider({ status: 'preparing', deliveryPartnerId: null }), null);
 
 console.log('deliveryAttribution: all assertions passed');

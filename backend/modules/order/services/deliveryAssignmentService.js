@@ -575,6 +575,16 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
           return null;
         }
 
+        // Same rule as the priority search: a rider flagged online whose app has not sent
+        // a position recently is not actually there. This path lacked it, and gave a live
+        // order to a rider whose last position was 17 days old - he was offline, the order
+        // sat with nobody, and his name went on the invoice.
+        const lastUpdate = partner.availability?.lastLocationUpdate;
+        const positionAgeMs = lastUpdate ? Date.now() - new Date(lastUpdate).getTime() : Infinity;
+        if (!(positionAgeMs <= MAX_ASSIGNABLE_POSITION_AGE_MS)) {
+          return null;
+        }
+
         if (zone && !isPartnerInsideRequiredZone(partner, zone, lat, lng)) {
           console.log(`⚠️ Delivery partner ${partner._id} rejected due to zone mismatch`);
           return null;
