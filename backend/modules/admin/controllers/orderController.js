@@ -1059,6 +1059,14 @@ export const rejectOrder = asyncHandler(async (req, res) => {
           await processWalletRefund(order._id, adminId, refundAmount);
           console.log(`✅ Automatic wallet refund processed for admin-rejected order ${order.orderId} of amount ${refundAmount}`);
           refundMessage = ` Wallet refund of ₹${refundAmount} processed automatically.`;
+        } else if (paymentMethod === 'cashfree') {
+          // Online payments were only calculated here, never refunded - and the admin refund
+          // button then refused the order as "not cancelled by restaurant or user".
+          const { processCashfreeRefund } = await import('../../order/services/cancellationRefundService.js');
+          const cashfreeResult = await processCashfreeRefund(order._id, adminId);
+          if (cashfreeResult?.refundAmount > 0) {
+            refundMessage = ` Refund of ₹${cashfreeResult.refundAmount} initiated to the customer's original payment method.`;
+          }
         }
       } catch (refundError) {
         console.error("Error processing refund for admin-rejected order:", refundError);
@@ -2676,7 +2684,11 @@ export const processRefund = asyncHandler(async (req, res) => {
     
     const isUserCancelled = order.cancelledBy === 'user';
 
-    if (!isRestaurantCancelled && !isUserCancelled) {
+    // Admin- and system-closed orders are refundable too; they used to be refused here,
+    // leaving no way at all to refund a paid order an admin had rejected.
+    const isPlatformCancelled = ['admin', 'system'].includes(order.cancelledBy);
+
+    if (!isRestaurantCancelled && !isUserCancelled && !isPlatformCancelled) {
       return errorResponse(res, 400, 'This order was not cancelled by restaurant or user');
     }
 
@@ -2692,7 +2704,8 @@ export const processRefund = asyncHandler(async (req, res) => {
     // Note: Order model uses deliveryFleet, not deliveryType
     if (paymentMethod !== 'wallet') {
       // Check deliveryFleet - 'standard' and 'fast' are home delivery types
-      const isHomeDelivery = order.deliveryFleet === 'standard' || order.deliveryFleet === 'fast';
+      // Every fleet is home delivery; pure_veg was missing, so those orders could not be refunded.
+      const isHomeDelivery = !order.deliveryFleet || ['standard', 'fast', 'pure_veg'].includes(order.deliveryFleet);
       if (!isHomeDelivery) {
         return errorResponse(res, 400, 'Refund can only be processed for Home Delivery orders');
       }

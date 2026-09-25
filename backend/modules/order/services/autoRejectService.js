@@ -29,7 +29,7 @@ async function reconcileUnpaidOnlineOrder(order, now) {
   const claimed = await Order.findOneAndUpdate(
     {
       _id: order._id,
-      status: { $in: ['pending', 'confirmed'] },
+      status: { $in: ['pending', 'confirmed', 'cancelled'] },
       'payment.status': { $ne: 'completed' },
       $or: [
         { 'payment.lastReconciledAt': { $exists: false } },
@@ -98,6 +98,24 @@ export async function processAutoRejectOrders() {
 
     // Find all orders with status 'pending' or 'confirmed' that haven't been accepted yet
     // These are orders waiting for restaurant to accept
+    // A payment can complete after its order was cancelled (the customer cancelled while on
+    // the payment page, or paid as the window closed). Keep asking Cashfree for an hour so
+    // such a payment is found and refunded rather than kept (verifyOrderPayment refunds it).
+    const recentlyCancelledUnpaid = await Order.find({
+      status: 'cancelled',
+      'payment.method': 'cashfree',
+      'payment.status': { $ne: 'completed' },
+      'payment.cashfreeOrderId': { $exists: true, $ne: null },
+      cancelledAt: { $gte: new Date(Date.now() - 60 * 60 * 1000) }
+    }).lean();
+    for (const cancelledOrder of recentlyCancelledUnpaid) {
+      try {
+        await reconcileUnpaidOnlineOrder(cancelledOrder, new Date());
+      } catch (reconcileError) {
+        console.error(`❌ Error checking late payment for ${cancelledOrder.orderId}:`, reconcileError);
+      }
+    }
+
     const validPendingOrders = await Order.find({
       status: { $in: ['pending', 'confirmed'] }
     }).lean();

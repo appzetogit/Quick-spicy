@@ -12,17 +12,101 @@ import { createCashfreeRefund } from '../../payment/services/cashfreeService.js'
 /**
  * Determine cancellation stage based on order status
  */
-const getCancellationStage = (order) => {
-  if (!order.tracking.confirmed.status) {
+export const getCancellationStage = (order) => {
+  // tracking.confirmed is set when the order is placed (COD, wallet) or paid (online) - not
+  // when the restaurant accepts. Accept sets tracking.preparing. Reading confirmed as
+  // "accepted" moved every order one stage on: a prepaid order the restaurant never saw
+  // refunded only part of what was paid, and one rejected after accepting paid the
+  // restaurant compensation. Each stage is now the event its name says.
+  const tracking = order.tracking || {};
+  if (!tracking.preparing?.status) {
     return 'pre_accept';
   }
-  if (!order.tracking.preparing.status) {
+  if (!tracking.ready?.status) {
     return 'post_accept_pre_cook';
   }
-  if (!order.tracking.ready.status) {
+  if (!tracking.outForDelivery?.status) {
     return 'post_cook';
   }
   return 'post_pickup';
+};
+
+/**
+ * Settlement for a paid order cancelled before one was ever created. Settlements used to
+ * appear only on the delivery path (and after a successful verify), so a paid order
+ * cancelled early had none: wallet refunds built one here, but Cashfree refunds threw
+ * 'Settlement not found' and the customer was never refunded. Nothing was delivered, so
+ * the refundable amount is everything that was charged.
+ */
+const createFallbackSettlement = async (order) => {
+  const pricing = order.pricing || {};
+  const subtotal = pricing.subtotal || 0;
+  const deliveryFee = pricing.deliveryFee || 0;
+  const platformFee = pricing.platformFee || 0;
+  const tax = pricing.tax || 0;
+  const total = pricing.total || 0;
+
+  // populate('userId') returns null for a deleted customer; the raw id is still there.
+  const rawUserId = order.userId?._id || order.get?.('userId') || order.userId;
+  if (!rawUserId) {
+    throw new Error(`Cannot create settlement for order ${order.orderId}: no userId on the order`);
+  }
+
+  const settlement = new OrderSettlement({
+    orderId: order._id,
+    orderNumber: order.orderId,
+    userId: rawUserId,
+    restaurantId: order.restaurantId,
+    restaurantName: order.restaurantName || 'Unknown Restaurant',
+    userPayment: {
+      subtotal,
+      discount: pricing.discount || 0,
+      deliveryFee,
+      platformFee,
+      gst: tax,
+      packagingFee: 0,
+      total
+    },
+    restaurantEarning: {
+      foodPrice: subtotal,
+      commission: 0,
+      commissionPercentage: 0,
+      netEarning: subtotal,
+      status: 'cancelled'
+    },
+    deliveryPartnerEarning: {
+      basePayout: 0,
+      distance: 0,
+      commissionPerKm: 0,
+      distanceCommission: 0,
+      surgeMultiplier: 1,
+      surgeAmount: 0,
+      totalEarning: 0,
+      status: 'cancelled'
+    },
+    adminEarning: {
+      commission: 0,
+      platformFee,
+      deliveryFee,
+      gst: tax,
+      deliveryMargin: 0,
+      totalEarning: platformFee + deliveryFee + tax,
+      status: 'cancelled'
+    },
+    escrowStatus: 'refunded',
+    escrowAmount: total,
+    settlementStatus: 'cancelled',
+    cancellationDetails: {
+      cancelled: true,
+      cancelledAt: order.cancelledAt || order.updatedAt || new Date(),
+      cancellationStage: getCancellationStage(order),
+      refundAmount: total,
+      restaurantCompensation: 0,
+      refundStatus: 'pending'
+    }
+  });
+  await settlement.save();
+  return settlement;
 };
 
 /**
@@ -126,6 +210,14 @@ export const calculateCancellationRefund = async (orderId, cancellationReason) =
       default:
         refundAmount = 0;
         restaurantCompensation = 0;
+    }
+
+    // A cancellation the customer did not cause - the restaurant rejected it or never
+    // responded, or the platform closed it - refunds everything they paid and pays the
+    // restaurant nothing. The staged amounts above are for cancellations the customer asked for.
+    if (['restaurant', 'system'].includes(order.cancelledBy)) {
+      refundAmount = userPayment.total;
+      restaurantCompensation = 0;
     }
 
     // Update settlement with cancellation details (refund status: 'pending' - awaiting admin approval)
@@ -691,9 +783,10 @@ export const processCashfreeRefund = async (orderId, adminId = null) => {
       throw new Error('Cashfree order ID not found for this order');
     }
 
-    const settlement = await OrderSettlement.findOne({ orderId });
+    let settlement = await OrderSettlement.findOne({ orderId });
     if (!settlement) {
-      throw new Error('Settlement not found');
+      settlement = await createFallbackSettlement(order);
+      console.warn(`[processCashfreeRefund] No settlement for paid order ${order.orderId}; refunding the full ${settlement.userPayment?.total} charged.`);
     }
 
     if (settlement.cancellationDetails?.refundStatus === 'processed' ||
@@ -984,83 +1077,7 @@ export const processWalletRefund = async (orderId, adminId = null, refundAmount 
     
     if (!settlement) {
       console.log('📝 [processWalletRefund] Settlement not found, creating settlement with order data for wallet refund...');
-      
-      const pricing = order.pricing || {};
-      const subtotal = pricing.subtotal || 0;
-      const deliveryFee = pricing.deliveryFee || 0;
-      const platformFee = pricing.platformFee || 0;
-      const tax = pricing.tax || 0;
-      const total = pricing.total || 0;
-      
-      // Calculate earnings (simplified for wallet refunds - we just need the structure)
-      const foodPrice = subtotal;
-      const commission = 0; // For wallet refunds, we don't need actual commission
-      const netEarning = foodPrice; // Simplified
-      
-      // The order was loaded with .populate('userId'), which returns null when the customer's
-      // account has since been deleted. userId then came out null and the settlement failed
-      // validation with "Path `userId` is required", so the refund could not be issued at all
-      // - by hand from the admin panel or automatically. Exactly the orders most in need of a
-      // refund, since a deleted account cannot chase it.
-      //
-      // The raw ObjectId is still on the order document regardless of whether the user it
-      // points at still exists, so read that when populate has come back empty.
-      const rawUserId = order.userId?._id || order.get?.('userId') || order.userId;
-      if (!rawUserId) {
-        throw new Error(`Cannot create settlement for order ${order.orderId}: no userId on the order`);
-      }
-
-      settlement = new OrderSettlement({
-        orderId: order._id,
-        orderNumber: order.orderId,
-        userId: rawUserId,
-        restaurantId: order.restaurantId,
-        restaurantName: order.restaurantName || 'Unknown Restaurant',
-        userPayment: {
-          subtotal: subtotal,
-          discount: pricing.discount || 0,
-          deliveryFee: deliveryFee,
-          platformFee: platformFee,
-          gst: tax,
-          packagingFee: 0,
-          total: total
-        },
-        restaurantEarning: {
-          foodPrice: foodPrice,
-          commission: commission,
-          commissionPercentage: 0,
-          netEarning: netEarning,
-          status: 'cancelled'
-        },
-        deliveryPartnerEarning: {
-          basePayout: 0,
-          distance: 0,
-          commissionPerKm: 0,
-          distanceCommission: 0,
-          surgeMultiplier: 1,
-          surgeAmount: 0,
-          totalEarning: 0,
-          status: 'cancelled'
-        },
-        adminEarning: {
-          commission: commission,
-          platformFee: platformFee,
-          deliveryFee: deliveryFee,
-          gst: tax,
-          deliveryMargin: 0,
-          totalEarning: platformFee + deliveryFee + tax,
-          status: 'cancelled'
-        },
-        escrowStatus: 'refunded',
-        escrowAmount: total,
-        settlementStatus: 'cancelled',
-        cancellationDetails: {
-          cancelled: true,
-          cancelledAt: order.updatedAt || new Date(),
-          refundStatus: 'pending'
-        }
-      });
-      await settlement.save();
+      settlement = await createFallbackSettlement(order);
       console.log('✅ [processWalletRefund] Settlement created for wallet refund');
     }
 
@@ -1240,6 +1257,15 @@ export const processWalletRefund = async (orderId, adminId = null, refundAmount 
       }
     } catch (walletError) {
       console.error('❌ Error refunding to user wallet:', walletError);
+      // Left at 'initiated', the admin retry refused it as "already processed or initiated"
+      // and the customer could never be refunded.
+      try {
+        settlement.cancellationDetails.refundStatus = 'failed';
+        settlement.cancellationDetails.refundFailureReason = walletError.message;
+        await settlement.save();
+      } catch (saveError) {
+        console.error('❌ Could not mark wallet refund as failed:', saveError);
+      }
       throw new Error(`Failed to refund to user wallet: ${walletError.message}`);
     }
 

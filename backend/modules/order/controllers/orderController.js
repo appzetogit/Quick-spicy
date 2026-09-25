@@ -44,6 +44,8 @@ const generateDropDeliveryOtp = () => {
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Must stay under the server's payment window (ONLINE_PAYMENT_WINDOW_MINUTES, default 30).
+const ONLINE_PAYMENT_EXPIRY_MS = 20 * 60 * 1000;
 
 function normalizeRestaurantLocation(location = {}) {
   if (!location || typeof location !== 'object') return location;
@@ -1338,7 +1340,10 @@ export const createOrder = async (req, res) => {
             orderId: order.orderId,
             userId: userId.toString(),
             restaurantId: restaurantId || 'unknown'
-          }
+          },
+          // Cashfree otherwise keeps the payment page payable for weeks, long after the
+          // server has closed an unpaid order. Payment is refused once this passes.
+          orderExpiryTime: new Date(Date.now() + ONLINE_PAYMENT_EXPIRY_MS).toISOString()
         });
 
         order.payment.cashfreeOrderId = cashfreeOrder.order_id;
@@ -1603,6 +1608,35 @@ export const verifyOrderPayment = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Payment amount mismatch detected'
+      });
+    }
+
+    // Paid, but the order is already cancelled: the customer cancelled while paying, or
+    // paid as the payment window closed it. Confirming it here would bring a cancelled
+    // order back to life, possibly hours later. Record the payment and refund it in full.
+    if (order.status === 'cancelled') {
+      order.payment.status = 'completed';
+      order.payment.cashfreePaymentId = verification.payment.cf_payment_id;
+      order.payment.cashfreeOrderStatus = verification.order?.order_status || null;
+      order.payment.cashfreePaymentStatus = verification.payment?.payment_status || null;
+      order.payment.transactionId = verification.payment.cf_payment_id;
+      await order.save();
+      let refunded = false;
+      try {
+        const { calculateCancellationRefund, processCashfreeRefund } = await import('../services/cancellationRefundService.js');
+        await calculateCancellationRefund(order._id, order.cancellationReason);
+        await processCashfreeRefund(order._id, null);
+        refunded = true;
+        logger.warn(`Payment arrived for already-cancelled order ${order.orderId}; refunded in full`);
+      } catch (refundError) {
+        logger.error(`Refund of payment for cancelled order ${order.orderId} failed: ${refundError.message}`);
+      }
+      return res.status(409).json({
+        success: false,
+        cancelled: true,
+        message: refunded
+          ? 'This order was cancelled, so your payment is being refunded to you.'
+          : 'This order was cancelled. Your payment will be refunded - please contact support if it does not arrive.'
       });
     }
 
@@ -1981,16 +2015,28 @@ export const verifyOrderTipPayment = async (req, res) => {
       });
     }
 
-    const verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+    // Cashfree can take a moment to show a tip as paid. One check used to decide it and
+    // marked a tip the customer HAD paid as failed, so the rider was never credited.
+    let verification = null;
+    for (let attempt = 1; attempt <= 5; attempt += 1) {
+      verification = await verifyCashfreeOrderPayment(cashfreeOrderId);
+      if (verification?.isPaid && verification?.payment) break;
+      if (attempt < 5) await wait(1500);
+    }
     if (!verification?.isPaid || !verification?.payment) {
-      if (tipEntry) {
+      const cashfreeStatus = String(verification?.order?.order_status || '').toUpperCase();
+      const definitelyFailed = ['EXPIRED', 'TERMINATED', 'FAILED'].includes(cashfreeStatus);
+      if (tipEntry && definitelyFailed) {
         tipEntry.status = 'failed';
         await order.save();
       }
 
-      return res.status(400).json({
+      return res.status(definitelyFailed ? 400 : 202).json({
         success: false,
-        message: 'Payment verification failed'
+        pending: !definitelyFailed,
+        message: definitelyFailed
+          ? 'Payment verification failed'
+          : 'Payment confirmation is still pending. Please wait a moment and try again.'
       });
     }
 

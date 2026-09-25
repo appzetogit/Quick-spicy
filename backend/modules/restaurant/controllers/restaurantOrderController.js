@@ -311,7 +311,12 @@ export const acceptOrder = asyncHandler(async (req, res) => {
       return errorResponse(res, 400, `Order cannot be accepted. Current status: ${order.status}`);
     }
 
-    const elapsedMs = Date.now() - new Date(order.createdAt).getTime();
+    // Timed from when the order reached the restaurant - payment confirmation for prepaid
+    // orders - not from when the customer opened the payment page. Timing from createdAt
+    // cancelled a prepaid order the moment the restaurant tapped Accept whenever payment
+    // had taken a few minutes, and blamed the restaurant for it.
+    const acceptClockStart = order.tracking?.confirmed?.timestamp || order.createdAt;
+    const elapsedMs = Date.now() - new Date(acceptClockStart).getTime();
     if (elapsedMs >= ACCEPT_TIME_LIMIT_MS) {
       order.status = 'cancelled';
       order.cancellationReason = 'Order not accepted within time limit. Restaurant did not respond in time.';

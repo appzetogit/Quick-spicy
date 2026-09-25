@@ -58,7 +58,8 @@ const createCashfreeOrder = async ({
   customerDetails = {},
   orderMeta = {},
   orderNote = '',
-  orderTags = {}
+  orderTags = {},
+  orderExpiryTime = null
 }) => {
   const clientConfig = await getClientConfig();
 
@@ -76,6 +77,10 @@ const createCashfreeOrder = async ({
 
   if (orderMeta && Object.keys(orderMeta).length > 0) {
     payload.order_meta = orderMeta;
+  }
+
+  if (orderExpiryTime) {
+    payload.order_expiry_time = orderExpiryTime;
   }
 
   if (orderNote) {
