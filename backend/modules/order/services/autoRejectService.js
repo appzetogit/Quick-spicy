@@ -4,6 +4,88 @@ import { notifyUserOrderUpdate } from './userNotificationService.js';
 import { calculateCancellationRefund } from './cancellationRefundService.js';
 
 /**
+ * Online orders whose payment is not confirmed yet.
+ *
+ * The restaurant only sees a prepaid order once its payment is confirmed, and that used to
+ * depend entirely on the customer's app calling verify-payment at the right moment. When
+ * that call failed, a PAID order sat invisible and this service then cancelled it as
+ * "Restaurant did not respond in time" - 12 paid orders in one week, 9 of them never
+ * refunded. Now the server asks Cashfree itself: paid means confirm it and hand it to the
+ * restaurant (their accept clock starts then); still unpaid after the payment window means
+ * close it as an unfinished payment, which is what it is.
+ */
+const FIRST_PAYMENT_CHECK_AFTER_MS = 45 * 1000;
+const PAYMENT_RECHECK_EVERY_MS = 45 * 1000;
+const PAYMENT_WINDOW_MS = Number(process.env.ONLINE_PAYMENT_WINDOW_MINUTES || 30) * 60 * 1000;
+
+export const isAwaitingOnlinePayment = (order) =>
+  order?.payment?.method === 'cashfree' && order?.payment?.status !== 'completed';
+
+async function reconcileUnpaidOnlineOrder(order, now) {
+  const ageMs = now - new Date(order.createdAt);
+  if (ageMs < FIRST_PAYMENT_CHECK_AFTER_MS) return null;
+
+  // Claim the check atomically: the cron runs in every worker.
+  const claimed = await Order.findOneAndUpdate(
+    {
+      _id: order._id,
+      status: { $in: ['pending', 'confirmed'] },
+      'payment.status': { $ne: 'completed' },
+      $or: [
+        { 'payment.lastReconciledAt': { $exists: false } },
+        { 'payment.lastReconciledAt': null },
+        { 'payment.lastReconciledAt': { $lt: new Date(now - PAYMENT_RECHECK_EVERY_MS) } },
+      ],
+    },
+    { $set: { 'payment.lastReconciledAt': now } },
+    { new: true },
+  );
+  if (!claimed) return null;
+
+  // Same path the app uses, so a server-confirmed order gets exactly the same treatment:
+  // payment record, escrow, restaurant notification.
+  const { verifyOrderPayment } = await import('../controllers/orderController.js');
+  const result = await new Promise((resolve) => {
+    const res = {
+      statusCode: 200,
+      status(code) { this.statusCode = code; return this; },
+      json(body) { resolve({ code: this.statusCode, body }); },
+    };
+    verifyOrderPayment({
+      user: { id: String(claimed.userId) },
+      body: { orderId: String(claimed._id), cashfreeOrderId: claimed.payment?.cashfreeOrderId },
+      ip: 'server',
+      get: () => 'payment-reconciler',
+      headers: {},
+    }, res).catch((error) => resolve({ code: 500, body: { message: error.message } }));
+  });
+
+  if (result.body?.success) {
+    console.log(`✅ Payment for ${claimed.orderId} confirmed with Cashfree by the server; sent to the restaurant`);
+    return 'confirmed';
+  }
+
+  if (ageMs < PAYMENT_WINDOW_MS) return null;
+
+  const current = await Order.findById(claimed._id);
+  if (!current || !['pending', 'confirmed'].includes(current.status) || current.payment?.status === 'completed') {
+    return null;
+  }
+  current.status = 'cancelled';
+  current.cancelledBy = 'system';
+  current.cancelledAt = now;
+  current.cancellationReason = 'Online payment was not completed.';
+  await current.save();
+  console.log(`ℹ️ Order ${current.orderId} closed: online payment not completed within the payment window`);
+  try {
+    await notifyUserOrderUpdate(current._id.toString(), 'cancelled');
+  } catch (notifError) {
+    console.error(`❌ Error sending user notification for order ${current.orderId}:`, notifError);
+  }
+  return 'closed';
+}
+
+/**
  * Automatically reject orders that haven't been accepted within the accept time limit
  * This runs as a cron job to check all pending/confirmed orders
  * Accept time limit: 240 seconds (4 minutes)
@@ -29,8 +111,19 @@ export async function processAutoRejectOrders() {
     const rejectedOrders = [];
 
     for (const order of validPendingOrders) {
-      const orderCreatedAt = new Date(order.createdAt);
-      const elapsedMs = now - orderCreatedAt;
+      if (isAwaitingOnlinePayment(order)) {
+        try {
+          await reconcileUnpaidOnlineOrder(order, now);
+        } catch (reconcileError) {
+          console.error(`❌ Error reconciling payment for order ${order.orderId}:`, reconcileError);
+        }
+        continue;
+      }
+
+      // The restaurant's clock starts when the order reaches them: at payment confirmation
+      // for prepaid orders, not when the customer opened the payment page.
+      const acceptClockStart = new Date(order.tracking?.confirmed?.timestamp || order.createdAt);
+      const elapsedMs = now - acceptClockStart;
 
       // Check if accept time has expired
       if (elapsedMs >= ACCEPT_TIME_LIMIT_MS) {

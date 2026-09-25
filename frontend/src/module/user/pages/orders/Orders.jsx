@@ -51,10 +51,30 @@ export default function Orders() {
           setVerifyingPayment(true)
           toast.loading("Verifying payment status...")
           
-          const response = await orderAPI.verifyPayment({
-            orderId: redirectOrderId,
-            cashfreeOrderId: redirectOrderId
-          })
+          // Cashfree can take a few seconds to report the payment after the redirect.
+          // One check used to decide it; a "pending" answer then read as failure. The
+          // server also confirms payments on its own, so this is only for a fast answer.
+          let response = null
+          for (let attempt = 1; attempt <= 6; attempt += 1) {
+            try {
+              response = await orderAPI.verifyPayment({
+                orderId: redirectOrderId,
+                cashfreeOrderId: redirectOrderId
+              })
+              if (response?.data?.success) break
+            } catch (verifyError) {
+              const pending = verifyError?.response?.status === 202 || verifyError?.response?.data?.pending === true
+              if (!pending) throw verifyError
+              response = verifyError.response
+            }
+            if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 2000))
+          }
+          if (!response?.data?.success && response?.data?.pending) {
+            toast.dismiss()
+            toast("Your payment is being confirmed. Your order will update in a moment.")
+            navigate(`/user/orders/${redirectOrderId}`, { replace: true })
+            return
+          }
           
           toast.dismiss()
           if (response?.data?.success) {

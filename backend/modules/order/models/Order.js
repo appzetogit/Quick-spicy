@@ -253,6 +253,10 @@ const orderSchema = new mongoose.Schema({
     },
     transactionId: {
       type: String
+    },
+    // When the server last asked Cashfree about this order's payment (see autoRejectService).
+    lastReconciledAt: {
+      type: Date
     }
   },
   additionalTip: {

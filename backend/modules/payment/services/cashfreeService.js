@@ -129,8 +129,11 @@ const createCashfreeRefund = async ({
   return response.data;
 };
 
-const mapCashfreePaymentMethod = (payment = {}) => {
-  const group = String(payment.payment_group || '').toLowerCase();
+// payment is null until Cashfree reports a successful payment. A default parameter does
+// not cover null, so this threw and every early verification came back as a 500 - the app
+// gave up, and paid orders sat unconfirmed until the accept timer cancelled them.
+const mapCashfreePaymentMethod = (payment) => {
+  const group = String(payment?.payment_group || '').toLowerCase();
 
   if (group.includes('upi')) return 'upi';
   if (group.includes('card')) return 'card';
