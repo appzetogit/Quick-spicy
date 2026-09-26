@@ -96,7 +96,7 @@ quiet();
 const Order = (await import('../modules/order/models/Order.js')).default;
 const OrderSettlement = (await import('../modules/order/models/OrderSettlement.js')).default;
 const Payment = (await import('../modules/payment/models/Payment.js')).default;
-const { verifyOrderPayment, cancelOrder, verifyOrderTipPayment } = await import('../modules/order/controllers/orderController.js');
+const { verifyOrderPayment, cancelOrder, verifyOrderTipPayment, getUserOrders, getOrderDetails } = await import('../modules/order/controllers/orderController.js');
 const { processAutoRejectOrders } = await import('../modules/order/services/autoRejectService.js');
 const restaurantCtl = await import('../modules/restaurant/controllers/restaurantOrderController.js');
 const adminCtl = await import('../modules/admin/controllers/orderController.js');
@@ -343,6 +343,24 @@ await scenario('Failed-payment order is hidden from the restaurant and cannot be
   assert.ok(!ids.includes(o.orderId), 'restaurant can see an unpaid order');
   const acc = await call(restaurantCtl.acceptOrder, { restaurant: restaurantReq, params: { id: String(o._id) }, body: {} });
   assert.equal(acc.code, 400, `accept allowed: ${acc.body?.message}`);
+});
+
+await scenario('Delivery OTP is shown to the customer only after the restaurant accepts', async () => {
+  const withOtp = { deliveryVerification: { dropOtp: { code: '4821' } } };
+  const unpaid = await mkOrder({ ageMin: 1, extra: withOtp });
+  const cod = await mkOrder({ method: 'cash', ageMin: 1, confirmedAgoMin: 1, extra: withOtp });
+  const cancelled = await mkOrder({ status: 'cancelled', cancelledBy: 'system', ageMin: 40, extra: withOtp });
+  const accepted = await mkOrder({ method: 'cash', status: 'preparing', ageMin: 5, confirmedAgoMin: 5, tracking: { preparing: { status: true, timestamp: new Date() } }, extra: withOtp });
+  const list = await call(getUserOrders, { query: {} });
+  const codeIn = (id) => (list.body?.data?.orders || []).find((o) => o.orderId === id)?.deliveryVerification?.dropOtp?.code || null;
+  assert.equal(codeIn(unpaid.orderId), null, 'unpaid online order shows OTP');
+  assert.equal(codeIn(cod.orderId), null, 'COD not yet accepted shows OTP');
+  assert.equal(codeIn(cancelled.orderId), null, 'cancelled order shows OTP');
+  assert.equal(codeIn(accepted.orderId), '4821', 'accepted order must show OTP');
+  const one = await call(getOrderDetails, { params: { id: String(unpaid._id) } });
+  assert.equal(one.body?.data?.order?.deliveryVerification?.dropOtp?.code || null, null, 'details endpoint leaks OTP');
+  const ok = await call(getOrderDetails, { params: { id: String(accepted._id) } });
+  assert.equal(ok.body?.data?.order?.deliveryVerification?.dropOtp?.code, '4821');
 });
 
 await scenario('Tip paid but Cashfree slow to report: not marked failed', async () => {

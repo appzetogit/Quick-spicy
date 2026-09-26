@@ -1983,7 +1983,7 @@ export default function Cart() {
       if (effectivePaymentMethod === "cash") {
         toast.success("Order placed with Cash on Delivery")
         setPlacedOrderId(order?.orderId || order?.id || null)
-        setPlacedOrderOtp(order?.deliveryDropOtp ? String(order.deliveryDropOtp) : null)
+        setPlacedOrderOtp(null) // the OTP appears on the order page once the restaurant accepts
         setShowOrderSuccess(true)
         clearCart()
         setIsPlacingOrder(false)
@@ -1994,7 +1994,7 @@ export default function Cart() {
       if (effectivePaymentMethod === "wallet") {
         toast.success("Order placed with Wallet payment")
         setPlacedOrderId(order?.orderId || order?.id || null)
-        setPlacedOrderOtp(order?.deliveryDropOtp ? String(order.deliveryDropOtp) : null)
+        setPlacedOrderOtp(null) // the OTP appears on the order page once the restaurant accepts
         setShowOrderSuccess(true)
         clearCart()
         setIsPlacingOrder(false)
