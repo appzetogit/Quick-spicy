@@ -100,7 +100,7 @@ export default function Orders() {
 
   // Calculate countdown for an order
   const calculateCountdown = (order) => {
-    if (!order || order.status === 'delivered' || order.status === 'cancelled' || order.status === 'restaurant_cancelled') {
+    if (!order || order.awaitingPayment || order.status === 'delivered' || order.status === 'cancelled' || order.status === 'restaurant_cancelled') {
       return null
     }
 
@@ -351,6 +351,11 @@ export default function Orders() {
               pricing: order.pricing || {}, // Keep full pricing object for discounts, coupons
               payment: order.payment || {},
               paymentMethod: order.payment?.method || order.paymentMethod,
+              // Unpaid online order: not sent to the restaurant, so no OTP, countdown or "cooking".
+              awaitingPayment:
+                (order.payment?.method || order.paymentMethod) === 'cashfree' &&
+                String(order.payment?.status || '').toLowerCase() !== 'completed' &&
+                order.status !== 'cancelled',
               restaurant: order.restaurantId?.name || order.restaurantName || 'Restaurant',
               restaurantId: order.restaurantId?._id || order.restaurantId,
               restaurantImage: order.restaurantId?.profileImage?.url || order.restaurantId?.profileImage || null,
@@ -372,7 +377,9 @@ export default function Orders() {
               // The rider asks for this at the door. It was only ever rendered inside order
               // tracking, so customers who never opened that screen reported never receiving
               // an OTP at all and could not complete the handover.
-              deliveryOtp: order.deliveryVerification?.dropOtp?.code
+              deliveryOtp: order.deliveryVerification?.dropOtp?.code &&
+                !((order.payment?.method || order.paymentMethod) === 'cashfree' &&
+                  String(order.payment?.status || '').toLowerCase() !== 'completed')
                 ? String(order.deliveryVerification.dropOtp.code)
                 : null,
               note: order.note || null
@@ -1015,7 +1022,7 @@ Order again from this restaurant in the ${companyName} app.`
                     </div>
                   ) : (
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">{order.status === 'preparing' ? 'Preparing' : order.status === 'outForDelivery' ? 'Out for delivery' : order.status === 'confirmed' ? 'Order confirmed' : ''}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{order.awaitingPayment ? 'Payment not completed' : order.status === 'preparing' ? 'Preparing' : order.status === 'outForDelivery' ? 'Out for delivery' : order.status === 'confirmed' ? 'Order confirmed' : ''}</p>
                       {/* Countdown Timer */}
                       {countdowns[order.id] && countdowns[order.id] > 0 && (
                         <div className="flex items-center gap-1 mt-1 text-xs text-[#EB590E] font-medium">

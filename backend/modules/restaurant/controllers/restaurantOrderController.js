@@ -14,7 +14,9 @@ const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
 function buildUnpaidOnlinePlaceholderCondition() {
   return {
     'payment.method': { $in: ONLINE_PAYMENT_METHODS },
-    'payment.status': 'pending',
+    // 'failed' too: a dropped payment leaves the order just as unpaid, and it used to show
+    // to the restaurant and admin as a real pending order.
+    'payment.status': { $in: ['pending', 'failed'] },
     'tracking.confirmed.status': { $ne: true }
   };
 }
@@ -25,7 +27,7 @@ function isUnpaidOnlinePlaceholderOrder(order) {
   const isConfirmed = order?.tracking?.confirmed?.status === true;
 
   return ONLINE_PAYMENT_METHODS.includes(paymentMethod) &&
-    paymentStatus === 'pending' &&
+    ['pending', 'failed'].includes(paymentStatus) &&
     !isConfirmed;
 }
 

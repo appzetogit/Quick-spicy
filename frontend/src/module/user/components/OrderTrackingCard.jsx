@@ -134,8 +134,13 @@ export default function OrderTrackingCard() {
 
   const restaurantName =
     activeOrder.restaurant || activeOrder.restaurantName || 'Restaurant';
-  const statusText =
-    orderStatus === 'preparing' || orderStatus === 'confirmed' || orderStatus === 'pending'
+  // An online order whose payment has not gone through is not being prepared.
+  const awaitingPayment =
+    (activeOrder.payment?.method || activeOrder.paymentMethod) === 'cashfree' &&
+    String(activeOrder.payment?.status || activeOrder.paymentStatus || '').toLowerCase() !== 'completed'
+  const statusText = awaitingPayment
+    ? 'Payment not completed'
+    : orderStatus === 'preparing' || orderStatus === 'confirmed' || orderStatus === 'pending'
       ? 'Preparing your order'
       : orderStatus === 'out_for_delivery' ||
           orderStatus === 'outfordelivery' ||

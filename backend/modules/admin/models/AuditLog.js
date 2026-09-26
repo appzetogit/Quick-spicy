@@ -116,11 +116,20 @@ auditLogSchema.index({ createdAt: -1 });
 auditLogSchema.index({ 'commissionChange.restaurantId': 1 });
 
 // Static method to create audit log
+// An audit entry records a money movement; it must never be the reason one fails. Callers
+// write it after the movement, so a validation error here (a bad enum, an object where a
+// string is expected) used to throw out of refunds and escrow releases that had already
+// happened - reporting them as failed and skipping the steps that followed.
 auditLogSchema.statics.createLog = async function(logData) {
-  return await this.create({
-    ...logData,
-    createdAt: new Date()
-  });
+  try {
+    return await this.create({
+      ...logData,
+      createdAt: new Date()
+    });
+  } catch (error) {
+    console.error(`[AuditLog] entry not written (${logData?.action || 'unknown action'}): ${error.message}`);
+    return null;
+  }
 };
 
 const AuditLog = mongoose.model('AuditLog', auditLogSchema);

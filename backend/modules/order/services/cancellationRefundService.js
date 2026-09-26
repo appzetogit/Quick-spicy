@@ -84,13 +84,15 @@ const createFallbackSettlement = async (order) => {
       totalEarning: 0,
       status: 'cancelled'
     },
+    // Zero: no settlement means no earnings were ever booked to the admin wallet, so a
+    // refund must not "reverse" them. It used to, taking fees out that never went in.
     adminEarning: {
       commission: 0,
-      platformFee,
-      deliveryFee,
-      gst: tax,
+      platformFee: 0,
+      deliveryFee: 0,
+      gst: 0,
       deliveryMargin: 0,
-      totalEarning: platformFee + deliveryFee + tax,
+      totalEarning: 0,
       status: 'cancelled'
     },
     escrowStatus: 'refunded',
@@ -505,13 +507,19 @@ const compensateRestaurant = async (restaurantId, orderId, amount, orderNumber) 
  * Reverse admin earnings for cancelled orders
  */
 const reverseAdminEarnings = async (orderId, adminEarning, orderNumber) => {
+  // A 'deduction' is subtracted by AdminWallet.addTransaction, so its amount is positive.
+  // These were negative: the wallet refused them (amount must be >= 0), and that error,
+  // thrown AFTER the customer's refund had gone out, reported the refund as failed.
   try {
+    if (!(Number(adminEarning?.totalEarning) > 0)) {
+      return; // nothing was ever booked, so nothing to reverse
+    }
     const wallet = await AdminWallet.findOrCreate();
 
     // Reverse commission
     if (adminEarning.commission > 0) {
       wallet.addTransaction({
-        amount: -adminEarning.commission,
+        amount: adminEarning.commission,
         type: 'deduction',
         status: 'Completed',
         description: `Commission reversal for cancelled order ${orderNumber}`,
@@ -522,7 +530,7 @@ const reverseAdminEarnings = async (orderId, adminEarning, orderNumber) => {
     // Reverse platform fee
     if (adminEarning.platformFee > 0) {
       wallet.addTransaction({
-        amount: -adminEarning.platformFee,
+        amount: adminEarning.platformFee,
         type: 'deduction',
         status: 'Completed',
         description: `Platform fee reversal for cancelled order ${orderNumber}`,
@@ -533,7 +541,7 @@ const reverseAdminEarnings = async (orderId, adminEarning, orderNumber) => {
     // Reverse delivery fee
     if (adminEarning.deliveryFee > 0) {
       wallet.addTransaction({
-        amount: -adminEarning.deliveryFee,
+        amount: adminEarning.deliveryFee,
         type: 'deduction',
         status: 'Completed',
         description: `Delivery fee reversal for cancelled order ${orderNumber}`,
@@ -544,7 +552,7 @@ const reverseAdminEarnings = async (orderId, adminEarning, orderNumber) => {
     // Reverse GST
     if (adminEarning.gst > 0) {
       wallet.addTransaction({
-        amount: -adminEarning.gst,
+        amount: adminEarning.gst,
         type: 'deduction',
         status: 'Completed',
         description: `GST reversal for cancelled order ${orderNumber}`,
@@ -559,7 +567,7 @@ const reverseAdminEarnings = async (orderId, adminEarning, orderNumber) => {
       entityType: 'order',
       entityId: orderId,
       action: 'admin_earning_reversal',
-      actionType: 'deduction',
+      actionType: 'debit',
       performedBy: {
         type: 'system',
         name: 'System'

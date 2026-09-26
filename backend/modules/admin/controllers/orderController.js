@@ -69,7 +69,9 @@ function getRestaurantFromMaps(order, restaurantMaps) {
 function buildUnpaidOnlinePlaceholderCondition() {
   return {
     'payment.method': { $in: ONLINE_PAYMENT_METHODS },
-    'payment.status': 'pending',
+    // 'failed' too: a dropped payment leaves the order just as unpaid, and it used to show
+    // to the restaurant and admin as a real pending order.
+    'payment.status': { $in: ['pending', 'failed'] },
     'tracking.confirmed.status': { $ne: true }
   };
 }
@@ -80,7 +82,7 @@ function isUnpaidOnlinePlaceholderOrder(order) {
   const isConfirmed = order?.tracking?.confirmed?.status === true;
 
   return ONLINE_PAYMENT_METHODS.includes(paymentMethod) &&
-    paymentStatus === 'pending' &&
+    ['pending', 'failed'].includes(paymentStatus) &&
     !isConfirmed;
 }
 
@@ -532,6 +534,10 @@ export const getOrders = asyncHandler(async (req, res) => {
           orderStatusDisplay = 'Cancelled by User';
         } else if (order.cancelledBy === 'admin') {
           orderStatusDisplay = 'Cancelled by Admin';
+        } else if (order.cancelledBy === 'system') {
+          // Closed by the platform (e.g. online payment never completed). Fell through to
+          // "Cancelled by User" before.
+          orderStatusDisplay = 'Cancelled by System';
         } else {
           // Fallback: check cancellation reason pattern for old orders
           const cancellationReason = order.cancellationReason || '';

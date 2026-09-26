@@ -2100,15 +2100,16 @@ export default function Cart() {
           error?.response?.data?.pending === true
 
         const errorMessage = pendingVerification
-          ? "Payment is processing. Your order has been created and should appear in My Orders shortly."
+          ? "Your payment is being confirmed. The order goes to the restaurant as soon as it is - you can follow it in My Orders."
           : error?.response?.data?.message || error?.message || "Payment verification failed. Please contact support."
 
         alert(errorMessage)
 
         if (pendingVerification) {
-          setPlacedOrderId(order?.orderId || order?.id || null)
+          // Not "Order Placed!": nothing has reached the restaurant yet. The order page shows
+          // the real payment state and updates when the server confirms it.
           clearCart()
-          setShowOrderSuccess(true)
+          navigate(`/user/orders/${order?.orderId || order?.id}`)
         }
 
         setIsPlacingOrder(false)
