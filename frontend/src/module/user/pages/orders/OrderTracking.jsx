@@ -1064,7 +1064,7 @@ export default function OrderTracking() {
     order?.status !== 'cancelled'
   const awaitingPaymentStatus = {
     title: paymentStateForStatus === 'failed' ? "Payment failed" : "Payment not completed",
-    subtitle: "This order has not been sent to the restaurant. If money was deducted, it will be confirmed or refunded automatically.",
+    subtitle: "This order has not been sent to the restaurant and will close on its own. If money was deducted, it will be confirmed or refunded automatically.",
     color: "bg-gray-700"
   }
   const currentStatus = awaitingPayment
@@ -1409,7 +1409,8 @@ export default function OrderTracking() {
           </motion.div>
         )}
 
-        {/* Delivery Partner Safety */}
+        {/* Delivery Partner Safety - not relevant until the order is paid and sent */}
+        {!awaitingPayment && (
         <motion.button
           className="w-full bg-white rounded-xl p-4 shadow-sm flex items-center gap-3"
           onClick={handleOpenDeliverySafety}
@@ -1424,6 +1425,7 @@ export default function OrderTracking() {
           </span>
           <ChevronRight className="w-5 h-5 text-gray-400" />
         </motion.button>
+        )}
 
         {/* Delivery Details Banner */}
         <motion.div
@@ -1568,7 +1570,9 @@ export default function OrderTracking() {
           </div>
         </motion.div>
 
-        {/* Help Section */}
+        {/* Help Section. Hidden for an unpaid online order: it was never placed, so there
+            is nothing to cancel - the server closes it on its own if payment never arrives. */}
+        {!awaitingPayment && (
         <motion.div
           className="bg-white rounded-xl shadow-sm overflow-hidden"
           initial={{ opacity: 0, y: 20 }}
@@ -1587,6 +1591,7 @@ export default function OrderTracking() {
             />
           )}
         </motion.div>
+        )}
 
       </div>
 
