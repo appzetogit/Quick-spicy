@@ -44,6 +44,26 @@ const generateDropDeliveryOtp = () => {
 };
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// The customer's delivery OTP only means something once the restaurant has accepted the
+// order. It was returned from the moment of placing - on unpaid online orders, on orders the
+// restaurant never saw, and on cancelled ones - so customers were shown a handover code for
+// food nobody was making. The server keeps the code (the rider's check is unaffected); the
+// customer just isn't shown it until then.
+const RESTAURANT_ACCEPTED_STATUSES = ['preparing', 'ready', 'out_for_delivery', 'picked_up'];
+const withholdDropOtpUntilAccepted = (order) => {
+  if (!order?.deliveryVerification?.dropOtp?.code) return order;
+  // Status alone: every one of these means the restaurant accepted, and cancelled or
+  // delivered orders drop out whatever their tracking flags say.
+  if (RESTAURANT_ACCEPTED_STATUSES.includes(order.status)) return order;
+  return {
+    ...order,
+    deliveryVerification: {
+      ...order.deliveryVerification,
+      dropOtp: { ...order.deliveryVerification.dropOtp, code: null }
+    }
+  };
+};
 // Must stay under the server's payment window (ONLINE_PAYMENT_WINDOW_MINUTES, default 30).
 const ONLINE_PAYMENT_EXPIRY_MS = 20 * 60 * 1000;
 
@@ -1209,7 +1229,7 @@ export const createOrder = async (req, res) => {
               orderId: order.orderId,
               status: order.status,
               total: order.pricing.total,
-              deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
+              deliveryDropOtp: null // shown once the restaurant accepts (see withholdDropOtpUntilAccepted)
             },
             cashfree: null,
             wallet: {
@@ -1306,7 +1326,7 @@ export const createOrder = async (req, res) => {
             orderId: order.orderId,
             status: order.status,
             total: order.pricing.total,
-            deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
+            deliveryDropOtp: null // shown once the restaurant accepts (see withholdDropOtpUntilAccepted)
           },
           cashfree: null
         }
@@ -1403,7 +1423,7 @@ export const createOrder = async (req, res) => {
           orderId: order.orderId,
           status: order.status,
           total: order.pricing.total,
-          deliveryDropOtp: order.deliveryVerification?.dropOtp?.code || null
+          deliveryDropOtp: null // shown once the restaurant accepts (see withholdDropOtpUntilAccepted)
         },
         cashfree: cashfreeOrder ? {
           orderId: cashfreeOrder.order_id,
@@ -2252,7 +2272,7 @@ export const getUserOrders = async (req, res) => {
     res.json({
       success: true,
       data: {
-        orders,
+        orders: orders.map(withholdDropOtpUntilAccepted),
         pagination: {
           total,
           page: parseInt(page),
@@ -2326,7 +2346,7 @@ export const getOrderDetails = async (req, res) => {
     res.json({
       success: true,
       data: {
-        order,
+        order: withholdDropOtpUntilAccepted(order),
         payment
       }
     });
