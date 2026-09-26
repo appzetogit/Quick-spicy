@@ -1545,7 +1545,7 @@ export const verifyOrderPayment = async (req, res) => {
 
     if (!verification?.isPaid || !verification?.payment) {
       const cashfreeOrderStatus = verification?.order?.order_status || null;
-      const latestPaymentStatus = verification?.payment?.payment_status || null;
+      const latestPaymentStatus = verification?.payment?.payment_status || verification?.latestAttempt?.payment_status || null;
       const normalizedOrderStatus = String(cashfreeOrderStatus || '').toUpperCase();
       const normalizedPaymentStatus = String(latestPaymentStatus || '').toUpperCase();
       const isDefinitelyFailed =

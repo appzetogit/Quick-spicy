@@ -162,10 +162,19 @@ const verifyCashfreeOrderPayment = async (orderId) => {
   const payment = successfulPayments[0] || null;
   const isPaid = String(order?.order_status || '').toUpperCase() === 'PAID' && !!payment;
 
+  // The most recent attempt of any outcome. `payment` above is only ever a successful one,
+  // so callers checking it for FAILED / USER_DROPPED never saw a failure and reported every
+  // failed payment as "still pending".
+  const latestAttempt = [...payments].sort((a, b) =>
+    new Date(b?.payment_time || b?.payment_completion_time || 0).getTime() -
+    new Date(a?.payment_time || a?.payment_completion_time || 0).getTime()
+  )[0] || null;
+
   return {
     isPaid,
     order,
     payment,
+    latestAttempt,
     paymentMethod: mapCashfreePaymentMethod(payment)
   };
 };

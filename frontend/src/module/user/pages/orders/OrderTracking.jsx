@@ -1052,7 +1052,24 @@ export default function OrderTracking() {
     }
   }
 
-  const currentStatus = statusConfig[orderStatus] || statusConfig.placed
+  // An online order whose payment has not gone through has not been sent to the restaurant.
+  // It used to show "Order placed", "Food is Cooking" and a delivery OTP, so a customer whose
+  // payment failed was told their food was being made.
+  const paymentMethodForStatus = order?.payment?.method || order?.paymentMethod
+  const paymentStateForStatus = String(order?.payment?.status || '').toLowerCase()
+  const awaitingPayment =
+    paymentMethodForStatus === 'cashfree' &&
+    paymentStateForStatus !== 'completed' &&
+    orderStatus !== 'cancelled' &&
+    order?.status !== 'cancelled'
+  const awaitingPaymentStatus = {
+    title: paymentStateForStatus === 'failed' ? "Payment failed" : "Payment not completed",
+    subtitle: "This order has not been sent to the restaurant. If money was deducted, it will be confirmed or refunded automatically.",
+    color: "bg-gray-700"
+  }
+  const currentStatus = awaitingPayment
+    ? awaitingPaymentStatus
+    : (statusConfig[orderStatus] || statusConfig.placed)
   const isDeliveredOrder =
     orderStatus === "delivered" ||
     order?.status === "delivered" ||
@@ -1222,7 +1239,7 @@ export default function OrderTracking() {
           </motion.div>
         )}
 
-        {customerDeliveryOtp && orderStatus !== 'delivered' && orderStatus !== 'cancelled' && (
+        {customerDeliveryOtp && !awaitingPayment && orderStatus !== 'delivered' && orderStatus !== 'cancelled' && (
           <motion.div
             className="bg-blue-50 rounded-xl p-4 shadow-sm border border-blue-100"
             initial={{ opacity: 0, y: 20 }}
@@ -1277,6 +1294,9 @@ export default function OrderTracking() {
             order?.tracking?.out_for_delivery?.status === true ||
             order?.status === 'out_for_delivery' ||
             order?.status === 'ready'
+
+          // Nothing is cooking until the payment has gone through.
+          if (awaitingPayment) return null
 
           // Show "Food is Cooking" until delivery partner accepts pickup
           if (!hasAcceptedPickup) {
