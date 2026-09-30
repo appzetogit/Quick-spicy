@@ -248,6 +248,29 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
   const { addresses = [], addAddress, updateAddress, setDefaultAddress, userProfile } = useProfile()
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [mapPosition, setMapPosition] = useState([22.7196, 75.8577]) // Default Indore coordinates [lat, lng]
+  // True while a field in the address form has focus (keyboard open). The map above the
+  // form is at least 250px and never shrank, so with the keyboard up the field being typed
+  // into was pushed off screen and customers could not see what they were entering.
+  const [isTypingInAddressForm, setIsTypingInAddressForm] = useState(false)
+  const addressFormScrollRef = useRef(null)
+  const handleAddressFormFocus = (event) => {
+    const field = event.target
+    if (!field?.matches?.('input, textarea, select')) return
+    setIsTypingInAddressForm(true)
+    // Wait for the keyboard and the map collapse, then bring the field to the middle.
+    window.setTimeout(() => {
+      try { field.scrollIntoView({ behavior: 'smooth', block: 'center' }) } catch { /* old WebViews */ }
+    }, 300)
+  }
+  const handleAddressFormBlur = () => {
+    // Focus moving to the next field fires blur then focus; only restore the map once
+    // nothing in the form has focus any more.
+    window.setTimeout(() => {
+      if (!addressFormScrollRef.current?.contains(document.activeElement)) {
+        setIsTypingInAddressForm(false)
+      }
+    }, 150)
+  }
   const [addressFormData, setAddressFormData] = useState({
     recipientName: "",
     street: "",
@@ -2744,8 +2767,12 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
           </div>
         </div>
 
-        {/* Map Section - Google Maps */}
-        <div className="flex-shrink-0 relative" style={{ height: '35vh', minHeight: '250px' }}>
+        {/* Map Section - Google Maps. Folds away while typing in the form (kept mounted so
+            the map does not reload), so the field being typed into stays on screen. */}
+        <div
+          className="flex-shrink-0 relative overflow-hidden transition-[height,min-height] duration-200"
+          style={isTypingInAddressForm ? { height: 0, minHeight: 0 } : { height: '35vh', minHeight: '250px' }}
+        >
           {/* Google Maps Container */}
           <div
             ref={mapContainerRef}
@@ -2816,7 +2843,13 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
         </div>
 
         {/* Form Section - Scrollable */}
-        <div className="flex-1 overflow-y-auto bg-white dark:bg-[#0a0a0a] min-h-0 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div
+          ref={addressFormScrollRef}
+          onFocus={handleAddressFormFocus}
+          onBlur={handleAddressFormBlur}
+          className="flex-1 overflow-y-auto bg-white dark:bg-[#0a0a0a] min-h-0 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="px-4 py-4 space-y-4 pb-48">
             {/* Delivery Details */}
             <div>
