@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react"
 import { Link, useNavigate } from "react-router-dom"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Plus, Minus, ArrowLeft, ChevronRight, Clock, MapPin, Phone, FileText, Utensils, Tag, Percent, Truck, Leaf, Share2, ChevronUp, ChevronDown, X, Check, Settings, CreditCard, Wallet, Building2, Sparkles } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import confetti from "canvas-confetti"
@@ -2423,11 +2424,10 @@ export default function Cart() {
                       placeholder="Their full name"
                       className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] dark:text-gray-100 outline-none focus:border-[#EB590E]"
                     />
-                    <input
+                    <PhoneInput
                       value={orderForOthers.recipient?.phone || ""}
                       ref={recipientPhoneRef}
-                      onChange={(e) => orderForOthers.setRecipient({ phone: e.target.value.replace(/\D/g, "").slice(0, 10) })}
-                      inputMode="numeric"
+                      onChange={(e) => orderForOthers.setRecipient({ phone: e.target.value })}
                       placeholder="Their 10-digit phone number"
                       className="w-full px-3 py-2.5 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-[#1a1a1a] dark:text-gray-100 outline-none focus:border-[#EB590E]"
                     />

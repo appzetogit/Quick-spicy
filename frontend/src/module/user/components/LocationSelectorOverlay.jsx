@@ -2,6 +2,7 @@
 import { ChevronLeft, Search, ChevronRight, Plus, MapPin, MoreHorizontal, Navigation, Home, Building2, Briefcase, Phone, X, Crosshair } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PhoneInput } from "@/components/ui/phone-input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { useLocation as useGeoLocation } from "../hooks/useLocation"
@@ -2900,9 +2901,10 @@ export default function LocationSelectorOverlay({ isOpen, onClose }) {
                     onChange={handleAddressFormChange}
                     className="bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-700"
                   />
-                  <Input
+                  <PhoneInput
                     name="phone"
-                    placeholder="Phone number"
+                    allowPlus
+                    placeholder="10-digit mobile number"
                     value={addressFormData.phone || ""}
                     onChange={handleAddressFormChange}
                     className="bg-white dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-700"

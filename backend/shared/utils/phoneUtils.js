@@ -88,3 +88,14 @@ export const findByPhoneVariants = async (Model, phone, extraQuery = {}) => {
   const query = buildPhoneQuery(phone);
   return query ? Model.findOne({ ...query, ...extraQuery }) : null;
 };
+
+
+/**
+ * A valid Indian mobile number: 10 digits starting 6-9, optionally prefixed +91 / 91 / 0,
+ * with spaces or dashes allowed. Used to refuse garbled numbers at save time - the app's
+ * WebView once saved "+918125633886" typed with a jumping caret as "688336521+918".
+ */
+export const isValidIndianMobile = (phone) => {
+  const compact = String(phone ?? '').replace(/[\s-]/g, '');
+  return /^(?:\+91|91|0)?[6-9]\d{9}$/.test(compact);
+};

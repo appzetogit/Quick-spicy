@@ -13,6 +13,7 @@ import {
 } from '../../notification/utils/deviceTokens.js';
 import { validatePersonName } from '../../../shared/utils/personName.js';
 import Order from '../../order/models/Order.js';
+import { isValidIndianMobile } from '../../../shared/utils/phoneUtils.js';
 
 const logger = winston.createLogger({
   level: 'info',
@@ -504,6 +505,12 @@ export const addUserAddress = asyncHandler(async (req, res) => {
   try {
     const { label, recipientName, phone, street, additionalDetails, city, state, zipCode, latitude, longitude, isDefault } = req.body;
 
+    // A receiver number the rider can actually call, or none. A garbled one (e.g. reversed
+    // by a jumping caret in the app) used to be saved as-is and handed to the rider.
+    if (phone !== undefined && String(phone).trim() !== '' && !isValidIndianMobile(phone)) {
+      return errorResponse(res, 400, 'Please enter a valid 10-digit mobile number for the receiver');
+    }
+
     if (!street || !city || !state) {
       return errorResponse(res, 400, 'Street, city, and state are required');
     }
@@ -578,6 +585,12 @@ export const updateUserAddress = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
     const { label, recipientName, phone, street, additionalDetails, city, state, zipCode, latitude, longitude, isDefault } = req.body;
+
+    // A receiver number the rider can actually call, or none. A garbled one (e.g. reversed
+    // by a jumping caret in the app) used to be saved as-is and handed to the rider.
+    if (phone !== undefined && String(phone).trim() !== '' && !isValidIndianMobile(phone)) {
+      return errorResponse(res, 400, 'Please enter a valid 10-digit mobile number for the receiver');
+    }
 
     const user = await User.findById(req.user._id);
 
