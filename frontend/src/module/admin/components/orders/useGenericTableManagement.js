@@ -344,7 +344,11 @@ export function useGenericTableManagement(data, title, searchFields = []) {
       if (platformFee > 0) {
         summaryRows.push(['Platform Fee', formatMoney(platformFee)])
       }
-      summaryRows.push(['GST', formatMoney(taxAmount)])
+      const gstRateOnOrder = Number(order?.pricing?.gstRate) || 0
+      summaryRows.push([gstRateOnOrder > 0 ? `GST (${gstRateOnOrder}%)` : 'GST', formatMoney(taxAmount)])
+      if (order?.pricing?.gstin) {
+        summaryRows.push(['Restaurant GSTIN', order.pricing.gstin])
+      }
       if (tipAmount > 0) {
         summaryRows.push(['Delivery Partner Tip', formatMoney(tipAmount)])
       }
