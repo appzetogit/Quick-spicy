@@ -333,6 +333,7 @@ const transformOrderForTracking = (apiOrder, previousOrder = null, explicitResta
     // The stored field is pricing.tax; reading pricing.gst meant this row showed 0 on every
     // order that actually carried tax. gst kept as a fallback for older records.
     gst: apiOrder?.pricing?.tax ?? apiOrder?.pricing?.gst ?? apiOrder?.gst ?? previousOrder?.gst ?? 0,
+    gstRate: apiOrder?.pricing?.gstRate ?? previousOrder?.gstRate ?? 0,
     // Carried through so the bill can show the real item total and the platform fee as its
     // own line, rather than deriving one by subtraction and hiding the other inside it.
     subtotal: apiOrder?.pricing?.subtotal ?? previousOrder?.subtotal ?? null,
@@ -1730,10 +1731,12 @@ export default function OrderTracking() {
                 <span className="text-gray-600">Platform Fee</span>
                 <span className="text-gray-900 font-medium">₹{Number(order?.platformFee || 0).toFixed(0)}</span>
               </div>
+              {Number(order?.gst || 0) > 0 && (
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-600">Taxes & Charges</span>
-                <span className="text-gray-900 font-medium">₹{order?.gst || 0}</span>
+                <span className="text-gray-600">GST{Number(order?.gstRate) > 0 ? ` (${order.gstRate}%)` : ""}</span>
+                <span className="text-gray-900 font-medium">₹{Number(order?.gst || 0).toFixed(0)}</span>
               </div>
+              )}
               {Number(order?.totalTip || 0) > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">Tip Paid</span>
