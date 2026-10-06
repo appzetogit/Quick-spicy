@@ -36,6 +36,9 @@ export default function OrderInvoice() {
   const deliveryFee = Number(pricing.deliveryFee ?? order.deliveryFee ?? 0)
   const platformFee = Number(pricing.platformFee ?? order.platformFee ?? 0)
   const gstAmount = Number(pricing.tax ?? order.tax ?? 0)
+  // Snapshotted on the order when placed (per-restaurant GST, Admin -> GST Settings).
+  const gstRate = Number(pricing.gstRate ?? 0)
+  const restaurantGstin = pricing.gstin || null
   const couponDiscount = Number(pricing.discount ?? 0)
   const total = Number(pricing.total ?? order.total ?? 0)
   // Without this the invoice lines did not add up to the amount charged on any tipped order,
@@ -280,10 +283,18 @@ export default function OrderInvoice() {
                     <span>-{formatMoney(couponDiscount)}</span>
                   </div>
                 )}
-                <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
-                  <span>GST:</span>
-                  <span>{formatMoney(gstAmount)}</span>
-                </div>
+                {gstAmount > 0 && (
+                  <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
+                    <span>GST{gstRate > 0 ? ` (${gstRate}%)` : ""}:</span>
+                    <span>{formatMoney(gstAmount)}</span>
+                  </div>
+                )}
+                {gstAmount > 0 && restaurantGstin && (
+                  <div className="flex justify-between text-[11px] sm:text-xs text-gray-500 pb-1">
+                    <span>Restaurant GSTIN:</span>
+                    <span className="font-mono">{restaurantGstin}</span>
+                  </div>
+                )}
                 {tipAmount > 0 && (
                   <div className="total-row flex justify-between text-xs sm:text-sm sm:text-base py-1 sm:py-2">
                     <span>Delivery Partner Tip:</span>
