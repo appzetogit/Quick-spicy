@@ -861,7 +861,7 @@ Order again from this restaurant in the ${companyName} app.`
                     )}
                     {order.tax > 0 && (
                       <div className="flex justify-between text-xs">
-                        <span className="text-gray-600 dark:text-gray-400">Tax</span>
+                        <span className="text-gray-600 dark:text-gray-400">GST{Number(order.pricing?.gstRate) > 0 ? ` (${order.pricing.gstRate}%)` : ""}</span>
                         <span className="text-gray-800 dark:text-gray-200 font-medium">₹{order.tax.toFixed(2)}</span>
                       </div>
                     )}

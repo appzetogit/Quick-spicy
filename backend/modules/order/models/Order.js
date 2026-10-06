@@ -196,6 +196,14 @@ const orderSchema = new mongoose.Schema({
     couponCode: {
       type: String
     },
+    // GST rate (%) and restaurant GSTIN that applied when the order was placed.
+    gstRate: {
+      type: Number,
+      default: 0
+    },
+    gstin: {
+      type: String
+    },
     appliedCoupon: {
       code: {
         type: String

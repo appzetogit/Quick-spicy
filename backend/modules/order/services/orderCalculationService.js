@@ -246,6 +246,29 @@ export const calculatePlatformFee = async () => {
 };
 
 /**
+ * The GST that applies to an order from this restaurant: none unless an admin has switched
+ * GST on for it, then its own rate if one is set, otherwise the platform default rate.
+ * Pure, so the rule is testable without a database.
+ */
+export const resolveRestaurantGst = (restaurant, defaultRate) => {
+  const settings = restaurant?.gstSettings;
+  if (!settings?.enabled) return { rate: 0, gstin: null, legalName: null };
+  const own = settings.rate;
+  const rate = own !== null && own !== undefined && Number.isFinite(Number(own))
+    ? Number(own)
+    : Number(defaultRate) || 0;
+  return {
+    rate: Math.min(Math.max(rate, 0), 28),
+    gstin: settings.gstin || null,
+    legalName: settings.legalName || null,
+  };
+};
+
+/** GST on the food total after discounts, rounded to the rupee. */
+export const gstAmount = (subtotal, discount, rate) =>
+  Math.round(Math.max(0, Number(subtotal || 0) - Number(discount || 0)) * (Number(rate) || 0) / 100);
+
+/**
  * Calculate GST (Goods and Services Tax)
  * GST is calculated on subtotal after discounts
  */
@@ -630,7 +653,10 @@ export const calculateOrderPricing = async ({
     const platformFee = await calculatePlatformFee();
     
     // Calculate GST on subtotal after discount
-    const gst = await calculateGST(subtotal, discount);
+    // Per restaurant: charged only where an admin has switched GST on (Admin -> GST Settings).
+    // It used to be one platform-wide rate applied to every restaurant or none.
+    const gstInfo = resolveRestaurantGst(restaurant, (await getFeeSettings()).gstRate);
+    const gst = gstAmount(subtotal, discount, gstInfo.rate);
 
     const normalizedTipAmount = Math.max(0, Number(tipAmount) || 0);
     
@@ -693,7 +719,11 @@ export const calculateOrderPricing = async ({
       discount: Math.round(discount),
       deliveryFee: Math.round(finalDeliveryFee),
       platformFee: Math.round(platformFee),
-      tax: gst, // Already rounded in calculateGST
+      tax: gst, // Already rounded
+      // Snapshotted onto the order, so its bill and invoice keep the rate and GSTIN that
+      // applied when it was placed even if the restaurant's setting changes later.
+      gstRate: gstInfo.rate,
+      gstin: gstInfo.gstin,
       tip: Math.round(normalizedTipAmount),
       total: Math.round(total),
       savings: Math.round(savings),
@@ -719,6 +749,7 @@ export const calculateOrderPricing = async ({
         deliveryFee: Math.round(finalDeliveryFee),
         platformFee: Math.round(platformFee),
         gst: gst,
+        gstRate: gstInfo.rate,
         tip: Math.round(normalizedTipAmount),
         total: Math.round(total)
       }

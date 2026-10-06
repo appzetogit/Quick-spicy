@@ -252,6 +252,12 @@ import {
 } from "../../restaurant/controllers/freebieOfferController.js";
 import zoneRoutes from "./zoneRoutes.js";
 import { authenticateAdmin, authorizeAdmin } from "../middleware/adminAuth.js";
+import {
+  getRestaurantGstSettings,
+  updateRestaurantGstSettings,
+  bulkUpdateRestaurantGst,
+  updateDefaultGstRate,
+} from "../controllers/gstSettingsController.js";
 import { uploadMiddleware } from "../../../shared/utils/cloudinaryService.js";
 
 const router = express.Router();
@@ -389,6 +395,12 @@ router.get("/fee-settings", getFeeSettings);
 router.post("/fee-settings", createOrUpdateFeeSettings);
 router.put("/fee-settings/:id", updateFeeSettings);
 router.get("/fee-settings/history", getFeeSettingsHistory);
+
+// GST per restaurant (Admin -> GST Settings)
+router.get("/gst/restaurants", getRestaurantGstSettings);
+router.post("/gst/restaurants/bulk", bulkUpdateRestaurantGst);
+router.patch("/gst/restaurants/:id", updateRestaurantGstSettings);
+router.put("/gst/default-rate", updateDefaultGstRate);
 
 // Delivery Partner Management
 router.get("/delivery-partners/requests", getJoinRequests);

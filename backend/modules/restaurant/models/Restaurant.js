@@ -471,4 +471,18 @@ restaurantSchema.add({
   isDemo: { type: Boolean, default: false, index: true },
 });
 
+// GST charged to customers on this restaurant's orders, set by an admin (Admin -> GST
+// Settings). Off by default. rate null means "use the platform default GST rate"
+// (FeeSettings.gstRate); a number overrides it for this restaurant only.
+restaurantSchema.add({
+  gstSettings: {
+    enabled: { type: Boolean, default: false, index: true },
+    rate: { type: Number, default: null, min: 0, max: 28 },
+    gstin: { type: String, trim: true, uppercase: true, default: '' },
+    legalName: { type: String, trim: true, default: '' },
+    updatedAt: { type: Date },
+    updatedBy: { type: String },
+  },
+});
+
 export default mongoose.model("Restaurant", restaurantSchema);

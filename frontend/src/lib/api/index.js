@@ -1378,6 +1378,12 @@ export const adminAPI = {
   createAdminOffer: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.OFFERS, data);
   },
+  // GST per restaurant (Admin -> GST Settings)
+  getGstRestaurants: (params = {}) => apiClient.get('/admin/gst/restaurants', { params }),
+  updateRestaurantGst: (restaurantId, data) =>
+    apiClient.patch(`/admin/gst/restaurants/${encodeURIComponent(restaurantId)}`, data),
+  bulkUpdateRestaurantGst: (data) => apiClient.post('/admin/gst/restaurants/bulk', data),
+  updateDefaultGstRate: (rate) => apiClient.put('/admin/gst/default-rate', { rate }),
   updateAdminOffer: (offerId, data) =>
     apiClient.patch(`/admin/offers/${encodeURIComponent(offerId)}`, data),
   deleteAdminOffer: (offerId) =>

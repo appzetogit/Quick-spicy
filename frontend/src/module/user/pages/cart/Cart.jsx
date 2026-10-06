@@ -1233,7 +1233,10 @@ export default function Cart() {
       ? `Delivery charge: fixed ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} up to ${breakdownBaseDistanceKm.toFixed(1)} km, then ${RUPEE_SYMBOL}${breakdownPerKmFee.toFixed(0)} per extra km`
       : `Delivery charge: fixed ${RUPEE_SYMBOL}${Number(feeSettings.deliveryFee || 0).toFixed(0)} up to ${Number(feeSettings.deliveryBaseDistanceKm || 2.5).toFixed(1)} km, then ${RUPEE_SYMBOL}${Number(feeSettings.deliveryFeePerKm || 0).toFixed(0)} per extra km`
   const platformFee = pricing?.platformFee || feeSettings.platformFee
-  const gstCharges = pricing?.tax || Math.round(subtotal * (feeSettings.gstRate / 100))
+  // GST is per restaurant and decided by the server (Admin -> GST Settings). The old fallback
+  // estimated it from the platform rate, which showed GST for restaurants that charge none.
+  const gstCharges = Number(pricing?.tax) || 0
+  const gstRate = Number(pricing?.gstRate) || 0
   const tip = pricing?.tip ?? tipAmount
   const discount = pricing?.discount || (appliedCoupon ? Math.min(appliedCoupon.discount, subtotal * 0.5) : 0)
   const totalBeforeDiscount = subtotal + deliveryFee + platformFee + gstCharges + tip
@@ -3002,10 +3005,12 @@ export default function Cart() {
                       <span className="font-medium text-[#23415a] dark:text-gray-400">Platform Fee</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
+                    {gstCharges > 0 && (
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST{gstRate > 0 ? ` (${gstRate}%)` : ""}</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
+                    )}
                     <div className="flex items-center justify-between text-sm md:text-base">
                       <span className="font-medium text-[#23415a] dark:text-gray-400">Tip</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(2)}</span>
@@ -3053,10 +3058,12 @@ export default function Cart() {
                       <span className="font-medium text-[#23415a] dark:text-gray-400">Platform Fee</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(platformFee).toFixed(2)}</span>
                     </div>
+                    {gstCharges > 0 && (
                     <div className="flex items-center justify-between text-sm md:text-base">
-                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST</span>
+                      <span className="font-medium text-[#23415a] dark:text-gray-400">GST{gstRate > 0 ? ` (${gstRate}%)` : ""}</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(gstCharges).toFixed(2)}</span>
                     </div>
+                    )}
                     <div className="flex items-center justify-between text-sm md:text-base">
                       <span className="font-medium text-[#23415a] dark:text-gray-400">Tip</span>
                       <span className="font-semibold text-[#111827] dark:text-gray-200">{RUPEE_SYMBOL}{Number(tip || 0).toFixed(2)}</span>

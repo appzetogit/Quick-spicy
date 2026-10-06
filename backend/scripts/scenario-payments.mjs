@@ -105,7 +105,7 @@ const db = mongoose.connection;
 const userId = new mongoose.Types.ObjectId();
 const restaurantObjectId = new mongoose.Types.ObjectId();
 await db.collection('users').insertOne({ _id: userId, name: 'Scenario Customer', phone: '+91 9000000001', role: 'user', isActive: true });
-await db.collection('restaurants').insertOne({ _id: restaurantObjectId, restaurantId: 'REST-SCENARIO', name: 'Scenario Kitchen', isActive: true, isAcceptingOrders: true, location: { latitude: 15.58, longitude: 79.11, coordinates: [79.11, 15.58] } });
+await db.collection('restaurants').insertOne({ _id: restaurantObjectId, restaurantId: 'REST-SCENARIO', name: 'Scenario Kitchen', phone: '919000000003', email: 'scenario-kitchen@example.test', isActive: true, isAcceptingOrders: true, location: { latitude: 15.58, longitude: 79.11, coordinates: [79.11, 15.58] } });
 const restaurantReq = { _id: restaurantObjectId, restaurantId: 'REST-SCENARIO', name: 'Scenario Kitchen' };
 const riderId = new mongoose.Types.ObjectId();
 await db.collection('deliveries').insertOne({ _id: riderId, name: 'Scenario Rider', phone: '+91 9000000002', status: 'approved', isActive: true });
@@ -361,6 +361,41 @@ await scenario('Delivery OTP is shown to the customer only after the restaurant 
   assert.equal(one.body?.data?.order?.deliveryVerification?.dropOtp?.code || null, null, 'details endpoint leaks OTP');
   const ok = await call(getOrderDetails, { params: { id: String(accepted._id) } });
   assert.equal(ok.body?.data?.order?.deliveryVerification?.dropOtp?.code, '4821');
+});
+
+await scenario('GST settings: per-restaurant on/off, custom rate, default fallback, GSTIN check', async () => {
+  const gst = await import('../modules/admin/controllers/gstSettingsController.js');
+  const { resolveRestaurantGst } = await import('../modules/order/services/orderCalculationService.js');
+  const FeeSettings = (await import('../modules/admin/models/FeeSettings.js')).default;
+  const Restaurant = (await import('../modules/restaurant/models/Restaurant.js')).default;
+  await FeeSettings.deleteMany({});
+  await FeeSettings.collection.insertOne({ isActive: true, gstRate: 5, createdAt: new Date(), deliveryFee: 20, platformFee: 6 });
+  const admin = { admin: { _id: new mongoose.Types.ObjectId(), name: 'Scenario Admin' } };
+  const id = String(restaurantObjectId);
+  const rate = async () => resolveRestaurantGst(await Restaurant.findById(id).lean(), (await FeeSettings.findOne({ isActive: true }).lean()).gstRate).rate;
+
+  assert.equal(await rate(), 0, 'off by default');
+  let r = await call(gst.updateRestaurantGstSettings, { ...admin, params: { id }, body: { enabled: true } });
+  assert.equal(r.code, 200, r.body?.message);
+  assert.equal(await rate(), 5, 'on with no own rate uses the default');
+  r = await call(gst.updateRestaurantGstSettings, { ...admin, params: { id }, body: { rate: 18 } });
+  assert.equal(await rate(), 18, 'custom rate overrides');
+  r = await call(gst.updateRestaurantGstSettings, { ...admin, params: { id }, body: { gstin: 'NOT-A-GSTIN' } });
+  assert.equal(r.code, 400, 'invalid GSTIN refused');
+  r = await call(gst.updateRestaurantGstSettings, { ...admin, params: { id }, body: { gstin: '37abcde1234f1z5', rate: '' } });
+  assert.equal(r.code, 200);
+  assert.equal((await Restaurant.findById(id).lean()).gstSettings.gstin, '37ABCDE1234F1Z5');
+  assert.equal(await rate(), 5, 'clearing the custom rate falls back to the default');
+  r = await call(gst.updateDefaultGstRate, { ...admin, body: { rate: 12 } });
+  assert.equal(r.code, 200);
+  assert.equal(await rate(), 12, 'default rate change applies');
+  r = await call(gst.updateDefaultGstRate, { ...admin, body: { rate: 40 } });
+  assert.equal(r.code, 400, 'out-of-range default refused');
+  r = await call(gst.bulkUpdateRestaurantGst, { ...admin, body: { ids: [id], enabled: false } });
+  assert.equal(r.code, 200);
+  assert.equal(await rate(), 0, 'bulk off');
+  const list = await call(gst.getRestaurantGstSettings, { ...admin, query: { filter: 'off' } });
+  assert.ok((list.body?.data?.restaurants || []).some((x) => x.id === id), 'listed under GST off');
 });
 
 await scenario('Tip paid but Cashfree slow to report: not marked failed', async () => {

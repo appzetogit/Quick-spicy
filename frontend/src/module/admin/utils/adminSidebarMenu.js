@@ -105,6 +105,12 @@ export const adminSidebarMenu = [
       },
       {
         type: "link",
+        label: "GST Settings",
+        path: "/admin/gst-settings",
+        icon: "Receipt",
+      },
+      {
+        type: "link",
         label: "Push Notification",
         path: "/admin/push-notification",
         icon: "Bell",

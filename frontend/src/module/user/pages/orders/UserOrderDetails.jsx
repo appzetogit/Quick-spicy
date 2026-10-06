@@ -453,12 +453,14 @@ export default function UserOrderDetails() {
                 </span>
               </div>
             </div>
+            {Number(pricing.tax || 0) > 0 && (
             <div className="flex justify-between">
-              <span className="text-gray-500">GST (govt. taxes)</span>
+              <span className="text-gray-500">GST{Number(pricing.gstRate) > 0 ? ` (${pricing.gstRate}%)` : ""}</span>
               <span className="text-gray-800">
                 ₹{Number(pricing.tax || 0).toFixed(2)}
               </span>
             </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-400 font-medium">Delivery fee</span>
               {pricing.deliveryFee === 0 && (

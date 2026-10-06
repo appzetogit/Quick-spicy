@@ -553,6 +553,7 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
       const restaurantCardHeight = drawInfoCard("Restaurant", 76, 53, 58, [
         { label: "Name", value: restaurantName },
         { label: "Zone", value: zoneName },
+        ...(order?.pricing?.gstin ? [{ label: "GSTIN", value: order.pricing.gstin }] : []),
         { label: "Delivery", value: deliveryType },
         { label: "Items", value: `${itemCount} item${itemCount === 1 ? "" : "s"}` },
       ], [37, 99, 235])
@@ -643,7 +644,9 @@ export function useOrdersManagement(orders, statusKey, title, zones = [], server
       if (platformFee > 0) {
         summaryRows.push(["Platform Fee", formatMoney(platformFee)])
       }
-      summaryRows.push(["GST", formatMoney(taxAmount)])
+      // Rate snapshotted on the order when placed (per-restaurant GST); old orders have none.
+      const gstRateOnOrder = Number(order?.pricing?.gstRate) || 0
+      summaryRows.push([gstRateOnOrder > 0 ? `GST (${gstRateOnOrder}%)` : "GST", formatMoney(taxAmount)])
       if (tipAmount > 0) {
         summaryRows.push(["Delivery Partner Tip", formatMoney(tipAmount)])
       }
