@@ -398,6 +398,54 @@ await scenario('GST settings: per-restaurant on/off, custom rate, default fallba
   assert.ok((list.body?.data?.restaurants || []).some((x) => x.id === id), 'listed under GST off');
 });
 
+await scenario('GST end to end: bill, saved order, customer order API', async () => {
+  const { calculateOrderPricing } = await import('../modules/order/services/orderCalculationService.js');
+  const FeeSettings = (await import('../modules/admin/models/FeeSettings.js')).default;
+  const Restaurant = (await import('../modules/restaurant/models/Restaurant.js')).default;
+  await FeeSettings.deleteMany({});
+  await FeeSettings.collection.insertOne({ isActive: true, gstRate: 5, deliveryFee: 20, deliveryBaseDistanceKm: 2.5, deliveryFeePerKm: 6, platformFee: 6, createdAt: new Date() });
+  await db.collection('menus').deleteMany({});
+  await db.collection('menus').insertOne({ restaurant: restaurantObjectId, isActive: true, sections: [{ name: 'Main', items: [{ id: 'gst-item-1', name: 'Paneer Curry', price: 200, isAvailable: true }] }], addons: [] });
+  const price = (quantity) => calculateOrderPricing({
+    items: [{ itemId: 'gst-item-1', name: 'Paneer Curry', price: 200, quantity }],
+    restaurantId: String(restaurantObjectId),
+    deliveryAddress: { location: { type: 'Point', coordinates: [79.111, 15.581] }, latitude: 15.581, longitude: 79.111 },
+    deliveryFleet: 'standard', tipAmount: 0,
+  });
+  const sumOf = (p) => p.subtotal - (p.discount || 0) + p.deliveryFee + p.platformFee + p.tax + (p.tip || 0);
+
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $unset: { gstSettings: '' } });
+  let p = await price(1);
+  assert.equal(p.tax, 0, 'GST off: no GST'); assert.equal(p.gstRate, 0);
+  assert.equal(p.total, sumOf(p));
+
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $set: { gstSettings: { enabled: true, rate: null, gstin: '37ABCDE1234F1Z5' } } });
+  p = await price(1);
+  assert.equal(p.tax, 10, `5% of 200 (got ${p.tax})`); assert.equal(p.gstRate, 5); assert.equal(p.gstin, '37ABCDE1234F1Z5');
+  assert.equal(p.total, sumOf(p), 'total includes GST');
+
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $set: { 'gstSettings.rate': 18 } });
+  p = await price(3);
+  assert.equal(p.tax, 108, `18% of 600 (got ${p.tax})`); assert.equal(p.gstRate, 18);
+  assert.equal(p.total, sumOf(p));
+
+  // Saved the way createOrder saves it, then read back through the customer API.
+  const order = await Order.create({
+    orderId: `SCN-GST-${Date.now()}`, userId, restaurantId: String(restaurantObjectId), restaurantName: 'Scenario Kitchen',
+    items: p.items, pricing: { ...p }, payment: { method: 'cash', status: 'pending' }, status: 'pending',
+  });
+  const saved = await Order.findById(order._id).lean();
+  assert.equal(saved.pricing.gstRate, 18, 'rate snapshotted on the order'); assert.equal(saved.pricing.gstin, '37ABCDE1234F1Z5');
+  assert.equal(saved.pricing.tax, 108);
+  const api = await call(getOrderDetails, { params: { id: String(order._id) } });
+  const apiPricing = api.body?.data?.order?.pricing || {};
+  assert.equal(apiPricing.gstRate, 18, 'customer API returns the rate'); assert.equal(apiPricing.tax, 108); assert.equal(apiPricing.gstin, '37ABCDE1234F1Z5');
+
+  // Changing the restaurant later must not change the placed order.
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $set: { 'gstSettings.enabled': false } });
+  assert.equal((await Order.findById(order._id).lean()).pricing.gstRate, 18, 'old order keeps its rate');
+});
+
 await scenario('Tip paid but Cashfree slow to report: not marked failed', async () => {
   const o = await mkOrder({ status: 'delivered', payStatus: 'completed', ageMin: 60, extra: { deliveryPartnerId: riderId, tipPayments: [{ amount: 30, status: 'pending', cashfreeOrderId: 'TIP-SCN-1' }] } });
   cf.set('TIP-SCN-1', { order_status: 'ACTIVE', order_amount: 30, userId: String(userId), payments: [], refunds: [] });
