@@ -125,7 +125,7 @@ export default function SearchingDeliveryMan() {
     toggleColumn,
   } = useGenericTableManagement(
     orders,
-    "Searching For Deliverymen Orders",
+    "Orders Needing Rider",
     ["id", "customerName", "restaurant", "customerPhone"]
   )
 
@@ -180,10 +180,10 @@ export default function SearchingDeliveryMan() {
       <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-lg sm:text-xl font-semibold text-gray-900">
-            Searching For Deliverymen Orders
+            Orders Needing Rider
           </h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            All orders that are currently searching for a deliveryman.
+            Live orders with no rider from the last 3 hours, longest wait first.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function SearchingDeliveryMan() {
         </div>
       </div>
       <OrdersTopbar 
-        title="Searching For Deliverymen Orders" 
+        title="Orders Needing Rider" 
         count={count} 
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
