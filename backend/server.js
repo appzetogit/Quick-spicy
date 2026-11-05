@@ -1155,6 +1155,24 @@ function initializeScheduledTasks() {
   });
   console.log('✅ Realtime tracking cleanup scheduler initialized (runs every 10 minutes)');
 
+  // The cron above clears the realtime database only. This clears the rider record itself,
+  // so "online" stops meaning "switched on at some point and never switched off".
+  import('./modules/delivery/services/riderPresenceService.js').then(({ markStaleRidersOffline }) => {
+    cron.schedule('*/5 * * * *', async () => {
+      try {
+        const result = await markStaleRidersOffline();
+        if (result.markedOffline > 0) {
+          console.log(`[Rider Presence Cron] marked ${result.markedOffline} of ${result.checked} online riders offline`);
+        }
+      } catch (error) {
+        console.error('[Rider Presence Cron] Error:', error);
+      }
+    });
+    console.log('✅ Rider presence sweep initialized (runs every 5 minutes)');
+  }).catch((error) => {
+    console.error('❌ Failed to initialize rider presence sweep:', error);
+  });
+
   // Import menu schedule service
   import('./modules/restaurant/services/menuScheduleService.js').then(({ processScheduledAvailability }) => {
     // Run every minute to check for due schedules

@@ -475,6 +475,21 @@ export default function ViewOrderDialog({ isOpen, onOpenChange, order }) {
             </div>
           )}
 
+          {order.dispatchedToName && (
+            <div className="border-t border-slate-200 pt-4">
+              <h3 className="text-sm font-semibold text-slate-700 mb-1 flex items-center gap-2">
+                <Truck className="w-4 h-4" />
+                Dispatched by admin
+              </h3>
+              <p className="text-sm font-medium text-slate-900">
+                {order.dispatchedToName}{order.dispatchedToPhone ? " · " + order.dispatchedToPhone : ""}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                The rider sent on this order. Confirm any cash with them directly.
+              </p>
+            </div>
+          )}
+
           {/* Delivery Partner Information */}
           {(order.deliveryPartnerName || order.deliveryPartnerPhone) && (
             <div className="border-t border-slate-200 pt-4">

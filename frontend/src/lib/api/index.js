@@ -1611,6 +1611,16 @@ export const adminAPI = {
     return apiClient.delete(`/admin/orders/${encodeURIComponent(id)}`);
   },
 
+  // Riders an admin can send on an order, best choice first
+  getOrderDispatchRiders: (id) => {
+    return apiClient.get(`/admin/orders/${encodeURIComponent(id)}/dispatch-riders`);
+  },
+
+  // Assign a rider chosen by an admin to an order with none
+  assignOrderRider: (id, riderId) => {
+    return apiClient.patch(`/admin/orders/${encodeURIComponent(id)}/assign-rider`, { riderId });
+  },
+
   // Get orders searching for deliveryman
   getSearchingDeliverymanOrders: (params = {}) => {
     return apiClient.get(API_ENDPOINTS.ADMIN.ORDERS_SEARCHING_DELIVERYMAN, {

@@ -70,6 +70,18 @@ export const invoiceRider = (order) => {
 };
 
 /**
+ * The rider an admin chose for this order, at any status. Kept apart from who delivered
+ * it: a dispatch records who was sent, so cash can be chased, and is not proof of handover
+ * or of collection, so invoices and cashCollectionStatus deliberately ignore it.
+ */
+export const dispatchedRider = (order) => {
+  if (order?.assignmentInfo?.assignedBy !== 'manual') return null;
+  const rider = order.deliveryPartnerId;
+  if (!rider || typeof rider !== 'object') return null;
+  return { name: rider.name || null, phone: rider.phone || null };
+};
+
+/**
  * Collection status for a cash order. Delivery on its own is not evidence of collection:
  * only a rider completion, which records the cash against that rider, is.
  */

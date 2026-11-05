@@ -1,8 +1,9 @@
-﻿import { useState, useMemo, useEffect } from "react"
+﻿import { useState, useMemo, useEffect, useCallback } from "react"
 import OrdersTopbar from "../../components/orders/OrdersTopbar"
 import DispatchOrdersTable from "../../components/orders/DispatchOrdersTable"
 import DispatchFilterPanel from "../../components/orders/DispatchFilterPanel"
 import ViewOrderDialog from "../../components/orders/ViewOrderDialog"
+import AssignRiderDialog from "../../components/orders/AssignRiderDialog"
 import SettingsDialog from "../../components/orders/SettingsDialog"
 import { useGenericTableManagement } from "../../components/orders/useGenericTableManagement"
 import { adminAPI } from "@/lib/api"
@@ -28,6 +29,7 @@ export default function SearchingDeliveryMan() {
   })
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
+  const [assigningOrder, setAssigningOrder] = useState(null)
 
   // Debounce search query
   useEffect(() => {
@@ -127,6 +129,28 @@ export default function SearchingDeliveryMan() {
     ["id", "customerName", "restaurant", "customerPhone"]
   )
 
+  // Keep the queue current while someone is working it, without blanking the screen.
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      try {
+        const response = await adminAPI.getSearchingDeliverymanOrders({
+          search: debouncedSearchQuery || undefined,
+          limit: 1000
+        })
+        if (response?.data?.success && response.data.data?.orders) {
+          setOrders(response.data.data.orders)
+        }
+      } catch (error) {
+        debugError("Background refresh of the dispatch queue failed:", error)
+      }
+    }, 30000)
+    return () => clearInterval(timer)
+  }, [debouncedSearchQuery])
+
+  const handleAssigned = useCallback((assigned) => {
+    setOrders((current) => current.filter((order) => order._id !== assigned?._id))
+  }, [])
+
   const resetColumns = () => {
     setVisibleColumns({
       sl: true,
@@ -208,7 +232,16 @@ export default function SearchingDeliveryMan() {
         onOpenChange={setIsViewOrderOpen}
         order={selectedOrder}
       />
+      <AssignRiderDialog
+        isOpen={Boolean(assigningOrder)}
+        onOpenChange={(open) => {
+          if (!open) setAssigningOrder(null)
+        }}
+        order={assigningOrder}
+        onAssigned={handleAssigned}
+      />
       <DispatchOrdersTable 
+        onAssignRider={setAssigningOrder}
         orders={filteredData} 
         visibleColumns={visibleColumns}
         onViewOrder={handleViewOrder}

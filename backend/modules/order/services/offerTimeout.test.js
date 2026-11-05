@@ -10,6 +10,8 @@
 import assert from 'node:assert/strict'
 import { wasAcceptedByRider } from './offerTimeoutService.js'
 
+assert.equal(wasAcceptedByRider({ assignmentInfo: { assignedBy: 'manual' } }), true, 'a rider an admin chose must not be reclaimed')
+
 // The ONLY shape that may be reclaimed: assigned to a rider, with no sign they engaged.
 assert.equal(
   wasAcceptedByRider({

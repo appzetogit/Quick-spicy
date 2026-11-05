@@ -485,7 +485,8 @@ const orderSchema = new mongoose.Schema({
     zoneId: String,
     zoneName: String,
     deliveryPartnerId: String,
-    assignedAt: Date
+    assignedAt: Date,
+    assignedByAdminId: String
   },
   excludedDeliveryPartners: [{
     type: mongoose.Schema.Types.ObjectId,

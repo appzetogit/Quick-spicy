@@ -220,6 +220,8 @@ import {
   rejectOrder,
   markOrderReady,
   markOrderDelivered,
+  getOrderDispatchRiders,
+  assignOrderRider,
   getSearchingDeliverymanOrders,
   getRefundRequests,
   processRefund,
@@ -277,7 +279,7 @@ router.use(authenticateAdmin);
 // per-route annotations so that a newly added mutating route is closed to moderators
 // by default instead of silently open - the failure mode that created this hole.
 const MODERATOR_ALLOWED_WRITES = [
-  /^\/orders\/[^/]+\/(accept|reject|ready|delivered)$/,
+  /^\/orders\/[^/]+\/(accept|reject|ready|delivered|assign-rider)$/,
   /^\/profile$/,
   /^\/settings\/change-password$/,
 ];
@@ -557,6 +559,8 @@ router.patch("/orders/:id/accept", acceptOrder);
 router.patch("/orders/:id/reject", rejectOrder);
 router.patch("/orders/:id/ready", markOrderReady);
 router.patch("/orders/:id/delivered", markOrderDelivered);
+router.get("/orders/:id/dispatch-riders", getOrderDispatchRiders);
+router.patch("/orders/:id/assign-rider", assignOrderRider);
 router.get("/orders/searching-deliveryman", getSearchingDeliverymanOrders);
 router.get("/orders/ongoing", getOngoingOrders);
 router.get("/orders/transaction-report", getTransactionReport);

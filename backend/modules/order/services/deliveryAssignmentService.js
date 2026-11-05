@@ -5,6 +5,7 @@ import Restaurant from '../../restaurant/models/Restaurant.js';
 import BusinessSettings from '../../admin/models/BusinessSettings.js';
 import DeliveryWallet from '../../delivery/models/DeliveryWallet.js';
 import mongoose from 'mongoose';
+import { describeEmptyPool } from '../utils/riderLiveness.js';
 
 /**
  * Calculate distance between two coordinates using Haversine formula
@@ -14,7 +15,7 @@ import mongoose from 'mongoose';
  * @param {number} lng2 - Longitude of second point
  * @returns {number} Distance in kilometers
  */
-function calculateDistance(lat1, lng1, lat2, lng2) {
+export function calculateDistance(lat1, lng1, lat2, lng2) {
   const R = 6371; // Earth's radius in kilometers
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -136,7 +137,7 @@ async function resolveRestaurantZone(restaurantId, restaurantLat, restaurantLng)
   return bestZone;
 }
 
-async function resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, restaurantLng) {
+export async function resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, restaurantLng) {
   if (requiredZoneId && mongoose.Types.ObjectId.isValid(String(requiredZoneId))) {
     const explicitZone = await Zone.findOne({
       _id: String(requiredZoneId),
@@ -152,11 +153,11 @@ async function resolveRequiredZone(requiredZoneId, restaurantId, restaurantLat, 
 // How recent a rider's position must be for them to be considered for assignment. Generous
 // on purpose: the goal is to exclude positions that are days old, not to punish a rider
 // whose app briefly stopped reporting.
-const MAX_ASSIGNABLE_POSITION_AGE_MS = Number(
+export const MAX_ASSIGNABLE_POSITION_AGE_MS = Number(
   process.env.MAX_ASSIGNABLE_POSITION_AGE_MS || 30 * 60 * 1000
 );
 
-function isPartnerInsideRequiredZone(partner, zone, lat, lng) {
+export function isPartnerInsideRequiredZone(partner, zone, lat, lng) {
   if (!zone) return false;
   const requiredZoneId = zone?._id?.toString();
   if (!requiredZoneId) return false;
@@ -192,7 +193,7 @@ async function getGlobalDeliveryCashLimit() {
   return { enforce: false, limit: null };
 }
 
-async function filterPartnersByAvailableCashLimit(deliveryPartners = []) {
+export async function filterPartnersByAvailableCashLimit(deliveryPartners = []) {
   if (!Array.isArray(deliveryPartners) || deliveryPartners.length === 0) {
     return [];
   }
@@ -524,9 +525,11 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
     // impossible to tell from production logs WHY an order went unassigned -
     // every partner busy, everyone over their COD cash limit, or a zone mismatch.
     // See BUGFIX_IMPLEMENTATION_GUIDE.md #027.
+    const dropped = { stale: 0, wrongZone: 0, tooFar: 0 };
     const logFunnel = (blockedAt) => {
       console.warn(
         `[Assignment Funnel] blockedAt=${blockedAt} ` +
+        `stale=${dropped.stale} wrongZone=${dropped.wrongZone} tooFar=${dropped.tooFar} ` +
         `online=${deliveryPartners?.length || 0} ` +
         `cashEligible=${cashEligibleDeliveryPartners.length} ` +
         `free=${freeDeliveryPartners?.length || 0} ` +
@@ -582,11 +585,13 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
         const lastUpdate = partner.availability?.lastLocationUpdate;
         const positionAgeMs = lastUpdate ? Date.now() - new Date(lastUpdate).getTime() : Infinity;
         if (!(positionAgeMs <= MAX_ASSIGNABLE_POSITION_AGE_MS)) {
+          dropped.stale += 1;
           return null;
         }
 
         if (zone && !isPartnerInsideRequiredZone(partner, zone, lat, lng)) {
           console.log(`⚠️ Delivery partner ${partner._id} rejected due to zone mismatch`);
+          dropped.wrongZone += 1;
           return null;
         }
 
@@ -601,12 +606,17 @@ export async function findNearestDeliveryBoy(restaurantLat, restaurantLng, resta
           zoneId: partner.zoneId || null
         };
       })
-      .filter(partner => partner !== null && partner.distance <= maxDistance)
+      .filter((partner) => {
+        if (partner === null) return false;
+        if (partner.distance <= maxDistance) return true;
+        dropped.tooFar += 1;
+        return false;
+      })
       .sort((a, b) => a.distance - b.distance); // Sort by distance (nearest first)
 
     if (deliveryPartnersWithDistance.length === 0) {
       console.log(`⚠️ No delivery partners found within ${maxDistance}km`);
-      logFunnel('zone-or-distance');
+      logFunnel(describeEmptyPool(dropped));
       return null;
     }
 

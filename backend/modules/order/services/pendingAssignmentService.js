@@ -71,7 +71,7 @@ const minutesSince = (date) => {
  * field instead, so both are tried. Results are cached per sweep - the same restaurant
  * commonly owns several stuck orders.
  */
-const loadRestaurant = async (rawId, cache) => {
+export const loadRestaurant = async (rawId, cache) => {
   const key = String(rawId?._id || rawId || '').trim();
   if (!key) return null;
   if (cache.has(key)) return cache.get(key);
@@ -90,7 +90,7 @@ const loadRestaurant = async (rawId, cache) => {
   return doc;
 };
 
-const extractRestaurantCoords = (restaurant) => {
+export const extractRestaurantCoords = (restaurant) => {
   const location = restaurant?.location || restaurant?.onboarding?.step1?.location || null;
   if (!location) return { lat: null, lng: null };
 

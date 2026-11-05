@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react"
-import { Eye, Download, ArrowUpDown } from "lucide-react"
+import { Eye, Download, ArrowUpDown, UserPlus } from "lucide-react"
 
-export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrder, onPrintOrder }) {
+export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrder, onPrintOrder, onAssignRider }) {
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
   const totalPages = Math.ceil(orders.length / itemsPerPage)
@@ -34,7 +34,7 @@ export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrde
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="overflow-x-hidden">
+      <div className="overflow-x-auto">
         <table className="w-full">
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
@@ -121,6 +121,11 @@ export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrde
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-slate-700">{order.date}</div>
                     <div className="text-xs text-slate-500 mt-0.5">{order.time}</div>
+                    {typeof order.waitingMinutes === "number" && (
+                      <div className={`text-xs font-medium mt-0.5 ${order.waitingMinutes >= 10 ? "text-red-600" : "text-slate-500"}`}>
+                        Waiting {order.waitingMinutes} min
+                      </div>
+                    )}
                   </td>
                 )}
                 {visibleColumns.customer && (
@@ -163,6 +168,15 @@ export default function DispatchOrdersTable({ orders, visibleColumns, onViewOrde
                 {visibleColumns.actions && (
                   <td className="px-6 py-4 whitespace-nowrap text-right">
                     <div className="flex items-center justify-end gap-2">
+                      {onAssignRider && (
+                        <button
+                          onClick={() => onAssignRider(order)}
+                          className="inline-flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-blue-700 transition-colors"
+                        >
+                          <UserPlus className="w-3.5 h-3.5" />
+                          Assign rider
+                        </button>
+                      )}
                       <button 
                         onClick={() => onViewOrder(order)}
                         className="p-1.5 rounded text-orange-600 hover:bg-orange-50 transition-colors"

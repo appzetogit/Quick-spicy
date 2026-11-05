@@ -66,8 +66,10 @@ const hasStartedWork = (order) => {
   return false;
 };
 
+// A rider an admin chose stays on the order: dispatch is usually agreed by phone, so a
+// quiet app is no sign they ignored it.
 export const wasAcceptedByRider = (order) =>
-  order?.assignmentInfo?.assignedBy === 'delivery_accept' || hasStartedWork(order);
+  ['delivery_accept', 'manual'].includes(order?.assignmentInfo?.assignedBy) || hasStartedWork(order);
 
 /**
  * One sweep.
@@ -83,7 +85,7 @@ export async function processExpiredOffers() {
     deliveryPartnerId: { $ne: null, $exists: true },
     createdAt: { $gte: oldestReclaimable },
     'assignmentInfo.assignedAt': { $lt: cutoff },
-    'assignmentInfo.assignedBy': { $ne: 'delivery_accept' },
+    'assignmentInfo.assignedBy': { $nin: ['delivery_accept', 'manual'] },
     'deliveryState.acceptedAt': { $in: [null, undefined] },
   }).limit(50);
 

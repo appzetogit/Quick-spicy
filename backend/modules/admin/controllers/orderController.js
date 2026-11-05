@@ -9,7 +9,8 @@ import { notifyUserOrderUpdate } from '../../order/services/userNotificationServ
 import { sendAdminOrderSmsAlertForOrder } from '../../order/services/adminNotificationService.js';
 import { removeActiveOrderTracking, syncDeliveryPartnerPresence } from '../../delivery/services/firebaseRealtimeTrackingService.js';
 import { escapeRegex } from '../../../shared/utils/regex.js';
-import { deliveredByRider, cashCollectionStatus, invoiceRider } from '../../order/utils/deliveryAttribution.js';
+import { deliveredByRider, cashCollectionStatus, invoiceRider, dispatchedRider } from '../../order/utils/deliveryAttribution.js';
+import { assignRiderManually, listDispatchCandidates } from '../../order/services/manualDispatchService.js';
 
 const ADMIN_ORDER_SMS_FALLBACK_WINDOW_MS = 30 * 60 * 1000;
 const ONLINE_PAYMENT_METHODS = ['cashfree', 'razorpay', 'upi', 'card'];
@@ -670,6 +671,8 @@ export const getOrders = asyncHandler(async (req, res) => {
         // which live operational views need; invoices use these instead.
         deliveredByName: invoiceRider(order)?.name || null,
         deliveredByPhone: invoiceRider(order)?.phone || null,
+        dispatchedToName: dispatchedRider(order)?.name || null,
+        dispatchedToPhone: dispatchedRider(order)?.phone || null,
         estimatedDeliveryTime: order.estimatedDeliveryTime || 30,
         deliveredAt: order.deliveredAt,
         cancellationReason: order.cancellationReason || null,
@@ -1531,7 +1534,9 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
         status: order.status,
-        pricing: order.pricing || {}
+        pricing: order.pricing || {},
+        zoneName: order.assignmentInfo?.zoneName || null,
+        waitingMinutes: Math.max(0, Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 60000))
       };
     });
 
@@ -1548,6 +1553,40 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     console.error('❌ Error fetching searching deliveryman orders:', error);
     console.error('Error stack:', error.stack);
     return errorResponse(res, 500, error.message || 'Failed to fetch searching deliveryman orders');
+  }
+});
+
+/**
+ * Riders an admin can send on an order, best choice first
+ * GET /api/admin/orders/:id/dispatch-riders
+ */
+export const getOrderDispatchRiders = asyncHandler(async (req, res) => {
+  try {
+    const order = await findOrderByIdOrOrderId(req.params.id);
+    if (!order) return errorResponse(res, 404, 'Order not found');
+
+    const result = await listDispatchCandidates(order);
+    return successResponse(res, 200, 'Riders retrieved successfully', result);
+  } catch (error) {
+    console.error('Error listing riders for dispatch:', error);
+    return errorResponse(res, 500, error.message || 'Failed to list riders');
+  }
+});
+
+/**
+ * Assign a rider chosen by an admin to an order with none
+ * PATCH /api/admin/orders/:id/assign-rider
+ */
+export const assignOrderRider = asyncHandler(async (req, res) => {
+  try {
+    const order = await findOrderByIdOrOrderId(req.params.id);
+    if (!order) return errorResponse(res, 404, 'Order not found');
+
+    const result = await assignRiderManually(order, req.body?.riderId, req.user?._id);
+    return successResponse(res, 200, 'Rider assigned successfully', result);
+  } catch (error) {
+    if (!error.statusCode) console.error('Error assigning rider:', error);
+    return errorResponse(res, error.statusCode || 500, error.message || 'Failed to assign rider');
   }
 });
 
