@@ -1371,6 +1371,9 @@ export const markOrderDelivered = asyncHandler(async (req, res) => {
  * GET /api/admin/orders/searching-deliveryman
  * Query params: page, limit, search
  */
+// How far back the dispatch queue looks. Matches ASSIGNMENT_RETRY_MAX_AGE_MINUTES' default.
+const DISPATCH_QUEUE_WINDOW_MS = 3 * 60 * 60 * 1000;
+
 export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
   try {
     console.log('🔍 Fetching searching deliveryman orders...');
@@ -1386,6 +1389,9 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     // deliveryPartnerId is ObjectId, so we only check for null or missing
     const baseConditions = {
       status: { $in: ['ready', 'preparing'] },
+      // Same window as the retry sweep. Older orders are abandoned, not waiting: production
+      // had some 82 days old, and a rider must not be sent for those.
+      createdAt: { $gte: new Date(Date.now() - DISPATCH_QUEUE_WINDOW_MS) },
       $or: [
         { deliveryPartnerId: { $exists: false } },
         { deliveryPartnerId: null }
@@ -1445,7 +1451,7 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
     const orders = await Order.find(finalQuery)
       .populate('userId', 'name email phone')
       .populate('restaurantId', 'name slug')
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: 1 })
       .limit(parseInt(limit))
       .skip(skip)
       .lean();
@@ -1510,7 +1516,7 @@ export const getSearchingDeliverymanOrders = asyncHandler(async (req, res) => {
 
       // Format total amount
       const totalAmount = order.pricing?.total || 0;
-      const formattedTotal = `$ ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const formattedTotal = `₹ ${totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
       return {
         id: order.orderId || order._id.toString(),

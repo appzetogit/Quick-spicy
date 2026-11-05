@@ -9,3 +9,5 @@ backend/assets/cloudinary-export/
 backend/uploads/
 backend/.env
 frontend/.env
+config.bat
+node_modules

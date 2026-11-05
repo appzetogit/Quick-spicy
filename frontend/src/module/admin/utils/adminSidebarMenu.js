@@ -87,6 +87,12 @@ export const adminSidebarMenu = [
       },
       {
         type: "link",
+        label: "Orders Needing Rider",
+        path: "/admin/orders/needs-rider",
+        icon: "Truck",
+      },
+      {
+        type: "link",
         label: "Order Detect Delivery",
         path: "/admin/order-detect-delivery",
         icon: "Truck",
