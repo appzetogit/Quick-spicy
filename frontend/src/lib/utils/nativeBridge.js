@@ -66,37 +66,68 @@ export const openNativeCamera = (options = {}) =>
  * their order. The order state was never the problem; the app had simply been
  * navigated away from.
  *
- * Inside the shell we therefore never touch window.location. We ask the native side
- * to open it, and failing that click a target="_blank" anchor, which InAppWebView
- * surfaces to the OS through its own URL handling. Either way the app stays loaded
- * underneath, so returning shows exactly what the rider left.
+ * Inside the shell we therefore prefer to leave window.location alone: we ask the
+ * native side to open the URL, then click a target="_blank" anchor, so the app stays
+ * loaded underneath and returning shows exactly what the rider left.
+ *
+ * Neither of those can report failure, though. A bridge call can resolve without
+ * anything having opened, and a _blank click is a silent no-op in a shell without
+ * multiple-window support - which left the rider tapping the map button with nothing
+ * happening. So success is judged by whether the app actually lost the foreground. If
+ * it did not, navigating the WebView is the last resort: being able to reach the map
+ * matters more mid-delivery than keeping the page underneath it.
  */
+const NATIVE_OPEN_TIMEOUT_MS = 1500
+const ANCHOR_OPEN_GRACE_MS = 1000
+
+const clickBlankAnchor = (target) => {
+  const anchor = document.createElement('a')
+  anchor.href = target
+  anchor.target = '_blank'
+  anchor.rel = 'noopener noreferrer'
+  anchor.style.display = 'none'
+  document.body.appendChild(anchor)
+  anchor.click()
+  anchor.remove()
+}
+
 export const openExternalUrl = async (url) => {
   const target = String(url || '').trim()
   if (!target) return false
 
   if (hasNativeBridge()) {
-    // Short timeout: if the shell has no such handler we want the fallback quickly,
-    // not a 30-second wait with nothing happening.
-    try {
-      await callNativeHandler('openExternalUrl', { url: target }, 2500)
-      return true
-    } catch {
-      // fall through to the anchor
-    }
+    let leftApp = false
+    const markLeft = () => { leftApp = true }
+    const markIfHidden = () => { if (document.visibilityState === 'hidden') leftApp = true }
+    window.addEventListener('blur', markLeft)
+    window.addEventListener('pagehide', markLeft)
+    document.addEventListener('visibilitychange', markIfHidden)
 
     try {
-      const anchor = document.createElement('a')
-      anchor.href = target
-      anchor.target = '_blank'
-      anchor.rel = 'noopener noreferrer'
-      anchor.style.display = 'none'
-      document.body.appendChild(anchor)
-      anchor.click()
-      anchor.remove()
+      try {
+        const opened = await callNativeHandler('openExternalUrl', { url: target }, NATIVE_OPEN_TIMEOUT_MS)
+        // Only an explicit yes counts: a handler the shell never registered can
+        // resolve empty without having opened anything.
+        if (opened === true || opened?.success === true || leftApp) return true
+      } catch {
+        // No handler answered. Fall through to the anchor.
+      }
+
+      try {
+        clickBlankAnchor(target)
+      } catch {
+        // Fall through to the grace check and the last resort.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, ANCHOR_OPEN_GRACE_MS))
+      if (leftApp) return true
+
+      window.location.href = target
       return true
-    } catch {
-      return false
+    } finally {
+      window.removeEventListener('blur', markLeft)
+      window.removeEventListener('pagehide', markLeft)
+      document.removeEventListener('visibilitychange', markIfHidden)
     }
   }
 
