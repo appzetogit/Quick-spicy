@@ -446,6 +446,56 @@ await scenario('GST end to end: bill, saved order, customer order API', async ()
   assert.equal((await Order.findById(order._id).lean()).pricing.gstRate, 18, 'old order keeps its rate');
 });
 
+await scenario('Zone delivery rules: free delivery, custom charges, back to default', async () => {
+  const { calculateOrderPricing } = await import('../modules/order/services/orderCalculationService.js');
+  const FeeSettings = (await import('../modules/admin/models/FeeSettings.js')).default;
+  const Restaurant = (await import('../modules/restaurant/models/Restaurant.js')).default;
+  const ZoneFeeRule = (await import('../modules/admin/models/ZoneFeeRule.js')).default;
+  const fees = await import('../modules/admin/controllers/feeSettingsController.js');
+  const zoneId = new mongoose.Types.ObjectId();
+  await db.collection('zones').insertOne({ _id: zoneId, name: 'SCENARIO ZONE', isActive: true });
+  await FeeSettings.deleteMany({});
+  await FeeSettings.collection.insertOne({ isActive: true, gstRate: 0, deliveryFee: 20, deliveryBaseDistanceKm: 2.5, deliveryFeePerKm: 7, platformFee: 7, createdAt: new Date() });
+  await db.collection('menus').deleteMany({});
+  await db.collection('menus').insertOne({ restaurant: restaurantObjectId, isActive: true, sections: [{ name: 'Main', items: [{ id: 'zone-item-1', name: 'Veg Rice', price: 150, isAvailable: true }] }], addons: [] });
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $set: { zoneId }, $unset: { gstSettings: '' } });
+  const price = () => calculateOrderPricing({
+    items: [{ itemId: 'zone-item-1', name: 'Veg Rice', price: 150, quantity: 1 }],
+    restaurantId: String(restaurantObjectId),
+    deliveryAddress: { location: { type: 'Point', coordinates: [79.111, 15.581] }, latitude: 15.581, longitude: 79.111 },
+    deliveryFleet: 'standard', tipAmount: 0,
+  });
+  const admin = { admin: { _id: new mongoose.Types.ObjectId(), name: 'Scenario Admin' } };
+
+  let p = await price();
+  assert.equal(p.deliveryFee, 20, `default charge (got ${p.deliveryFee})`);
+
+  let r = await call(fees.upsertZoneFeeRules, { ...admin, body: { zoneIds: [String(zoneId)], freeDelivery: true } });
+  assert.equal(r.code, 200, r.body?.message);
+  p = await price();
+  assert.equal(p.deliveryFee, 0, 'free delivery in the zone');
+  assert.equal(p.deliveryFeeBreakdown?.source, 'zone_free');
+  assert.equal(p.total, p.subtotal + p.platformFee, 'total has no delivery fee');
+
+  r = await call(fees.upsertZoneFeeRules, { ...admin, body: { zoneIds: [String(zoneId)], freeDelivery: false, deliveryFee: 10 } });
+  assert.equal(r.code, 200, r.body?.message);
+  p = await price();
+  assert.equal(p.deliveryFee, 10, `custom zone charge (got ${p.deliveryFee})`);
+
+  r = await call(fees.upsertZoneFeeRules, { ...admin, body: { zoneIds: [String(zoneId)], freeDelivery: false } });
+  assert.equal(r.code, 400, 'empty custom rule refused');
+
+  const list = await call(fees.getZoneFeeRules, { ...admin });
+  assert.equal(list.body?.data?.zones?.find((z) => z.zoneId === String(zoneId))?.rule?.deliveryFee, 10);
+
+  r = await call(fees.deleteZoneFeeRule, { ...admin, params: { zoneId: String(zoneId) } });
+  assert.equal(r.code, 200);
+  assert.equal(await ZoneFeeRule.countDocuments({ zoneId }), 0);
+  p = await price();
+  assert.equal(p.deliveryFee, 20, 'back to default');
+  await Restaurant.updateOne({ _id: restaurantObjectId }, { $unset: { zoneId: '' } });
+});
+
 await scenario('Tip paid but Cashfree slow to report: not marked failed', async () => {
   const o = await mkOrder({ status: 'delivered', payStatus: 'completed', ageMin: 60, extra: { deliveryPartnerId: riderId, tipPayments: [{ amount: 30, status: 'pending', cashfreeOrderId: 'TIP-SCN-1' }] } });
   cf.set('TIP-SCN-1', { order_status: 'ACTIVE', order_amount: 30, userId: String(userId), payments: [], refunds: [] });

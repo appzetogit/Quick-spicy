@@ -1808,6 +1808,12 @@ export const adminAPI = {
     return apiClient.get(API_ENDPOINTS.ADMIN.FEE_SETTINGS_HISTORY, { params });
   },
 
+  // Per-zone delivery charges / free delivery (Delivery & Platform Fee -> zone filter)
+  getZoneFeeRules: () => apiClient.get('/admin/fee-settings/zones'),
+  saveZoneFeeRules: (data) => apiClient.put('/admin/fee-settings/zones', data),
+  deleteZoneFeeRule: (zoneId) =>
+    apiClient.delete(`/admin/fee-settings/zones/${encodeURIComponent(zoneId)}`),
+
   createOrUpdateFeeSettings: (data) => {
     return apiClient.post(API_ENDPOINTS.ADMIN.FEE_SETTINGS, data);
   },

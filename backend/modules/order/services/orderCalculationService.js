@@ -5,6 +5,7 @@ import FeeSettings from '../../admin/models/FeeSettings.js';
 import Menu from '../../restaurant/models/Menu.js';
 import { areOffersEnabled } from '../../../shared/utils/offersSwitch.js';
 import mongoose from 'mongoose';
+import ZoneFeeRule from '../../admin/models/ZoneFeeRule.js';
 
 const getEffectiveOfferEndDate = (endDateValue) => {
   if (!endDateValue) return null;
@@ -179,14 +180,54 @@ export const capDiscountedUnits = (lines = [], maxUnits = Infinity) => {
 };
 
 /**
+ * Delivery charges after a zone rule (Admin -> Delivery & Platform Fee -> zone filter).
+ * No rule: the platform-wide settings. freeDelivery: nothing charged. Otherwise each field
+ * the rule sets replaces the platform value; fields left empty (null) keep it. Pure.
+ */
+export const applyZoneFeeRule = (feeSettings = {}, rule = null) => {
+  const pick = (own, global, fallback) =>
+    own !== null && own !== undefined && own !== '' && Number.isFinite(Number(own))
+      ? Number(own)
+      : Number(global ?? fallback);
+  return {
+    freeDelivery: Boolean(rule?.freeDelivery),
+    zoneRuleApplied: Boolean(rule),
+    deliveryFee: pick(rule?.deliveryFee, feeSettings?.deliveryFee, 25),
+    deliveryBaseDistanceKm: pick(rule?.deliveryBaseDistanceKm, feeSettings?.deliveryBaseDistanceKm, 2.5),
+    deliveryFeePerKm: pick(rule?.deliveryFeePerKm, feeSettings?.deliveryFeePerKm, 6),
+  };
+};
+
+const findZoneFeeRule = async (restaurant) => {
+  const zoneId = restaurant?.zoneId?._id || restaurant?.zoneId;
+  if (!zoneId || !mongoose.Types.ObjectId.isValid(String(zoneId))) return null;
+  try {
+    return await ZoneFeeRule.findOne({ zoneId }).lean();
+  } catch (error) {
+    console.error(`Error loading zone fee rule: ${error.message}`);
+    return null;
+  }
+};
+
+/**
  * Calculate delivery fee based on distance and fee settings
  */
 export const calculateDeliveryFee = async (orderValue, restaurant, deliveryAddress = null) => {
   const round2 = (value) => Math.round(Number(value || 0) * 100) / 100;
-  const feeSettings = await getFeeSettings();
-  const baseDeliveryFee = Number(feeSettings.deliveryFee ?? 25);
-  const baseDistanceKm = Number(feeSettings.deliveryBaseDistanceKm ?? 2.5);
-  const additionalFeePerKm = Number(feeSettings.deliveryFeePerKm ?? 6);
+  const charges = applyZoneFeeRule(await getFeeSettings(), await findZoneFeeRule(restaurant));
+
+  // Free delivery for this restaurant's zone. Rider pay is unaffected: it is worked out
+  // from the rider commission rules, not from what the customer paid for delivery.
+  if (charges.freeDelivery) {
+    return {
+      fee: 0,
+      breakdown: { source: 'zone_free', zoneFreeDelivery: true, total: 0 }
+    };
+  }
+
+  const baseDeliveryFee = charges.deliveryFee;
+  const baseDistanceKm = charges.deliveryBaseDistanceKm;
+  const additionalFeePerKm = charges.deliveryFeePerKm;
   const restaurantCoordinates = restaurant?.location?.coordinates;
   const deliveryCoordinates = deliveryAddress?.location?.coordinates;
 

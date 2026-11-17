@@ -1225,7 +1225,9 @@ export default function Cart() {
   const isBaseOnlyDeliveryBreakdown =
     (deliveryFeeBreakdown?.source === "distance" || deliveryFeeBreakdown?.source === "base") &&
     !hasDistanceDeliveryBreakdown
-  const deliveryFeeBreakdownText = hasDistanceDeliveryBreakdown
+  const deliveryFeeBreakdownText = deliveryFeeBreakdown?.source === "zone_free"
+    ? "Free delivery in your area"
+    : hasDistanceDeliveryBreakdown
     ? Number(deliveryFeeBreakdown.extraDistanceKm || 0) > 0
       ? `Delivery charge for ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} for first ${breakdownBaseDistanceKm.toFixed(1)} km + ${Number(deliveryFeeBreakdown.extraDistanceKm || 0).toFixed(1)} km x ${RUPEE_SYMBOL}${breakdownPerKmFee.toFixed(0)}`
       : `Delivery charge for ${Number(deliveryFeeBreakdown.distanceKm).toFixed(1)} km: fixed ${RUPEE_SYMBOL}${breakdownBaseFee.toFixed(0)} up to ${breakdownBaseDistanceKm.toFixed(1)} km`

@@ -3,6 +3,7 @@ import { Save, Loader2, DollarSign } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { adminAPI } from "@/lib/api"
 import { toast } from "sonner"
+import ZoneDeliveryRules from "./ZoneDeliveryRules"
 
 const debugError = (...args) => {}
 
@@ -90,7 +91,7 @@ export default function FeeSettings() {
             <div>
               <h2 className="text-xl font-bold text-slate-900">Fee Configuration</h2>
               <p className="text-sm text-slate-500 mt-1">
-                Set the fees and charges that will be applied to all orders
+                Default fees for all orders. Zones can override delivery charges below.
               </p>
             </div>
             <Button
@@ -219,6 +220,16 @@ export default function FeeSettings() {
           )}
         </div>
       </div>
+
+      {!loadingFeeSettings && (
+        <ZoneDeliveryRules
+          defaults={{
+            deliveryFee: Number(feeSettings.deliveryFee || 0),
+            deliveryBaseDistanceKm: Number(feeSettings.deliveryBaseDistanceKm || 0),
+            deliveryFeePerKm: Number(feeSettings.deliveryFeePerKm || 0),
+          }}
+        />
+      )}
     </div>
   )
 }

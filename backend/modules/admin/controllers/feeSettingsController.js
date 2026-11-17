@@ -1,4 +1,7 @@
 import FeeSettings from '../models/FeeSettings.js';
+import ZoneFeeRule from '../models/ZoneFeeRule.js';
+import Zone from '../models/Zone.js';
+import mongoose from 'mongoose';
 import { successResponse, errorResponse } from '../../../shared/utils/response.js';
 import asyncHandler from '../../../shared/middleware/asyncHandler.js';
 import winston from 'winston';
@@ -281,4 +284,106 @@ export const getPublicFeeSettings = asyncHandler(async (req, res) => {
     logger.error(`Error fetching public fee settings: ${error.message}`);
     return errorResponse(res, 500, 'Failed to fetch fee settings');
   }
+});
+
+// ---------------------------------------------------------------------------------------
+// Zone delivery-fee rules (Admin -> Delivery & Platform Fee -> zone filter)
+// ---------------------------------------------------------------------------------------
+
+const optionalNonNegative = (value, label) => {
+  if (value === undefined || value === null || String(value).trim() === '') return { value: null };
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return { error: `${label} must be 0 or more` };
+  return { value: n };
+};
+
+const zoneRuleRow = (zone, rule) => ({
+  zoneId: String(zone._id),
+  zoneName: zone.name || zone.zoneName || 'Unnamed zone',
+  isActive: zone.isActive !== false,
+  rule: rule
+    ? {
+        freeDelivery: Boolean(rule.freeDelivery),
+        deliveryFee: rule.deliveryFee ?? null,
+        deliveryBaseDistanceKm: rule.deliveryBaseDistanceKm ?? null,
+        deliveryFeePerKm: rule.deliveryFeePerKm ?? null,
+        updatedAt: rule.updatedAt || null,
+        updatedBy: rule.updatedBy || null,
+      }
+    : null,
+});
+
+/**
+ * Every zone with its delivery rule (null = uses the platform-wide charges).
+ * GET /api/admin/fee-settings/zones
+ */
+export const getZoneFeeRules = asyncHandler(async (req, res) => {
+  const [zones, rules] = await Promise.all([
+    Zone.find({}).select('name zoneName isActive').sort({ name: 1 }).lean(),
+    ZoneFeeRule.find({}).lean(),
+  ]);
+  const byZone = new Map(rules.map((r) => [String(r.zoneId), r]));
+  return successResponse(res, 200, 'Zone delivery rules retrieved', {
+    zones: zones.map((z) => zoneRuleRow(z, byZone.get(String(z._id)))),
+  });
+});
+
+/**
+ * Set the same delivery rule on one or more zones.
+ * PUT /api/admin/fee-settings/zones
+ * { zoneIds: [...], freeDelivery: bool, deliveryFee?, deliveryBaseDistanceKm?, deliveryFeePerKm? }
+ */
+export const upsertZoneFeeRules = asyncHandler(async (req, res) => {
+  const { zoneIds, freeDelivery } = req.body || {};
+  if (!Array.isArray(zoneIds) || zoneIds.length === 0) {
+    return errorResponse(res, 400, 'Select at least one zone');
+  }
+  const validIds = [...new Set(zoneIds.map(String))].filter((id) => mongoose.Types.ObjectId.isValid(id));
+  if (validIds.length === 0) return errorResponse(res, 400, 'No valid zones selected');
+
+  const fee = optionalNonNegative(req.body.deliveryFee, 'Fixed delivery charge');
+  const base = optionalNonNegative(req.body.deliveryBaseDistanceKm, 'Base distance');
+  const perKm = optionalNonNegative(req.body.deliveryFeePerKm, 'Fee per extra KM');
+  const bad = fee.error || base.error || perKm.error;
+  if (bad) return errorResponse(res, 400, bad);
+
+  const isFree = Boolean(freeDelivery);
+  if (!isFree && fee.value === null && base.value === null && perKm.value === null) {
+    return errorResponse(res, 400, 'Turn on free delivery or enter at least one custom charge');
+  }
+
+  const zones = await Zone.find({ _id: { $in: validIds } }).select('name zoneName').lean();
+  if (zones.length === 0) return errorResponse(res, 404, 'Zones not found');
+  const who = req.admin?.name || req.admin?.email || String(req.admin?._id || 'admin');
+
+  await Promise.all(zones.map((zone) => ZoneFeeRule.updateOne(
+    { zoneId: zone._id },
+    {
+      $set: {
+        zoneName: zone.name || zone.zoneName || '',
+        freeDelivery: isFree,
+        deliveryFee: isFree ? null : fee.value,
+        deliveryBaseDistanceKm: isFree ? null : base.value,
+        deliveryFeePerKm: isFree ? null : perKm.value,
+        updatedBy: who,
+      },
+    },
+    { upsert: true },
+  )));
+
+  logger.info(`Zone delivery rule set by ${who}: ${isFree ? 'FREE delivery' : `fee=${fee.value} base=${base.value} perKm=${perKm.value}`} for ${zones.map((z) => z.name || z.zoneName).join(', ')}`);
+  return successResponse(res, 200, `Delivery rule saved for ${zones.length} zone(s)`, { updated: zones.length });
+});
+
+/**
+ * Remove a zone's rule, returning it to the platform-wide charges.
+ * DELETE /api/admin/fee-settings/zones/:zoneId
+ */
+export const deleteZoneFeeRule = asyncHandler(async (req, res) => {
+  const { zoneId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(zoneId)) return errorResponse(res, 400, 'Invalid zone');
+  const result = await ZoneFeeRule.deleteOne({ zoneId });
+  const who = req.admin?.name || req.admin?.email || String(req.admin?._id || 'admin');
+  logger.info(`Zone delivery rule removed by ${who} for zone ${zoneId}`);
+  return successResponse(res, 200, result.deletedCount ? 'Zone now uses the default charges' : 'Zone already uses the default charges', {});
 });

@@ -241,6 +241,9 @@ import {
   updateFeeSettings,
   getFeeSettingsHistory,
   getPublicFeeSettings,
+  getZoneFeeRules,
+  upsertZoneFeeRules,
+  deleteZoneFeeRule,
 } from "../controllers/feeSettingsController.js";
 import {
   getRewardSettings,
@@ -395,6 +398,11 @@ router.put("/customer-wallets/:userId", requireSuperAdmin, updateCustomerWalletB
 
 router.get("/fee-settings", getFeeSettings);
 router.post("/fee-settings", createOrUpdateFeeSettings);
+// Per-zone delivery charges / free delivery. Must come before /fee-settings/:id, which
+// would otherwise take PUT /fee-settings/zones as an id.
+router.get("/fee-settings/zones", getZoneFeeRules);
+router.put("/fee-settings/zones", upsertZoneFeeRules);
+router.delete("/fee-settings/zones/:zoneId", deleteZoneFeeRule);
 router.put("/fee-settings/:id", updateFeeSettings);
 router.get("/fee-settings/history", getFeeSettingsHistory);
 
