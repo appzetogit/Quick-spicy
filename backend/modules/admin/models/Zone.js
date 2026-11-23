@@ -94,6 +94,12 @@ const zoneSchema = new mongoose.Schema(
       min: 0,
       max: 100
     },
+    // Admin -> Zone Setup switch. When true, orders from restaurants in this zone can only
+    // be paid by COD or wallet; online (Cashfree) payment is refused.
+    onlinePaymentDisabled: {
+      type: Boolean,
+      default: false
+    },
     // Status
     isActive: {
       type: Boolean,

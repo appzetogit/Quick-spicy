@@ -330,6 +330,16 @@ export default function Cart() {
   // away from the delivery address actually matters - see isAwayFromSelectedAddress.
   const { zoneId: liveZoneId, zoneStatus: liveZoneStatus } = useZone(currentLocation, { probe: true })
 
+  // Admin -> Zone Setup can switch online payment off for a zone. The delivery-address zone
+  // must match the restaurant's zone to order at all, so it is the zone that decides here.
+  // The backend refuses online payment in such a zone too; this only keeps the cart honest.
+  const onlinePaymentDisabled = Boolean(zone?.onlinePaymentDisabled)
+  useEffect(() => {
+    if (onlinePaymentDisabled && selectedPaymentMethod === "cashfree") {
+      setSelectedPaymentMethod("cash")
+    }
+  }, [onlinePaymentDisabled, selectedPaymentMethod])
+
   // How far the customer currently is from the address they are ordering to. The zone above
   // deliberately follows the delivery address - that is what the server validates and what
   // the rider drives to - so a customer who has moved out of the area can still legitimately
@@ -3120,7 +3130,7 @@ export default function Cart() {
                     className="appearance-none bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg px-3 py-2 pr-9 text-sm md:text-base focus:outline-none focus:ring-2 focus:ring-[#EB590E]/40"
                   >
                     <option value="cash">COD</option>
-                    <option value="cashfree">Online</option>
+                    {!onlinePaymentDisabled && <option value="cashfree">Online</option>}
                     <option value="wallet">
                       Wallet ({RUPEE_SYMBOL}{isLoadingWallet ? "..." : walletBalance.toFixed(0)})
                     </option>

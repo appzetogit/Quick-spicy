@@ -52,6 +52,30 @@ export default function ZoneSetup() {
     }
   }
 
+  const [savingPaymentZoneId, setSavingPaymentZoneId] = useState(null)
+
+  const handleToggleOnlinePayment = async (zone) => {
+    const zoneId = zone._id || zone.id
+    const disable = !zone.onlinePaymentDisabled
+    const zoneLabel = zone.name || "this zone"
+    const confirmText = disable
+      ? `Turn OFF online payment in ${zoneLabel}? Customers there will only be able to pay by COD or Wallet.`
+      : `Turn online payment back ON in ${zoneLabel}?`
+    if (!window.confirm(confirmText)) return
+    try {
+      setSavingPaymentZoneId(zoneId)
+      await adminAPI.updateZone(zoneId, { onlinePaymentDisabled: disable })
+      setZones((prev) =>
+        prev.map((z) => ((z._id || z.id) === zoneId ? { ...z, onlinePaymentDisabled: disable } : z))
+      )
+    } catch (error) {
+      debugError("Error updating online payment for zone:", error)
+      alert(error.response?.data?.message || "Failed to update online payment for this zone")
+    } finally {
+      setSavingPaymentZoneId(null)
+    }
+  }
+
   const filteredZones = zones.filter(zone =>
     zone.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     zone.serviceLocation?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -181,6 +205,30 @@ export default function ZoneSetup() {
                     }`}>
                       {zone.isActive ? "Active" : "Inactive"}
                     </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-600">Online payment:</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={!zone.onlinePaymentDisabled}
+                      aria-label={`Online payment in ${zone.name || "zone"}`}
+                      disabled={savingPaymentZoneId === (zone._id || zone.id)}
+                      onClick={() => handleToggleOnlinePayment(zone)}
+                      className="flex items-center gap-2 disabled:opacity-50"
+                      title={zone.onlinePaymentDisabled ? "Customers can only pay by COD or Wallet" : "Customers can pay online"}
+                    >
+                      <span className={`text-xs font-medium ${zone.onlinePaymentDisabled ? "text-red-700" : "text-green-700"}`}>
+                        {zone.onlinePaymentDisabled ? "Off (COD/Wallet only)" : "On"}
+                      </span>
+                      <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                        zone.onlinePaymentDisabled ? "bg-slate-300" : "bg-green-500"
+                      }`}>
+                        <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                          zone.onlinePaymentDisabled ? "translate-x-0.5" : "translate-x-4"
+                        }`} />
+                      </span>
+                    </button>
                   </div>
                   {zone.coordinates && zone.coordinates.length > 0 && (
                     <div className="flex items-center justify-between">

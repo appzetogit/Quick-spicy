@@ -50,7 +50,7 @@ export const getZones = asyncHandler(async (req, res) => {
       .skip(skip);
 
     if (isSummaryMode) {
-      zonesQuery = zonesQuery.select('_id name zoneName serviceLocation country isActive unit');
+      zonesQuery = zonesQuery.select('_id name zoneName serviceLocation country isActive unit onlinePaymentDisabled');
     } else {
       zonesQuery = zonesQuery
         .populate({
@@ -436,7 +436,8 @@ export const detectUserZone = asyncHandler(async (req, res) => {
         name: userZone.name || userZone.zoneName,
         zoneName: userZone.zoneName || userZone.name,
         country: userZone.country,
-        unit: userZone.unit
+        unit: userZone.unit,
+        onlinePaymentDisabled: Boolean(userZone.onlinePaymentDisabled)
       },
       message: 'Service available in your area'
     });

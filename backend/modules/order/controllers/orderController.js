@@ -809,6 +809,21 @@ export const createOrder = async (req, res) => {
       });
     }
 
+    // Admin -> Zone Setup can switch online payment off per zone. Enforced here, not only in
+    // the cart, so an older app build or a stale cart page cannot still start a Cashfree
+    // payment in that zone. COD and wallet stay available.
+    if (restaurantZone?.onlinePaymentDisabled && !['cash', 'wallet'].includes(normalizedPaymentMethod)) {
+      logger.warn('Order blocked: online payment is disabled for this zone', {
+        userId,
+        restaurantZoneId,
+        paymentMethod: normalizedPaymentMethod
+      });
+      return res.status(400).json({
+        success: false,
+        message: 'Online payment is not available in this area. Please choose Cash on Delivery or Wallet.'
+      });
+    }
+
     // Optional cross-check if frontend sends zoneId
     if (req.body?.zoneId && req.body.zoneId !== userDetectedZoneId) {
       logger.warn('⚠️ Frontend zoneId differs from detected customer zoneId', {
